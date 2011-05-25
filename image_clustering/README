@@ -1,0 +1,14 @@
+
+
+HAC
+- Perform K-means first to reduce the number of initial clusters to a practical size (a function of our computational resources)
+- Compute the N^2 distance matrix as distance vectors (each point has a vector).
+-- Input: All points with cluster assignments in the form of (cluster_num, point_list)
+-- Output: (cluster_num, list_of_dists_to_each_cluster) and all points with cluster assignments
+- Find the nearest clusters (min of all distance vectors), these are to be merged
+-- Input: (cluster_num, list_of_dists_to_each_cluster)
+-- Output: (cluster_0, cluster_1) with the merged cluster as cluster_0
+- Merge and compact the clusters, find the new distances (Order Inversion), go to the previous step until done
+-- Config Input: (cluster_0, cluster_1)
+-- Input: All points with cluster assignments and (cluster_num, list_of_dists_to_each_cluster)
+-- Output: (cluster_num, list_of_dists_to_each_cluster) and all points with cluster assignments
