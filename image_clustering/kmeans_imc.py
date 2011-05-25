@@ -25,6 +25,7 @@ import numpy as np
 import hadoopy
 import distpy
 
+
 class Mapper(object):
     def __init__(self):
         self._norm = distpy.L2Sqr()
