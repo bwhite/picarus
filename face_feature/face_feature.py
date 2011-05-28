@@ -57,3 +57,16 @@ class Eigenfaces(object):
         image = np.asarray(cv.GetMat(image_cv), dtype=np.float32).ravel()
         out = np.dot(image - self.mean, self.vectors)
         return [out]
+
+
+def main():
+    import glob, imfeat
+    images = [cv.LoadImage(x)
+              for x in glob.glob('/homes/morariu/downloads/lfwcrop_color/faces/*')[:100]]
+    vectors = range(4,10)
+    feat = Eigenfaces(images, vectors)
+    out = imfeat.compute(feat, images[0])
+    print(out)
+
+if __name__ == "__main__":
+    main()
