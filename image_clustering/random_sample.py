@@ -24,6 +24,7 @@ import hadoopy
 import os
 import bisect
 import random
+import numpy as np
 
 
 class Mapper(object):
@@ -31,7 +32,7 @@ class Mapper(object):
     def __init__(self):
         self._sorted_rands = [float('inf')]  # (random)
         self._key_vals = {}  # [random] = (key, point)
-        self._sample_size = os.environ['SAMPLE_SIZE']
+        self._sample_size = int(os.environ['SAMPLE_SIZE'])
 
     def map(self, key, value):
         """Take in points and output a random sample
@@ -45,7 +46,10 @@ class Mapper(object):
             bisect.insort(self._sorted_rands, cur_rand)
             self._key_vals[cur_rand] = (key, value)
         if len(self._sorted_rands) > self._sample_size:
-            del self._key_vals[self._sorted_rands[-1]]
+            try:
+                del self._key_vals[self._sorted_rands[-1]]
+            except KeyError:  # Ignore inf
+                pass
             self._sorted_rands = self._sorted_rands[:-1]
 
     def close(self):
@@ -65,7 +69,7 @@ class Mapper(object):
 class Reducer(object):
 
     def __init__(self):
-        self._sample_size = os.environ['SAMPLE_SIZE']
+        self._sample_size = int(os.environ['SAMPLE_SIZE'])
         self._num_output = 0
 
     def reduce(self, rand, key_vals):
@@ -83,8 +87,8 @@ class Reducer(object):
         for kv in key_vals:
             if self._sample_size <= self._num_output:
                 break
-            yield kv
             self._num_output += 1
+            yield kv
 
 if __name__ == "__main__":
     if hadoopy.run(Mapper, Reducer):

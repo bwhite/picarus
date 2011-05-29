@@ -5,9 +5,17 @@ import cStringIO as StringIO
 
 
 def mapper(name, image_data):
-    image = Image.open(StringIO.StringIO(image_data))
-    feat = imfeat.Histogram('rgb', style='planar')
-    yield name, imfeat.compute(feat, image)[0]
+    try:
+        image = Image.open(StringIO.StringIO(image_data))
+    except:
+        hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
+        return
+    feat = imfeat.Histogram('rgb', style='joint')
+    try:
+        yield name, imfeat.compute(feat, image)[0]
+    except ValueError:
+        hadoopy.counter('DATA_ERRORS', 'UnkImageType')
+        return
 
 
 if __name__ == '__main__':
