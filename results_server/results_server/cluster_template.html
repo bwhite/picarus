@@ -1,0 +1,58 @@
+<html>
+<head>
+  <title>Clustering Results</title>
+  <script type="text/javascript" src="js/prototype.js"></script>
+  <script type="text/javascript" src="js/scriptaculous.js?load=effects,builder"></script>
+  <script type="text/javascript" src="js/lightbox.js"></script>
+  <link rel="stylesheet" href="css/lightbox.css" type="text/css" media="screen"/>
+  <script type="text/javascript" src="js/jquery.min.js"></script>
+<style type="text/css">
+
+</style>
+</head>
+<body>
+  <script type="text/javascript">
+    jQuery.noConflict();
+
+    var clusters = JSON.parse('$:(json.dumps(clusters))');
+    function show_all(index) {
+	var div = jQuery('div.all_images:eq('+index+')');
+	if (!div.is(":visible")) {
+	    jQuery.each(clusters[index].all_images, function (k, v) {
+		div.append('<a href="/i/'+v+'" rel="lightbox">\
+    <img style="max-width:50;height:50" src="/t/'+v+'"/></a>')
+	    })
+	    div.show()
+	} else {
+	    div.empty()
+	    div.hide()
+	}
+    }
+  </script>
+
+  <table>
+    $for cluster in clusters:
+    <div style="margin:5px;float:left;width:340px">
+      <!-- Cluster preview -->
+      <h3>Cluster $(loop.index) ($(len(cluster['all_images'])) images)
+      <a href="#" onclick="show_all($(loop.index-1))">
+	[Expand]
+      </a></h3>
+      <div style="margin:10px;padding:5px;background:lightblue">
+	$for path in cluster['sample_images']:
+	  <a href="/i/$(path)" rel="lightbox">
+	    <img style="height:100px;max-width:100px" src="/t/$(path)"/>
+	  </a>
+      </div>
+      <!-- Full view of images in cluster -->
+      <div class="all_images visible" 
+	   style="margin:10px;padding:5px;background:lightred;display:none;">
+	$# $for path in cluster['all_images']:
+	$#  <div style="background: url(static/spinner.gif)"></div>
+	$#  <img style="display:none;height:100px;max-width:100px" src="$(path)"/>
+      </div>
+    </div>
+    
+  </table>
+</body>
+</html>

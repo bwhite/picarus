@@ -1,0 +1,16 @@
+Andrew Miller <amiller@dappervision.com>
+Brandyn White <bwhite@dappervision.com>
+
+Shows results using a json file describing the clusters (or a randomly generated mockup).
+
+Usage:
+	# listens on default port 12546, uses the './' as the directory of 
+	# images, with randomly generated clusters
+	python -m results_viewer 
+
+	# loads clusters from a js file
+	python -m results_viewer --clusterjs <clusters.js> 
+
+
+	# creates a random set of clusters using the given image folder
+	python -m results_viewer --randomclusters <out_clusters.js> --imagedir=./
