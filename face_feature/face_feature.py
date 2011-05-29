@@ -20,6 +20,7 @@ __license__ = 'GPL V3'
 
 import cv
 import numpy as np
+import imfeat
 
 
 class Eigenfaces(object):
@@ -28,13 +29,14 @@ class Eigenfaces(object):
         self.MODES = [('opencv', 'gray', 32)]
         self.verbose = verbose
         if not images == None and not vectors == None:
+            images = [imfeat.convert_image(i, self.MODES) for i in images]
             self.train(images, vectors)
 
     def train(self, images, vectors):
-        if images == None:
-            raise ValueError('images must contain at least one image')
-        if vectors == None:
-            raise ValueError('vectors must contain at least one index')
+        if images == None or len(images) == 0:
+            raise ValueError('\'images\' must contain at least one image')
+        if vectors == None or len(vectors) == 0:
+            raise ValueError('\'vectors\' must contain at least one index')
 
         # assemble image matrix, subtract mean
         X = np.array([np.asarray(cv.GetMat(i)).ravel() for i in images])
@@ -43,15 +45,15 @@ class Eigenfaces(object):
             x = x - self.mean
         # assume that the number of images is smaller than the # of pixels
         M = np.dot(X, X.T)
-        es, vs = np.linalg.eigvalsh(M)
-        for v in vs:
-            v = np.dot(X.T, v)         # get e.v. of X^T*X from that of X*X^T
-            v = v / np.linalg.norm(v)  # normalize each eigenvector
+        es, vs = np.linalg.eigh(M)
+        vs = np.dot(X.T, vs)        # get e.v. of X^T*X from that of X*X^T
+        for i in range(vs.shape[1]):
+            vs[:, i] /= np.linalg.norm(vs[:, i])  # normalize each eigenvector
 
         # order eigenvalues by
         ordering = sorted([(e, i) for (i, e) in enumerate(es)], reverse=True)
         indexes = np.array(ordering).take(vectors, 0)[:, 1]
-        self.vectors = vectors.take(indexes, 1)
+        self.vectors = vs.take(indexes.tolist(), 1)
 
     def make_features(self, image_cv):
         image = np.asarray(cv.GetMat(image_cv), dtype=np.float32).ravel()
@@ -60,10 +62,10 @@ class Eigenfaces(object):
 
 
 def main():
-    import glob, imfeat
+    import glob
     images = [cv.LoadImage(x)
-              for x in glob.glob('/homes/morariu/downloads/lfwcrop_color/faces/*')[:100]]
-    vectors = range(4,10)
+              for x in glob.glob('/home/morariu/downloads/lfwcrop_color/faces/*')[:100]]
+    vectors = range(4, 10)
     feat = Eigenfaces(images, vectors)
     out = imfeat.compute(feat, images[0])
     print(out)
