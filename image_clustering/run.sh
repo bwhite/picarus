@@ -1,0 +1,2 @@
+#python cluster.py image_feature /user/brandyn/flickr/voc07/flickr_photo_conv4-1297714349.074514 /user/brandyn/tp/image_cluster/run-0/feat dummy
+python cluster.py sample /user/brandyn/tp/image_cluster/run-0/feat /user/brandyn/tp/image_cluster/run-0/clust0 100
