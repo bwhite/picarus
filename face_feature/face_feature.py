@@ -28,7 +28,7 @@ class Eigenfaces(object):
     def __init__(self, images=None, vectors=None, verbose=False):
         self.MODES = [('opencv', 'gray', 32)]
         self.verbose = verbose
-        if not images == None and not vectors == None:
+        if not images == None:
             images = [imfeat.convert_image(i, self.MODES) for i in images]
             self.train(images, vectors)
 
@@ -36,7 +36,8 @@ class Eigenfaces(object):
         if images == None or len(images) == 0:
             raise ValueError('\'images\' must contain at least one image')
         if vectors == None or len(vectors) == 0:
-            raise ValueError('\'vectors\' must contain at least one index')
+            # discard the first 3 eigenvectors
+            vectors = range(3, np.min(len(images), 65))
 
         # assemble image matrix, subtract mean
         X = np.array([np.asarray(cv.GetMat(i)).ravel() for i in images])

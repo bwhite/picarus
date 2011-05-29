@@ -36,7 +36,7 @@ class Test(unittest.TestCase):
         images = [cv.LoadImage(x)
                   for x in glob.glob(
                       '/home/morariu/downloads/lfwcrop_color/faces/*')[:100]]
-        vectors = range(4, 65)
+        vectors = range(3, 64)
         feat = face_feature.Eigenfaces(images, vectors)
         out = imfeat.compute(feat, images[0])
 
