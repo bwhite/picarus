@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/lightbox.css" type="text/css" media="screen"/>
   <script type="text/javascript" src="js/jquery.min.js"></script>
 <style type="text/css">
-
+    
 </style>
 </head>
 <body>
@@ -34,7 +34,7 @@
     $for cluster in clusters:
     <div style="margin:5px;float:left;width:340px">
       <!-- Cluster preview -->
-      <h3>Cluster $(loop.index) ($(len(cluster['all_images'])) images)
+      <h3>Cluster $(loop.index) ($(len(cluster.size)) images)
       <a href="#" onclick="show_all($(loop.index-1))">
 	[Expand]
       </a></h3>
@@ -47,9 +47,6 @@
       <!-- Full view of images in cluster -->
       <div class="all_images visible" 
 	   style="margin:10px;padding:5px;background:lightred;display:none;">
-	$# $for path in cluster['all_images']:
-	$#  <div style="background: url(static/spinner.gif)"></div>
-	$#  <img style="display:none;height:100px;max-width:100px" src="$(path)"/>
       </div>
     </div>
     

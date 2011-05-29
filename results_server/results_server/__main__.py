@@ -3,7 +3,7 @@ import web
 from threading import Thread
 import random
 import string
-import simplejson as json
+import json
 import argparse
 import os
 import Image
@@ -29,8 +29,7 @@ def random_clusters(imagedir, n_clusters=3):
     for i in range(n_clusters):
         n_images = random.randrange(4,7)
         n_size = random.randrange(40,60)
-        cluster = {'name': [random.choice(string.digits) for _ in range(8)],
-                   'all_images': random.sample(local_images, n_size),
+        cluster = {'all_images': random.sample(local_images, n_size),
                    'sample_images': random.sample(local_images, n_images),
                    'size': n_size}
         clusters.append(cluster)
