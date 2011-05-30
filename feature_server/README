@@ -1,0 +1,17 @@
+Andrew Miller <amiller@dappervision.com>
+
+A RESTful interface to features and image data stored on Cassandra.
+
+/features: returns a list of available feature expressions, e.g. "imfeat.GIST()"
+/features/<feature_expression>/<image hash>: returns a feature value (pickle of numpy array)
+/i/<image hash>: returns image data (with content-type set appropriately)
+/t/<image hash>: returns a thumbnail (content-type: image/jpeg)
+
+Usage:
+	python -m feature_server --port=<port>
+
+To load images from a directory into Cassandra:
+   	python -m feature_server --put_images=<directory full of images>
+
+To compute features and store them in Cassandra:
+   	python -m feature_server --compute_features="imfeat.Moments('rgb', 2)"
