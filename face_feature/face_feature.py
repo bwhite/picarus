@@ -37,7 +37,7 @@ class Eigenfaces(object):
             raise ValueError('\'images\' must contain at least one image')
         if vectors == None or len(vectors) == 0:
             # discard the first 3 eigenvectors
-            vectors = range(3, np.min(len(images), 65))
+            vectors = range(3, min(len(images), 65))
 
         # assemble image matrix, subtract mean
         X = np.array([np.asarray(cv.GetMat(i)).ravel() for i in images])
