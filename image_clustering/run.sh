@@ -1,2 +1,3 @@
-#python cluster.py image_feature /user/brandyn/flickr/voc07/flickr_photo_conv4-1297714349.074514 /user/brandyn/tp/image_cluster/run-0/feat dummy
-python cluster.py sample /user/brandyn/tp/image_cluster/run-0/feat /user/brandyn/tp/image_cluster/run-0/clust0 100
+python cluster.py image_feature /user/brandyn/flickr/voc07/flickr_photo_conv4-1297714349.074514 /user/brandyn/tp/image_cluster/run-18/feat
+python cluster.py sample /user/brandyn/tp/image_cluster/run-18/feat /user/brandyn/tp/image_cluster/run-18/clust0 20
+python cluster.py kmeans /user/brandyn/tp/image_cluster/run-18/feat /user/brandyn/tp/image_cluster/run-18/clust0 /user/brandyn/flickr/voc07/flickr_photo_conv4-1297714349.074514 /user/brandyn/tp/image_cluster/run-18/ 20 5 20
