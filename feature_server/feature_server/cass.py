@@ -1,6 +1,7 @@
 import pycassa
 import json
 import cPickle as pickle
+import itertools
 
 config = dict(
     credentials={'username': 'amiller', 'password': 'F6E1A36701517F495F938'},
@@ -9,13 +10,11 @@ config = dict(
     cf_features='amiller_features',
     )
 
-pool = None
-manager = None
-cf_images = None
-cf_features = None
-
 
 def connect():
+    """Connect to cassandra server using default credentials
+    TODO Add an option to use credentials from a config file
+    """
     global pool, manager, cf_images, cf_features
     pool = pycassa.ConnectionPool(config['keyspace'],
                                   ['vitrieve03.pc.umiacs.umd.edu:9160',
@@ -32,10 +31,64 @@ def connect():
     cf_features = pycassa.ColumnFamily(pool, config['cf_features'])
 
 
+if not 'pool' in globals():
+    pool = None
+    manager = None
+    cf_images = None
+    cf_features = None
+    connect()
+
+
+def sorted_iter_diff(a, b):
+    """Returns an iterator of the elements in a that are not in b.
+
+    Arguments:
+       a, b: Sorted iterators (e.g., items returned from get_range()
+    """
+    _a, _b = None, None
+    try:
+        while True:
+            if _a == _b:
+                _a = a.next()
+                _b = b.next()
+            elif _a < _b:
+                yield _a
+                _a = a.next()
+            elif _a > _b: _b = b.next()
+    except StopIteration:
+        for _a in a: yield _a
+
+
+def buffered_get_row(cf, row_key, buffer_size=500):
+    """Returns a generator of ((column_name, column),...) values
+    from a specific row, using a buffered read.
+
+    Arguments:
+        cf: column family, e.g. cass.cf_features
+        row_key:
+        buffer_size:
+    """
+
+    def gen():
+        startColumn = ""
+        try:
+            while True:
+                r = [_ for _ in cf.get(row_key,
+                                       column_start=startColumn,
+                                       column_count=buffer_size).items()]
+                # Advance to the very next possible column \
+                # (lexical sort on string)
+                startColumn = r[-1][0] + '\x00'
+                yield r
+        except pycassa.NotFoundException:
+            return
+
+    return itertools.chain.from_iterable(gen())
+
+
 def get_image_hashes():
     # TODO: range scan for the meta data?
-    return [_[0] for _ in
-            cf_images.get('image_metadata', column_count=2000000000).items()]
+    return (_[0] for _ in buffered_get_row(cf_images, 'image_metadata'))
 
 
 def get_imagedata(im_hash):
@@ -72,3 +125,7 @@ def get_feature_values(feature, hashes=[]):
     return [pickle.loads(_[1])
             for _ in cf_features.get(feature_row_id(feature),
                                            hashes).items()]
+
+
+def get_feature_hashes(feature_str, hashes=[]):
+    return (_[0] for _ in buffered_get_row(cf_features, feature_str))

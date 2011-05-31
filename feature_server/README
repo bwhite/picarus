@@ -15,3 +15,8 @@ To load images from a directory into Cassandra:
 
 To compute features and store them in Cassandra:
    	python -m feature_server --compute_features="imfeat.Moments('rgb', 2)"
+
+
+Note:
+	--put_images and --compute_features by default will not replace existing
+	images on cassandra. Use --replace to overwrite all features and images

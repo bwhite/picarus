@@ -10,6 +10,7 @@ import imfeat
 import cass
 import json
 import time
+import itertools
 
 if not 'app' in globals():
     urls = ('/features/(.*)/(.*)', 'Features',
@@ -108,9 +109,12 @@ def ipython_apprun():
                 continue
 
 
-def put_images(imagedir):
+def put_images(imagedir, replace=False):
     success_count = 0
-    for filename in os.listdir(imagedir):
+    filenames = os.listdir(imagedir)
+    old_hashes = set(cass.get_image_hashes() if not replace else [])
+
+    for filename in filenames:
         try:
             with open(os.path.join(imagedir, filename), 'r') as f:
                 data = f.read()
@@ -123,16 +127,18 @@ def put_images(imagedir):
             continue
 
         md5hash = hashlib.md5(data).hexdigest()
+        if md5hash in old_hashes:
+            continue
 
         # Store the image file indexed by hash
         cass.put_image(md5hash, data)
         success_count += 1
         print 'Put %s (%s)' % (filename, md5hash)
-    total = len(cass.get_image_hashes())
+    total = len(list(cass.get_image_hashes()))
     print 'Successfully put %d images (total %d)' % (success_count, total)
 
 
-def put_features(feature_str, hashes=None):
+def put_features(feature_str, hashes=None, replace=False):
     feature = eval(feature_str, {'imfeat': imfeat})
     print('Feature: %s (%s)' % (feature_str, feature))
 
@@ -140,10 +146,23 @@ def put_features(feature_str, hashes=None):
     if hashes is None:
         hashes = cass.get_image_hashes()
 
-    print('Computing feature for %d images' % len(hashes))
+    # Optionally try not to replace existing features
+    if replace:
+        print 'Replacing all existing features for %s' % feature_str
+    else:
+        old_hashes = cass.get_feature_hashes(feature_str)
+
+    # Get an estimate of the number of images by counting
+    # FIXME This requires cass to load the whole row, twice
+    if 1:
+        print ('Computing feature for %d images' % \
+               len(list(cass.get_feature_hashes(feature_str))))
+
     success_count = 0
     start_time = time.time()
-    for md5hash in hashes:
+
+    _hashes = hashes if replace else cass.sorted_iter_diff(hashes, old_hashes)
+    for md5hash in _hashes:
         data = cass.get_imagedata(md5hash)
         import StringIO
         s = StringIO.StringIO(data)
@@ -151,11 +170,22 @@ def put_features(feature_str, hashes=None):
         try:
             im = Image.open(s)
             im.load()
+
+            # Guard for small images that break GIST
+            if im.size[0] < 10 or im.size[1] < 10 or \
+                   im.size[0] > 1000 or im.size[1] > 1000:
+                print('Skipping small image (%d, %d) because of \
+                GIST segfault' % im.size)
+                continue
+
         except IOError:
             print "couldn't load image: %s" % md5hash
             continue
 
+        # FIXME this seems to be necessary for many features
+        # e.g. imfeat.Moments and imfeat.GIST()
         im = im.convert("RGB")
+
         # Compute the feature
         value = imfeat.compute(feature, im)
         ret = cass.put_feature_value(feature_str, md5hash, value)
@@ -175,14 +205,18 @@ if __name__ == "__main__":
     parser.add_argument('--port', type=str, help='run webpy on this port',
                         default='8080')
 
+    # Don't replace
+    parser.add_argument('--replace', action='store_true',
+                       help='don\'t replace existing image or feature')
+
     # Optional IPython shell
     parser.add_argument('--ipython', action='store_true',
                         help="Run an IPython shell for debugging")
 
     # Load images into cassandra
+    group = parser.add_argument_group('put_images')
     parser.add_argument('--put_images',
-                        help='Put a directory of images to Cassandra',
-                        default=None)
+                        help='Put a directory of images to Cassandra')
 
     # Compute features and load values to cass
     group = parser.add_argument_group('compute_features')
@@ -195,12 +229,12 @@ if __name__ == "__main__":
 
     if not ARGS.put_images is None:
         print 'Putting images from %s to Cassandra' % ARGS.put_images
-        put_images(ARGS.put_images)
+        put_images(ARGS.put_images, ARGS.replace)
         sys.exit(0)
 
     if not ARGS.compute_features is None:
         print 'Computing features'
-        put_features(ARGS.compute_features)
+        put_features(ARGS.compute_features, replace=ARGS.replace)
         sys.exit(0)
 
     if ARGS.ipython:
