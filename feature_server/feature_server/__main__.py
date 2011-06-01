@@ -49,15 +49,17 @@ class Classifier():
             return items[::skip]
 
         run_items = train_test_runs.get_run(run)
-        """run_items is a dict of {label: [(confidence, GT, hash), ...])
+        """run_items is a list of [(label, [(confidence, GT, hash), ...]), ...]
         where GT is ground truth annotation, -1 or 1.
         """
+        rocs = [train_test_runs.make_roc(items[1]) for items in run_items]
+        rocurls = [train_test_runs.make_roc_chart_google(roc) for roc in rocs]
         strata = [(label, [sample(s) for s in stratify(items)])
                   for label, items in run_items]
 
         render = web.template.frender(os.path.join(os.path.dirname(__file__),
                                                    'template_classifier.html'))
-        return render(strata)
+        return render(strata, rocurls)
 
 
 class Main(object):

@@ -214,5 +214,59 @@ def get_available_runs():
     return [_[0] for _ in cf_runs.get_range(column_count=1)]
 
 
+def make_roc(items):
+    """
+    Args:
+        items:
+          [(conf, GT, hash), ...]
+          sorted in increasing confidence value
+    """
+    import numpy as np
+    labels = [GT for _, GT, _ in items]
+    labels = np.array(labels)
+    tn = np.cumsum(labels == -1)
+    fn = np.cumsum(labels == 1)
+    P = np.sum(labels == 1)
+    N = np.sum(labels == -1)
+    TPR = 1 - fn/float(P)
+    FPR = 1 - tn/float(N)
+    return dict(tn=tn, fn=fn, P=P, N=N, TPR=TPR, FPR=FPR)
+
+
+def make_roc_chart_mpl(roc, filename=None):
+    import pylab
+    pylab.figure(1)
+    pylab.clf()
+    pylab.plot(roc['FPR'], roc['TPR'])
+    pylab.scatter(roc['FPR'], roc['TPR'], color='k', marker='+')
+    pylab.xlabel('False Positive Rate')
+    pylab.ylabel('True Positive Rate')
+    pylab.title('ROC')
+    pylab.draw()
+    pylab.show()
+    if not filename is None:
+        pylab.savefig(filename)
+
+
+def make_roc_chart_google(roc):
+    fpr = roc['FPR']
+    tpr = roc['TPR']
+    fpr = fpr[::max(len(fpr)/100,1)]
+    tpr = tpr[::max(len(tpr)/100,1)]    
+    xdata = ','.join(map(lambda x: '%.2f' % x, fpr))
+    ydata = ','.join(map(lambda x: '%.2f' % x, tpr))
+    template = """http://chart.apis.google.com/chart
+    ?chxr=0,0,1|1,0,1
+    &chxt=y,x
+    &chs=300x300
+    &cht=lxy
+    &chco=3D7930,3D7930
+    &chds=0,1,0,1
+    &chd=t:{xdata}|{ydata}
+    &chls=2,4,0
+    """
+    url = template.format(xdata=xdata, ydata=ydata)
+    return url.replace(' ','').replace('\n','')
+
 if __name__ == "__main__":
     pass

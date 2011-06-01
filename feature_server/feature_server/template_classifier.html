@@ -1,4 +1,4 @@
-$def with (run_items)
+$def with (run_items, roc_urls)
 
 <html>
 <head>
@@ -8,9 +8,11 @@ $def with (run_items)
 
 $for label, strata in run_items:
   <h3>$(label)</h3>
+  <img src="$(roc_urls[loop.index-1])" style="width:150px;height:150px"/>
   <div>
     $for stratum in strata[::-1]:
-        <h4>Strata [$((loop.index-1)*10)% to $((loop.index)*10)%]</h4>
+      <div style="float:left">
+        <h4>Sample from strata [$((loop.index-1)*10)% to $((loop.index)*10)%]</h4>
         $for (conf, GT, hash) in stratum[::-1]:
             <div style="float:left;white-space:nowrap">
 	      <div>
@@ -22,7 +24,8 @@ $for label, strata in run_items:
 	      </div>
 	      <div><img src="/t/$hash" style="min-width:75;max-width:100;height:75"></div>
 	    </div>
-	 <div style="clear:both"></div>
+       </div>
+     <div style="clear:both"></div>
   </div>
 
 </body>
