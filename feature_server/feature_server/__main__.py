@@ -12,14 +12,32 @@ import json
 import time
 import itertools
 
+import train_test_runs
+
 if not 'app' in globals():
     urls = ('/features/(.*)/(.*)', 'Features',
             '/features', 'Features',
             '/i/(.*)', 'Images',
             '/t/(.*)', 'ThumbImages',
             '/', 'Main',
+            '/test_runs/', 'Classifier',
+            '/test_runs/(.+)', 'Classifier',
             )
     app = web.application(urls, globals())
+
+
+class Classifier():
+    def GET(self, run=None):
+        if run is None:
+            # TODO display the list of runs with a new template
+            runs = train_test_runs.available_runs()
+            return ["<a href='/classifier/runs/%s'>%s</a>" % \
+                    run for run in runs]
+
+        run_list = train_test_runs.get_run(run)
+        """run_list is a list of [(label, [confidence, GT, hash]), ...]
+        where GT is ground truth annotation, -1 or 1.
+        """
 
 
 class Main(object):
@@ -131,7 +149,10 @@ def put_images(imagedir, replace=False):
             continue
 
         # Store the image file indexed by hash
-        cass.put_image(md5hash, data)
+        cass.put_image(md5hash, data,
+                       metadata={
+                           'filename': filename,
+                           })
         success_count += 1
         print 'Put %s (%s)' % (filename, md5hash)
     total = len(list(cass.get_image_hashes()))

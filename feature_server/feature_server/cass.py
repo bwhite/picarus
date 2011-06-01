@@ -86,6 +86,11 @@ def buffered_get_row(cf, row_key, buffer_size=500):
     return itertools.chain.from_iterable(gen())
 
 
+def get_image_metadata(im_hash):
+    d = cf_images.get('image_metadata', columns=[im_hash])[im_hash]
+    return json.loads(d)
+
+
 def get_image_hashes():
     # TODO: range scan for the meta data?
     return (_[0] for _ in buffered_get_row(cf_images, 'image_metadata'))
@@ -98,7 +103,8 @@ def get_imagedata(im_hash):
 
 def put_image(im_hash, data, metadata={}):
     cf_images.insert('image_data', {im_hash: data})
-    cf_images.insert('image_metadata', {im_hash: json.dumps(metadata)})
+    cf_images.insert('image_metadata',
+                     {im_hash: json.dumps(metadata)})
 
 
 def put_feature_value(feature_str, im_hash, value):
@@ -113,18 +119,14 @@ def put_feature_value(feature_str, im_hash, value):
     return _
 
 
-def feature_row_id(feature):
-    return 'feature_%s' % str(type(feature))
-
-
 def get_available_features():
     return [_[0] for _ in cf_features.get_range(column_count=1)]
 
 
-def get_feature_values(feature, hashes=[]):
-    return [pickle.loads(_[1])
-            for _ in cf_features.get(feature_row_id(feature),
-                                           hashes).items()]
+def get_feature_values(feature_str, hashes=[]):
+    return [pickle.loads(_[1])[0]
+            for _ in cf_features.get(feature_str,
+                                     hashes).items()]
 
 
 def get_feature_hashes(feature_str, hashes=[]):
