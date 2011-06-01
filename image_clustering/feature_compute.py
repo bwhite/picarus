@@ -10,7 +10,9 @@ def mapper(name, image_data):
     except:
         hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
         return
-    feat = imfeat.Histogram('rgb', style='joint')
+    image = image.resize((256, 256))
+    #feat = imfeat.Histogram('rgb', style='joint')
+    feat = imfeat.GIST()
     try:
         yield name, imfeat.compute(feat, image)[0]
     except ValueError:
