@@ -17,8 +17,7 @@ def connect():
     """
     global pool, manager, cf_images, cf_features
     pool = pycassa.ConnectionPool(config['keyspace'],
-                                  ['vitrieve03.pc.umiacs.umd.edu:9160',
-                                   'vitrieve02.pc.umiacs.umd.edu:9160',
+                                  ['vitrieve02.pc.umiacs.umd.edu:9160',
                                    'vitrieve01.pc.umiacs.umd.edu:9160'],
                                   credentials=config['credentials'],
                                   pool_size=9)

@@ -5,6 +5,7 @@ import Image
 import json
 import itertools
 import re
+import cPickle as pickle
 
 from feature_server import cass
 
@@ -19,6 +20,7 @@ feature_str = [
 """
 
 cf_labels = cass.pycassa.ColumnFamily(cass.pool, 'amiller_sun09label')
+cf_runs = cass.pycassa.ColumnFamily(cass.pool, 'amiller_testruns')
 
 
 def build_label_index(buffer_size=1000):
@@ -181,13 +183,14 @@ def run_train_test(feature_str, label, split_opts={}):
 
     # Test
     hashes = [k for L, k in test]
-    print('Testing with %d values' % (len(hashes),))
-    values = cass.get_feature_values(feature_str, hashes)
-
+    values = list(cass.get_feature_values(feature_str, hashes))
+    print('Testing with %d(%d) values' % (len(hashes),len(values)))
     conf_label = (classifier.predict(value) for value in values)
+
     conf_gt_hash = [(pred*conf, L, k)
-                    for (pred, conf), (L, k)
-                    in itertools.zip(conf_label, test)]
+                    for ((pred, conf),), (L, k)
+                    in zip(conf_label, test)]
+    conf_gt_hash = sorted(conf_gt_hash, key=lambda _: _[0])    
 
     return (label, conf_gt_hash)
 
@@ -196,10 +199,20 @@ def run_all_train_test(feature_str, labels=None):
     if labels is None:
         labels = [_[0] for _ in cf_labels.get_range(column_count=1)]
 
-    results = dict((run_train_test(feature_str, label)
-                    for label in labels))
+    results = [run_train_test(feature_str, label)
+                    for label in labels]
 
-    return results
+    cf_runs.insert('test', {'run_items': pickle.dumps(results, -1)})
+
+
+def get_run(run_key):
+    run = cf_runs.get(run_key, ['run_items'])['run_items']
+    return pickle.loads(run)
+
+
+def get_available_runs():
+    return [_[0] for _ in cf_runs.get_range(column_count=1)]
+
 
 if __name__ == "__main__":
     pass

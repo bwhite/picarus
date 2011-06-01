@@ -30,14 +30,34 @@ class Classifier():
     def GET(self, run=None):
         if run is None:
             # TODO display the list of runs with a new template
-            runs = train_test_runs.available_runs()
+            runs = train_test_runs.get_available_runs()
             return ["<a href='/classifier/runs/%s'>%s</a>" % \
-                    run for run in runs]
+                    (run, run) for run in runs]
 
-        run_list = train_test_runs.get_run(run)
-        """run_list is a list of [(label, [confidence, GT, hash]), ...]
+        def stratify(items, strata=10):
+            ranks = []
+            for i in range(len(items)):
+                GT = items[i][1]
+                if GT == 1: ranks.append(i)
+
+            cutoffs = range(0, len(ranks), max(len(ranks)/strata, 1))
+            for start, stop in zip(cutoffs, cutoffs[1:]+[len(items)]):
+                yield items[start:stop]
+
+        def sample(items, n=5):
+            skip = max(len(items)/n, 1)
+            return items[::skip]
+
+        run_items = train_test_runs.get_run(run)
+        """run_items is a dict of {label: [(confidence, GT, hash), ...])
         where GT is ground truth annotation, -1 or 1.
         """
+        strata = [(label, [sample(s) for s in stratify(items)])
+                  for label, items in run_items]
+
+        render = web.template.frender(os.path.join(os.path.dirname(__file__),
+                                                   'template_classifier.html'))
+        return render(strata)
 
 
 class Main(object):
@@ -96,8 +116,10 @@ class ThumbImages(object):
             raise web.internalerror('Couldn\'t open image %s' % md5hash)
 
         web.header("Content-Type", cType['JPEG'])  # Set the Header
+        print im
+        im.thumbnail((100,50))
+
         fp = StringIO.StringIO()
-        im.thumbnail(100,50)
         im.save(fp, 'JPEG')
         fp.seek(0)
         return fp.read()
@@ -206,6 +228,9 @@ def put_features(feature_str, hashes=None, replace=False):
         # FIXME this seems to be necessary for many features
         # e.g. imfeat.Moments and imfeat.GIST()
         im = im.convert("RGB")
+
+        # Only for catching segfaults
+        print('hash: ', md5hash)
 
         # Compute the feature
         value = imfeat.compute(feature, im)
