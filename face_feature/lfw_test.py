@@ -86,6 +86,7 @@ def get_lfw_cropped_data(split='dv_train'):
 
 
 def get_lfw_restricted_accuracy(split):
+    max_train_ims = 3000
     train_data = get_lfw_cropped_data('%s_train' % split)
     test_data = get_lfw_cropped_data('%s_test' % split)
 
@@ -98,10 +99,10 @@ def get_lfw_restricted_accuracy(split):
     # load the unique training images, and learn PCA
     print('Training Eigenfaces feature space (%i training images)...' % (
           len(train_fns)))
-    if len(train_fns) <= 3000:
+    if len(train_fns) <= max_train_ims:
         train_ims = map(cv.LoadImage, train_fns)
     else:
-        train_ims = map(cv.LoadImage, random.sample(train_fns, 3000))
+        train_ims = map(cv.LoadImage, random.sample(train_fns, max_train_ims))
     feat = face_feature.Eigenfaces(train_ims)
 
     # go through each training image pair and calculate distances

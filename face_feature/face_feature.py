@@ -42,8 +42,8 @@ class Eigenfaces(object):
         # assemble image matrix, subtract mean
         X = np.array([np.asarray(cv.GetMat(i)).ravel() for i in images])
         self.mean = np.mean(X, 0)
-        for x in X:
-            x = x - self.mean
+        X = X - self.mean
+
         # assume that the number of images is smaller than the # of pixels
         M = np.dot(X, X.T)
         es, vs = np.linalg.eigh(M)
@@ -51,7 +51,7 @@ class Eigenfaces(object):
         for i in range(vs.shape[1]):
             vs[:, i] /= np.linalg.norm(vs[:, i])  # normalize each eigenvector
 
-        # order eigenvalues by
+        # order eigenvalues by magnitude and keep only desired vectors
         ordering = sorted([(e, i) for (i, e) in enumerate(es)], reverse=True)
         indexes = np.array(ordering).take(vectors, 0)[:, 1]
         self.vectors = vs.take(indexes.tolist(), 1)
@@ -70,6 +70,7 @@ def main():
     feat = Eigenfaces(images, vectors)
     out = imfeat.compute(feat, images[0])
     print(out)
+
 
 if __name__ == "__main__":
     main()
