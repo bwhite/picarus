@@ -11,6 +11,7 @@ import StringIO
 
 if not 'imagedir' in globals():
     imagedir = None
+    videosample = None
 
 
 def random_clusters(imagedir, n_clusters=3):
@@ -83,7 +84,7 @@ class ThumbImages(object):
         if file_name in os.listdir(imagedir):  # Security
             web.header("Content-Type", cType[extension])  # Set the Header
             img = Image.open('%s/%s' % (imagedir, file_name))
-            img.thumbnail((50,50))
+            img.thumbnail((100,100))
             fp = StringIO.StringIO()
             img.save(fp, extension if extension != 'jpg' else 'jpeg')
             fp.seek(0)
@@ -99,8 +100,18 @@ class ShowClusters():
                                     globals=globals())()
 
 
+class ShowVideo():
+    def GET(self):
+        global videosample
+        render = web.template.frender(os.path.dirname(__file__) +
+                                      '/template_video.html',
+                                      globals={'json':json})
+        return render(videosample)
+
+
 if not 'app' in globals():
     urls = ('/', 'ShowClusters',
+            '/video/', 'ShowVideo',
             '/(css|js|images)/(.*)\.(js|css|png|jpg|gif|ico)', 'Static',
             '/i/(.*)\.(png|jpg|gif|ico)', 'Images',
             '/t/(.*)\.(png|jpg|gif|ico)', 'ThumbImages',
@@ -152,9 +163,13 @@ def main():
     parser.add_argument('--randomclusters', type=str, metavar='<output.js>',
                         help='Output random cluster json to this file')
 
+    # Video splitting
+    parser.add_argument('--videojs', type=str, metavar='<input.js>',
+                        help='JSON for displaying ranges of video')
+
     args = parser.parse_args()
 
-    global clusters, imagedir
+    global clusters, imagedir, videosample
     imagedir = args.imagedir
 
     if not args.randomclusters is None:
@@ -173,6 +188,11 @@ def main():
     else:
         # Create random clusters using images in the attached directory
         clusters = random_clusters(imagedir)
+
+    if not args.videojs is None:
+        # Read the video json file
+        with open(args.videojs, 'r') as f:
+            videosample = json.load(f)
 
     sys.argv = ['', args.port]
     app.run()
