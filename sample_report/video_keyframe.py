@@ -6,7 +6,7 @@ import hashlib
 import json
 
 
-def keyframe_tree(video, range=None, split=10.0, min_interval=1.0):
+def keyframe_tree(video, range=None, split=10.0, min_interval=0.2):
     """
     Args:
        video: a pyffmpeg stream
@@ -29,7 +29,7 @@ def keyframe_tree(video, range=None, split=10.0, min_interval=1.0):
     frame_num = int((start+stop) / 2.0 * stream.tv.get_fps())
     timestamp = frame_num / stream.tv.get_fps()
     frame = video.GetFrameNo(frame_num)
-
+ 
     # Find the hash of the representative image
     s = StringIO.StringIO()
     frame.save(s, 'JPEG')
@@ -38,6 +38,7 @@ def keyframe_tree(video, range=None, split=10.0, min_interval=1.0):
 
     # Store the image itself
     if not ARGS.imagedir is None:
+        frame.thumbnail((100,100))
         with open('%s/%s.jpg' % (ARGS.imagedir, imagehash), 'wb') as f:
             f.write(s.buf)
 
