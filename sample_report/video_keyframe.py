@@ -4,9 +4,54 @@ import numpy as np
 import StringIO
 import hashlib
 import json
+import Image
 
 
-def keyframe_tree(video, range=None, split=10.0, min_interval=1.0):
+def update_by_advancing(tree, video, videohash):
+    frame_nums = []
+
+    def get_hashes(tree):
+        frame_nums.append(tree['frame_num'])
+        for subtree in tree['children']:
+            get_hashes(subtree)
+
+    get_hashes(tree)
+
+    frame_nums = sorted(frame_nums)
+    hashes = {}
+
+    for frame_num in frame_nums:
+        frame = video.GetFrameNo(frame_num)
+
+        # Find the hash of the representative image
+        s = StringIO.StringIO()
+        frame.save(s, 'JPEG')
+        s.seek(0)
+        imagehash = hashlib.md5(s.buf).hexdigest()
+        hashes[frame_num] = imagehash
+
+        # Store the image itself
+        if not ARGS.imagedir is None:
+            frame = Image.open(s)
+            frame.thumbnail((100,100))
+            with open('%s/%s.jpg' % (ARGS.imagedir, imagehash), 'wb') as f:
+                frame.save(f, 'JPEG')
+                print imagehash
+
+    def update_tree(tree):
+        tree['image'] = {
+            'hash': hashes[tree['frame_num']],
+            'video': {'videohash': videohash, 'frame_num': tree['frame_num']},
+            'faces': [],
+            'categories': [],
+        }
+        for subtree in tree['children']:
+            update_tree(subtree)
+
+    update_tree(tree)
+
+
+def keyframe_tree(video, range=None, split=10.0, min_interval=0.2):
     """
     Args:
        video: a pyffmpeg stream
@@ -28,19 +73,8 @@ def keyframe_tree(video, range=None, split=10.0, min_interval=1.0):
     # Pick a representative frame from the center of the range
     frame_num = int((start+stop) / 2.0 * stream.tv.get_fps())
     timestamp = frame_num / stream.tv.get_fps()
-    frame = video.GetFrameNo(frame_num)
 
-    # Find the hash of the representative image
-    s = StringIO.StringIO()
-    frame.save(s, 'JPEG')
-    s.seek(0)
-    imagehash = hashlib.md5(s.buf).hexdigest()
-
-    # Store the image itself
-    if not ARGS.imagedir is None:
-        with open('%s/%s.jpg' % (ARGS.imagedir, imagehash), 'wb') as f:
-            f.write(s.buf)
-
+    # Sub divid the interval
     interval = max((stop-start)/split, min_interval)
     subints = list(np.arange(start, stop, interval)) + [stop]
     subints = zip(subints[:-1], subints[1:])
@@ -55,7 +89,7 @@ def keyframe_tree(video, range=None, split=10.0, min_interval=1.0):
         'range': (start, stop),
         'frame_num': frame_num,
         'timestamp': timestamp,
-        'imagehash': imagehash,
+        #'imagehash': imagehash,
         'children': children,
         }
 
@@ -84,6 +118,7 @@ if __name__ == '__main__':
     stream.open(ARGS.videofile)
 
     keyframes = [keyframe_tree(stream)]
+    update_by_advancing(keyframes[0], stream, videohash)
 
     video = {
         'hash': videohash,
