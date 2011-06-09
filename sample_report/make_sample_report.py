@@ -16,15 +16,37 @@ def videos(vid_jsdir, vid_tdir):
     return videos
 
 
-def random_clusters(imagedir):
+def make_image(imagehash, category, make_faces):
+    if not make_faces:
+        faces = []
+    else:
+        num_faces = random.randint(1,2)
+
+        def make_face():
+            w,h = random.random()/3+.1, random.random()/3+.1
+            x,y = random.random()/3+.5, random.random()/3+.5
+            return ((x-w/2,y-h/2), (x+w/2,y+h/2))
+        faces = [make_face() for _ in range(num_faces)]
+
+    return {
+        'hash': imagehash,
+        'categories': [category],
+        'video': [],
+        'faces': faces,
+        }
+
+
+def random_clusters(imagedir, category, make_faces=False):
     """Creates a test mockup of random clusters from a folder of images
     Returns:
        clusters: a list of clusters that can be JSONified and passed to the
        html renderer
     """
     image_extensions = set(['jpg', 'png', 'jpeg', 'gif', 'ico'])
-    local_images = [os.path.splitext(x)[0] for x in sorted(os.listdir(imagedir))
+    local_images = [os.path.splitext(x)[0]
+                    for x in sorted(os.listdir(imagedir))
                     if os.path.splitext(x)[1][1:] in image_extensions]
+    local_images = [make_image(h, category, make_faces) for h in local_images]
 
     clusters = []
 
@@ -48,11 +70,12 @@ def random_clusters(imagedir):
 def make_sample_object(imagedir, videosjs, vid_tdir):
     obj = {
         'videos': videos(videosjs, vid_tdir),
-        'graphics': random_clusters(imagedir),
-        'inappropriate': random_clusters(imagedir),
-        'indoor': random_clusters(imagedir),
-        'outdoor': random_clusters(imagedir),
-        'objects': random_clusters(imagedir),
+        'graphics': random_clusters(imagedir, 'graphics'),
+        'inappropriate': random_clusters(imagedir, 'inappropriate'),
+        'indoor': random_clusters(imagedir, 'indoor'),
+        'outdoor': random_clusters(imagedir, 'outdoor'),
+        'objects': random_clusters(imagedir, 'objects'),
+        'faces': random_clusters(imagedir, 'faces', make_faces=True),
         }
     return obj
 
@@ -85,5 +108,10 @@ if __name__ == "__main__":
     obj = make_sample_object(ARGS.thumbdir,
                              ARGS.videosjs,
                              ARGS.vid_tdir)
+
     with open(ARGS.outputjs, 'w') as f:
+        # Prepend a variable assignment so we can load this easier
+        f.write('var report = ');
+
+        # Write the actual json
         json.dump(obj, f, indent=2)

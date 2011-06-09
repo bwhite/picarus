@@ -1,0 +1,59 @@
+$def with (video)
+<html>
+<head>
+  <title>Video Keyframes</title>
+  <script type="text/javascript" src="http://gettopup.com/releases/latest/top_up-min.js"></script>
+  <style type="text/css">
+    img.keyframe {
+      max-width: 100px;
+    }
+  </style>
+</head>
+<body>
+
+<h3>Video $video['hash']</h3>
+$(video['frames']) total frames, duration $('%.2f'%video['duration'])s ($video['fps'] fps)
+<div id="keyframes">
+
+</div>
+
+
+
+<script type="text/javascript">
+    function round(x) {
+	return Math.round(x * 100)/100;
+    }
+
+    function pop_rows(rowheight) {
+	$$('div.keyframe_row:gt('+rowheight+')').remove();
+    }
+
+    function push_row(keyframes, rowheight) {
+	$$('div#keyframes').append('<div class="keyframe_row" \
+                  style="margin:5px;background:#FFFFFF"></div>')
+	$$.each(keyframes, function (k, keyframe) {
+	    $$('div.keyframe_row:last').append( \
+		'<div style="float:left;margin:2px"> \
+    <div><a class="keyframe_expand" href="#">'+round(keyframe.range[0]) +'[+]</a></div>\
+    <div><a href="/i/'+keyframe.imagehash+'.jpg" class="top_up"><img class="keyframe" src="/t/' +  \
+		       keyframe.imagehash + '.jpg"/></a></div> \
+                 </div>'
+               )
+	    var children = keyframe.children
+	    if (children.length > 0) {
+		$$('a.keyframe_expand:last').click(function () {
+		    pop_rows(rowheight);
+		    push_row(keyframe.children, rowheight+1);
+		})
+	    }
+	})
+	    $$('div.keyframe_row:last').append('<div style="clear:both"></div>')
+    }
+    var video = JSON.parse('$:(json.dumps(video))');
+    var keyframes = video.keyframes
+    push_row(keyframes, 0)
+</script>
+
+
+</body>
+</html>
