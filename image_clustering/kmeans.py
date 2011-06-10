@@ -28,9 +28,9 @@ import os
 
 
 class Mapper(object):
-    def __init__(self):
+    def __init__(self, clusters=None):
         self._norm = distpy.L2Sqr()
-        self._clusters = self._load_clusters()
+        self._clusters = self._load_clusters() if clusters is None else clusters
         self._cluster_sums = {}
 
     def _load_clusters(self):

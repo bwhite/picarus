@@ -14,9 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Hadoopy Face Finding Demo"""
-
-__author__ =  'Brandyn A. White <bwhite@cs.umd.edu>'
+__author__ = 'Brandyn A. White <bwhite@cs.umd.edu>'
 __license__ = 'GPL V3'
 
 import hadoopy
@@ -64,8 +62,9 @@ class Mapper(object):
                 for (x, y, w, h), n in faces]
 
     def _load_cv_image(self, value):
-        return imfeat.convert_image(Image.open(StringIO.StringIO(value)),
-                                    [('opencv', 'rgb', 8)])
+        image = Image.open(StringIO.StringIO(value))
+        image = image.convert('RGB')
+        return image, imfeat.convert_image(image, [('opencv', 'rgb', 8)])
 
     def map(self, key, value):
         """
@@ -75,19 +74,21 @@ class Mapper(object):
 
         Yields:
             A tuple in the form of (key, value)
-            key: Image name
-            value: (image, faces) where image is the input value and faces is
-                a list of ((x, y, w, h), n)
+            key: Imagename-face-x<xval>-y<yval>-w<widthval>-h<heightval>
+            value: Cropped face binary data
         """
         try:
-            image = self._load_cv_image(value)
+            image_pil, image_cv = self._load_cv_image(value)
         except:
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
             return
-        faces = self._detect_faces(image)
-        if faces:
-            yield key, (value, faces)
-
+        faces = self._detect_faces(image_cv)
+        for (x, y, w, h), n in faces:
+            image_pil_crop = image_pil.crop((x, y, x + w, y + h))
+            out_fp = StringIO.StringIO()
+            image_pil_crop.save(out_fp, 'JPEG')
+            out_fp.seek(0)
+            yield '%s-face-x%d-y%d-w%d-h%d' % (key, x, y, w, h), out_fp.read()
 
 if __name__ == "__main__":
     hadoopy.run(Mapper, doc=__doc__)
