@@ -113,6 +113,6 @@ def train(training_fns, pickle_fn, max_train_ims=3000):
 
 
 if __name__ == '__main__':
-    pickle_fn = 'eigenfaces_lfw_cropped.pickle'
+    pickle_fn = 'eigenfaces_lfw_cropped.pkl    '
     training_fns = get_unique_lfw_training_images()
     train(training_fns, pickle_fn)
