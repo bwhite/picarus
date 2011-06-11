@@ -73,7 +73,8 @@ class Mapper(object):
         # TODO: do this in eigenfaces feature code
         fixed_size_gray = cv.CreateImage(self._size, 8, 1)
         cv.Resize(gray, fixed_size_gray, cv.CV_INTER_LINEAR)
-        return imfeat.compute(self._feat, fixed_size_gray)
+        f = imfeat.compute(self._feat, fixed_size_gray)
+        return np.linalg.norm(self._exemplar - f) # TODO(Vlad) replace w/ distpy
 
     def _load_cv_image(self, value):
         return imfeat.convert_image(Image.open(StringIO.StringIO(value)),
