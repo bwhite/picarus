@@ -39,7 +39,7 @@ def get_face_feature():
     pkl_fn = 'eigenfaces_lfw_cropped.pkl'
     with open(pkl_fn, 'r') as fp:
         feat = cPickle.load(fp)
-    return imfeat.compute(feat, im)
+    return imfeat.compute(feat, im)[0]
 
 
 def get_face_feature_hardcoded():
@@ -70,11 +70,12 @@ class Mapper(object):
 
     def _compute_face_distance(self, gray):
         # resize to the fixed size the feature was trained on
-        # TODO: do this in eigenfaces feature code
+        # TODO(Vlad): do this in eigenfaces feature code
         fixed_size_gray = cv.CreateImage(self._size, 8, 1)
         cv.Resize(gray, fixed_size_gray, cv.CV_INTER_LINEAR)
-        f = imfeat.compute(self._feat, fixed_size_gray)
-        return np.linalg.norm(self._exemplar - f) # TODO(Vlad) replace w/ distpy
+        f = imfeat.compute(self._feat, fixed_size_gray)[0]
+        # TODO(Vlad) replace w/ distpy
+        return np.linalg.norm(self._exemplar - f)
 
     def _load_cv_image(self, value):
         return imfeat.convert_image(Image.open(StringIO.StringIO(value)),
