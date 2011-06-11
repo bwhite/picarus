@@ -7,12 +7,17 @@ import cPickle as pickle
 import numpy as np
 
 
-def run_image_feature(input, output, feature='hist_joint', **kw):
-    hadoopy.launch_frozen(input, output, 'feature_compute.py', reducer=False)
+def run_image_feature(input, output, feature, image_length, **kw):
+    hadoopy.launch_frozen(input, output, 'feature_compute.py', reducer=False,
+                          cmdenvs=['IMAGE_LENGTH=%d' % image_length,
+                                   'FEATURE=%s' % feature],
+                          files=['eigenfaces_lfw_cropped.pkl'])
 
 
-def run_face_feature(**kw):
-    pass
+def run_face_finder(input, output, image_length, **kw):
+    hadoopy.launch_frozen(input, output, 'face_finder.py', reducer=False,
+                          cmdenvs=['IMAGE_LENGTH=%d' % image_length],
+                          files=['haarcascade_frontalface_default.xml'])
 
 
 def run_whiten(**kw):
@@ -25,15 +30,17 @@ def run_sample(input, output, num_clusters, **kw):
 
 
 def run_kmeans(input, prev_clusters, image_data, output, num_clusters,
-               num_iters, num_samples, metric='l2sqr', json_output=None, **kw):
+               num_iters, num_samples, metric, json_output=None, **kw):
+    frozen_tar_path = None
     for cur_iter_num in range(num_iters):
         clusters_fp = fetch_clusters_from_hdfs(prev_clusters)
         clusters_fn = os.path.basename(clusters_fp.name)
         cur_output = '%s/clust%.6d' % (output, cur_iter_num)
-        hadoopy.launch_frozen(input, cur_output, 'kmeans.py',
-                              cmdenvs=['CLUSTERS_FN=%s' % clusters_fn],
-                              files=[clusters_fp.name],
-                              num_reducers=max(1, num_clusters / 2))
+        _, frozen_tar_path = hadoopy.launch_frozen(input, cur_output, 'kmeans.py',
+                                                   cmdenvs=['CLUSTERS_FN=%s' % clusters_fn],
+                                                   files=[clusters_fp.name],
+                                                   num_reducers=max(1, num_clusters / 2),
+                                                   frozen_tar_path=frozen_tar_path)
         prev_clusters = cur_output
     print('Clusters[%s]' % prev_clusters)
     # Compute K-Means assignment/samples
@@ -80,7 +87,7 @@ def fetch_clusters_from_hdfs(input):
         NamedTemporaryFile holding the cluster data
     """
     clusters_fp = tempfile.NamedTemporaryFile()
-    clusters = [v.tolist() for k, v in hadoopy.cat(input)]
+    clusters = [v.tolist() for k, v in hadoopy.readtb(input)]
     clusters.sort()
     clusters = np.ascontiguousarray(clusters, dtype=np.float64)
     pickle.dump(clusters, clusters_fp, -1)
@@ -98,7 +105,7 @@ def fetch_assignments_from_hdfs(input):
         NamedTemporaryFile holding the assignment data
     """
     assignments_fp = tempfile.NamedTemporaryFile()
-    assignments = list(hadoopy.cat(input))
+    assignments = list(hadoopy.readtb(input))
     pickle.dump(assignments, assignments_fp, -1)
     assignments_fp.seek(0)
     return assignments_fp
@@ -111,23 +118,25 @@ def main():
     ca = {'input': {'help': 'HDFS Input'},
           'output': {'help': 'HDFS Output'},
           'image_data': {'help': 'HDFS image data key=unique_id value=binary_image_data'},
-          'feature': {'help': 'Image feature to use from features.py (default hsv_hist_joint)'},
+          'feature': {'help': 'Image feature to use from features.py (default: hist_joint)', 'default': 'hist_joint'},
           'num_clusters': {'type': int, 'help': 'Desired number of clusters'},
-          'metric': {'help': 'Distance metric to use from metrics.py (default l2sqr)'}}
+          'image_length': {'type': int, 'help': 'Side length of image before feature computation (default: 256)', 'default': 256},
+          'metric': {'help': 'Distance metric to use from metrics.py (default l2sqr)', 'default': 'l2sqr'}}
 
     # Image Feature
     sp = sps.add_parser('image_feature', help='Compute features on entire image')
     sp.add_argument('input', **ca['input'])
     sp.add_argument('output', **ca['output'])
     sp.add_argument('--feature', **ca['feature'])
+    sp.add_argument('--image_length', **ca['image_length'])
     sp.set_defaults(func=run_image_feature)
 
-    # Face Feature
-    sp = sps.add_parser('face_feature', help='Extract faces and compute features on them')
+    # Face Finder
+    sp = sps.add_parser('face_finder', help='Extract faces')
     sp.add_argument('input', **ca['input'])
     sp.add_argument('output', **ca['output'])
-    sp.add_argument('--feature', **ca['feature'])
-    sp.set_defaults(func=run_face_feature)
+    sp.add_argument('--image_length', **ca['image_length'])
+    sp.set_defaults(func=run_face_finder)
 
     # Whiten Features
     sp = sps.add_parser('whiten', help='Scale features to zero mean unit variance')

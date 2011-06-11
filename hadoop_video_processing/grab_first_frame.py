@@ -1,15 +1,23 @@
+#!/usr/bin/env python
 import hadoopy
 import tempfile
 import cStringIO as StringIO
 import Image
+import pyffmpeg
 
+
+def grab_frame(fn):
+    stream = pyffmpeg.VideoStream()
+    stream.open(fn)
+    return stream.GetFrameNo(10)
+            
 
 class Mapper(object):
 
     def __init__(self):
         pass
 
-    def map(hash, video_data):
+    def map(self, hash, video_data):
         """
 
         Args:
@@ -24,9 +32,9 @@ class Mapper(object):
         with tempfile.NamedTemporaryFile() as fp:
             fp.write(video_data)
             fp.flush()
-            #
+            image = grab_frame(fp.name)
         out = StringIO.StringIO()
-        Image.save(out, 'jpg')
+        image.save(out, 'jpeg')
         out.seek(0)
         yield hash, out.read()
 
