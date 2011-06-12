@@ -4,12 +4,15 @@ import tempfile
 import cStringIO as StringIO
 import Image
 import pyffmpeg
+import PIL
 
 
 def grab_frame(fn):
     stream = pyffmpeg.VideoStream()
+    print('FN[%s]' % fn)
     stream.open(fn)
-    return stream.GetFrameNo(10)
+    out = stream.GetFrameNo(10)
+    return out
             
 
 class Mapper(object):
@@ -29,7 +32,8 @@ class Mapper(object):
             hash: 
             image_data: Raw binary data
         """
-        with tempfile.NamedTemporaryFile() as fp:
+        print(hash)
+        with tempfile.NamedTemporaryFile(suffix='.avi') as fp:
             fp.write(video_data)
             fp.flush()
             image = grab_frame(fp.name)
