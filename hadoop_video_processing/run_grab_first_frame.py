@@ -8,6 +8,6 @@ def run(hdfs_input, hdfs_output):
 
 def main():
     # videos
-    run('videos_small', 'output/video_frame_grab/%f/' % time.time())
+    run('/user/brandyn/videos_small', 'output/video_frame_grab/%f/' % time.time())
 
 main()
