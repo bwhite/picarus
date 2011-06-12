@@ -40,7 +40,7 @@ def write_tb(path, fold=None):
     if fold == None:
         folds_glob = fddb_path + '/FDDB-folds/FDDB-fold-??.txt'
     else:
-        folds_glob = fddb_path + '/FDDB-folds/FDDB-fold-01.txt'
+        folds_glob = fddb_path + '/FDDB-folds/FDDB-fold-%02i.txt' % fold
 
     if hadoopy.exists(path):
         # do nothing if the file already exists
