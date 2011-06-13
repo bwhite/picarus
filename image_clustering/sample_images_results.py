@@ -8,7 +8,7 @@ image_path = '%s/images/' % (out_path)
 os.makedirs(image_path)
 groups = {}
 #/user/brandyn/tp/image_cluster/run-15//samples
-for group, (image_name, image_data) in hadoopy.readtb('/user/brandyn/tp/face_cluster/run-13//samples'):
+for group, (image_name, image_data) in hadoopy.readtb('/user/brandyn/tp/face_cluster/run-14//samples'):
     image_name = image_name + '.jpg'
     with open(image_path + image_name, 'w') as fp:
         fp.write(image_data) 
