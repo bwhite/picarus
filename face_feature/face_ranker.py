@@ -26,7 +26,8 @@ import cStringIO as StringIO
 import cv
 import numpy as np
 import cPickle
-
+# not used directly here, but it needs to be packaged along
+import face_feature
 
 def get_face_feature():
     """
