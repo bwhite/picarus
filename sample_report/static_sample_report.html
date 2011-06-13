@@ -22,7 +22,8 @@
 
   <script type="text/javascript">
     $(function () {
-	showclusters('outdoor')
+	//showclusters('outdoor')
+	showvideos()
     })
 
     function showclusters(type) {
@@ -68,8 +69,10 @@
 	$('div#report').append('<h3>Videos</h3>')
 	$.each(report.videos, function (k, video) {
 	    var divkeyframe = $('#templ_keyframe > div').clone()
-	    divkeyframe.find('img.keyframe').attr('src', 'vid_t/'+video.keyframes[0].image.hash+'.jpg')
-	    divkeyframe.find('.keyframe_expand a').html(round(video.duration)+'s')
+	    var len2 = Math.floor(video.keyframes.length / 2);
+	    console.info(len2)
+	    divkeyframe.find('img.keyframe').attr('src', 'vid_t/'+video.keyframes[len2].image.hash+'.jpg')
+	    divkeyframe.find('.keyframe_expand a').html(round(video.duration)+'s ['+video.keyframes.length+']')
 	    divkeyframe.click(function () {
 		showvideo(video)
 	    })

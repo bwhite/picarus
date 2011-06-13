@@ -26,7 +26,8 @@ import cStringIO as StringIO
 import cv
 import numpy as np
 import cPickle
-
+# not used directly here, but it needs to be packaged along
+import face_feature
 
 def get_face_feature():
     """
@@ -71,7 +72,7 @@ class Mapper(object):
     def _compute_face_distance(self, gray):
         # resize to the fixed size the feature was trained on
         # TODO(Vlad): do this in eigenfaces feature code
-        fixed_size_gray = cv.CreateImage(self._size, 8, 1)
+        fixed_size_gray = cv.CreateImage(self._size, 8, 3)
         cv.Resize(gray, fixed_size_gray, cv.CV_INTER_LINEAR)
         f = imfeat.compute(self._feat, fixed_size_gray)[0]
         # TODO(Vlad) replace w/ distpy
@@ -79,7 +80,7 @@ class Mapper(object):
 
     def _load_cv_image(self, value):
         return imfeat.convert_image(Image.open(StringIO.StringIO(value)),
-                                    [('opencv', 'gray', 8)])
+                                    [('opencv', 'rgb', 8)])
 
     def map(self, key, value):
         """
@@ -99,7 +100,7 @@ class Mapper(object):
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
             return
         dist = self._compute_face_distance(image)
-        yield dist, value
+        yield dist, key
 
 
 def reducer(key, values):
@@ -109,4 +110,4 @@ def reducer(key, values):
 
 
 if __name__ == "__main__":
-    hadoopy.run(Mapper, doc=__doc__)
+    hadoopy.run(Mapper, reducer, reducer, doc=__doc__)
