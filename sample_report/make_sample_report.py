@@ -2,6 +2,7 @@ import json
 import random
 import os
 import argparse
+import re
 
 
 def videos(vid_jsdir, vid_tdir):
@@ -67,7 +68,51 @@ def random_clusters(imagedir, category, make_faces=False):
     return clusters
 
 
-def make_sample_object(imagedir, videosjs, vid_tdir):
+def make_faces(facejs):
+    """
+    Args:
+        facejs: path to a clusters.js file (output from image_clustering)
+
+    Returns:
+        a list of cluster dicts according to our JSON schema
+    """
+    with open(facejs) as f:
+        clusters = json.load(f)
+
+    def make_image(iname):
+        """Returns a dict for an Image according to our JSON schema
+        """
+        name, ext = os.path.splitext(iname)
+        m = re.match('(\w+)-face-x(\d+)-y(\d+)-w(\d+)-h(\d+)', name)
+        hash, x, y, w, h = m.groups()
+        return {
+            'hash': hash,
+            'categories': ['faces'],
+            'faces': [{'boundingbox': ((x,y),(w,h))}],
+            'video': [],
+           }
+
+    face_clusters = []
+    for cluster in clusters:
+        face_images = [make_image(_) for _ in cluster['sample_images']]
+        face_cluster = {
+            'sample_images': face_images,
+            'all_images': face_images,
+            'size': len(face_images),
+            'children': [],
+            'std': 0.0,
+            'position': [0.0, 0.0],
+        }
+        face_clusters.append(face_cluster)
+    return face_clusters
+
+
+def make_sample_object(imagedir, videosjs, vid_tdir, facejs):
+    if facejs is None:
+        faces = random_clusters(imagedir, 'faces', make_faces=True),
+    else:
+        faces = make_faces(facejs)
+
     obj = {
         'videos': videos(videosjs, vid_tdir),
         'graphics': random_clusters(imagedir, 'graphics'),
@@ -75,7 +120,7 @@ def make_sample_object(imagedir, videosjs, vid_tdir):
         'indoor': random_clusters(imagedir, 'indoor'),
         'outdoor': random_clusters(imagedir, 'outdoor'),
         'objects': random_clusters(imagedir, 'objects'),
-        'faces': random_clusters(imagedir, 'faces', make_faces=True),
+        'faces': faces,
         }
     return obj
 
@@ -83,6 +128,11 @@ def make_sample_object(imagedir, videosjs, vid_tdir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Serve images and features \
     from Cassandra")
+
+    # Face JS
+    parser.add_argument('--facejs',
+                        help='input cluster.js file for faces',
+                        default=None)
 
     # Thumbnail images
     parser.add_argument('--thumbdir',
@@ -107,11 +157,13 @@ if __name__ == "__main__":
 
     obj = make_sample_object(ARGS.thumbdir,
                              ARGS.videosjs,
-                             ARGS.vid_tdir)
+                             ARGS.vid_tdir,
+                             ARGS.facejs)
 
     with open(ARGS.outputjs, 'w') as f:
         # Prepend a variable assignment so we can load this easier
         f.write('var report = ');
 
         # Write the actual json
-        json.dump(obj, f, indent=2)
+        #json.dump(obj, f, indent=2)
+        json.dump(obj, f)
