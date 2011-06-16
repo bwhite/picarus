@@ -26,18 +26,18 @@ def debug_map_reduce(mapper, reducer, kv_map_in):
     # pass input (k, v) pairs through mapper
     kv_map_out = []
     for k, v in kv_map_in:
-        kv_map.extend(mapper_fn(k, v))
+        kv_map_out.extend(mapper(k, v))
 
     # group values by key and sort before passing to reducer
-        kv_red_in = {}
-        for k, v in kv_map.items():
-            kv_red_in.setdefault(k, []).append(v)
-        kv_red_in = sorted(kv_red_in)
+    kv_red_in = {}
+    for k, v in kv_map_in:
+        kv_red_in.setdefault(k, []).append(v)
+    kv_red_in = sorted(kv_red_in)
 
     # pass (k, vs) pairs through reducer
     kv_red_out = []
     for k, v in kv_map_in:
-        kv_red.extend(reducer_fn(k, [v]))
+        kv_red_out.extend(reducer(k, [v]))
 
     # debug
     from IPython.Shell import IPShellEmbed
@@ -50,6 +50,7 @@ def debug_face_ranker():
     mapper = face_ranker.Mapper()
     mapper_fn = mapper.map
     reducer_fn = face_ranker.reducer
+    debug_map_reduce(mapper_fn, reducer_fn, kv_map_in)
 
 
 def main():
