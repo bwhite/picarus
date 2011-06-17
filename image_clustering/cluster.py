@@ -187,16 +187,16 @@ def main():
 
     # Train Classifier (take in features from the previous labeling step)
     sp = sps.add_parser('train_classifier', help='Train classifier on feature vectors')
-    sp.add_argument('hdfs_input', **ca['input'])  # TODO Allow multiple
     sp.add_argument('hdfs_output', **ca['output'])
     sp.add_argument('local_labels', help='Path to labels file, this can be an existing file and any existing classifier_name entry is replaced.')
+    sp.add_argument('hdfs_input', nargs='+', **ca['input'])
     sp.set_defaults(func=run_train_classifier)
 
     # Predict Classifier
     sp = sps.add_parser('predict_classifier', help='Predict classifier on feature vectors')
-    sp.add_argument('hdfs_input', **ca['input'])  # TODO Allow multiple
-    sp.add_argument('hdfs_classifier_input', **ca['input'])  # TODO Allow multiple
+    sp.add_argument('hdfs_classifier_input', **ca['input'])
     sp.add_argument('hdfs_output', **ca['output'])
+    sp.add_argument('hdfs_input', nargs='+', **ca['input'])
     sp.set_defaults(func=run_predict_classifier)
 
     # Face Finder
