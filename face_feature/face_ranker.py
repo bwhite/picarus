@@ -29,6 +29,7 @@ import cPickle
 # not used directly here, but it needs to be packaged along
 import face_feature
 
+
 def get_face_feature():
     """
     Get the feature of an image from the lfw dataset.  This will be
@@ -60,10 +61,14 @@ def get_face_feature_hardcoded():
          -0.21734388, -0.04742456], dtype='float64')
 
 
+def get_face_feature_pickle():
+    return cPickle.load(open('eigenfaces_exemplar.pkl', 'r'))
+
+
 class Mapper(object):
 
     def __init__(self):
-        self._exemplar = get_face_feature_hardcoded()
+        self._exemplar = get_face_feature_pickle()
         pkl_fn = 'eigenfaces_lfw_cropped.pkl'
         with open(pkl_fn, 'r') as fp:
             self._feat = cPickle.load(fp)
@@ -100,7 +105,7 @@ class Mapper(object):
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
             return
         dist = self._compute_face_distance(image)
-        yield dist, key
+        yield dist, (key, value)
 
 
 def reducer(key, values):
@@ -110,4 +115,4 @@ def reducer(key, values):
 
 
 if __name__ == "__main__":
-    hadoopy.run(Mapper, reducer, reducer, doc=__doc__)
+    hadoopy.run(Mapper, reducer, doc=__doc__)
