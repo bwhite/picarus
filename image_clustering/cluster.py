@@ -153,6 +153,26 @@ def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, **kw)
                               cmdenvs=['CLASSIFIERS_FN=%s' % os.path.basename(fp.name)])
 
 
+def run_join_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, local_image_output, **kw):
+    inputs = [hdfs_predictions_input]
+    if isinstance(hdfs_input, list):
+        inputs += hdfs_input
+    else:
+        inputs.append(hdfs_input)
+    hadoopy.launch_frozen(inputs, hdfs_output, 'join_predictions.py')
+    if local_image_output:
+        for image_hash, (classifier_preds, image_data) in hadoopy.readtb(hdfs_output):
+            for classifier, preds in classifier_preds.items():
+                for conf, label in preds:
+                    path = '%s/%s/label_%d/%8.8f-%s.jpg' % (local_image_output, classifier, label, conf, image_hash)
+                    try:
+                        os.makedirs(os.path.dirname(path))
+                    except OSError:
+                        pass
+                    with open(path, 'w') as fp:
+                        fp.write(image_data)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Hadoopy Image Clustering Utility')
     sps = parser.add_subparsers(help='Available commands (select for additional help)')
@@ -198,6 +218,14 @@ def main():
     sp.add_argument('hdfs_output', **ca['output'])
     sp.add_argument('hdfs_input', nargs='+', **ca['input'])
     sp.set_defaults(func=run_predict_classifier)
+
+    # Join Predictions with Classifier
+    sp = sps.add_parser('join_predictions', help='Joint predictions with images')
+    sp.add_argument('hdfs_predictions_input', **ca['input'])
+    sp.add_argument('hdfs_output', **ca['output'])
+    sp.add_argument('hdfs_input', nargs='+', **ca['input'])
+    sp.add_argument('--local_image_output', help='Path to store local images', default='')
+    sp.set_defaults(func=run_join_predictions)
 
     # Face Finder
     sp = sps.add_parser('face_finder', help='Extract faces')
