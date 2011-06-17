@@ -16,9 +16,12 @@ def run_image_feature(hdfs_input, hdfs_output, feature, image_length, **kw):
                           files=['eigenfaces_lfw_cropped.pkl'])
 
 
-def run_face_finder(hdfs_input, hdfs_output, image_length, **kw):
+def run_face_finder(hdfs_input, hdfs_output, image_length, boxes, **kw):
+    cmdenvs = ['IMAGE_LENGTH=%d' % image_length]
+    if boxes:
+        cmdenvs.append('OUTPUT_BOXES=True')
     hadoopy.launch_frozen(hdfs_input, hdfs_output, 'face_finder.py', reducer=False,
-                          cmdenvs=['IMAGE_LENGTH=%d' % image_length],
+                          cmdenvs=cmdenvs,
                           files=['haarcascade_frontalface_default.xml'])
 
 
@@ -232,6 +235,7 @@ def main():
     sp.add_argument('hdfs_input', **ca['input'])
     sp.add_argument('hdfs_output', **ca['output'])
     sp.add_argument('--image_length', **ca['image_length'])
+    sp.add_argument('--boxes', help='If True make the value (image_data, boxes) where boxes is a list of (x, y, h, w)', type=bool, default=False)
     sp.set_defaults(func=run_face_finder)
 
     # Whiten Features
