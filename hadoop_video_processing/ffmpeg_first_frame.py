@@ -7,8 +7,9 @@ import StringIO
 
 def grab_frame(file_name):
     frame_iter = vidfeat.convert_video_ffmpeg(file_name,
-                                              ('frameiter', ['RGB']))
-    return frame_iter.next()
+                                              ('frameiter', ['RGB']),
+                                              True)
+    return frame_iter.next()[2]
 
 
 def mapper(hash, video_data):
