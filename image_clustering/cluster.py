@@ -185,6 +185,10 @@ def report_categories(hdfs_join_predictions_input, local_output, image_limit, lo
     categories[posname] = report_output.make_random_clusters([h for _, h in hashes[1]], posname)
     categories[negname] = report_output.make_random_clusters([h for _, h in hashes[-1]], negname)
 
+    try:
+        os.makedirs(os.path.dirname(local_output))
+    except OSError:
+        pass
     file_parse.dump(categories, local_output)
 
     # Second pass: make image thumbnails
