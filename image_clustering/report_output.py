@@ -25,11 +25,11 @@ def make_random_clusters(image_hashes, category):
     """Make a bunch of clusters from a category of images
     """
     local_images = [make_image(h, category) for h in image_hashes]
-    n_clusters = random.randrange(8,10)
+    n_clusters = 1  # random.randrange(8,10)
     clusters = []
     for i in range(n_clusters):
-        n_images = min(len(local_images), random.randrange(4,7))
-        n_size = min(len(local_images), random.randrange(40,60))
+        n_images = min(len(local_images), random.randrange(300,301))
+        n_size = min(len(local_images), random.randrange(300,301))
         cluster = {'all_images': random.sample(local_images, n_size),
                    'sample_images': random.sample(local_images, n_images),
                    'std': random.normalvariate(10.0,2.0),

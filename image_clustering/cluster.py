@@ -11,6 +11,7 @@ import report_output
 import heapq
 import StringIO
 import Image
+import re
 
 
 def run_image_feature(hdfs_input, hdfs_output, feature, image_length, **kw):
@@ -229,6 +230,58 @@ def run_join_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, local_
                         fp.write(image_data)
 
 
+def report_face_clusters(hdfs_input, local_json_output, **kw):
+    def make_image(facestr):
+        name, ext = os.path.splitext(facestr)
+        m = re.match('(\w+)-face-x(\d+)-y(\d+)-w(\d+)-h(\d+)', name)
+        hash, l, t, w, h = m.groups()
+        #m = re.match('(\w+)-face-x0(\d+)-y0(\d+)-x1(\d+)-y1(\d+)', name)
+        #hash, l, t, r, b = m.groups()
+        return {
+            'hash': hash,
+            'categories': ['faces'],
+            'faces': [{'boundingbox': ((l,t),(w,h))}],
+            'video': [],
+        }
+
+    face_clusters = {}
+    for id, (facestr, _)  in hadoopy.readtb(hdfs_input):
+        cluster = face_clusters.setdefault(id, [])
+        face_image = make_image(facestr)
+        cluster.append(face_image)
+
+    face_clusters = [{
+                'sample_images': face_images,
+                'all_images': face_images,
+                'size': len(face_images),
+                'children': [],
+                'std': 0.0,
+                'position': [0.0, 0.0],
+                } for face_images in face_clusters.values()]
+
+    try:
+        os.makedirs(os.path.dirname(local_json_output))
+    except OSError:
+        pass
+    report = {'faces': face_clusters}
+    file_parse.dump(report, local_json_output)
+
+
+def report_thumbnails(hdfs_input, local_thumb_output, **kw):
+    try:
+        os.makedirs(os.path.dirname(local_thumb_output))
+    except OSError:
+        pass
+    for image_hash, image_data in hadoopy.readtb(hdfs_input):
+        s = StringIO.StringIO()
+        s.write(image_data)
+        s.seek(0)
+        frame = Image.open(s)
+        frame.thumbnail((100,100))
+        path = '%s/%s.jpg' % (local_thumb_output, image_hash)
+        frame.save(path)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Hadoopy Image Clustering Utility')
     sps = parser.add_subparsers(help='Available commands (select for additional help)')
@@ -283,15 +336,6 @@ def main():
     sp.add_argument('--local_image_output', help='Path to store local images', default='')
     sp.set_defaults(func=run_join_predictions)
 
-    # Report Categories from Prediction Output
-    sp = sps.add_parser('report_categories', help='Report Categories from Prediction Output')
-    sp.add_argument('hdfs_join_predictions_input', **ca['input'])
-    sp.add_argument('local_output', help='report output')
-    sp.add_argument('--image_limit', help='fill each category with <image_limit> highest confidences',
-                    type=int, default=200)
-    sp.add_argument('--local_thumb_output', help='folder of image thumbnails', default=None)
-    sp.set_defaults(func=report_categories)
-
     # Face Finder
     sp = sps.add_parser('face_finder', help='Extract faces')
     sp.add_argument('hdfs_input', **ca['input'])
@@ -338,6 +382,27 @@ def main():
     sp = sps.add_parser('visualize', help='Visualize clusters')
     sp.add_argument('hdfs_input', **ca['input'])
     sp.set_defaults(func=run_visualize)
+
+    # Report Categories from Prediction Output
+    sp = sps.add_parser('report_categories', help='Report Categories from Prediction Output')
+    sp.add_argument('hdfs_join_predictions_input', **ca['input'])
+    sp.add_argument('local_output', help='report output')
+    sp.add_argument('--image_limit', help='fill each category with <image_limit> highest confidences',
+                    type=int, default=200)
+    sp.add_argument('--local_thumb_output', help='folder of image thumbnails', default=None)
+    sp.set_defaults(func=report_categories)
+
+    # Report Categories from Face Clustering
+    sp = sps.add_parser('report_faces', help='Report Categories from Face Clustering')
+    sp.add_argument('hdfs_input', **ca['input'])
+    sp.add_argument('local_json_output', help='report output')
+    sp.set_defaults(func=report_face_clusters)
+
+    # Local Thumbnail Output
+    sp = sps.add_parser('report_thumbnails', help='Report Categories from Face Clustering')
+    sp.add_argument('hdfs_input', **ca['input'])
+    sp.add_argument('local_thumb_output', help='local thumbnail output directory')
+    sp.set_defaults(func=report_thumbnails)
 
     args = parser.parse_args()
     args.func(**vars(args))
