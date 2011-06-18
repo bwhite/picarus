@@ -13,7 +13,7 @@ def grab_frame(fn):
     stream.open(fn)
     out = stream.GetFrameNo(10)
     return out
-            
+
 
 class Mapper(object):
 
