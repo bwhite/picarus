@@ -58,9 +58,10 @@ class Mapper(object):
                                      cv.CreateMemStorage(0),
                                      haar_scale, min_neighbors, haar_flags,
                                      min_size)
-        return [((x * image_scale, y * image_scale,
-                  w * image_scale, h * image_scale), n)
-                for (x, y, w, h), n in faces]
+        scaled_faces = [(x * image_scale, y * image_scale,
+                          w * image_scale, h * image_scale)
+                        for (x, y, w, h), n in faces]
+        return [(x, y, x + w, y + h) for x, y, w, h in scaled_faces]
 
     def _load_cv_image(self, value):
         image = Image.open(StringIO.StringIO(value))
@@ -75,7 +76,7 @@ class Mapper(object):
 
         Yields:
             A tuple in the form of (key, value)
-            key: Imagename-face-x<xval>-y<yval>-w<widthval>-h<heightval>
+            key: Imagename-face-x0<x_tl_val>-y0<y_tl_val>-x1<x_br_val>-y1<y_br_val>
             value: Cropped face binary data
         """
         try:
@@ -85,14 +86,14 @@ class Mapper(object):
             return
         faces = self._detect_faces(image_cv)
         if self._output_boxes:
-            yield key, (value, [face[0] for face in faces])
+            yield key, (value, faces)
         else:
-            for (x, y, w, h), n in faces:
-                image_pil_crop = image_pil.crop((x, y, x + w, y + h))
+            for x0, y0, x1, y1 in faces:
+                image_pil_crop = image_pil.crop((x0, y0, x1, y1))
                 out_fp = StringIO.StringIO()
                 image_pil_crop.save(out_fp, 'JPEG')
                 out_fp.seek(0)
-                yield '%s-face-x%d-y%d-w%d-h%d' % (key, x, y, w, h), out_fp.read()
+                yield '%s-face-x0%d-y0%d-x1%d-y1%d' % (key, x0, y0, x1, y1), out_fp.read()
 
 if __name__ == "__main__":
     hadoopy.run(Mapper, doc=__doc__)
