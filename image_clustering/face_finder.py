@@ -37,6 +37,7 @@ class Mapper(object):
                 self._cascade = cv.Load(path)
             else:
                 raise ValueError("Can't find .xml file!")
+        self._output_boxes = 'OUTPUT_BOXES' in os.environ
 
     def _detect_faces(self, img):
         min_size = (20, 20)
@@ -83,12 +84,15 @@ class Mapper(object):
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
             return
         faces = self._detect_faces(image_cv)
-        for (x, y, w, h), n in faces:
-            image_pil_crop = image_pil.crop((x, y, x + w, y + h))
-            out_fp = StringIO.StringIO()
-            image_pil_crop.save(out_fp, 'JPEG')
-            out_fp.seek(0)
-            yield '%s-face-x%d-y%d-w%d-h%d' % (key, x, y, w, h), out_fp.read()
+        if self._output_boxes:
+            yield key, (value, [face[0] for face in faces])
+        else:
+            for (x, y, w, h), n in faces:
+                image_pil_crop = image_pil.crop((x, y, x + w, y + h))
+                out_fp = StringIO.StringIO()
+                image_pil_crop.save(out_fp, 'JPEG')
+                out_fp.seek(0)
+                yield '%s-face-x%d-y%d-w%d-h%d' % (key, x, y, w, h), out_fp.read()
 
 if __name__ == "__main__":
     hadoopy.run(Mapper, doc=__doc__)

@@ -7,6 +7,10 @@ import cPickle as pickle
 import numpy as np
 import glob
 import file_parse
+import report_output
+import heapq
+import StringIO
+import Image
 
 
 def run_image_feature(hdfs_input, hdfs_output, feature, image_length, **kw):
@@ -16,9 +20,12 @@ def run_image_feature(hdfs_input, hdfs_output, feature, image_length, **kw):
                           files=['eigenfaces_lfw_cropped.pkl'])
 
 
-def run_face_finder(hdfs_input, hdfs_output, image_length, **kw):
+def run_face_finder(hdfs_input, hdfs_output, image_length, boxes, **kw):
+    cmdenvs = ['IMAGE_LENGTH=%d' % image_length]
+    if boxes:
+        cmdenvs.append('OUTPUT_BOXES=True')
     hadoopy.launch_frozen(hdfs_input, hdfs_output, 'face_finder.py', reducer=False,
-                          cmdenvs=['IMAGE_LENGTH=%d' % image_length],
+                          cmdenvs=cmdenvs,
                           files=['haarcascade_frontalface_default.xml'])
 
 
@@ -153,6 +160,75 @@ def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, **kw)
                               cmdenvs=['CLASSIFIERS_FN=%s' % os.path.basename(fp.name)])
 
 
+def report_categories(hdfs_join_predictions_input, local_output, image_limit, local_thumb_output, **kw):
+    # Output a cluster for each category
+    # FIXME This is hardcoded for indoor_outdoor, it will have to change when
+    # there are multiple classifiers (indoor, outdoor, photos, documents, etc)
+    hashes = {-1: [], 1: []}
+    totals = {-1: 0, 1: 0}
+
+    # First pass: find images for each category
+    for image_hash, (classifier_preds, image_data) in hadoopy.readtb(hdfs_join_predictions_input):
+        for classifier, preds in classifier_preds.items():
+            posname, negname = classifier.split('_')
+            for conf, label in preds:
+                totals[label] += 1
+                if len(hashes[label]) < image_limit:
+                    heapq.heappush(hashes[label], (conf, image_hash))
+                else:
+                    heapq.heappushpop(hashes[label], (conf, image_hash))
+
+    print negname, len(hashes[-1]), totals[-1]
+    print posname, len(hashes[1]), totals[1]
+
+    categories = {}
+    categories[posname] = report_output.make_random_clusters([h for _, h in hashes[1]], posname)
+    categories[negname] = report_output.make_random_clusters([h for _, h in hashes[-1]], negname)
+
+    try:
+        os.makedirs(os.path.dirname(local_output))
+    except OSError:
+        pass
+    file_parse.dump(categories, local_output)
+
+    # Second pass: make image thumbnails
+    if local_thumb_output:
+        try:
+            os.makedirs(local_thumb_output)
+        except OSError:
+            pass
+        hashset = set([h for _, h in hashes[-1] + hashes[1]])
+        for image_hash, (classifier_preds, image_data) in hadoopy.readtb(hdfs_join_predictions_input):
+            if image_hash in hashset:
+                s = StringIO.StringIO()
+                s.write(image_data)
+                s.seek(0)
+                frame = Image.open(s)
+                frame.thumbnail((100,100))
+                path = '%s/%s.jpg' % (local_thumb_output, image_hash)
+                frame.save(path)
+
+
+def run_join_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, local_image_output, **kw):
+    inputs = [hdfs_predictions_input]
+    if isinstance(hdfs_input, list):
+        inputs += hdfs_input
+    else:
+        inputs.append(hdfs_input)
+    hadoopy.launch_frozen(inputs, hdfs_output, 'join_predictions.py')
+    if local_image_output:
+        for image_hash, (classifier_preds, image_data) in hadoopy.readtb(hdfs_output):
+            for classifier, preds in classifier_preds.items():
+                for conf, label in preds:
+                    path = '%s/%s/label_%d/%8.8f-%s.jpg' % (local_image_output, classifier, label, conf, image_hash)
+                    try:
+                        os.makedirs(os.path.dirname(path))
+                    except OSError:
+                        pass
+                    with open(path, 'w') as fp:
+                        fp.write(image_data)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Hadoopy Image Clustering Utility')
     sps = parser.add_subparsers(help='Available commands (select for additional help)')
@@ -187,23 +263,41 @@ def main():
 
     # Train Classifier (take in features from the previous labeling step)
     sp = sps.add_parser('train_classifier', help='Train classifier on feature vectors')
-    sp.add_argument('hdfs_input', **ca['input'])  # TODO Allow multiple
     sp.add_argument('hdfs_output', **ca['output'])
     sp.add_argument('local_labels', help='Path to labels file, this can be an existing file and any existing classifier_name entry is replaced.')
+    sp.add_argument('hdfs_input', nargs='+', **ca['input'])
     sp.set_defaults(func=run_train_classifier)
 
     # Predict Classifier
     sp = sps.add_parser('predict_classifier', help='Predict classifier on feature vectors')
-    sp.add_argument('hdfs_input', **ca['input'])  # TODO Allow multiple
-    sp.add_argument('hdfs_classifier_input', **ca['input'])  # TODO Allow multiple
+    sp.add_argument('hdfs_classifier_input', **ca['input'])
     sp.add_argument('hdfs_output', **ca['output'])
+    sp.add_argument('hdfs_input', nargs='+', **ca['input'])
     sp.set_defaults(func=run_predict_classifier)
+
+    # Join Predictions with Classifier
+    sp = sps.add_parser('join_predictions', help='Joint predictions with images')
+    sp.add_argument('hdfs_predictions_input', **ca['input'])
+    sp.add_argument('hdfs_output', **ca['output'])
+    sp.add_argument('hdfs_input', nargs='+', **ca['input'])
+    sp.add_argument('--local_image_output', help='Path to store local images', default='')
+    sp.set_defaults(func=run_join_predictions)
+
+    # Report Categories from Prediction Output
+    sp = sps.add_parser('report_categories', help='Report Categories from Prediction Output')
+    sp.add_argument('hdfs_join_predictions_input', **ca['input'])
+    sp.add_argument('local_output', help='report output')
+    sp.add_argument('--image_limit', help='fill each category with <image_limit> highest confidences',
+                    type=int, default=200)
+    sp.add_argument('--local_thumb_output', help='folder of image thumbnails', default=None)
+    sp.set_defaults(func=report_categories)
 
     # Face Finder
     sp = sps.add_parser('face_finder', help='Extract faces')
     sp.add_argument('hdfs_input', **ca['input'])
     sp.add_argument('hdfs_output', **ca['output'])
     sp.add_argument('--image_length', **ca['image_length'])
+    sp.add_argument('--boxes', help='If True make the value (image_data, boxes) where boxes is a list of (x, y, h, w)', type=bool, default=False)
     sp.set_defaults(func=run_face_finder)
 
     # Whiten Features
