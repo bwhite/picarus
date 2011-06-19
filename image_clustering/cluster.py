@@ -231,7 +231,7 @@ def run_join_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, local_
                         fp.write(image_data)
 
 
-def report_clusters(hdfs_input, local_json_output, sample, category='faces', **kw):
+def report_clusters(hdfs_input, local_json_output, sample, category, **kw):
     """
     NOTE: This transfers much more image data than is necessary! Really this operation
     should be done directly on hdfs
@@ -256,7 +256,7 @@ def report_clusters(hdfs_input, local_json_output, sample, category='faces', **k
         count += 1
         if count % 100 == 0: print count
         cluster = clusters.setdefault(cluster_index, [])
-        if category=='faces':
+        if category == 'faces':
             face_image = make_face_image(image_name)
             cluster.append(face_image)
         else:

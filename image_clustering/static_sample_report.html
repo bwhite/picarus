@@ -22,7 +22,11 @@
 
   <script type="text/javascript">
     $(function () {
-	showclusters('outdoor')
+	if (window.location.hash.length == 1) {
+	    showclusters('outdoor') 
+	} else {
+	    showclusters(window.location.hash.slice(1))
+	}
 	//showvideos()
 	//showclusters('faces')
     })
