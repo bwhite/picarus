@@ -231,6 +231,13 @@ def run_join_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, local_
                         fp.write(image_data)
 
 
+def run_video_keyframe(hdfs_input, hdfs_output, min_resolution, max_resolution, **kw):
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, 'video_keyframe.py',
+                          reducer=None,
+                          cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
+                                   'MAX_RESOLUTION=%f' % max_resolution])
+
+
 def report_clusters(hdfs_input, local_json_output, sample, category, **kw):
     """
     NOTE: This transfers much more image data than is necessary! Really this operation
@@ -308,6 +315,30 @@ def report_thumbnails(hdfs_input, local_thumb_output, **kw):
         frame = frame.convert('RGB')
         path = '%s/%s.jpg' % (local_thumb_output, image_hash)
         frame.save(path)
+
+
+def report_video_keyframe(hdfs_input, local_json_output, local_thumb_output, **kw):
+    videos = {}
+    for (kind, hash), v in hadoopy.readtb(hdfs_input):
+        if kind == 'frame' and local_thumb_output is not None:
+            s = StringIO.StringIO()
+            s.write(v)
+            s.seek(0)
+            frame = Image.open(s)
+            try:
+                os.makedirs(local_thumb_output)
+            except OSError:
+                pass
+            frame.save(os.path.join(local_thumb_output, '%s.jpg' % hash))
+        if kind == 'video':
+            videos[hash] = v
+
+    try:
+        os.makedirs(os.path.dirname(local_json_output))
+    except OSError:
+        pass
+    report = {'videos': videos}
+    file_parse.dump(report, local_json_output)
 
 
 def main():
@@ -406,6 +437,14 @@ def main():
     sp.add_argument('--metric', **ca['metric'])
     sp.set_defaults(func=run_hac)
 
+    # Run Video Keyframing
+    sp = sps.add_parser('video_keyframe', help='Run Video Keyframing')
+    sp.add_argument('hdfs_input', **ca['input'])
+    sp.add_argument('hdfs_output', **ca['output'])
+    sp.add_argument('min_resolution', type=int)
+    sp.add_argument('max_resolution', type=float)
+    sp.set_defaults(func=run_video_keyframe)
+
     # Visualize Clusters
     sp = sps.add_parser('visualize', help='Visualize clusters')
     sp.add_argument('hdfs_input', **ca['input'])
@@ -427,6 +466,13 @@ def main():
     sp.add_argument('category', help='category tag for this clustering')
     sp.add_argument('--sample', help='sample size', type=int, default=20)
     sp.set_defaults(func=report_clusters)
+
+    # Report Video Keyframes
+    sp = sps.add_parser('report_video_keyframe', help='Report Video Keyframes')
+    sp.add_argument('hdfs_input', **ca['input'])
+    sp.add_argument('local_json_output', help='report output')
+    sp.add_argument('--local_thumb_output', help='local thumbnail output directory')
+    sp.set_defaults(func=report_video_keyframe)
 
     # Local Thumbnail Output
     sp = sps.add_parser('report_thumbnails', help='Report Categories from Face Clustering')

@@ -25,7 +25,9 @@
 	if (window.location.hash.length == 1) {
 	    showclusters('outdoor') 
 	} else {
-	    showclusters(window.location.hash.slice(1))
+	    kind = window.location.hash.slice(1)
+	    if (kind == 'videos') showvideos()
+	    else showclusters(kind)
 	}
 	//showvideos()
 	//showclusters('faces')
@@ -89,7 +91,7 @@
 	    var len2 = Math.floor(video.keyframes.length / 2);
 	    console.info(len2)
 	    divkeyframe.find('img.keyframe').attr('src', 'vid_t/'+video.keyframes[len2].image.hash+'.jpg')
-	    divkeyframe.find('.keyframe_expand a').html(round(video.duration)+'s ['+video.keyframes.length+']')
+	    divkeyframe.find('.keyframe_expand a').html(round(video.duration)+'s ['+video.keyframes[len2].count+']')
 	    divkeyframe.click(function () {
 		showvideo(video)
 	    })
@@ -129,7 +131,7 @@
 	    divkeyframe.find('img.keyframe').attr('src', 'vid_t/'+keyframe.image.hash+'.jpg')
 	    var children = keyframe.children
 	    if (children.length > 0) {
-		divkeyframe.find('a').html(round(keyframe.timestamp)+'s [+]')
+		divkeyframe.find('a').html(round(keyframe.timestamp)+'s ['+keyframe.count+']')
 		divkeyframe.find('a').click(function () {
 		    pop_keyframerows(rowheight);
 		    push_keyframerow(keyframe.children, rowheight+1);
