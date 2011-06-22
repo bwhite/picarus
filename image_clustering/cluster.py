@@ -13,6 +13,7 @@ import StringIO
 import Image
 import re
 import random
+import vidfeat
 
 
 def run_image_feature(hdfs_input, hdfs_output, feature, image_length, **kw):
@@ -231,11 +232,20 @@ def run_join_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, local_
                         fp.write(image_data)
 
 
-def run_video_keyframe(hdfs_input, hdfs_output, min_resolution, max_resolution, **kw):
-    hadoopy.launch_frozen(hdfs_input, hdfs_output, 'video_keyframe.py',
-                          reducer=None,
-                          cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
-                                   'MAX_RESOLUTION=%f' % max_resolution])
+def run_video_keyframe(hdfs_input, hdfs_output, min_resolution, max_resolution, ffmpeg, **kw):
+    if not ffmpeg:
+        hadoopy.launch_frozen(hdfs_input, hdfs_output, 'video_keyframe.py',
+                              reducer=None,
+                              cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
+                                       'MAX_RESOLUTION=%f' % max_resolution])
+    else:
+        with vidfeat.freeze_ffmpeg() as f:
+            hadoopy.launch_frozen(hdfs_input, hdfs_output, 'video_keyframe.py',
+                                  reducer=None,
+                                  cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
+                                           'MAX_RESOLUTION=%f' % max_resolution],
+                                  files=f,
+                                  jobconfs=['mapred.child.java.opts=-Xmx512M'])
 
 
 def report_clusters(hdfs_input, local_json_output, sample, category, **kw):
@@ -441,8 +451,9 @@ def main():
     sp = sps.add_parser('video_keyframe', help='Run Video Keyframing')
     sp.add_argument('hdfs_input', **ca['input'])
     sp.add_argument('hdfs_output', **ca['output'])
-    sp.add_argument('min_resolution', type=int)
-    sp.add_argument('max_resolution', type=float)
+    sp.add_argument('min_resolution', type=int, help='Maximum number of keyframes in each cluster')
+    sp.add_argument('max_resolution', type=float, help='Minimum number seconds between keyframes')
+    sp.add_argument('--ffmpeg', help='Use frozen ffmpeg binary instead of pyffmpeg (works with more kinds of encoded videos, poorly enocded videos)', action='store_true')
     sp.set_defaults(func=run_video_keyframe)
 
     # Visualize Clusters
