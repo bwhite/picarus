@@ -1,6 +1,7 @@
 import hadoopy
 import cluster
 import time
+import functools
 
 # HDFS Paths with data of the form (unique_string, binary_image_data
 data_root = '/user/brandyn/classifier_data/'
@@ -130,29 +131,48 @@ def score_train_predictions(test_start_time='1308630752.962982'):
 
 
 def predict(train_start_time, hdfs_input_path):
+    # NOTE(brandyn): This assumes that they all use the same feature
     train_root = '/user/brandyn/tp/image_cluster/run-%s/' % train_start_time
     start_time = time.time()
     root = '/user/brandyn/tp/image_cluster/run-%s/' % start_time
-    # Split photos/nonphotos
-    cluster.run_image_feature(hdfs_input_path, root + 'feat/photos', 'meta_gist_spatial_hist', 256)
-    cluster.run_predict_classifier(root + 'feat/photos', train_root + 'classifiers/photos', root + 'predict/photos')
+    # Predict photos
+    cluster.run_image_feature(hdfs_input_path, root + 'feat/input', 'meta_gist_spatial_hist', 256)
+    cluster.run_predict_classifier(root + 'feat/input', train_root + 'classifiers/photos', root + 'predict/photos')
+    # Split images for photos/nonphotos
     cluster.run_thresh_predictions(root + 'predict/photos', hdfs_input_path, root + 'data/photos', 'photo', 0., 1)
     cluster.run_thresh_predictions(root + 'predict/photos', hdfs_input_path, root + 'data/nonphotos', 'photo', 0., -1)
-    # Split indoor/outdoor, objects/nonobjects (ignore nonobjects), pr0n/nonpr0n (ignore non-pron) and run the face finder
-    # NOTE(brandyn): This assumes that they all use the same feature
-    cluster.run_image_feature(root + 'data/photos', root + 'feat/photos_class', 'meta_gist_spatial_hist', 256)
-    cluster.run_predict_classifier(root + 'feat/photos_class', train_root + 'classifiers/indoors', root + 'predict/indoors')
-    cluster.run_predict_classifier(root + 'feat/photos_class', train_root + 'classifiers/objects', root + 'predict/objects')
-    cluster.run_predict_classifier(root + 'feat/photos_class', train_root + 'classifiers/pr0n', root + 'predict/pr0n')
+    # Split features for photos
+    cluster.run_thresh_predictions(root + 'predict/photos', root + 'feat/input', root + 'feat/photos', 'photo', 0., 1)
+    # Predict photo subclasses
+    cluster.run_predict_classifier(root + 'feat/photos', train_root + 'classifiers/indoors', root + 'predict/indoors')
+    cluster.run_predict_classifier(root + 'feat/photos', train_root + 'classifiers/objects', root + 'predict/objects')
+    cluster.run_predict_classifier(root + 'feat/photos', train_root + 'classifiers/pr0n', root + 'predict/pr0n')
+    # Split images for photos subclasses
     cluster.run_thresh_predictions(root + 'predict/indoors', root + 'data/photos', root + 'data/indoors', 'indoor', 0., 1)
     cluster.run_thresh_predictions(root + 'predict/indoors', root + 'data/photos', root + 'data/outdoors', 'indoor', 0., -1)
     cluster.run_thresh_predictions(root + 'predict/objects', root + 'data/photos', root + 'data/objects', 'object', 0., 1)
     cluster.run_thresh_predictions(root + 'predict/pr0n', root + 'data/photos', root + 'data/pr0n', 'pr0n', 0., 1)
+    # Split features for photos subclasses
+    cluster.run_thresh_predictions(root + 'predict/indoors', root + 'feat/photos', root + 'feat/indoors', 'indoor', 0., 1)
+    cluster.run_thresh_predictions(root + 'predict/indoors', root + 'feat/photos', root + 'feat/outdoors', 'indoor', 0., -1)
+    cluster.run_thresh_predictions(root + 'predict/objects', root + 'feat/photos', root + 'feat/objects', 'object', 0., 1)
+    cluster.run_thresh_predictions(root + 'predict/pr0n', root + 'feat/photos', root + 'feat/pr0n', 'pr0n', 0., 1)
+    # Find faces
     cluster.run_face_finder(root + 'data/photos', root + 'data/detected_faces', image_length=64, boxes=False)
     cluster.run_image_feature(root + 'data/detected_faces', root + 'feat/detected_faces', 'meta_gist_spatial_hist', 256)
     cluster.run_predict_classifier(root + 'feat/detected_faces', train_root + 'classifiers/faces', root + 'predict/detected_faces')
     cluster.run_thresh_predictions(root + 'predict/detected_faces', root + 'data/detected_faces', root + 'data/faces', 'face', 0., 1)
+    cluster.run_thresh_predictions(root + 'predict/detected_faces', root + 'feat/detected_faces', root + 'feat/faces', 'face', 0., 1)
+    # Sample for initial clusters
+    num_clusters = 10
+    num_iters = 5
+    num_output_samples = 10
+    sample = lambda x: cluster.run_sample(root + 'feat/%s' % x, root + 'cluster/%s/clust0' % x, num_clusters)
+    map(sample, ['indoors', 'outdoors', 'objects', 'pr0n', 'faces'])
     # Cluster photos, indoors, outdoors, pr0n, faces
+    kmeans = lambda x: cluster.run_kmeans(root + 'feat/%s' % x, root + 'cluster/%s/clust0' % x, root + 'data/%s' % x, root + 'cluster/%s' % x,
+                                          num_clusters, num_iters, num_output_samples)
+    map(kmeans, ['indoors', 'outdoors', 'objects', 'pr0n', 'faces'])
     # Generate JSON output
     
 
