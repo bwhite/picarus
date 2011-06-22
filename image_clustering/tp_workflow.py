@@ -1,3 +1,4 @@
+import hadoopy_flow
 import hadoopy
 import cluster
 import time
@@ -184,8 +185,8 @@ def predict(train_start_time, hdfs_input_path):
     sample = lambda x: cluster.run_sample(root + 'whiten/%s' % x, root + 'cluster/%s/clust0' % x, num_clusters)
     map(sample, ['indoors', 'outdoors', 'objects', 'pr0n', 'faces'])
     # Cluster photos, indoors, outdoors, pr0n, faces
-    kmeans = lambda x: cluster.run_kmeans(root + 'whiten/%s' % x, root + 'cluster/%s/clust0' % x, root + 'data/%s' % x, root + 'cluster/%s' % x,
-                                          num_clusters, num_iters, num_output_samples, 'l2sqr')
+    kmeans = lambda x: hadoopy_flow.Greenlet(cluster.run_kmeans, root + 'whiten/%s' % x, root + 'cluster/%s/clust0' % x, root + 'data/%s' % x,
+                                             root + 'cluster/%s' % x, num_clusters, num_iters, num_output_samples, 'l2sqr').start()
     map(kmeans, ['indoors', 'outdoors', 'objects', 'pr0n', 'faces'])
     # Generate JSON output
     
@@ -198,3 +199,4 @@ if __name__ == '__main__':
     test_start_time = '1308650330.016147'
     print('TrainStart[%s] TestStart[%s]' % (train_start_time, test_start_time))
     predict(train_start_time, '/user/brandyn/classifier_data/unlabeled_flickr_small')
+    hadoopy_flow.joinall()

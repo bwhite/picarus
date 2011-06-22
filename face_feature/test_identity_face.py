@@ -33,7 +33,7 @@ except ImportError:
 
 
 def pil_to_cv(fp):
-    return imfeat.convert_image(Image.open(fp), [('opencv', 'rgb', 8)])
+    return imfeat.convert_image(Image.open(fp), [('opencv', 'bgr', 8)])
 
 
 def cv_to_array(image_cv):
