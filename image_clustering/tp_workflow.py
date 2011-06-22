@@ -167,11 +167,13 @@ def predict(train_start_time, hdfs_input_path):
     num_clusters = 10
     num_iters = 5
     num_output_samples = 10
-    sample = lambda x: cluster.run_sample(root + 'feat/%s' % x, root + 'cluster/%s/clust0' % x, num_clusters)
+    whiten = lambda x: cluster.run_whiten(root + 'feat/%s' % x, root + 'whiten/%s' % x)
+    map(whiten, ['indoors', 'outdoors', 'objects', 'pr0n', 'faces'])
+    sample = lambda x: cluster.run_sample(root + 'whiten/%s' % x, root + 'cluster/%s/clust0' % x, num_clusters)
     map(sample, ['indoors', 'outdoors', 'objects', 'pr0n', 'faces'])
     # Cluster photos, indoors, outdoors, pr0n, faces
-    kmeans = lambda x: cluster.run_kmeans(root + 'feat/%s' % x, root + 'cluster/%s/clust0' % x, root + 'data/%s' % x, root + 'cluster/%s' % x,
-                                          num_clusters, num_iters, num_output_samples)
+    kmeans = lambda x: cluster.run_kmeans(root + 'whiten/%s' % x, root + 'cluster/%s/clust0' % x, root + 'data/%s' % x, root + 'cluster/%s' % x,
+                                          num_clusters, num_iters, num_output_samples, 'l2sqr')
     map(kmeans, ['indoors', 'outdoors', 'objects', 'pr0n', 'faces'])
     # Generate JSON output
     
