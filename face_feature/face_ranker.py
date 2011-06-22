@@ -85,7 +85,7 @@ class Mapper(object):
 
     def _load_cv_image(self, value):
         return imfeat.convert_image(Image.open(StringIO.StringIO(value)),
-                                    [('opencv', 'rgb', 8)])
+                                    [('opencv', 'bgr', 8)])
 
     def map(self, key, value):
         """
