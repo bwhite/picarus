@@ -260,21 +260,23 @@ def run_video_keyframe(hdfs_input, hdfs_output, min_resolution, max_resolution, 
                                   jobconfs=['mapred.child.java.opts=-Xmx512M'])
 
 
-def report_clusters(hdfs_input, local_json_output, sample, category, **kw):
+def report_clusters(hdfs_input, local_json_output, sample, category, make_faces, **kw):
     """
     NOTE: This transfers much more image data than is necessary! Really this operation
     should be done directly on hdfs
     """
     def make_face_image(facestr):
         name, ext = os.path.splitext(facestr)
-        m = re.match('(\w+)-face-x(\d+)-y(\d+)-w(\d+)-h(\d+)', name)
-        hash, l, t, w, h = m.groups()
+        m = re.match('(\w+)-face-x0(\d+)-y0(\d+)-x1(\d+)-y1(\d+)', name)
+        print name
+        hash, l, t, r, b = m.groups()
+        l,t,r,b = map(int, (l,t,r,b))
         #m = re.match('(\w+)-face-x0(\d+)-y0(\d+)-x1(\d+)-y1(\d+)', name)
         #hash, l, t, r, b = m.groups()
         return {
             'hash': hash,
             'categories': ['faces'],
-            'faces': [{'boundingbox': ((l,t),(w,h))}],
+            'faces': [{'boundingbox': ((l,t),(r,b))}],
             'video': [],
         }
 
@@ -285,7 +287,7 @@ def report_clusters(hdfs_input, local_json_output, sample, category, **kw):
         count += 1
         if count % 100 == 0: print count
         cluster = clusters.setdefault(cluster_index, [])
-        if category == 'faces':
+        if make_faces:
             face_image = make_face_image(image_name)
             cluster.append(face_image)
         else:
@@ -324,7 +326,7 @@ def report_thumbnails(hdfs_input, local_thumb_output, **kw):
     except OSError:
         pass
     count = 0
-    for image_hash, image_data in hadoopy.readtb(hdfs_input):
+    for _, (image_hash, image_data) in hadoopy.readtb(hdfs_input):
         s = StringIO.StringIO()
         s.write(image_data)
         s.seek(0)
@@ -488,6 +490,7 @@ def main():
     sp.add_argument('local_json_output', help='report output')
     sp.add_argument('category', help='category tag for this clustering')
     sp.add_argument('--sample', help='sample size', type=int, default=20)
+    sp.add_argument('--make_faces', action="store_true")
     sp.set_defaults(func=report_clusters)
 
     # Report Video Keyframes
