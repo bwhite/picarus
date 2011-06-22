@@ -9,7 +9,7 @@ def parallel_launch(launch):
     procs = []
     
     def _inner(*args, **kw):
-        procs.append(launch(*args, wait=False, **kw))
+        procs.append(launch(*args, wait=False, **kw)['process'])
     yield _inner
     for p in procs:
         p.wait()
