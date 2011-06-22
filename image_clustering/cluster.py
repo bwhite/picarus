@@ -32,8 +32,8 @@ def run_face_finder(hdfs_input, hdfs_output, image_length, boxes, **kw):
                           files=['haarcascade_frontalface_default.xml'])
 
 
-def run_whiten(**kw):
-    pass
+def run_whiten(hdfs_input, hdfs_output, **kw):
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, 'whiten.py')
 
 
 def run_sample(hdfs_input, hdfs_output, num_clusters, **kw):
