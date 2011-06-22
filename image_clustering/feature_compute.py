@@ -22,7 +22,8 @@ class Mapper(object):
         image = image.resize((self._image_length, self._image_length))
         try:
             yield name, np.asfarray(imfeat.compute(self._feat, image)[0])
-        except ValueError:
+        except ValueError, e:
+            print(e)
             hadoopy.counter('DATA_ERRORS', 'UnkImageType')
             return
 

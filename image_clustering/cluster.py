@@ -232,6 +232,18 @@ def run_join_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, local_
                         fp.write(image_data)
 
 
+def run_thresh_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, class_name, class_thresh, output_class, **kw):
+    inputs = [hdfs_predictions_input]
+    if isinstance(hdfs_input, list):
+        inputs += hdfs_input
+    else:
+        inputs.append(hdfs_input)
+    hadoopy.launch_frozen(inputs, hdfs_output, 'thresh_predictions.py',
+                          cmdenvs=['CLASSIFIER_NAME=%s' % class_name,
+                                   'CLASSIFIER_THRESH=%f' % class_thresh,
+                                   'OUTPUT_CLASS=%d' % output_class])
+
+
 def run_video_keyframe(hdfs_input, hdfs_output, min_resolution, max_resolution, ffmpeg, **kw):
     if not ffmpeg:
         hadoopy.launch_frozen(hdfs_input, hdfs_output, 'video_keyframe.py',

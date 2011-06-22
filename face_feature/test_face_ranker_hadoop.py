@@ -38,8 +38,7 @@ class TestFaceRankerHadoop(unittest.TestCase):
         self.side_path = 'side/'
         self.eigenfaces_fn = self.side_path + 'eigenfaces_lfw_cropped.pkl'
         self.exemplar_pkl = self.side_path + 'eigenfaces_exemplar.pkl'
-        #self.exemplar_path = '/home/morariu/downloads/lfwcrop_color/faces/George_W_Bush_0026.ppm'
-        self.exemplar_path = 'zero_test.jpg'
+        self.exemplar_path = '/home/morariu/downloads/lfwcrop_color/faces/George_W_Bush_0026.ppm'
         os.makedirs(self.out_path)
         if not os.path.exists(self.side_path):
             os.makedirs(self.side_path)
