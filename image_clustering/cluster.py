@@ -17,6 +17,7 @@ import vidfeat
 
 
 def run_image_feature(hdfs_input, hdfs_output, feature, image_length, **kw):
+    print('Before feature')
     hadoopy.launch_frozen(hdfs_input, hdfs_output, 'feature_compute.py', reducer=False,
                           cmdenvs=['IMAGE_LENGTH=%d' % image_length,
                                    'FEATURE=%s' % feature],
@@ -52,7 +53,8 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
                                                 cmdenvs=['CLUSTERS_FN=%s' % clusters_fn],
                                                 files=[clusters_fp.name],
                                                 num_reducers=max(1, num_clusters / 2),
-                                                frozen_tar_path=frozen_tar_path)['frozen_tar_path']
+                                                frozen_tar_path=frozen_tar_path,
+                                                dummy_arg=clusters_fp)['frozen_tar_path']
         hdfs_prev_clusters = cur_output
     print('Clusters[%s]' % hdfs_prev_clusters)
     # Compute K-Means assignment/samples
@@ -66,7 +68,8 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
                                    'mapred.text.key.partitioner.options=-k1'],
                           files=[clusters_fp.name],
                           num_reducers=max(1, num_clusters / 2),
-                          partitioner='org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner')
+                          partitioner='org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner',
+                          dummy_arg=clusters_fp)
     print('Assignment[%s]' % cur_output)
     # Filter the samples
     assignments_fp = fetch_assignments_from_hdfs(cur_output)
@@ -75,7 +78,8 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
     hadoopy.launch_frozen(hdfs_image_data, cur_output, 'filter_samples.py',
                           cmdenvs=['ASSIGNMENTS_FN=%s' % os.path.basename(assignments_fn)],
                           files=[assignments_fp.name],
-                          reducer=None)
+                          reducer=None,
+                          dummy_arg=assignments_fp)
     print('Samples[%s]' % cur_output)
 
 
@@ -155,12 +159,15 @@ def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, **kw)
     import classipy
     # NOTE: Adds necessary files
     files = glob.glob(classipy.__path__[0] + "/lib/*")
-    with tempfile.NamedTemporaryFile(suffix='.pkl.gz') as fp:
-        file_parse.dump(list(hadoopy.readtb(hdfs_classifier_input)), fp.name)
-        files.append(fp.name)
-        hadoopy.launch_frozen(hdfs_input, hdfs_output, 'predict_classifier.py',
-                              files=files, reducer=None,
-                              cmdenvs=['CLASSIFIERS_FN=%s' % os.path.basename(fp.name)])
+    fp = tempfile.NamedTemporaryFile(suffix='.pkl.gz')
+    print('------------------------BEFORE READTB')
+    file_parse.dump(list(hadoopy.readtb(hdfs_classifier_input)), fp.name)
+    print('------------------------AFTER  READTB [%s, %s]' % (fp.name, os.path.exists(fp.name)))
+    files.append(fp.name)
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, 'predict_classifier.py',
+                          files=files, reducer=None,
+                          cmdenvs=['CLASSIFIERS_FN=%s' % os.path.basename(fp.name)],
+                          dummy_arg=fp)
 
 
 def report_categories(hdfs_join_predictions_input, local_output, image_limit, local_thumb_output, **kw):
