@@ -1,7 +1,19 @@
 import hadoopy
 import cluster
 import time
-import functools
+import contextlib
+
+
+@contextlib.contextmanager
+def parallel_launch(launch):
+    procs = []
+    
+    def _inner(*args, **kw):
+        procs.append(launch(*args, wait=False, **kw))
+    yield _inner
+    for p in procs:
+        p.wait()
+    
 
 # HDFS Paths with data of the form (unique_string, binary_image_data
 data_root = '/user/brandyn/classifier_data/'

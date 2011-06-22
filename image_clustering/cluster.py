@@ -48,11 +48,11 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
         clusters_fp = fetch_clusters_from_hdfs(hdfs_prev_clusters)
         clusters_fn = os.path.basename(clusters_fp.name)
         cur_output = '%s/clust%.6d' % (hdfs_output, cur_iter_num)
-        _, frozen_tar_path = hadoopy.launch_frozen(hdfs_input, cur_output, 'kmeans.py',
-                                                   cmdenvs=['CLUSTERS_FN=%s' % clusters_fn],
-                                                   files=[clusters_fp.name],
-                                                   num_reducers=max(1, num_clusters / 2),
-                                                   frozen_tar_path=frozen_tar_path)
+        frozen_tar_path = hadoopy.launch_frozen(hdfs_input, cur_output, 'kmeans.py',
+                                                cmdenvs=['CLUSTERS_FN=%s' % clusters_fn],
+                                                files=[clusters_fp.name],
+                                                num_reducers=max(1, num_clusters / 2),
+                                                frozen_tar_path=frozen_tar_path)['frozen_tar_path']
         hdfs_prev_clusters = cur_output
     print('Clusters[%s]' % hdfs_prev_clusters)
     # Compute K-Means assignment/samples
