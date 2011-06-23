@@ -3,18 +3,35 @@ import hadoopy
 import cluster
 import time
 import contextlib
+import os
 
 
 @contextlib.contextmanager
 def parallel_launch(launch):
     procs = []
-    
+
     def _inner(*args, **kw):
         procs.append(launch(*args, wait=False, **kw)['process'])
     yield _inner
     for p in procs:
         p.wait()
-    
+
+
+def run_videos():
+    start_time = time.time()
+    #start_time = 1308792496.427986
+    root = '/user/amiller/tp/video_keyframe/run-%f/' % start_time
+    cluster.run_video_keyframe('/user/brandyn/videos_small', root + 'video_keyframe/', 30, 3.0, ffmpeg=True)
+    cluster.run_video_keyframe_collect(root + 'video_keyframe/')
+
+    cluster.report_thumbnails(root + 'video_keyframe/keyframes', root + 'video_keyframe/thumbs',
+                              'out/video_keyframe/thumbnails-%f' % start_time, 100)
+
+    for tag in ['photos', 'nonphotos']:
+        cluster.report_thumbnails(data_root + 'test_' + tag, root + '/thumbs/' + tag,
+                                  'out/%s/thumbnails-%f' % (tag, start_time), 100)
+
+
 
 # HDFS Paths with data of the form (unique_string, binary_image_data
 data_root = '/user/brandyn/classifier_data/'
@@ -198,5 +215,6 @@ if __name__ == '__main__':
     train_start_time = '1308644265.354146'
     test_start_time = '1308650330.016147'
     print('TrainStart[%s] TestStart[%s]' % (train_start_time, test_start_time))
-    predict(train_start_time, '/user/brandyn/classifier_data/unlabeled_flickr_small')
+    run_videos()
+    #predict(train_start_time, '/user/brandyn/classifier_data/unlabeled_flickr_small')
     hadoopy_flow.joinall()

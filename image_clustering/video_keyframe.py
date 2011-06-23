@@ -8,6 +8,7 @@ import tempfile
 import hadoopy
 import os
 import numpy as np
+import vidfeat
 
 
 class Seeker(object):
@@ -26,9 +27,10 @@ class Seeker(object):
         return self.frame
 
 
-def keyframes(video, videohash, kf, min_resolution, max_resolution):
+def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
     """
     Args:
+        frame_iter_lambda: call this to get an iterator (must work twice)
         min_resolution: the maximum number of keyframes to display in a
                         cluster, controls the subdividing of clusters
         max_resolution: the minimum distance between keyframes, in seconds
@@ -37,12 +39,17 @@ def keyframes(video, videohash, kf, min_resolution, max_resolution):
     # Find all the boundaries, including the first and last frame,
     # discarding tiny intervals (< max_resolution)
     boundaries = [0.0]
-    for (frame_num, frame_time, frame), iskeyframe in kf(video):
+    for (frame_num, frame_time, frame), iskeyframe in kf(iter1):
         if iskeyframe:
             print 'keyframe', frame_num
             boundaries.append(frame_time)
     if boundaries[-1] < frame_time:
         boundaries.append(frame_time)
+
+    # Get the video statistics from the output
+    video_frames = frame_num
+    video_fps = frame_num / frame_time
+    video_duration = frame_time
 
     intervals = zip(boundaries[:-1], boundaries[1:])
     assert len(intervals) > 0
@@ -51,17 +58,19 @@ def keyframes(video, videohash, kf, min_resolution, max_resolution):
 
     # Second pass
     # Grab all the 'middle' frames
+    frame_time = 0
     for start, stop in intervals:
-        frame_num = int((start+stop) / 2.0 * video.tv.get_fps())
-        timestamp = frame_num / video.tv.get_fps()
+        while frame_time < (start+stop)/2:
+            frame_num, frame_time, frame = iter2.next()
 
-        frame = video.GetFrameNo(frame_num)
+        timestamp = frame_time
 
         # Find the hash of the representative image
         s = StringIO.StringIO()
         frame.save(s, 'JPEG')
         s.seek(0)
         imagehash = hashlib.md5(s.buf).hexdigest()
+        yield ('frame', imagehash), s.buf
 
         # Store the image thumbnail itself
         frame = Image.open(s)
@@ -70,7 +79,7 @@ def keyframes(video, videohash, kf, min_resolution, max_resolution):
         frame.save(ts, 'JPEG')
         ts.seek(0)
         #print 'keyframe: ' + imagehash
-        yield ('frame', imagehash), ts.buf
+        yield ('thumb', imagehash), ts.buf
 
         keyframes.append({
             'range': (start, stop),
@@ -115,9 +124,9 @@ def keyframes(video, videohash, kf, min_resolution, max_resolution):
 
     video = {
         'hash': videohash,
-        'duration': video.tv.duration() / video.tv.get_fps(),
-        'frames': video.tv.duration(),
-        'fps': video.tv.get_fps(),
+        'duration': video_duration,
+        'frames': video_frames,
+        'fps': video_fps,
         'keyframes': [subdivide(keyframes)]
         }
     print 'video: ', videohash
@@ -127,21 +136,35 @@ def keyframes(video, videohash, kf, min_resolution, max_resolution):
     yield ('scores', videohash), kf.scores
 
 
-def mapper(videohash, video_data):
+def mapper(videohash, metadata):
     print 'mapper', videohash
+
+    #extension = metadata['extension']
+    #if metadata.has_key('video_data'):
+    #    video_data = metadata['video_data']
+
+    video_data = metadata
+
     max_resolution = float(os.environ.setdefault('MAX_RESOLUTION', '3.0'))
     min_resolution = int(os.environ.setdefault('MIN_RESOLUTION', '8'))
 
-    video = pyffmpeg.VideoStream()
     videohash = hashlib.md5(video_data).hexdigest()
     print videohash
+    # FIXME use an actual filename instead of assuming .avi
     with tempfile.NamedTemporaryFile(suffix='.avi') as fp:
         fp.write(video_data)
         fp.flush()
-        video.open(fp.name)
-        kf = keyframe.Histogram(skip_mod=5)
-        #kf = keyframe.SURF(skip_mod=5)
-        return keyframes(video, videohash, kf, min_resolution, max_resolution)
+        if 'USE_FFMPEG' in os.environ:
+            video = pyffmpeg.VideoStream()
+            video.open(fp.name)
+            iter1 = vidfeat.convert_video(video, ('frameiterskip', keyframe.histogram.MODES, 5))
+            iter2 = vidfeat.convert_video(video, ('frameiterskip', ['RGB'], 5))
+        else:
+            iter1 = vidfeat.convert_video_ffmpeg(video, ('frameiterskip', keyframe.histogram.MODES, 5), frozen=True)
+            iter2 = vidfeat.convert_video_ffmpeg(video, ('frameiterskip', ['RGB'], 5), frozen=True)
+
+        kf = keyframe.Histogram()
+        return keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution)
 
 
 if __name__ == '__main__':

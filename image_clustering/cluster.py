@@ -258,13 +258,19 @@ def run_video_keyframe(hdfs_input, hdfs_output, min_resolution, max_resolution, 
                               cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
                                        'MAX_RESOLUTION=%f' % max_resolution])
     else:
-        with vidfeat.freeze_ffmpeg() as f:
-            hadoopy.launch_frozen(hdfs_input, hdfs_output, 'video_keyframe.py',
-                                  reducer=None,
-                                  cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
-                                           'MAX_RESOLUTION=%f' % max_resolution],
-                                  files=f,
-                                  jobconfs=['mapred.child.java.opts=-Xmx512M'])
+        fp = vidfeat.freeze_ffmpeg()
+        hadoopy.launch_frozen(hdfs_input, hdfs_output, 'video_keyframe.py',
+                              reducer=None,
+                              cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
+                                       'MAX_RESOLUTION=%f' % max_resolution,
+                                       'USE_FFMPEG=1'],
+                              files=fp.__enter__(),
+                              dummy_arg=fp)
+
+
+def run_video_keyframe_collect(hdfs_output, **kw):
+    hadoopy.launch_frozen(hdfs_output, hdfs_output + '/keyframes', 'video_keyframe_collect.py',
+                      reducer=None)
 
 
 def report_clusters(hdfs_input, local_json_output, sample, category, make_faces, **kw):
@@ -325,27 +331,21 @@ def report_clusters(hdfs_input, local_json_output, sample, category, make_faces,
     file_parse.dump(report, local_json_output)
 
 
-def report_thumbnails(hdfs_input, local_thumb_output, **kw):
+def report_thumbnails(hdfs_input, hdfs_output, local_thumb_output, thumb_size, **kw):
     """Collect thumbnails of all images in hdfs://${hdfs_input}
     """
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, 'make_thumbnails.py',
+                          reducer=None,
+                          cmdenvs=['THUMB_SIZE=%d' % thumb_size])
+
     try:
-        os.makedirs(os.path.dirname(local_thumb_output))
+        os.makedirs(local_thumb_output)
     except OSError:
         pass
-    count = 0
-    for _, (image_hash, image_data) in hadoopy.readtb(hdfs_input):
-        s = StringIO.StringIO()
-        s.write(image_data)
-        s.seek(0)
-        frame = Image.open(s)
-        frame.thumbnail((100,100))
-        count += 1
-        if count % 100 == 0: print count
-        # Sometimes this is a png with an alpha layer
-        # TODO: autodetect it?
-        frame = frame.convert('RGB')
+    for image_hash, image_data in hadoopy.readtb(hdfs_output):
         path = '%s/%s.jpg' % (local_thumb_output, image_hash)
-        frame.save(path)
+        with open(path, 'w') as f:
+            f.write(image_data)
 
 
 def report_video_keyframe(hdfs_input, local_json_output, local_thumb_output, **kw):

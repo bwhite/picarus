@@ -9,10 +9,7 @@ def dump_images(hdfs_input, local_output):
     if not local_output:
         local_output = os.path.basename(hdfs_input.rstrip('/'))
     for k, image_data in hadoopy.readtb(hdfs_input):
-        s = StringIO.StringIO()
-        s.write(image_data)
-        s.seek(0)
-        image = Image.open(s)
+        image = Image.open(StringIO.StringIO(image_data))
 
         imformat = image.format
         if imformat == 'JPEG': imformat = 'JPG'
@@ -32,7 +29,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Copy images from hdfs to a local folder')
 
     parser.add_argument('hdfs_input', help='get images from hdfs')
-    parser.add_argument('--local_output', help='copy images here (if none, default to using the last part of the hdfs_input)', default='')
+    parser.add_argument('local_output', help='copy images here (if none, default to using the last part of the hdfs_input)')
 
     ARGS = parser.parse_args()
     dump_images(ARGS.hdfs_input, ARGS.local_output)
