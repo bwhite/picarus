@@ -32,7 +32,6 @@ def run_videos():
                                   'out/%s/thumbnails-%f' % (tag, start_time), 100)
 
 
-
 # HDFS Paths with data of the form (unique_string, binary_image_data
 data_root = '/user/brandyn/classifier_data/'
 
@@ -59,11 +58,23 @@ test_faces_path = data_root + 'test_faces'
 test_nonfaces_path = data_root + 'test_nonfaces'
 
 
+def run_videos():
+    start_time = time.time()
+    start_time = 1308792496.427986
+    root = '/user/amiller/tp/video_keyframe/run-%f/' % start_time
+    #cluster.run_video_keyframe('/user/brandyn/videos_small', root + 'video_keyframe/', 30, 3.0, ffmpeg=True)
+    cluster.run_video_keyframe_collect(root + 'video_keyframe/')
+
+
+def make_reports():
+    pass
+
+
 def train():
     # HDFS Paths for Output
     start_time = time.time()
     root = '/user/brandyn/tp/image_cluster/run-%f/' % start_time
-    
+
     # Compute features for classifier train
     cluster.run_image_feature(train_photos_path, root + 'train_feat/photos', 'meta_gist_spatial_hist', 256)
     cluster.run_image_feature(train_nonphotos_path, root + 'train_feat/nonphotos', 'meta_gist_spatial_hist', 256)
@@ -206,7 +217,7 @@ def predict(train_start_time, hdfs_input_path):
                                              root + 'cluster/%s' % x, num_clusters, num_iters, num_output_samples, 'l2sqr').start()
     map(kmeans, ['indoors', 'outdoors', 'objects', 'pr0n', 'faces'])
     # Generate JSON output
-    
+
 
 if __name__ == '__main__':
     #train_start_time = train()
