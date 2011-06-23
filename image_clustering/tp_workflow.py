@@ -2,18 +2,6 @@ import hadoopy_flow
 import hadoopy
 import cluster
 import time
-import contextlib
-
-
-@contextlib.contextmanager
-def parallel_launch(launch):
-    procs = []
-
-    def _inner(*args, **kw):
-        procs.append(launch(*args, wait=False, **kw)['process'])
-    yield _inner
-    for p in procs:
-        p.wait()
 
 
 # HDFS Paths with data of the form (unique_string, binary_image_data
@@ -182,12 +170,12 @@ def predict(train_start_time, hdfs_input_path):
     cluster.run_thresh_predictions(root + 'predict/indoors', root + 'feat/photos', root + 'feat/outdoors', 'indoor', 0., -1)
     cluster.run_thresh_predictions(root + 'predict/objects', root + 'feat/photos', root + 'feat/objects', 'object', 0., 1)
     cluster.run_thresh_predictions(root + 'predict/pr0n', root + 'feat/photos', root + 'feat/pr0n', 'pr0n', 0., 1)
-    # Find faces
+    # Find faces and compute the eigenface feature
     cluster.run_face_finder(root + 'data/photos', root + 'data/detected_faces', image_length=64, boxes=False)
     cluster.run_image_feature(root + 'data/detected_faces', root + 'feat/detected_faces', 'meta_gist_spatial_hist', 256)
     cluster.run_predict_classifier(root + 'feat/detected_faces', train_root + 'classifiers/faces', root + 'predict/detected_faces')
     cluster.run_thresh_predictions(root + 'predict/detected_faces', root + 'data/detected_faces', root + 'data/faces', 'face', 0., 1)
-    cluster.run_thresh_predictions(root + 'predict/detected_faces', root + 'feat/detected_faces', root + 'feat/faces', 'face', 0., 1)
+    cluster.run_image_feature(root + 'data/faces', root + 'feat/faces', 'eigenface', 64)
     # Sample for initial clusters
     num_clusters = 10
     num_iters = 5
@@ -204,12 +192,11 @@ def predict(train_start_time, hdfs_input_path):
 
 
 if __name__ == '__main__':
-    #train_start_time = train()
-    #test_start_time = train_predict(train_start_time)
-    #score_train_predictions(test_start_time)
-    train_start_time = '1308644265.354146'
-    test_start_time = '1308650330.016147'
+    train_start_time = train()
+    test_start_time = train_predict(train_start_time)
+    score_train_predictions(test_start_time)
+    #train_start_time = '1308644265.354146'
+    #test_start_time = '1308650330.016147'
     print('TrainStart[%s] TestStart[%s]' % (train_start_time, test_start_time))
-    run_videos()
-    #predict(train_start_time, '/user/brandyn/classifier_data/unlabeled_flickr_small')
-    hadoopy_flow.joinall()
+    #run_videos()
+    predict(train_start_time, '/user/brandyn/classifier_data/unlabeled_flickr_small')
