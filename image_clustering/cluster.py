@@ -259,17 +259,14 @@ def run_video_keyframe(hdfs_input, hdfs_output, min_resolution, max_resolution, 
                                        'MAX_RESOLUTION=%f' % max_resolution])
     else:
         fp = vidfeat.freeze_ffmpeg()
-        hadoopy.launch_frozen(hdfs_input, hdfs_output, 'video_keyframe.py',
+        hadoopy.launch_local(hdfs_input, hdfs_output, 'video_keyframe.py',
                               reducer=None,
                               cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
                                        'MAX_RESOLUTION=%f' % max_resolution,
                                        'USE_FFMPEG=1'],
                               files=fp.__enter__(),
                               dummy_arg=fp)
-
-
-def run_video_keyframe_collect(hdfs_output, **kw):
-    hadoopy.launch_frozen(hdfs_output, hdfs_output + '/keyframes', 'video_keyframe_collect.py',
+    hadoopy.launch_local(hdfs_output, hdfs_output + '/keyframes', 'video_keyframe_collect.py',
                       reducer=None)
 
 
@@ -329,6 +326,12 @@ def report_clusters(hdfs_input, local_json_output, sample, category, make_faces,
         pass
     report = {category: clusters}
     file_parse.dump(report, local_json_output)
+
+
+def make_thumbnails(hdfs_input, hdfs_output, thumb_size, **kw):
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, 'make_thumbnails.py',
+                          reducer=None,
+                          cmdenvs=['THUMB_SIZE=%d' % thumb_size])
 
 
 def report_thumbnails(hdfs_input, hdfs_output, local_thumb_output, thumb_size, **kw):

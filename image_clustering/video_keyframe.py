@@ -11,22 +11,6 @@ import numpy as np
 import vidfeat
 
 
-class Seeker(object):
-    """For frame_iters that don't support random seeking (i.e. streaming from
-    ffmpeg cmd), this makes it easy to skip forward
-    """
-    def __init__(self, frame_iter):
-        self.counter = 0
-        self.frame_iter = frame_iter
-        self.frame = frame_iter.next()
-
-    def get_frame_num(self, frame_num):
-        assert frame_num >= self.counter
-        while frame_num > self.counter:
-            self.frame = self.frame_iter.next()
-        return self.frame
-
-
 def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
     """
     Args:
@@ -43,13 +27,14 @@ def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
         if iskeyframe:
             print 'keyframe', frame_num
             boundaries.append(frame_time)
-    if boundaries[-1] < frame_time:
-        boundaries.append(frame_time)
 
     # Get the video statistics from the output
     video_frames = frame_num
     video_fps = frame_num / frame_time
     video_duration = frame_time
+
+    if boundaries[-1] < video_duration:
+        boundaries.append(video_duration)
 
     intervals = zip(boundaries[:-1], boundaries[1:])
     assert len(intervals) > 0
@@ -154,14 +139,14 @@ def mapper(videohash, metadata):
     with tempfile.NamedTemporaryFile(suffix='.avi') as fp:
         fp.write(video_data)
         fp.flush()
-        if 'USE_FFMPEG' in os.environ:
+        if not 'USE_FFMPEG' in os.environ:
             video = pyffmpeg.VideoStream()
             video.open(fp.name)
             iter1 = vidfeat.convert_video(video, ('frameiterskip', keyframe.histogram.MODES, 5))
             iter2 = vidfeat.convert_video(video, ('frameiterskip', ['RGB'], 5))
         else:
-            iter1 = vidfeat.convert_video_ffmpeg(video, ('frameiterskip', keyframe.histogram.MODES, 5), frozen=True)
-            iter2 = vidfeat.convert_video_ffmpeg(video, ('frameiterskip', ['RGB'], 5), frozen=True)
+            iter1 = vidfeat.convert_video_ffmpeg(fp.name, ('frameiterskip', keyframe.histogram.MODES, 5), frozen=True)
+            iter2 = vidfeat.convert_video_ffmpeg(fp.name, ('frameiterskip', ['RGB'], 5), frozen=True)
 
         kf = keyframe.Histogram()
         return keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution)
