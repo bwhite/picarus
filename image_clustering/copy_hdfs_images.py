@@ -32,7 +32,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Copy images from hdfs to a local folder')
 
     parser.add_argument('hdfs_input', help='get images from hdfs')
-    parser.add_argument('--local_output', help='copy images here (if none, default to using the last part of the hdfs_input)', default='')
+    parser.add_argument('local_output', help='copy images here (if none, default to using the last part of the hdfs_input)')
 
     ARGS = parser.parse_args()
     dump_images(ARGS.hdfs_input, ARGS.local_output)

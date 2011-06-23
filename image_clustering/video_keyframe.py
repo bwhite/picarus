@@ -62,6 +62,7 @@ def keyframes(video, videohash, kf, min_resolution, max_resolution):
         frame.save(s, 'JPEG')
         s.seek(0)
         imagehash = hashlib.md5(s.buf).hexdigest()
+        yield ('frame', imagehash), s.buf
 
         # Store the image thumbnail itself
         frame = Image.open(s)
@@ -70,7 +71,7 @@ def keyframes(video, videohash, kf, min_resolution, max_resolution):
         frame.save(ts, 'JPEG')
         ts.seek(0)
         #print 'keyframe: ' + imagehash
-        yield ('frame', imagehash), ts.buf
+        yield ('thumb', imagehash), ts.buf
 
         keyframes.append({
             'range': (start, stop),
@@ -135,6 +136,7 @@ def mapper(videohash, video_data):
     video = pyffmpeg.VideoStream()
     videohash = hashlib.md5(video_data).hexdigest()
     print videohash
+    # FIXME use an actual filename instead of assuming .avi
     with tempfile.NamedTemporaryFile(suffix='.avi') as fp:
         fp.write(video_data)
         fp.flush()
