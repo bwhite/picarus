@@ -5,7 +5,7 @@ import cStringIO as StringIO
 import Image
 import re
 import random
-from picarus import file_parse
+from picarus import _file_parse as file_parse
 from picarus.report import report_output
 
 

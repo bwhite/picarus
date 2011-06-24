@@ -1,5 +1,5 @@
 import hadoopy
-from picarus import file_parse
+from picarus import _file_parse as file_parse
 import glob
 import os
 import tempfile
