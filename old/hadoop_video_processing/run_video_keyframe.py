@@ -17,5 +17,4 @@ def main():
     run('/user/brandyn/videos_small',
         'output/video_keyframes/%f/' % time.time())
 
-
 main()

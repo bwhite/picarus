@@ -11,10 +11,10 @@
   <h2>Sample Report</h2>
   <div>
     <a href="#" onclick="showvideos()">[Videos]</a>
-    <a href="#" onclick="showclusters('outdoor')">[Outdoor]</a>
-    <a href="#" onclick="showclusters('indoor')">[Indoor]</a>
+    <a href="#" onclick="showclusters('outdoors')">[Outdoor]</a>
+    <a href="#" onclick="showclusters('indoors')">[Indoor]</a>
     <a href="#" onclick="showclusters('objects')">[Objects]</a>
-    <a href="#" onclick="showclusters('inappropriate')">[Inappropriate]</a>
+    <a href="#" onclick="showclusters('pr0n')">[Inappropriate]</a>
     <a href="#" onclick="showclusters('faces')">[Faces]</a>
   </div>
   <div id="report">
@@ -45,12 +45,12 @@
 		if (type=='faces') {
 		    // This assumes there is exactly 1 face per image
 		    var face = image.faces[0]
-		    var x = face.boundingbox[0][0]
-		    var y = face.boundingbox[0][1]
-		    var w = face.boundingbox[1][0]
-		    var h = face.boundingbox[1][1]
-		    img.attr('src', 'face_t/'+image.hash+'-face-x'+
-			     x+'-y'+y+'-w'+w+'-h'+h+'.jpg')
+		    var l = face.boundingbox[0][0]
+		    var t = face.boundingbox[0][1]
+		    var r = face.boundingbox[1][0]
+		    var b = face.boundingbox[1][1]
+		    img.attr('src', 'face_t/'+image.hash+'-face-x0'+
+			     l+'-y0'+t+'-x1'+r+'-y1'+b+'.jpg')
 		} else {
 		    img.attr('src', 't/'+image.hash+'.jpg')
 		}

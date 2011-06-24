@@ -9,10 +9,7 @@ def dump_images(hdfs_input, local_output):
     if not local_output:
         local_output = os.path.basename(hdfs_input.rstrip('/'))
     for k, image_data in hadoopy.readtb(hdfs_input):
-        s = StringIO.StringIO()
-        s.write(image_data)
-        s.seek(0)
-        image = Image.open(s)
+        image = Image.open(StringIO.StringIO(image_data))
 
         imformat = image.format
         if imformat == 'JPEG': imformat = 'JPG'

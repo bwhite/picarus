@@ -4,6 +4,18 @@ import cluster
 import time
 
 
+def run_videos():
+    start_time = time.time()
+    #start_time = 1308792496.427986
+    root = '/user/amiller/tp/video_keyframe/run-%f/' % start_time
+    cluster.run_video_keyframe('/user/brandyn/videos_small', root + 'video_keyframe/', 30, 3.0, ffmpeg=False)
+
+    # Make the thumbnails (this parallelizes)
+    for tag in ['photos', 'nonphotos']:
+        cluster.make_thumbnails(data_root + 'test_' + tag, root + '/thumbs/' + tag, 100)
+    cluster.make_thumbnails(root + 'video_keyframe/keyframes', root + 'video_keyframe/thumbs', 100)
+
+
 # HDFS Paths with data of the form (unique_string, binary_image_data
 data_root = '/user/brandyn/classifier_data/'
 
@@ -28,14 +40,6 @@ test_pr0n_path = data_root + 'test_pr0n'
 test_nonpr0n_path = data_root + 'test_nonpr0n'
 test_faces_path = data_root + 'test_faces'
 test_nonfaces_path = data_root + 'test_nonfaces'
-
-
-def run_videos():
-    start_time = time.time()
-    start_time = 1308792496.427986
-    root = '/user/amiller/tp/video_keyframe/run-%f/' % start_time
-    #cluster.run_video_keyframe('/user/brandyn/videos_small', root + 'video_keyframe/', 30, 3.0, ffmpeg=True)
-    cluster.run_video_keyframe_collect(root + 'video_keyframe/')
 
 
 def make_reports():
