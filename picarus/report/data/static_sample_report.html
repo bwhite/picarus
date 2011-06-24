@@ -49,7 +49,7 @@
 		    var t = face.boundingbox[0][1]
 		    var r = face.boundingbox[1][0]
 		    var b = face.boundingbox[1][1]
-		    img.attr('src', 'face_t/'+image.hash+'-face-x0'+
+		    img.attr('src', 't/'+image.hash+'-face-x0'+
 			     l+'-y0'+t+'-x1'+r+'-y1'+b+'.jpg')
 		} else {
 		    img.attr('src', 't/'+image.hash+'.jpg')
@@ -90,7 +90,7 @@
 	    var divkeyframe = $('#templ_keyframe > div').clone()
 	    var len2 = Math.floor(video.keyframes.length / 2);
 	    console.info(len2)
-	    divkeyframe.find('img.keyframe').attr('src', 'vid_t/'+video.keyframes[len2].image.hash+'.jpg')
+	    divkeyframe.find('img.keyframe').attr('src', 't/'+video.keyframes[len2].image.hash+'.jpg')
 	    divkeyframe.find('.keyframe_expand a').html(round(video.duration)+'s ['+video.keyframes[len2].count+']')
 	    divkeyframe.click(function () {
 		showvideo(video)
@@ -128,7 +128,7 @@
 	var keyframe_row = $('#templ_keyframerow > div').clone()
 	$.each(keyframes, function (k, keyframe) {
 	    var divkeyframe = $('#templ_keyframe > div').clone()
-	    divkeyframe.find('img.keyframe').attr('src', 'vid_t/'+keyframe.image.hash+'.jpg')
+	    divkeyframe.find('img.keyframe').attr('src', 't/'+keyframe.image.hash+'.jpg')
 	    var children = keyframe.children
 	    if (children.length > 0) {
 		divkeyframe.find('a').html(round(keyframe.timestamp)+'s ['+keyframe.count+']')

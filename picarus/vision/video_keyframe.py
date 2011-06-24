@@ -23,7 +23,7 @@ def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
     # Find all the boundaries, including the first and last frame,
     # discarding tiny intervals (< max_resolution)
     boundaries = [0.0]
-    for (frame_num, frame_time, frame), iskeyframe in kf(iter1):
+    for (frame_num, frame_time, frame), iskeyframe in kf(iter1()):
         if iskeyframe:
             print 'keyframe', frame_num
             boundaries.append(frame_time)
@@ -44,10 +44,12 @@ def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
     # Second pass
     # Grab all the 'middle' frames
     frame_time = 0
+    iter2 = iter2()
+    iter2.next()
     for start, stop in intervals:
-        while frame_time < (start+stop)/2:
-            frame_num, frame_time, frame = iter2.next()
-
+        frame_time = (start+stop)/2
+        frame_num = video_fps * frame_time
+        frame_num, frame_time, frame = iter2.send(frame_num)
         timestamp = frame_time
 
         # Find the hash of the representative image
@@ -57,14 +59,15 @@ def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
         imagehash = hashlib.md5(s.buf).hexdigest()
         yield ('frame', imagehash), s.buf
 
-        # Store the image thumbnail itself
-        frame = Image.open(s)
-        frame.thumbnail((100,100))
-        ts = StringIO.StringIO()
-        frame.save(ts, 'JPEG')
-        ts.seek(0)
-        #print 'keyframe: ' + imagehash
-        yield ('thumb', imagehash), ts.buf
+        if 0:
+            # Store the image thumbnail itself
+            frame = Image.open(s)
+            frame.thumbnail((100,100))
+            ts = StringIO.StringIO()
+            frame.save(ts, 'JPEG')
+            ts.seek(0)
+            # print 'keyframe: ' + imagehash
+            yield ('thumb', imagehash), ts.buf
 
         keyframes.append({
             'range': (start, stop),
@@ -134,7 +137,6 @@ def mapper(videohash, metadata):
     min_resolution = int(os.environ.setdefault('MIN_RESOLUTION', '8'))
 
     videohash = hashlib.md5(video_data).hexdigest()
-    print videohash
     # FIXME use an actual filename instead of assuming .avi
     with tempfile.NamedTemporaryFile(suffix='.avi') as fp:
         fp.write(video_data)
@@ -142,14 +144,18 @@ def mapper(videohash, metadata):
         if not 'USE_FFMPEG' in os.environ:
             video = pyffmpeg.VideoStream()
             video.open(fp.name)
-            iter1 = vidfeat.convert_video(video, ('frameiterskip', keyframe.histogram.MODES, 5))
-            iter2 = vidfeat.convert_video(video, ('frameiterskip', ['RGB'], 5))
+            iter1 = lambda : vidfeat.convert_video(video, ('frameiterskip', keyframe.histogram.MODES, 5))
+            iter2 = lambda : vidfeat.convert_video(video, ('frameiterskip', ['RGB'], 5))
         else:
-            iter1 = vidfeat.convert_video_ffmpeg(fp.name, ('frameiterskip', keyframe.histogram.MODES, 5), frozen=True)
-            iter2 = vidfeat.convert_video_ffmpeg(fp.name, ('frameiterskip', ['RGB'], 5), frozen=True)
+            iter1 = lambda : vidfeat.convert_video_ffmpeg(fp.name, ('frameiterskip', keyframe.histogram.MODES, 5), frozen=True)
+            iter2 = lambda : vidfeat.convert_video_ffmpeg(fp.name, ('frameiterskip', ['RGB'], 5), frozen=True)
 
         kf = keyframe.Histogram()
-        return keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution)
+
+        # Do this instead of 'return' in order to keep the tempfile around
+        for k, v in  keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
+            print k
+            yield k, v
 
 
 if __name__ == '__main__':

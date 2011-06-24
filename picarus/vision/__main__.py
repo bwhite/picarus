@@ -25,19 +25,23 @@ def run_face_finder(hdfs_input, hdfs_output, image_length, boxes, **kw):
 
 
 def run_video_keyframe(hdfs_input, hdfs_output, min_resolution, max_resolution, ffmpeg, **kw):
+
+    #vidin = '/user/amiller/tp/video_keyframe/run-1308896110.275528/video_keyframe'
+
     if not ffmpeg:
-        hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('video_keyframe.py'),
+        hadoopy.launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
                               reducer=None,
                               cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
                                        'MAX_RESOLUTION=%f' % max_resolution])
     else:
         fp = vidfeat.freeze_ffmpeg()
-        hadoopy.launch_local(hdfs_input, hdfs_output, _lf('video_keyframe.py'),
+        hadoopy.launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
                               reducer=None,
                               cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
                                        'MAX_RESOLUTION=%f' % max_resolution,
                                        'USE_FFMPEG=1'],
                               files=fp.__enter__(),
                               dummy_arg=fp)
-    hadoopy.launch_local(hdfs_output, hdfs_output + '/keyframes', _lf('video_keyframe_collect.py'),
+
+    hadoopy.launch_frozen(hdfs_output + '/keyframe', hdfs_output + '/samples', _lf('video_keyframe_collect.py'),
                       reducer=None)
