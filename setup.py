@@ -6,4 +6,4 @@ setup(name='picarus',
       author_email='bwhite@dappervision.com',
       license='GPL',
       package_data={'picarus._data': ['*.xml', '*.pkl', '*.html', '*.jpg']},
-      packages=['picarus', 'picarus._vision', 'picarus._cluster', 'picarus._classify', 'picarus._report', 'picarus._data'])
+      packages=['picarus', 'picarus.vision', 'picarus.cluster', 'picarus.classify', 'picarus.report', 'picarus._data'])
