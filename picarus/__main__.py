@@ -7,7 +7,7 @@ import cPickle as pickle
 import numpy as np
 import glob
 import file_parse
-import report_output
+from picarus._report import report_output
 import heapq
 import StringIO
 import Image
@@ -17,7 +17,6 @@ import vidfeat
 
 
 def run_image_feature(hdfs_input, hdfs_output, feature, image_length, **kw):
-    print('Before feature')
     hadoopy.launch_frozen(hdfs_input, hdfs_output, 'feature_compute.py', reducer=False,
                           cmdenvs=['IMAGE_LENGTH=%d' % image_length,
                                    'FEATURE=%s' % feature],
@@ -160,9 +159,7 @@ def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, **kw)
     # NOTE: Adds necessary files
     files = glob.glob(classipy.__path__[0] + "/lib/*")
     fp = tempfile.NamedTemporaryFile(suffix='.pkl.gz')
-    print('------------------------BEFORE READTB')
     file_parse.dump(list(hadoopy.readtb(hdfs_classifier_input)), fp.name)
-    print('------------------------AFTER  READTB [%s, %s]' % (fp.name, os.path.exists(fp.name)))
     files.append(fp.name)
     hadoopy.launch_frozen(hdfs_input, hdfs_output, 'predict_classifier.py',
                           files=files, reducer=None,
@@ -375,7 +372,7 @@ def report_video_keyframe(hdfs_input, local_json_output, local_thumb_output, **k
     file_parse.dump(report, local_json_output)
 
 
-def main():
+def _main():
     parser = argparse.ArgumentParser(description='Hadoopy Image Clustering Utility')
     sps = parser.add_subparsers(help='Available commands (select for additional help)')
 
@@ -520,4 +517,4 @@ def main():
     args.func(**vars(args))
 
 if __name__ == '__main__':
-    main()
+    _main()
