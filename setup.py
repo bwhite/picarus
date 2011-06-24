@@ -5,5 +5,5 @@ setup(name='picarus',
       author='Brandyn A. White',
       author_email='bwhite@dappervision.com',
       license='GPL',
-      package_data={'picarus._data': ['*.xml', '*.pkl', '*.html', '*.jpg']},
-      packages=['picarus', 'picarus.vision', 'picarus.cluster', 'picarus.classify', 'picarus.report', 'picarus._data'])
+      package_data={'picarus.vision.data': ['*.xml', '*.pkl', '*.html', '*.jpg']},
+      packages=['picarus', 'picarus.vision', 'picarus.vision.data', 'picarus.cluster', 'picarus.classify', 'picarus.report'])

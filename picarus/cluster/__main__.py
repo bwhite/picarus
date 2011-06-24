@@ -5,12 +5,17 @@ import numpy as np
 import cPickle as pickle
 
 
+def _lf(fn):
+    from . import __path__
+    return os.path.join(__path__[0], fn)
+
+
 def run_whiten(hdfs_input, hdfs_output, **kw):
-    hadoopy.launch_frozen(hdfs_input, hdfs_output, 'whiten.py')
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('whiten.py'))
 
 
 def run_sample(hdfs_input, hdfs_output, num_clusters, **kw):
-    hadoopy.launch_frozen(hdfs_input, hdfs_output, 'random_sample.py',
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('random_sample.py'),
                           cmdenvs=['SAMPLE_SIZE=%d' % num_clusters])
 
 
@@ -21,7 +26,7 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
         clusters_fp = fetch_clusters_from_hdfs(hdfs_prev_clusters)
         clusters_fn = os.path.basename(clusters_fp.name)
         cur_output = '%s/clust%.6d' % (hdfs_output, cur_iter_num)
-        frozen_tar_path = hadoopy.launch_frozen(hdfs_input, cur_output, 'kmeans.py',
+        frozen_tar_path = hadoopy.launch_frozen(hdfs_input, cur_output, _lf('kmeans.py'),
                                                 cmdenvs=['CLUSTERS_FN=%s' % clusters_fn],
                                                 files=[clusters_fp.name],
                                                 num_reducers=max(1, num_clusters / 2),
@@ -34,7 +39,7 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
     clusters_fp = fetch_clusters_from_hdfs(hdfs_prev_clusters)
     clusters_fn = os.path.basename(clusters_fp.name)
     cur_output = '%s/assign' % hdfs_output
-    hadoopy.launch_frozen(hdfs_input, cur_output, 'kmeans_assign.py',
+    hadoopy.launch_frozen(hdfs_input, cur_output, _lf('kmeans_assign.py'),
                           cmdenvs=['CLUSTERS_FN=%s' % clusters_fn,
                                    'NUM_SAMPLES=%d' % num_samples,
                                    'mapred.text.key.partitioner.options=-k1'],
@@ -47,7 +52,7 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
     assignments_fp = fetch_assignments_from_hdfs(cur_output)
     assignments_fn = os.path.basename(assignments_fp.name)
     cur_output = '%s/samples' % hdfs_output
-    hadoopy.launch_frozen(hdfs_image_data, cur_output, 'filter_samples.py',
+    hadoopy.launch_frozen(hdfs_image_data, cur_output, _lf('filter_samples.py'),
                           cmdenvs=['ASSIGNMENTS_FN=%s' % os.path.basename(assignments_fn)],
                           files=[assignments_fp.name],
                           reducer=None,

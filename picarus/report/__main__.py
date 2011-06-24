@@ -9,6 +9,11 @@ from picarus import _file_parse as file_parse
 from picarus.report import report_output
 
 
+def _lf(fn):
+    from . import __path__
+    return os.path.join(__path__[0], fn)
+
+
 def report_categories(hdfs_join_predictions_input, local_output, image_limit, local_thumb_output, **kw):
     # Output a cluster for each category
     # FIXME This is hardcoded for indoor_outdoor, it will have to change when
@@ -118,7 +123,7 @@ def report_clusters(hdfs_input, local_json_output, sample, category, make_faces,
 
 
 def make_thumbnails(hdfs_input, hdfs_output, thumb_size, **kw):
-    hadoopy.launch_frozen(hdfs_input, hdfs_output, 'make_thumbnails.py',
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('make_thumbnails.py'),
                           reducer=None,
                           cmdenvs=['THUMB_SIZE=%d' % thumb_size])
 
@@ -126,7 +131,7 @@ def make_thumbnails(hdfs_input, hdfs_output, thumb_size, **kw):
 def report_thumbnails(hdfs_input, hdfs_output, local_thumb_output, thumb_size, **kw):
     """Collect thumbnails of all images in hdfs://${hdfs_input}
     """
-    hadoopy.launch_frozen(hdfs_input, hdfs_output, 'make_thumbnails.py',
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('make_thumbnails.py'),
                           reducer=None,
                           cmdenvs=['THUMB_SIZE=%d' % thumb_size])
 
