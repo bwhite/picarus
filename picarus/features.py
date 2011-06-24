@@ -1,5 +1,5 @@
 import imfeat
-import face_feature
+import picarus.vision.face_feature
 import cPickle as pickle
 import numpy as np
 
