@@ -71,7 +71,7 @@ def report_clusters(hdfs_input, sample, category, make_faces, **kw):
 
 def make_thumbnails(hdfs_input, hdfs_output, thumb_size, is_cluster=False, **kw):
     script = 'make_thumbnails.py' if not is_cluster else 'make_cluster_thumbnails.py'
-    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf(script),
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf(script),
                           reducer=None,
                           cmdenvs=['THUMB_SIZE=%d' % thumb_size])
 

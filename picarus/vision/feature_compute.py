@@ -1,10 +1,10 @@
 import hadoopy
 import imfeat
 import Image
-import features
 import cStringIO as StringIO
 import os
 import numpy as np
+import picarus._features as features
 
 
 class Mapper(object):
