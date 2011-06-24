@@ -3,6 +3,7 @@ import os
 import tempfile
 import numpy as np
 import cPickle as pickle
+import picarus
 
 
 def _lf(fn):
@@ -11,27 +12,25 @@ def _lf(fn):
 
 
 def run_whiten(hdfs_input, hdfs_output, **kw):
-    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('whiten.py'))
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('whiten.py'))
 
 
 def run_sample(hdfs_input, hdfs_output, num_clusters, **kw):
-    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('random_sample.py'),
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('random_sample.py'),
                           cmdenvs=['SAMPLE_SIZE=%d' % num_clusters])
 
 
 def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num_clusters,
                num_iters, num_samples, metric, local_json_output=None, **kw):
-    frozen_tar_path = None
     for cur_iter_num in range(num_iters):
         clusters_fp = fetch_clusters_from_hdfs(hdfs_prev_clusters)
         clusters_fn = os.path.basename(clusters_fp.name)
         cur_output = '%s/clust%.6d' % (hdfs_output, cur_iter_num)
-        frozen_tar_path = hadoopy.launch_frozen(hdfs_input, cur_output, _lf('kmeans.py'),
-                                                cmdenvs=['CLUSTERS_FN=%s' % clusters_fn],
-                                                files=[clusters_fp.name],
-                                                num_reducers=max(1, num_clusters / 2),
-                                                frozen_tar_path=frozen_tar_path,
-                                                dummy_arg=clusters_fp)['frozen_tar_path']
+        picarus._launch_frozen(hdfs_input, cur_output, _lf('kmeans.py'),
+                               cmdenvs=['CLUSTERS_FN=%s' % clusters_fn],
+                               files=[clusters_fp.name],
+                               num_reducers=max(1, num_clusters / 2),
+                               dummy_arg=clusters_fp)
         hdfs_prev_clusters = cur_output
     print('Clusters[%s]' % hdfs_prev_clusters)
     # Compute K-Means assignment/samples
@@ -39,7 +38,7 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
     clusters_fp = fetch_clusters_from_hdfs(hdfs_prev_clusters)
     clusters_fn = os.path.basename(clusters_fp.name)
     cur_output = '%s/assign' % hdfs_output
-    hadoopy.launch_frozen(hdfs_input, cur_output, _lf('kmeans_assign.py'),
+    picarus._launch_frozen(hdfs_input, cur_output, _lf('kmeans_assign.py'),
                           cmdenvs=['CLUSTERS_FN=%s' % clusters_fn,
                                    'NUM_SAMPLES=%d' % num_samples,
                                    'mapred.text.key.partitioner.options=-k1'],
@@ -52,7 +51,7 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
     assignments_fp = fetch_assignments_from_hdfs(cur_output)
     assignments_fn = os.path.basename(assignments_fp.name)
     cur_output = '%s/samples' % hdfs_output
-    hadoopy.launch_frozen(hdfs_image_data, cur_output, _lf('filter_samples.py'),
+    picarus._launch_frozen(hdfs_image_data, cur_output, _lf('filter_samples.py'),
                           cmdenvs=['ASSIGNMENTS_FN=%s' % os.path.basename(assignments_fn)],
                           files=[assignments_fp.name],
                           reducer=None,

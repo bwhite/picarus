@@ -3,6 +3,7 @@ from picarus import _file_parse as file_parse
 import glob
 import os
 import tempfile
+import picarus
 
 
 def _lf(fn):
@@ -18,8 +19,8 @@ def run_classifier_labels(hdfs_input_pos, hdfs_input_neg, hdfs_output, classifie
         pass
     hdfs_output_pos = hdfs_output + '/pos'
     hdfs_output_neg = hdfs_output + '/neg'
-    hadoopy.launch_frozen(hdfs_input_pos, hdfs_output_pos, _lf('collect_keys.py'))
-    hadoopy.launch_frozen(hdfs_input_neg, hdfs_output_neg, _lf('collect_keys.py'))
+    picarus._launch_frozen(hdfs_input_pos, hdfs_output_pos, _lf('collect_keys.py'))
+    picarus._launch_frozen(hdfs_input_neg, hdfs_output_neg, _lf('collect_keys.py'))
     pos_keys = sum((x[1] for x in hadoopy.readtb(hdfs_output_pos)), [])
     neg_keys = sum((x[1] for x in hadoopy.readtb(hdfs_output_neg)), [])
     labels[classifier_name] = {'labels': {'1': pos_keys, '-1': neg_keys},
@@ -33,7 +34,7 @@ def run_train_classifier(hdfs_input, hdfs_output, local_labels, **kw):
     # NOTE: Adds necessary files
     files = glob.glob(classipy.__path__[0] + "/lib/*")
     files.append(local_labels)
-    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('train_classifier.py'),
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('train_classifier.py'),
                           files=files,
                           cmdenvs=['LOCAL_LABELS_FN=%s' % os.path.basename(local_labels)])
 
@@ -45,7 +46,7 @@ def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, **kw)
     fp = tempfile.NamedTemporaryFile(suffix='.pkl.gz')
     file_parse.dump(list(hadoopy.readtb(hdfs_classifier_input)), fp.name)
     files.append(fp.name)
-    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('predict_classifier.py'),
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('predict_classifier.py'),
                           files=files, reducer=None,
                           cmdenvs=['CLASSIFIERS_FN=%s' % os.path.basename(fp.name)],
                           dummy_arg=fp)
@@ -57,7 +58,7 @@ def run_join_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, local_
         inputs += hdfs_input
     else:
         inputs.append(hdfs_input)
-    hadoopy.launch_frozen(inputs, hdfs_output, _lf('join_predictions.py'))
+    picarus._launch_frozen(inputs, hdfs_output, _lf('join_predictions.py'))
     if local_image_output:
         for image_hash, (classifier_preds, image_data) in hadoopy.readtb(hdfs_output):
             for classifier, preds in classifier_preds.items():
@@ -77,7 +78,7 @@ def run_thresh_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, clas
         inputs += hdfs_input
     else:
         inputs.append(hdfs_input)
-    hadoopy.launch_frozen(inputs, hdfs_output, _lf('thresh_predictions.py'),
+    picarus._launch_frozen(inputs, hdfs_output, _lf('thresh_predictions.py'),
                           cmdenvs=['CLASSIFIER_NAME=%s' % class_name,
                                    'CLASSIFIER_THRESH=%f' % class_thresh,
                                    'OUTPUT_CLASS=%d' % output_class])

@@ -1,7 +1,7 @@
 import hadoopy
-import file_parse
+import picarus._file_parse as file_parse
 import os
-import classifiers
+import picarus._classifiers as classifiers
 
 
 class Mapper(object):
