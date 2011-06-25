@@ -19,7 +19,7 @@ __author__ = 'Vlad I. Morariu <morariu@umd.edu>'
 __license__ = 'GPL V3'
 
 
-import face_feature
+from picarus.vision import face_feature
 import imfeat
 import cv
 import numpy as np
