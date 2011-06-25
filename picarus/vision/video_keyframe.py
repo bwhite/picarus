@@ -9,6 +9,7 @@ import hadoopy
 import os
 import numpy as np
 import vidfeat
+import picarus
 
 
 def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
@@ -27,6 +28,10 @@ def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
         if iskeyframe:
             print 'keyframe', frame_num
             boundaries.append(frame_time)
+
+    if not 'frame_time' in locals() or frame_time == 0:
+        print 'There were no frames in this video:', videohash
+        return
 
     # Get the video statistics from the output
     video_frames = frame_num

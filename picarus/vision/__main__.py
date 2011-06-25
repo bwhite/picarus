@@ -1,6 +1,7 @@
 import hadoopy
 import vidfeat
 import os
+import picarus
 
 
 def _lf(fn):
