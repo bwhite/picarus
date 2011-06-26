@@ -3,6 +3,7 @@ import hadoopy
 import StringIO
 import Image
 import os
+import numpy as np
 
 
 def mapper(image_hash, image_data):
