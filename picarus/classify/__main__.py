@@ -11,6 +11,43 @@ def _lf(fn):
     return os.path.join(__path__[0], fn)
 
 
+def _parser(sps):
+    import picarus.__main__
+    ca = picarus.__main__._ca
+    # Make labels pkl
+    s = sps.add_parser('classifier_labels', help='Given positive/negative inputs, make/update the labels .pkl for training the classifier')
+    s.add_argument('hdfs_input_pos', **ca['input'])
+    s.add_argument('hdfs_input_neg', **ca['input'])
+    s.add_argument('hdfs_output', **ca['output'])
+    s.add_argument('classifier_name', help='Name to give the classifier (e.g., indoor_outdoor).  This is used by the classifier training.')
+    s.add_argument('local_labels', help='Path to labels file, this can be an existing file and any existing classifier_name entry is replaced.')
+    s.add_argument('--classifier', help='Classifier to use from classifiers.py (default: svmlinear)', default='svmlinear')
+    s.add_argument('--classifier_extra', help='Additional data to pass to classifier (e.g., parameters). (default: '')', default='')
+    s.set_defaults(func=picarus.classify.run_classifier_labels)
+
+    # Train Classifier (take in features from the previous labeling step)
+    s = sps.add_parser('train_classifier', help='Train classifier on feature vectors')
+    s.add_argument('hdfs_output', **ca['output'])
+    s.add_argument('local_labels', help='Path to labels file, this can be an existing file and any existing classifier_name entry is replaced.')
+    s.add_argument('hdfs_input', nargs='+', **ca['input'])
+    s.set_defaults(func=picarus.classify.run_train_classifier)
+
+    # Predict Classifier
+    s = sps.add_parser('predict_classifier', help='Predict classifier on feature vectors')
+    s.add_argument('hdfs_classifier_input', **ca['input'])
+    s.add_argument('hdfs_output', **ca['output'])
+    s.add_argument('hdfs_input', nargs='+', **ca['input'])
+    s.set_defaults(func=picarus.classify.run_predict_classifier)
+
+    # Join Predictions with Classifier
+    s = sps.add_parser('join_predictions', help='Joint predictions with images')
+    s.add_argument('hdfs_predictions_input', **ca['input'])
+    s.add_argument('hdfs_output', **ca['output'])
+    s.add_argument('hdfs_input', nargs='+', **ca['input'])
+    s.add_argument('--local_image_output', help='Path to store local images', default='')
+    s.set_defaults(func=picarus.classify.run_join_predictions)
+
+
 def run_classifier_labels(hdfs_input_pos, hdfs_input_neg, hdfs_output, classifier_name, classifier_extra, local_labels, classifier, **kw):
     labels = {}
     try:

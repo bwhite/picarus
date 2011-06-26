@@ -9,6 +9,35 @@ def _lf(fn):
     return os.path.join(__path__[0], fn)
 
 
+def _parser(sps):
+    import picarus.__main__
+    ca = picarus.__main__._ca
+    # Image Feature
+    s = sps.add_parser('image_feature', help='Compute features on entire image')
+    s.add_argument('hdfs_input', **ca['input'])
+    s.add_argument('hdfs_output', **ca['output'])
+    s.add_argument('--feature', **ca['feature'])
+    s.add_argument('--image_length', **ca['image_length'])
+    s.set_defaults(func=picarus.vision.run_image_feature)
+
+    # Face Finder
+    s = sps.add_parser('face_finder', help='Extract faces')
+    s.add_argument('hdfs_input', **ca['input'])
+    s.add_argument('hdfs_output', **ca['output'])
+    s.add_argument('--image_length', **ca['image_length'])
+    s.add_argument('--boxes', help='If True make the value (image_data, boxes) where boxes is a list of (x, y, h, w)', type=bool, default=False)
+    s.set_defaults(func=picarus.vision.run_face_finder)
+
+    # Run Video Keyframing
+    s = sps.add_parser('video_keyframe', help='Run Video Keyframing')
+    s.add_argument('hdfs_input', **ca['input'])
+    s.add_argument('hdfs_output', **ca['output'])
+    s.add_argument('min_resolution', type=int, help='Maximum number of keyframes in each cluster')
+    s.add_argument('max_resolution', type=float, help='Minimum number seconds between keyframes')
+    s.add_argument('--ffmpeg', help='Use frozen ffmpeg binary instead of pyffmpeg (works with more kinds of encoded videos, poorly enocded videos)', action='store_true')
+    s.set_defaults(func=picarus.vision.run_video_keyframe)
+
+
 def run_image_feature(hdfs_input, hdfs_output, feature, image_length, **kw):
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('feature_compute.py'), reducer=False,
                           cmdenvs=['IMAGE_LENGTH=%d' % image_length,
