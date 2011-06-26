@@ -16,6 +16,14 @@ def _gist():
     return imfeat.GIST()
 
 
+def _hog():
+    return imfeat.HOGLatent()
+
+
+def _autocorrelogram():
+    return imfeat.Autocorrelogram()
+
+
 def _meta_gist_spatial_hist():
     return imfeat.MetaFeature(_gist(), _spatial_hist_joint())
 
@@ -26,5 +34,6 @@ def _eigenface():
 
 def select_feature(feat_name):
     return {'gist': _gist, 'hist_joint': _hist_joint, 'eigenface': _eigenface,
+            'hog': _hog, 'autocorrelogram': _autocorrelogram,
             'spatial_hist_joint': _spatial_hist_joint,
             'meta_gist_spatial_hist': _meta_gist_spatial_hist}[feat_name]()

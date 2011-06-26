@@ -4,6 +4,8 @@ import tempfile
 import numpy as np
 import cPickle as pickle
 import picarus
+import scipy as sp
+import scipy.cluster
 
 
 def _lf(fn):
@@ -20,6 +22,13 @@ def run_sample(hdfs_input, hdfs_output, num_clusters, **kw):
                           cmdenvs=['SAMPLE_SIZE=%d' % num_clusters])
 
 
+def run_local_kmeans(hdfs_input, hdfs_output, num_clusters, **kw):
+    # TODO(brandyn): Update command interface
+    data = np.asfarray([y for x, y in hadoopy.readtb(hdfs_input)])
+    clusters = sp.cluster.vq.kmeans(data, num_clusters)[0]
+    hadoopy.writetb(hdfs_output, enumerate(clusters))
+
+
 def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num_clusters,
                num_iters, num_samples, metric, local_json_output=None, **kw):
     for cur_iter_num in range(num_iters):
@@ -34,7 +43,6 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
         hdfs_prev_clusters = cur_output
     print('Clusters[%s]' % hdfs_prev_clusters)
     # Compute K-Means assignment/samples
-    # TODO Do full assignment, then sample
     clusters_fp = fetch_clusters_from_hdfs(hdfs_prev_clusters)
     clusters_fn = os.path.basename(clusters_fp.name)
     cur_output = '%s/assign' % hdfs_output
