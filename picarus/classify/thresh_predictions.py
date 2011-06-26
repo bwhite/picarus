@@ -26,9 +26,9 @@ class Mapper(object):
 class Reducer(object):
 
     def __init__(self):
-            self._class_name = os.environ['CLASSIFIER_NAME']
-            self._class_thresh = float(os.environ['CLASSIFIER_THRESH'])
-            self._output_class = int(os.environ['OUTPUT_CLASS'])
+        self._class_name = os.environ['CLASSIFIER_NAME']
+        self._class_thresh = float(os.environ['CLASSIFIER_THRESH'])
+        self._output_class = int(os.environ['OUTPUT_CLASS'])
 
     def reduce(self, image_hash, values):
         """

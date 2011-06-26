@@ -118,4 +118,5 @@ def run_thresh_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, clas
     picarus._launch_frozen(inputs, hdfs_output, _lf('thresh_predictions.py'),
                           cmdenvs=['CLASSIFIER_NAME=%s' % class_name,
                                    'CLASSIFIER_THRESH=%f' % class_thresh,
-                                   'OUTPUT_CLASS=%d' % output_class])
+                                   'OUTPUT_CLASS=%d' % output_class],
+                           num_reducers=10)
