@@ -81,6 +81,12 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
     # Compute K-Means assignment/samples
     clusters_fp = fetch_clusters_from_hdfs(hdfs_prev_clusters)
     clusters_fn = os.path.basename(clusters_fp.name)
+    cur_output = '%s/partition' % hdfs_output
+    picarus._launch_frozen([hdfs_input, hdfs_image_data], cur_output, _lf('kmeans_partition.py'),
+                           cmdenvs=['CLUSTERS_FN=%s' % clusters_fn],
+                           files=[clusters_fp.name],
+                           num_reducers=max(1, num_clusters / 2),
+                           dummy_arg=clusters_fp)
     cur_output = '%s/assign' % hdfs_output
     picarus._launch_frozen(hdfs_input, cur_output, _lf('kmeans_assign.py'),
                           cmdenvs=['CLUSTERS_FN=%s' % clusters_fn,
