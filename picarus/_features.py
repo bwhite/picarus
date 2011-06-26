@@ -28,6 +28,10 @@ def _meta_gist_spatial_hist():
     return imfeat.MetaFeature(_gist(), _spatial_hist_joint())
 
 
+def _meta_gist_spatial_hist_autocorrelogram():
+    return imfeat.MetaFeature(_gist(), _spatial_hist_joint(), _autocorrelogram())
+
+
 def _meta_hog_gist_hist():
     return imfeat.MetaFeature(_gist(), _hog(), _hist_joint())
 
@@ -41,4 +45,5 @@ def select_feature(feat_name):
             'hog': _hog, 'autocorrelogram': _autocorrelogram,
             'spatial_hist_joint': _spatial_hist_joint,
             'meta_gist_spatial_hist': _meta_gist_spatial_hist,
+            'meta_gist_spatial_hist_autocorrelogram': _meta_gist_spatial_hist_autocorrelogram,
             'meta_hog_gist_hist': _meta_hog_gist_hist}[feat_name]()
