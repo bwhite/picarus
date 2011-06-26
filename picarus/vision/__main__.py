@@ -12,6 +12,7 @@ def _lf(fn):
 def _parser(sps):
     import picarus.__main__
     ca = picarus.__main__._ca
+
     # Image Feature
     s = sps.add_parser('image_feature', help='Compute features on entire image')
     s.add_argument('hdfs_input', **ca['input'])
@@ -60,18 +61,21 @@ def run_video_keyframe(hdfs_input, hdfs_output, min_resolution, max_resolution, 
 
     if not ffmpeg:
         picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
-                              reducer=None,
-                              cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
-                                       'MAX_RESOLUTION=%f' % max_resolution])
+                               reducer=None,
+                               cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
+                                        'MAX_RESOLUTION=%f' % max_resolution],
+                               jobconfs=['mapred.child.java.opts=-Xmx512M'],
+                               )
     else:
         fp = vidfeat.freeze_ffmpeg()
         picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
-                              reducer=None,
-                              cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
+                            reducer=None,
+                               cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
                                        'MAX_RESOLUTION=%f' % max_resolution,
                                        'USE_FFMPEG=1'],
-                              files=fp.__enter__(),
-                              dummy_arg=fp)
+                               jobconfs=['mapred.child.java.opts=-Xmx512M'],
+                               files=fp.__enter__(),
+                               dummy_arg=fp)
 
     picarus._launch_frozen(hdfs_output + '/keyframe', hdfs_output + '/samples', _lf('video_keyframe_collect.py'),
                       reducer=None)
