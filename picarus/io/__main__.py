@@ -3,6 +3,8 @@ import vidfeat
 import os
 import picarus
 import hashlib
+import tempfile
+import cStringIO as StringIO
 
 
 def _lf(fn):
@@ -19,7 +21,25 @@ def _sha1(fn, chunk_size=1048576):
             break
         h.update(chunk)
     return h.hexdigest()
-        
+
+
+def _record_to_file(v, out_path):
+    """Get data from a record 'v' and store it in out_path
+
+    Args:
+        v: record
+        out_path: Local output path
+    """
+    try:
+        with open(out_path, 'wb') as fp:
+            fp.write(v['data'])
+    except KeyError:
+        try:
+            hadoopy.get(v['hdfs_path'], out_path)
+        except KeyError:
+            raise ValueError("Can't find data or hdfs_path in record,"
+                             " at least one is required.")
+
 
 def _read_files(fns, prev_hashes, hdfs_output, output_format, max_record_size):
     """
@@ -106,35 +126,16 @@ def dump_local(hdfs_input, local_output, extension='', **kw):
     except OSError:
         pass
     for k, v in hadoopy.readtb(hdfs_input):
-        fn = k
-        data = None
-        hdfs_path = None
         if isinstance(v, dict):  # record
             try:
-                extension = v['extension']
+                extension = '.' + v['extension'] if v['extension'] else ''
             except KeyError:
                 pass
-            try:
-                data = v['data']
-            except KeyError:
-                try:
-                    hdfs_path = v['hdfs_path']
-                except KeyError:
-                    pass
-        elif isinstance(v, str):
-            data = v
+            _record_to_file(v, os.path.join(local_output, k + extension))
         else:
-            raise ValueError('Value must be either a dict or a string.')
-        if extension:
-            fn += '.%s' % extension
-        out_path = os.path.join(local_output, fn)
-        if data is not None:
+            out_path = os.path.join(local_output, k + extension)
             with open(out_path, 'wb') as fp:
-                fp.write(data)
-        elif hdfs_path is not None:
-            hadoopy.get(hdfs_path, out_path)
-        else:
-            raise ValueError("Can't find data or hdfs_path, at least one is required.")
+                fp.write(v)
 
 
 def _parser(sps):
