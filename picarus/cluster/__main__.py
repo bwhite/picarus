@@ -39,7 +39,6 @@ def _parser(sps):
     s.add_argument('num_clusters', **ca['num_clusters'])
     s.add_argument('num_iters', type=int, help='Maximum number of iterations')
     s.add_argument('num_samples', type=int, help='Number of samples')
-    s.add_argument('--metric', **ca['metric'])
     s.add_argument('--local_json_output', help='Local output path')
     s.set_defaults(func=picarus.cluster.run_kmeans)
 
@@ -47,7 +46,6 @@ def _parser(sps):
     s = sps.add_parser('hac', help='Hierarhical Agglomerative Clustering')
     s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('hdfs_output', **ca['output'])
-    s.add_argument('--metric', **ca['metric'])
     s.set_defaults(func=picarus.cluster.run_hac)
 
 
@@ -68,7 +66,7 @@ def run_local_kmeans(hdfs_input, hdfs_output, num_clusters, **kw):
 
 
 def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num_clusters,
-               num_iters, num_samples, metric, local_json_output=None, **kw):
+               num_iters, num_samples, metric='l2sqr', local_json_output=None, **kw):
     for cur_iter_num in range(num_iters):
         clusters_fp = fetch_clusters_from_hdfs(hdfs_prev_clusters)
         clusters_fn = os.path.basename(clusters_fp.name)
