@@ -5,11 +5,15 @@ import cPickle as pickle
 import os
 
 
+def _getext(fn):
+    return fn.rsplit('/', 1)[-1].split('.', 1)[-1]
+
+
 def load(fn):
     if not os.path.exists(fn):
         raise IOError('Path does not exist [%s]' % fn)
     try:
-        base, ext = os.path.splitext(fn)
+        ext = _getext(fn)
     except ValueError:
         raise ValueError('File needs an extension')
     if ext[-3:] == '.gz':
@@ -20,9 +24,9 @@ def load(fn):
         ext = ext[:-4]
     else:
         fp = open(fn)
-    if ext == '.js':
+    if ext == 'js':
         return json.load(fp)
-    elif ext == '.pkl':
+    elif ext == 'pkl':
         return pickle.load(fp)
     else:
         raise ValueError('File [%s] has unknown extension [%s]' % (fn, ext))
@@ -30,7 +34,7 @@ def load(fn):
 
 def dump(obj, fn):
     try:
-        base, ext = os.path.splitext(fn)
+        ext = _getext(fn)
     except ValueError:
         raise ValueError('File needs an extension')
     if ext[-3:] == '.gz':
@@ -41,9 +45,9 @@ def dump(obj, fn):
         ext = ext[:-4]
     else:
         fp = open(fn, 'w')
-    if ext == '.js':
+    if ext == 'js':
         return json.dump(obj, fp)
-    elif ext == '.pkl':
+    elif ext == 'pkl':
         return pickle.dump(obj, fp, -1)
     else:
         raise ValueError('File [%s] has unknown extension [%s]' % (fn, ext))
