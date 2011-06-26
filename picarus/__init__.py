@@ -1,5 +1,5 @@
-__all__ = ['vision', 'cluster', 'report', 'classify']
-from picarus import vision, cluster, report, classify
+__all__ = ['vision', 'cluster', 'report', 'classify', 'io']
+from picarus import vision, cluster, report, classify, io
 
 _FROZEN_PATHS = {}
 
