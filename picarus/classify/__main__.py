@@ -72,8 +72,9 @@ def run_train_classifier(hdfs_input, hdfs_output, local_labels, **kw):
     files = glob.glob(classipy.__path__[0] + "/lib/*")
     files.append(local_labels)
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('train_classifier.py'),
-                          files=files,
-                          cmdenvs=['LOCAL_LABELS_FN=%s' % os.path.basename(local_labels)])
+                           files=files,
+                           cmdenvs=['LOCAL_LABELS_FN=%s' % os.path.basename(local_labels)],
+                           jobconfs=['mapred.child.java.opts=-Xmx512M'])
 
 
 def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, **kw):
