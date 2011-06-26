@@ -139,6 +139,15 @@
     function push_keyframerow(keyframes, rowheight) {
 	console.info(keyframes)
 	var keyframe_row = $('#templ_keyframerow > div').clone()
+	if (rowheight==0) {
+	    keyframe_row.append('<div style="clear:both">\
+    Single Representative Image ['+keyframes[0].count+' total frames]</div>')
+	} else if (rowheight==1) {
+	    keyframe_row.append('<div style="clear:both">\
+    Detected Keyframes [# of frames inside]</div>')
+	} else if (rowheight==2) {
+	    keyframe_row.append('<div style="clear:both">All frames</div>')
+	}
 	$.each(keyframes, function (k, keyframe) {
 	    var divkeyframe = $('#templ_keyframe > div').clone()
 	    divkeyframe.find('img.keyframe').attr('src', 't/'+keyframe.image.hash+'.jpg')

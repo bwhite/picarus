@@ -33,7 +33,6 @@ def _parser(sps):
     s = sps.add_parser('video_keyframe', help='Run Video Keyframing')
     s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('hdfs_output', **ca['output'])
-    s.add_argument('min_resolution', type=int, help='Maximum number of keyframes in each cluster')
     s.add_argument('max_resolution', type=float, help='Minimum number seconds between keyframes')
     s.add_argument('--ffmpeg', help='Use frozen ffmpeg binary instead of pyffmpeg (works with more kinds of encoded videos, poorly enocded videos)', action='store_true')
     s.set_defaults(func=picarus.vision.run_video_keyframe)
@@ -55,22 +54,22 @@ def run_face_finder(hdfs_input, hdfs_output, image_length, boxes, **kw):
                            files=[_lf('data/haarcascade_frontalface_default.xml')])
 
 
-def run_video_keyframe(hdfs_input, hdfs_output, min_resolution, max_resolution, ffmpeg, **kw):
+def run_video_keyframe(hdfs_input, hdfs_output, max_resolution, ffmpeg, **kw):
 
     if not ffmpeg:
         picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
                                reducer=None,
-                               cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
-                                        'MAX_RESOLUTION=%f' % max_resolution],
+                               cmdenvs=[
+                                   'MAX_RESOLUTION=%f' % max_resolution],
                                jobconfs=['mapred.child.java.opts=-Xmx512M'],
                                )
     else:
         fp = vidfeat.freeze_ffmpeg()
         picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
                                reducer=None,
-                               cmdenvs=['MIN_RESOLUTION=%d' % min_resolution,
-                                       'MAX_RESOLUTION=%f' % max_resolution,
-                                       'USE_FFMPEG=1'],
+                               cmdenvs=[
+                                   'MAX_RESOLUTION=%f' % max_resolution,
+                                   'USE_FFMPEG=1'],
                                files=fp.__enter__(),
                                jobconfs=['mapred.child.java.opts=-Xmx512M'],
                                dummy_arg=fp)
