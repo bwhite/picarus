@@ -9,22 +9,29 @@
 </head>
 <body>
   <h2>Sample Report</h2>
-  <div>
-    <a href="#" onclick="showvideos()">[Videos]</a>
-    <a href="#" onclick="showclusters('nonphotos')">[Non-photos]</a>
-    <a href="#" onclick="showclusters('outdoors')">[Outdoor]</a>
-    <a href="#" onclick="showclusters('indoors')">[Indoor]</a>
-    <a href="#" onclick="showclusters('objects')">[Objects]</a>
-    <a href="#" onclick="showclusters('pr0n')">[Inappropriate]</a>
-    <a href="#" onclick="showclusters('faces')">[Faces]</a>
+  <div id="categories">
+
   </div>
   <div id="report">
   </div>
 
   <script type="text/javascript">
     $(function () {
-	if (window.location.hash.length == 1) {
-	    showclusters('outdoor') 
+	$.each(report, function (category, v) {
+	    var Category = category.charAt(0).toUpperCase() + category.slice(1)
+	    if (category == 'videos') {
+		$('div#categories').append('\
+    <a href="#'+category+'" onclick="showvideos()">['+Category+']</a>\
+    ')
+	    } else {
+		$('div#categories').append('\
+    <a href="#'+category+'" onclick="showclusters(\''+category+'\')">['+Category+']</a>\
+    ')
+	    }
+	})
+
+	if (window.location.hash.length < 2) {
+	    showclusters('outdoor')
 	} else {
 	    kind = window.location.hash.slice(1)
 	    if (kind == 'videos') showvideos()
@@ -40,6 +47,10 @@
 	$.each(report[type], function (i, cluster) {
 	    var divcluster = $('#templ_cluster > div').clone()
 	    divcluster.find('span.cluster_size').html(cluster.size)
+	    divcluster.find('.cluster_expand').click(function (e) {
+		e.preventDefault()
+		show_cluster_allimages(cluster, i)
+	    })
 	    $.each(cluster.sample_images, function (j, image) {
 		var clusterimg = $('#templ_clusterim > div').clone()
 		var img = clusterimg.find('img')
@@ -55,6 +66,7 @@
 		} else {
 		    img.attr('src', 't/'+image.hash+'.jpg')
 		}
+		/* Draw the bounding box for each face */
 		if (image.faces.length) {
 		    /*
 		    img.load(function () {
@@ -107,11 +119,11 @@
 	push_keyframerow(video.keyframes[0].children, 1)
     }
 
-    function show_cluster_allimages(index) {
+    function show_cluster_allimages(cluster, index) {
 	var div = $('div.all_images:eq('+index+')');
 	if (!div.is(":visible")) {
-	    $.each(clusters[index].all_images, function (k, v) {
-		div.append('<img style="max-width:50;height:50" src="t/'+v+'"/></a>')
+	    $.each(cluster.all_images, function (k, image) {
+		div.append('<img style="max-width:50;height:50" src="t/'+image.hash+'.jpg"/></a>')
 	    })
 	    div.show()
 	} else {

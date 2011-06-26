@@ -3,6 +3,7 @@ import hadoopy
 import StringIO
 import Image
 import os
+import numpy as np
 
 
 def mapper(cluster_index, image_hash_data):

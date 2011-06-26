@@ -25,7 +25,6 @@ def _parser(sps):
     s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('local_json_output', help='report output')
     s.add_argument('category', help='category tag for this clustering')
-    s.add_argument('--sample', help='sample size', type=int, default=20)
     s.add_argument('--make_faces', action="store_true", help='set this for face clusters')
     s.set_defaults(func=_report_clusters)
 
@@ -34,7 +33,8 @@ def _parser(sps):
     s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('hdfs_output', **ca['output'])
     s.add_argument('thumb_size', help='thumbnail width in pixels', type=int)
-    s.add_argument('--is_cluster', help='used to indicate the samples output from a clustering')
+    s.add_argument('--is_cluster', help='used to indicate the samples output from a clustering',
+                   action='store_true')
     s.set_defaults(func=make_thumbnails)
 
     # Local Thumbnail Output
@@ -51,7 +51,7 @@ def _parser(sps):
     s.set_defaults(func=_report_video_keyframe)
 
 
-def report_clusters(hdfs_input, sample, category, make_faces, **kw):
+def report_clusters(hdfs_input, category, make_faces, **kw):
     """
     NOTE: This transfers much more image data than is necessary! Really this operation
     should be done directly on hdfs
@@ -72,7 +72,9 @@ def report_clusters(hdfs_input, sample, category, make_faces, **kw):
 
     # Collect all the clusters as a set of lists
     clusters = {}
-    for cluster_index, (image_name, _)  in hadoopy.readtb(hdfs_input):
+    cluster_samples = {}
+
+    def update(cluster_index, image_name, clusters):
         cluster = clusters.setdefault(cluster_index, [])
         if make_faces:
             face_image = make_face_image(image_name)
@@ -85,25 +87,30 @@ def report_clusters(hdfs_input, sample, category, make_faces, **kw):
                 'video': [],
                 })
 
+    for cluster_index, (image_name, _)  in hadoopy.readtb(hdfs_input + '/partition'):
+        update(cluster_index, image_name, clusters)
+
+    for cluster_index, (image_name, _)  in hadoopy.readtb(hdfs_input + '/samples'):
+        update(cluster_index, image_name, cluster_samples)
+
     # Gather each cluster
-    if not sample:
-        sample = float('inf')
     clusters = [{
         # Sample images uniformly
-        'sample_images': random.sample(image_set, min(len(image_set), sample)),
-        'all_images': image_set,
-        'size': len(image_set),
+        'sample_images': samples,
+        'all_images': images,
+        'size': len(images),
         'children': [],
         'std': 0.0,
         'position': [0.0, 0.0],
-        } for image_set in clusters.values()]
+        } for ((_, images), (_, samples)) in zip(sorted(clusters.items()),
+                                                 sorted(cluster_samples.items()))]
 
     report = {category: clusters}
     return report
 
 
-def _report_clusters(hdfs_input, local_json_output, sample, category, make_faces, **kw):
-    report = report_clusters(hdfs_input, sample, category, make_faces, **kw)
+def _report_clusters(hdfs_input, local_json_output, category, make_faces, **kw):
+    report = report_clusters(hdfs_input, category, make_faces, **kw)
     file_parse.dump(report, local_json_output)
 
 

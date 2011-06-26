@@ -26,7 +26,7 @@ def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
     boundaries = [0.0]
     for (frame_num, frame_time, frame), iskeyframe in kf(iter1()):
         if iskeyframe:
-            print 'keyframe', frame_num
+            print 'keyframe', frame_num, frame_time
             boundaries.append(frame_time)
 
     if not 'frame_time' in locals() or frame_time == 0:
