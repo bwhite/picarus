@@ -1,10 +1,10 @@
 import hadoopy
-import vidfeat
 import os
 import picarus
 import hashlib
-import tempfile
 import cStringIO as StringIO
+import shutil
+import tempfile
 
 
 def _lf(fn):
@@ -30,12 +30,42 @@ def _record_to_file(v, out_path):
         v: record
         out_path: Local output path
     """
+    fp = _record_to_fp(v)
     try:
-        with open(out_path, 'wb') as fp:
-            fp.write(v['data'])
+        shutil.move(fp.name, out_path)
+    except AttributeError:
+        with open(out_path, 'wb') as fp_out:
+            fp_out.write(fp.read())
+
+
+class _DelFile(file):
+
+    def __init__(self, fn, *args, **kw):
+        super(_DelFile, self).__init__(fn, *args, **kw)
+        self._fn = fn
+
+    def close(self, *args, **kw):
+        super(_DelFile, self).close(*args, **kw)
+        os.remove(self._fn)
+
+        
+def _record_to_fp(v):
+    """Get data from a record 'v' and return a file object to it
+
+    Args:
+        v: record
+
+    Returns:
+        File object (either a NamedTemporaryFile or StringIO)
+    """
+    try:
+        return StringIO.StringIO(v['data'])
     except KeyError:
         try:
-            hadoopy.get(v['hdfs_path'], out_path)
+            fn = tempfile.NamedTemporaryFile().name
+            hadoopy.get(v['hdfs_path'], fn)
+            fp = _DelFile(fn)
+            return fp
         except KeyError:
             raise ValueError("Can't find data or hdfs_path in record,"
                              " at least one is required.")
@@ -57,7 +87,7 @@ def _read_files(fns, prev_hashes, hdfs_output, output_format, max_record_size):
             prev_hashes.add(sha1_hash)
             if output_format == 'record' and max_record_size is not None and max_record_size < os.stat(fn)[6]:
                 # Put the file into the remote location
-                hdfs_path = '%s/blobs/%s_%s' % (hdfs_output, sha1_hash, os.path.basename(fn))
+                hdfs_path = hadoopy.abspath('%s/blobs/%s_%s' % (hdfs_output, sha1_hash, os.path.basename(fn)))
                 data = ''
                 hadoopy.put(fn, hdfs_path)
             else:
@@ -126,16 +156,22 @@ def dump_local(hdfs_input, local_output, extension='', **kw):
     except OSError:
         pass
     for k, v in hadoopy.readtb(hdfs_input):
+        if not isinstance(k, str):
+            raise ValueError("Key must be a string. If you are reading data in 'record' form use the 'records' file and not the directory it is in.")
         if isinstance(v, dict):  # record
             try:
-                extension = '.' + v['extension'] if v['extension'] else ''
+                extension = '.' + v['extension'] if v['extension'] else extension
             except KeyError:
                 pass
             _record_to_file(v, os.path.join(local_output, k + extension))
         else:
-            out_path = os.path.join(local_output, k + extension)
+            out_path = os.path.join(local_output, k + ('.' + extension if extension else ''))
             with open(out_path, 'wb') as fp:
                 fp.write(v)
+
+
+def run_record_to_kv(hdfs_input, hdfs_output, **kw):
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('record_to_kv.py'), reducer=None)
 
 
 def _parser(sps):
@@ -147,14 +183,19 @@ def _parser(sps):
     s.add_argument('hdfs_output', **ca['output'])
     s.add_argument('--output_format', help=("Data format to use.  'kv': (sha1_hash, binary_data) or 'record'"
                                             " (sha1_hash, metadata) (see docstring) (default 'kv')"), default='kv')
-    s.add_argument('--max_record_size', help="If using record format, larger files are placed directly on HDFS (see docstring) (default None)", default=None)
+    s.add_argument('--max_record_size', help="If using record format, larger files are placed directly on HDFS (see docstring) (default None)",
+                   default=None, type=int)
     s.set_defaults(func=picarus.io.load_local)
 
     # Dump to local directory
     s = sps.add_parser('dump_local', help='Writes data as local_output/sha1hash.ext')
     s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('local_output', help='Local output directory path (created if not there)')
-    s.add_argument('--extension', help="Extension to give output files, only used if not provided by the data. (default '')")
+    s.add_argument('--extension', help="Extension to give output files, only used if not provided by the data. (default '')", default='')
     s.set_defaults(func=picarus.io.dump_local)
 
-
+    # Convert record to kv
+    s = sps.add_parser('run_record_to_kv', help='Converts from (sha1hash, record) to (sha1hash, data) (see docs)')
+    s.add_argument('hdfs_input', **ca['input'])
+    s.add_argument('hdfs_output', **ca['output'])
+    s.set_defaults(func=picarus.io.run_record_to_kv)
