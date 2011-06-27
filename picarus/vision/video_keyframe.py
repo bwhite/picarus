@@ -12,7 +12,7 @@ import vidfeat
 import picarus
 
 
-def keyframes(iter1, iter2, videohash, kf, max_resolution):
+def keyframes(iter1, iter2, metadata, kf, max_resolution):
     """
     Args:
         frame_iter_lambda: call this to get an iterator (must work twice)
@@ -23,6 +23,7 @@ def keyframes(iter1, iter2, videohash, kf, max_resolution):
     # First pass
     # Find all the boundaries, including the first and last frame,
     # discarding tiny intervals (< max_resolution)
+    videohash = metadata['sha1']
     boundaries = [0.0]
     for (frame_num, frame_time, frame), iskeyframe in kf(iter1()):
         if iskeyframe:
@@ -91,7 +92,6 @@ def keyframes(iter1, iter2, videohash, kf, max_resolution):
             'count': len(children),
             })
         total_count += len(children)
-        print key
 
     key = keyframes[len(keyframes)/2]
     topkey = {
@@ -109,7 +109,8 @@ def keyframes(iter1, iter2, videohash, kf, max_resolution):
         'duration': video_duration,
         'frames': video_frames,
         'fps': video_fps,
-        'keyframes': [topkey]
+        'keyframes': [topkey],
+        'full_path': metadata['full_path']
         }
     print 'video: ', videohash
     print 'total keyframes:', len(keyframes)
@@ -121,35 +122,28 @@ def keyframes(iter1, iter2, videohash, kf, max_resolution):
 def mapper(videohash, metadata):
     print 'mapper', videohash
 
-    #extension = metadata['extension']
-    #if metadata.has_key('video_data'):
-    #    video_data = metadata['video_data']
-
-    video_data = metadata
+    filename = 'hardcodedvideo' + metadata['extension']
+    picarus.io._record_to_file(metadata, filename)
 
     max_resolution = float(os.environ['MAX_RESOLUTION'])
-
-    videohash = hashlib.md5(video_data).hexdigest()
-    # FIXME use an actual filename instead of assuming .avi
-    with tempfile.NamedTemporaryFile(suffix='.avi') as fp:
-        fp.write(video_data)
-        fp.flush()
+    try:
+        # FIXME use an actual filename instead of assuming .avi
         if not 'USE_FFMPEG' in os.environ:
             video = pyffmpeg.VideoStream()
-            video.open(fp.name)
+            video.open(filename)
             iter1 = lambda : vidfeat.convert_video(video, ('frameiterskip', keyframe.histogram.MODES, 5))
             iter2 = lambda : vidfeat.convert_video(video, ('frameiterskip', ['RGB'], 5))
         else:
-            iter1 = lambda : vidfeat.convert_video_ffmpeg(fp.name, ('frameiterskip', keyframe.histogram.MODES, 5), frozen=True)
-            iter2 = lambda : vidfeat.convert_video_ffmpeg(fp.name, ('frameiterskip', ['RGB'], 5), frozen=True)
+            iter1 = lambda : vidfeat.convert_video_ffmpeg(filename, ('frameiterskip', keyframe.histogram.MODES, 5), frozen=True)
+            iter2 = lambda : vidfeat.convert_video_ffmpeg(filename, ('frameiterskip', ['RGB'], 5), frozen=True)
 
         kf = keyframe.Histogram()
 
         # Do this instead of 'return' in order to keep the tempfile around
-        for k, v in  keyframes(iter1, iter2, videohash, kf, max_resolution):
-            print k
+        for k, v in  keyframes(iter1, iter2, metadata, kf, max_resolution):
             yield k, v
-
+    finally:
+        os.remove(filename)
 
 if __name__ == '__main__':
     hadoopy.run(mapper)
