@@ -64,7 +64,9 @@ def keyframes(iter1, iter2, metadata, kf, max_resolution):
             frame.save(s, 'JPEG')
             s.seek(0)
             imagehash = hashlib.md5(s.buf).hexdigest()
-            yield ('frame', imagehash), s.buf
+            yield ('frame', imagehash), {'source_video': imagehash,
+                                         'frame_num': frame_num,
+                                         'image_data': s.buf}
             timestamp = frame_time
 
             children.append({

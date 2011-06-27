@@ -33,8 +33,7 @@ def _parser(sps):
     s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('hdfs_output', **ca['output'])
     s.add_argument('thumb_size', help='thumbnail width in pixels', type=int)
-    s.add_argument('--is_cluster', help='used to indicate the samples output from a clustering',
-                   action='store_true')
+    s.add_argument('image_type', choices=['record','cluster','kv','frame'])
     s.set_defaults(func=make_thumbnails)
 
     # Local Thumbnail Output
@@ -114,11 +113,12 @@ def _report_clusters(hdfs_input, local_json_output, category, make_faces, **kw):
     file_parse.dump(report, local_json_output)
 
 
-def make_thumbnails(hdfs_input, hdfs_output, thumb_size, is_cluster=False, **kw):
-    script = 'make_thumbnails.py' if not is_cluster else 'make_cluster_thumbnails.py'
+def make_thumbnails(hdfs_input, hdfs_output, thumb_size, image_type, **kw):
+    script = 'make_thumbnails.py'
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf(script),
                           reducer=None,
-                          cmdenvs=['THUMB_SIZE=%d' % thumb_size])
+                          cmdenvs=['THUMB_SIZE=%d' % thumb_size,
+                                   'IMAGE_TYPE=%d' % image_type])
 
 
 def report_thumbnails(hdfs_input, local_thumb_output, **kw):

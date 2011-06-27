@@ -3,11 +3,10 @@ import hadoopy
 import numpy as np
 
 
-def mapper(key, image_data):
+def mapper(key, image_metadata):
     (tag, hash) = key
-    print key
     if tag == 'frame':
-        yield hash, image_data
+        yield hash, image_metadata
 
 
 if __name__ == '__main__':
