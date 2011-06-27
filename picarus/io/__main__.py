@@ -174,6 +174,12 @@ def run_record_to_kv(hdfs_input, hdfs_output, **kw):
     hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('record_to_kv.py'), reducer=None)
 
 
+def run_kv_to_record(hdfs_input, hdfs_output, extension, base_path, **kw):
+    hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('kv_to_record.py'), reducer=None,
+                          cmdenvs=['EXTENSION=%s' % extension,
+                                   'BASE_PATH=%s' % base_path])
+
+
 def _parser(sps):
     import picarus.__main__
     ca = picarus.__main__._ca
@@ -199,3 +205,12 @@ def _parser(sps):
     s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('hdfs_output', **ca['output'])
     s.set_defaults(func=picarus.io.run_record_to_kv)
+
+    # Convert kv to record
+    s = sps.add_parser('run_kv_to_record', help=('Converts from sha1hash, data) to (sha1hash, record) (see docs).  '
+                                                 'The full_path is set to base_path/sha1hash.extension.'))
+    s.add_argument('hdfs_input', **ca['input'])
+    s.add_argument('hdfs_output', **ca['output'])
+    s.add_argument('extension', help="Extension to give output files")
+    s.add_argument('base_path', help="Base of the generates full_path's")
+    s.set_defaults(func=picarus.io.run_kv_to_record)
