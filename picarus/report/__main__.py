@@ -124,13 +124,17 @@ def make_thumbnails(hdfs_input, hdfs_output, thumb_size, is_cluster=False, **kw)
 def report_thumbnails(hdfs_input, local_thumb_output, **kw):
     """Collect thumbnails of all images in hdfs://${hdfs_input}
     """
-    try:
-        os.makedirs(local_thumb_output)
-    except OSError:
-        pass
     counter = 0
     for image_hash, image_data in hadoopy.readtb(hdfs_input):
-        path = '%s/%s.jpg' % (local_thumb_output, image_hash)
+        path = '%s/%s/%s/%s.jpg' % (local_thumb_output,
+                                    image_hash[:2],
+                                    image_hash[2:4],
+                                    image_hash)
+        try:
+            os.makedirs(os.path.dirname(path))
+        except OSError:
+            pass
+
         with open(path, 'w') as f:
             f.write(image_data)
         counter += 1
