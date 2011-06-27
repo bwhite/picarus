@@ -41,6 +41,13 @@
 	//showclusters('faces')
     })
 
+    function thumbnail(name) {
+	return '/t/' + 
+	    name.slice(0,2) + '/' + 
+	    name.slice(2,4) + '/' +
+	    name
+    }
+
     function showclusters(type) {
 	$('div#report').empty()
 	$('div#report').append('<h3>'+type+'</h3>')
@@ -61,10 +68,10 @@
 		    var t = face.boundingbox[0][1]
 		    var r = face.boundingbox[1][0]
 		    var b = face.boundingbox[1][1]
-		    img.attr('src', 't/'+image.hash+'-face-x0'+
-			     l+'-y0'+t+'-x1'+r+'-y1'+b+'.jpg')
+		    img.attr('src', thumbnail(image.hash+'-face-x0'+
+					      l+'-y0'+t+'-x1'+r+'-y1'+b+'.jpg'))
 		} else {
-		    img.attr('src', 't/'+image.hash+'.jpg')
+		    img.attr('src', thumbnail(image.hash+'.jpg'))
 		}
 		/* Draw the bounding box for each face */
 		if (image.faces.length) {
@@ -103,7 +110,7 @@
 	    var divkeyframe = $('#templ_keyframe > div').clone()
 	    var len2 = Math.floor(video.keyframes.length / 2);
 	    console.info(len2)
-	    divkeyframe.find('img.keyframe').attr('src', 't/'+video.keyframes[len2].image.hash+'.jpg')
+	    divkeyframe.find('img.keyframe').attr('src', thumbnail(video.keyframes[len2].image.hash+'.jpg'))
 	    divkeyframe.find('.keyframe_expand a').html(round(video.duration)+'s ['+video.keyframes[len2].count+']')
 	    divkeyframe.click(function () {
 		showvideo(video)
@@ -123,7 +130,8 @@
 	var div = $('div.all_images:eq('+index+')');
 	if (!div.is(":visible")) {
 	    $.each(cluster.all_images, function (k, image) {
-		div.append('<img style="max-width:50;height:50" src="t/'+image.hash+'.jpg"/></a>')
+		div.append('<img style="max-width:50;height:50" src="'+
+			   thumbnail(image.hash+'.jpg')+'"/></a>')
 	    })
 	    div.show()
 	} else {
@@ -139,9 +147,18 @@
     function push_keyframerow(keyframes, rowheight) {
 	console.info(keyframes)
 	var keyframe_row = $('#templ_keyframerow > div').clone()
+	if (rowheight==0) {
+	    keyframe_row.append('<div style="clear:both">\
+    Single Representative Image ['+keyframes[0].count+' total frames]</div>')
+	} else if (rowheight==1) {
+	    keyframe_row.append('<div style="clear:both">\
+    Detected Keyframes [# of frames inside]</div>')
+	} else if (rowheight==2) {
+	    keyframe_row.append('<div style="clear:both">All frames</div>')
+	}
 	$.each(keyframes, function (k, keyframe) {
 	    var divkeyframe = $('#templ_keyframe > div').clone()
-	    divkeyframe.find('img.keyframe').attr('src', 't/'+keyframe.image.hash+'.jpg')
+	    divkeyframe.find('img.keyframe').attr('src', thumbnail(keyframe.image.hash+'.jpg'))
 	    var children = keyframe.children
 	    if (children.length > 0) {
 		divkeyframe.find('a').html(round(keyframe.timestamp)+'s ['+keyframe.count+']')

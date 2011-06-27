@@ -12,7 +12,7 @@ import vidfeat
 import picarus
 
 
-def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
+def keyframes(iter1, iter2, videohash, kf, max_resolution):
     """
     Args:
         frame_iter_lambda: call this to get an iterator (must work twice)
@@ -51,76 +51,65 @@ def keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
     frame_time = 0
     iter2 = iter2()
     iter2.next()
+    fskip = max(int(max_resolution * video_fps), 1)
+    total_count = 0
     for start, stop in intervals:
-        frame_time = (start+stop)/2
-        frame_num = video_fps * frame_time
-        frame_num, frame_time, frame = iter2.send(frame_num)
-        timestamp = frame_time
+        children = []
+        for fn in range(int(start*video_fps), int(stop*video_fps), fskip):
+            frame_num, frame_time, frame = iter2.send(fn)
 
-        # Find the hash of the representative image
-        s = StringIO.StringIO()
-        frame.save(s, 'JPEG')
-        s.seek(0)
-        imagehash = hashlib.md5(s.buf).hexdigest()
-        yield ('frame', imagehash), s.buf
+            # Find the hash of the representative image
+            s = StringIO.StringIO()
+            frame.save(s, 'JPEG')
+            s.seek(0)
+            imagehash = hashlib.md5(s.buf).hexdigest()
+            yield ('frame', imagehash), s.buf
+            timestamp = frame_time
 
-        if 0:
-            # Store the image thumbnail itself
-            frame = Image.open(s)
-            frame.thumbnail((100,100))
-            ts = StringIO.StringIO()
-            frame.save(ts, 'JPEG')
-            ts.seek(0)
-            # print 'keyframe: ' + imagehash
-            yield ('thumb', imagehash), ts.buf
-
+            children.append({
+                'range': (timestamp, timestamp),
+                'frame_num': frame_num,
+                'timestamp': timestamp,
+                'image': {
+                    'hash': imagehash,
+                    'video': {'videohash': videohash, 'frame_num': frame_num},
+                    'faces': [],
+                    'categories': [],
+                },
+                'imagehash': imagehash,
+                'children': [],
+                'count': 1
+                })
+        key = children[len(children)/2]
         keyframes.append({
             'range': (start, stop),
-            'frame_num': frame_num,
-            'timestamp': timestamp,
-            'image': {
-                'hash': imagehash,
-                'video': {'videohash': videohash, 'frame_num': frame_num},
-                'faces': [],
-                'categories': [],
-                },
-            'imagehash': imagehash,
-            'children': [],
-            })
-
-    # Recursively merge the key frames to create a tree
-    def subdivide(keyframes):
-        assert len(keyframes) > 0
-        divisions = min(min_resolution, len(keyframes))
-        n_per_child = int(np.ceil(len(keyframes) / float(divisions)))
-        divisions = int(np.ceil(len(keyframes) / n_per_child))
-        children = []
-        count = 0
-        if divisions > 1:
-            for i in range(divisions):
-                child = subdivide(keyframes[i*n_per_child:(i+1)*n_per_child])
-                count += child['count']
-                children.append(child)
-        if count == 0:
-            count = 1
-
-        key = keyframes[int(len(keyframes)/2)]
-        return {
-            'range': (keyframes[0]['range'][0], keyframes[-1]['range'][1]),
             'frame_num': key['frame_num'],
             'timestamp': key['timestamp'],
             'image': key['image'],
             'imagehash': key['imagehash'],
             'children': children,
-            'count': count
-            }
+            'count': len(children),
+            })
+        total_count += len(children)
+        print key
+
+    key = keyframes[len(keyframes)/2]
+    topkey = {
+        'range': (0, video_duration),
+        'frame_num': key['frame_num'],
+        'timestamp': key['timestamp'],
+        'image': key['image'],
+        'imagehash': key['imagehash'],
+        'children': keyframes,
+        'count': total_count,
+        }
 
     video = {
         'hash': videohash,
         'duration': video_duration,
         'frames': video_frames,
         'fps': video_fps,
-        'keyframes': [subdivide(keyframes)]
+        'keyframes': [topkey]
         }
     print 'video: ', videohash
     print 'total keyframes:', len(keyframes)
@@ -138,8 +127,7 @@ def mapper(videohash, metadata):
 
     video_data = metadata
 
-    max_resolution = float(os.environ.setdefault('MAX_RESOLUTION', '3.0'))
-    min_resolution = int(os.environ.setdefault('MIN_RESOLUTION', '8'))
+    max_resolution = float(os.environ['MAX_RESOLUTION'])
 
     videohash = hashlib.md5(video_data).hexdigest()
     # FIXME use an actual filename instead of assuming .avi
@@ -158,7 +146,7 @@ def mapper(videohash, metadata):
         kf = keyframe.Histogram()
 
         # Do this instead of 'return' in order to keep the tempfile around
-        for k, v in  keyframes(iter1, iter2, videohash, kf, min_resolution, max_resolution):
+        for k, v in  keyframes(iter1, iter2, videohash, kf, max_resolution):
             print k
             yield k, v
 
