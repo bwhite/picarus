@@ -124,7 +124,7 @@ def keyframes(iter1, iter2, metadata, kf, max_resolution):
 def mapper(videohash, metadata):
     print 'mapper', videohash
 
-    filename = 'hardcodedvideo' + metadata['extension']
+    filename = 'hardcodedvideo.' + metadata['extension']
     picarus.io._record_to_file(metadata, filename)
 
     max_resolution = float(os.environ['MAX_RESOLUTION'])
@@ -132,7 +132,9 @@ def mapper(videohash, metadata):
         # FIXME use an actual filename instead of assuming .avi
         if not 'USE_FFMPEG' in os.environ:
             video = pyffmpeg.VideoStream()
+            print 'pyffmpeg open:', filename
             video.open(filename)
+            print 'opened'
             iter1 = lambda : vidfeat.convert_video(video, ('frameiterskip', keyframe.histogram.MODES, 5))
             iter2 = lambda : vidfeat.convert_video(video, ('frameiterskip', ['RGB'], 5))
         else:
