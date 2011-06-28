@@ -6,7 +6,6 @@ import Image
 import re
 import random
 from picarus import _file_parse as file_parse
-from picarus.report import report_output
 import picarus
 import json
 
