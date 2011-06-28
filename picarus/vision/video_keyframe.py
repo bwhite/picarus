@@ -12,13 +12,11 @@ import vidfeat
 import picarus
 
 
-def keyframes(iter1, iter2, metadata, kf, max_resolution):
+def keyframes(iter1, iter2, metadata, kf, resolution):
     """
     Args:
         frame_iter_lambda: call this to get an iterator (must work twice)
-        min_resolution: the maximum number of keyframes to display in a
-                        cluster, controls the subdividing of clusters
-        max_resolution: the minimum distance between keyframes, in seconds
+        resolution: duration in seconds between frame outputs
     """
     # First pass
     # Find all the boundaries, including the first and last frame,
@@ -52,7 +50,7 @@ def keyframes(iter1, iter2, metadata, kf, max_resolution):
     frame_time = 0
     iter2 = iter2()
     iter2.next()
-    fskip = max(int(max_resolution * video_fps), 1)
+    fskip = max(int(resolution * video_fps), 1)
     total_count = 0
     for start, stop in intervals:
         children = []
@@ -125,26 +123,26 @@ def mapper(videohash, metadata):
     print 'mapper', videohash
 
     filename = 'hardcodedvideo.' + metadata['extension']
+    print filename, metadata.keys()
     picarus.io._record_to_file(metadata, filename)
 
-    max_resolution = float(os.environ['MAX_RESOLUTION'])
+    min_interval = float(os.environ['MIN_INTERVAL'])
+    resolution = float(os.environ['RESOLUTION'])
     try:
         # FIXME use an actual filename instead of assuming .avi
         if not 'USE_FFMPEG' in os.environ:
             video = pyffmpeg.VideoStream()
-            print 'pyffmpeg open:', filename
             video.open(filename)
-            print 'opened'
             iter1 = lambda : vidfeat.convert_video(video, ('frameiterskip', keyframe.histogram.MODES, 5))
             iter2 = lambda : vidfeat.convert_video(video, ('frameiterskip', ['RGB'], 5))
         else:
             iter1 = lambda : vidfeat.convert_video_ffmpeg(filename, ('frameiterskip', keyframe.histogram.MODES, 5), frozen=True)
             iter2 = lambda : vidfeat.convert_video_ffmpeg(filename, ('frameiterskip', ['RGB'], 5), frozen=True)
 
-        kf = keyframe.Histogram()
+        kf = keyframe.Histogram(min_interval)
 
         # Do this instead of 'return' in order to keep the tempfile around
-        for k, v in  keyframes(iter1, iter2, metadata, kf, max_resolution):
+        for k, v in  keyframes(iter1, iter2, metadata, kf, resolution):
             yield k, v
     finally:
         os.remove(filename)
