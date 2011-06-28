@@ -38,7 +38,9 @@ def mapper(key, value):
         image_file = StringIO.StringIO(image_data)
 
     elif os.environ['IMAGE_TYPE'] == 'frame':
-        (_, image_hash), image_metadata = key, value
+        (kind, image_hash), image_metadata = key, value
+        if not kind == 'frame':
+            return
         image_file = StringIO.StringIO(image_metadata['image_data'])
 
     thumb_size = int(os.environ['THUMB_SIZE'])

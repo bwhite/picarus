@@ -74,5 +74,5 @@ def run_video_keyframe(hdfs_input, hdfs_output, max_resolution, ffmpeg, **kw):
                                jobconfs=['mapred.child.java.opts=-Xmx512M'],
                                dummy_arg=fp)
 
-    picarus._launch_frozen(hdfs_output + '/keyframe', hdfs_output + '/allframes', _lf('video_keyframe_collect.py'),
+    picarus._launch_frozen(hdfs_output + '/keyframe', hdfs_output + '/allframes', _lf('video_keyframe_filter.py'),
                       reducer=None)
