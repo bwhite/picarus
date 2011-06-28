@@ -39,7 +39,7 @@ def _parser(sps):
 
 
 def run_image_feature(hdfs_input, hdfs_output, feature, image_length, **kw):
-    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('feature_compute.py'), reducer=False,
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('feature_compute.py'), reducer=None,
                            cmdenvs=['IMAGE_LENGTH=%d' % image_length,
                                     'FEATURE=%s' % feature],
                            files=[_lf('data/eigenfaces_lfw_cropped.pkl')])
@@ -49,7 +49,7 @@ def run_face_finder(hdfs_input, hdfs_output, image_length, boxes, **kw):
     cmdenvs = ['IMAGE_LENGTH=%d' % image_length]
     if boxes:
         cmdenvs.append('OUTPUT_BOXES=True')
-    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('face_finder.py'), reducer=False,
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('face_finder.py'), reducer=None,
                            cmdenvs=cmdenvs,
                            files=[_lf('data/haarcascade_frontalface_default.xml')])
 
@@ -74,5 +74,5 @@ def run_video_keyframe(hdfs_input, hdfs_output, max_resolution, ffmpeg, **kw):
                                jobconfs=['mapred.child.java.opts=-Xmx512M'],
                                dummy_arg=fp)
 
-    picarus._launch_frozen(hdfs_output + '/keyframe', hdfs_output + '/allframes', _lf('video_keyframe_collect.py'),
+    picarus._launch_frozen(hdfs_output + '/keyframe', hdfs_output + '/allframes', _lf('video_keyframe_filter.py'),
                       reducer=None)

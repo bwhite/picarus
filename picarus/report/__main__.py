@@ -6,7 +6,6 @@ import Image
 import re
 import random
 from picarus import _file_parse as file_parse
-from picarus.report import report_output
 import picarus
 import json
 
@@ -118,7 +117,7 @@ def make_thumbnails(hdfs_input, hdfs_output, thumb_size, image_type, **kw):
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf(script),
                           reducer=None,
                           cmdenvs=['THUMB_SIZE=%d' % thumb_size,
-                                   'IMAGE_TYPE=%d' % image_type])
+                                   'IMAGE_TYPE=%s' % image_type])
 
 
 def report_thumbnails(hdfs_input, local_thumb_output, **kw):

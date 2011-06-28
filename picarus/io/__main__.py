@@ -87,7 +87,7 @@ def _read_files(fns, prev_hashes, hdfs_output, output_format, max_record_size):
             prev_hashes.add(sha1_hash)
             if output_format == 'record' and max_record_size is not None and max_record_size < os.stat(fn)[6]:
                 # Put the file into the remote location
-                hdfs_path = hadoopy.abspath('%s/blobs/%s_%s' % (hdfs_output, sha1_hash, os.path.basename(fn)))
+                hdfs_path = hadoopy.abspath('%s/_blobs/%s_%s' % (hdfs_output, sha1_hash, os.path.basename(fn)))
                 data = ''
                 hadoopy.put(fn, hdfs_path)
             else:
@@ -105,17 +105,15 @@ def _read_files(fns, prev_hashes, hdfs_output, output_format, max_record_size):
                 yield sha1_hash, out
 
 
-def load_local(local_input, hdfs_output, output_format='kv', max_record_size=None, **kw):
+def load_local(local_input, hdfs_output, output_format='kv', max_record_size=None, max_kv_per_file=None, **kw):
     """Read data, de-duplicate, and put on HDFS in the specified format
 
     Args:
         local_input: Local directory path
         hdfs_output: HDFS output path
-        output_format: One of 'kv' or 'record'.  If 'kv' then output one
-            sequence file of the form (sha1_hash, binary_file_data).  If 'record'
-            make a directory at the hdfs_output path and put inside one sequence
-            file called 'records' of the form (sha1_hash, metadata)
-
+        output_format: One of 'kv' or 'record'.  If 'kv' then output sequence
+            files of the form (sha1_hash, binary_file_data).  If 'record'
+            then output sequence files of the form (sha1_hash, metadata)
             where metadata has keys
             sha1: Sha1 hash
             extension: File extension without a period (blah.avi -> avi,
@@ -128,18 +126,25 @@ def load_local(local_input, hdfs_output, output_format='kv', max_record_size=Non
             where only one of data or hdfs_path has to exist.
         max_record_size: If using 'record' and the filesize (in bytes) is larger
             than this, then store the contents of the file in a directory called
-            'blobs' inside output path with the name as the sha1 hash prefixed
+            '_blobs' inside output path with the name as the sha1 hash prefixed
             to the original file name (example, hdfs_output/blobs/sha1hash_origname).
             If None then there is no limit to the record size (default is None).
+        max_kv_per_file: If not None then only put this number of kv pairs in each
+            sequence file (default None).
     """
     fns = sorted([os.path.join(local_input, x) for x in os.listdir(local_input)])
-    if output_format == 'kv':
-        output_path = hdfs_output
-    elif output_format == 'record':
-        output_path = hdfs_output + '/records'
-    else:
+    if output_format not in ('kv', 'record'):
         raise ValueError('Unsupported output_format [%s]' % output_format)
-    hadoopy.writetb(output_path, _read_files(fns, set(), hdfs_output, output_format, max_record_size))
+    out = []
+    out_cnt = 0
+    for x in _read_files(fns, set(), hdfs_output, output_format, max_record_size):
+        out.append(x)
+        if max_kv_per_file is not None and max_kv_per_file < len(out):
+            hadoopy.writetb(hdfs_output + '/part-%.5d' % out_cnt, out)
+            out_cnt += 1
+            out = []
+    if out:
+        hadoopy.writetb(hdfs_output + '/part-%.5d' % out_cnt, out)
 
 
 def dump_local(hdfs_input, local_output, extension='', **kw):
