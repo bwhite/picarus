@@ -28,6 +28,8 @@ import numpy as np
 import os
 import glob
 import subprocess
+import cPickle as pickle
+import argparse
 
 
 def get_existing_paths(path_pos, path_neither, path_neg):
@@ -46,7 +48,8 @@ def get_existing_paths(path_pos, path_neither, path_neg):
     return key_to_path
 
 
-def save_display_images(path_hdfs, path_local, max_count, key_to_path=None):
+def save_display_images(path_hdfs, path_local, min_count,
+                        max_count, key_to_path=None):
     """
     Saves the first max_count images obtained by calling
     hadoopy.readtb(path_hdfs).  Each item in the sequence is assumed
@@ -59,18 +62,19 @@ def save_display_images(path_hdfs, path_local, max_count, key_to_path=None):
         key_to_path = {}
     count = 0
     for k, (i, bs) in hadoopy.readtb(path_hdfs):
-        if k in key_to_path:
-            path = key_to_path[k]
-        else:
-            path = path_local
-        filename = '%s/%s.jpg' % (path, k)
-        im = imfeat.convert_image(Image.open(StringIO.StringIO(i)),
-                                  [('opencv', 'bgr', 8)])
-        print(k)
-        for b in bs:
-            cv.Rectangle(im, (b[0], b[1]), (b[2], b[3]),
-                         cv.CV_RGB(255, 0, 0), 3)
-        cv.SaveImage(filename, im)
+        if count >= min_count:
+            if k in key_to_path:
+                path = key_to_path[k]
+            else:
+                path = path_local
+            filename = '%s/%s.jpg' % (path, k)
+            im = imfeat.convert_image(Image.open(StringIO.StringIO(i)),
+                                      [('opencv', 'bgr', 8)])
+            print(k)
+            for b in bs:
+                cv.Rectangle(im, (b[0], b[1]), (b[2], b[3]),
+                             cv.CV_RGB(255, 0, 0), 3)
+            cv.SaveImage(filename, im)
         # update count and break loop if necessary
         # TODO(Vlad): can we slice notation on a list of generators?
         count += 1
@@ -92,28 +96,32 @@ def make_training_set(path_hdfs, pos_disp_dir, neg_disp_dir,
             os.makedirs(d2)
         key_to_path.update([(os.path.splitext(
             os.path.basename(f))[0], d2) for f in glob.glob('%s/*' % d1)])
-
+    # save the bounding boxes in a pickle file in each directory
+    boxes = {pos_dir : {}, neg_dir : {}}
+    # the following two files will contain the list of positive/negative
+    # images for training the OpenCV face detector
     pos_fp = open(pos_file, 'w')
     neg_fp = open(neg_file, 'w')
-
     count = 0
     for k, (i, bs) in hadoopy.readtb(path_hdfs):
         try:
             path = key_to_path[k]
+            # save the face bounding boxes for this image
+            boxes[path][k] = bs
             # save the original image
             filename = '%s/%s.jpg' % (path, k)
             print(filename)
             with open(filename, 'wb') as f:
                 f.write(i)
-                # update the positive/negative training lists
-                if path == pos_dir:
-                    pos_fp.write('%s %i' % (filename, len(bs)))
-                    for b in bs:
-                        pos_fp.write(' %i %i %i %i' % (
-                            b[0], b[1], b[2] - b[0] + 1, b[3] - b[1] + 1))
-                    pos_fp.write('\n')
-                else:
-                    neg_fp.write('%s\n' % filename)
+            # update the positive/negative training lists
+            if path == pos_dir:
+                pos_fp.write('%s %i' % (filename, len(bs)))
+                for b in bs:
+                    pos_fp.write(' %i %i %i %i' % (
+                        b[0], b[1], b[2] - b[0] + 1, b[3] - b[1] + 1))
+                pos_fp.write('\n')
+            else:
+                neg_fp.write('%s\n' % filename)
         except KeyError:
             pass
         # update count and break loop if necessary
@@ -121,9 +129,12 @@ def make_training_set(path_hdfs, pos_disp_dir, neg_disp_dir,
         count += 1
         if count > max_count:
             break
-
     pos_fp.close()
     neg_fp.close()
+    # save the bounding boxes in a pickle file
+    for (path, bs) in boxes.items():
+        with open('%s/boxes.pkl' % path, 'wb') as f:
+            pickle.dump(bs, f)
 
 
 def train_classifier(pos_file, neg_file, out_dir,
@@ -133,7 +144,7 @@ def train_classifier(pos_file, neg_file, out_dir,
                      minhitrate=.999, maxfalsealarm=.5,
                      size=(20, 20)):
     """
-    Trains a object detector using OpenCV's haartraining code.  The default
+    Trains an object detector using OpenCV's haartraining code.  The default
     values are those described in Intel's tech report on this topic:
     Empirical Analysis of Detection Cascades of Boosted Classifiers for
     Rapid Object Detection, by Rainier Lienhart, Alexander Kuranov, and
@@ -162,43 +173,154 @@ def train_classifier(pos_file, neg_file, out_dir,
     subprocess.call(cmd.split())
 
 
+def make_eigenfaces_training_set(inputdir, outputdir):
+    if not os.path.exists(outputdir):
+        os.makedirs(outputdir)
+    with open('%s/boxes.pkl' % inputdir, 'rb') as f:
+        boxes = pickle.load(f)
+    for k, bs in boxes.items():
+        image = Image.open('%s/%s.jpg' % (inputdir, k))
+        image = image.convert('RGB')
+        for x0, y0, x1, y1 in bs:
+            image_crop = image.crop((x0, y0, x1, y1))
+            fn = '%s/%s-face-x0%d-y0%d-x1%d-y1%d.jpg' % (
+                outputdir, k, x0, y0, x1, y1)
+            image_crop.save(fn, 'JPEG')
+
+
 def main():
+    parser = argparse.ArgumentParser(
+        description='Face detector and feature training code. Can be used to '
+        'download images with detected faces from HDFS, sort them manually '
+        'into positive/negative samples, create an OpenCV classifier training '
+        'dataset, train an OpenCV detector, and create a dataset of cropped '
+        'faces to train face features.')
+    # parameters for downloading flickr files with detected faces
+    parser.add_argument('--hdfs', type=str,
+                        help='HDFS path containing the output of the face-finder. '
+                        '(default \'/user/root/flickr_hash_faces7\')',
+                        default='/user/root/flickr_hash_faces7')
+    parser.add_argument('--min', type=int, help='index of first image to consider from sequence file (default 0)',
+                        default=0)
+    parser.add_argument('--max', type=int, help='index of last image to consider from sequence file (default 4000)',
+                        default=4000)
+    # args for displaying and manually sorting/annotating images with detected faces (downloaded from above)
+    parser.add_argument('--dispneither', type=str,
+                        help='Directory to which display faces will be saved before annotation'
+                        '(see --annotate and --checkpos) (default \'faces_disp_neither\')',
+                        default='faces_disp_neither')
+    parser.add_argument('--disppos', type=str,
+                        help='Directory to which positive display faces will be moved during manual annotation '
+                        '(see --annotate and --checkpos) (default \'faces_disp_pos\')',
+                        default='faces_disp_pos')
+    parser.add_argument('--dispneg', type=str,
+                        help='Directory to which negative display faces will be moved during manual annotation '
+                        '(see --annotate and --checkpos) (default \'faces_disp_neg\')',
+                        default='faces_disp_neg')
+    # directories in which training images will be downloaded
+    parser.add_argument('--pos', type=str,
+                        help='Directory to which positive training images will be saved '
+                        '(default \'faces_pos\')',
+                        default='faces_pos')
+    parser.add_argument('--neg', type=str,
+                        help='Directory to which negative training images will be saved '
+                        '(default \'faces_neg\')',
+                        default='faces_neg')
+    # opencv classifier training files
+    parser.add_argument('--posfile', type=str,
+                        help='File listing the positive training images and boxes (from --pos directory) '
+                        '(default \'train_pos.txt\')',
+                        default='train_pos.txt')
+    parser.add_argument('--negfile', type=str,
+                        help='File listing the negative training images (from --neg directory) '
+                        '(default \'train_neg.txt\')',
+                        default='train_neg.txt')
+    parser.add_argument('--classifier', type=str,
+                        help='Trained classifier path '
+                        '(default \'faces_classifier\')',
+                        default='faces_classifier')
+    parser.add_argument('--cropdir', type=str,
+                        help='Place cropped faces here (from the positive dir --pos) '
+                        '(default \'faces_cropped\')',
+                        default='faces_cropped')
+    # flags enabling various training steps (nothing happens, by default)
+    parser.add_argument('--downloaddisp', action='store_true',
+                        help='Download and save display images from HDFS.')
+    parser.add_argument('--annotate', action='store_true',
+                        help='Annotate positive/negative training images.')
+    parser.add_argument('--checkpos', action='store_true',
+                        help='Check (and modify, if needed) the positive training set.')
+    parser.add_argument('--downloadtrain', action='store_true',
+                        help='Download positive and negative images corresponding to '
+                        '--disppos and --dispneg paths into --pos and --neg paths.')
+    parser.add_argument('--train', action='store_true',
+                        help='Train an opencv classifier.')
+    parser.add_argument('--crop', action='store_true',
+                        help='Crop faces from positive samples.')
+    
+    args = parser.parse_args()
+
     # the paths for storing images in which all faces were detected
     # and where some or no faces were detected
-    path_disp_pos = 'faces_disp_pos'
-    path_disp_neither = 'faces_disp_neither'
-    path_disp_neg = 'faces_disp_neg'
-    path_out = 'face_classifier'
-    path_hdfs = '/user/root/flickr_hash_faces7'
-    path_pos = 'faces_pos'
-    path_neg = 'faces_neg'
-    pos_file = 'train_pos.txt'
-    neg_file = 'train_neg.txt'
-    max_count = 1000
+    key_to_path_pkl = 'faces_key_to_path.pkl'
 
-    # save paths of images that have already been manually sorted
+    # load paths of images that have already been manually sorted
     key_to_path = get_existing_paths(
-        path_disp_pos, path_disp_neither, path_disp_neg)
+        args.disppos, args.dispneither, args.dispneg)
+    # load already saved paths from pickle file
+    if os.path.exists(key_to_path_pkl):
+        with open(key_to_path_pkl, 'r') as f:
+            key_to_path.update(pickle.load(f))
+            
     # download images from hdfs and place them in the 'neither' directory,
     # unless they have already been moved to some other directory
-    #save_display_images(path_hdfs, path_disp_neither, max_count, key_to_path)
+    if args.downloaddisp:
+        save_display_images(args.hdfs, args.dispneither,
+                            args.min, args.max, key_to_path)
 
     # now manually sort the display images into ones that should be used as
     # positives (those in which all people are detected), negatives (those
     # that contain no faces), and neither (those that contain false positives
     # or false negatives).
+    if args.annotate:
+        cmd = ('python -m image_server --thumbsize 200 --imagedir %s '
+               '--movedirs %s --movedirs %s '
+               '--limit 500 --port 20001' % (
+                   args.dispneither, args.disppos, args.dispneg))
+        subprocess.call(cmd.split())
+
+    # double-check positives
+    if args.checkpos:
+        cmd = ('python -m image_server --thumbsize 200 --imagedir %s '
+               '--movedirs %s --movedirs %s '
+               '--limit 500 --port 20001' % (
+                   args.disppos, args.dispneither, args.dispneg))
+        subprocess.call(cmd.split())
 
     # after manually sorting the downloaded files, make the training set
     # by downloading the original images (w/o overlayed boxes) corresponding to
     # the manually chosen positives and negatives
-    #make_training_set(path_hdfs, path_disp_pos, path_disp_neg,
-    #                  path_pos, path_neg, pos_file, neg_file, max_count)
+    if args.downloadtrain:
+        make_training_set(args.hdfs, args.disppos, args.dispneg,
+                          args.pos, args.neg, args.posfile, args.negfile, args.max)
 
-    # train classifier on a very small dataset
-    train_classifier(pos_file, neg_file, path_out,
-                     nneg=50, npos=100,
-                     nstages=5, memory=500,
-                     minhitrate=.9, maxfalsealarm=.5)
+    # train classifier on a very small dataset (use the defaults of train_classifier9)
+    # to train a real clasifier--this might take a few days)
+    if args.train:
+        train_classifier(args.posfile, args.negfile, args.classifier,
+                         nneg=50, npos=100,
+                         nstages=5, memory=500,
+                         minhitrate=.9, maxfalsealarm=.5)
+
+    # create a training set for the eigenface feature using the positive images chosen above
+    if args.crop:
+        make_eigenfaces_training_set(args.pos, args.cropdir)
+    
+    # reload existing paths and save to a pickle file
+    key_to_path.update(get_existing_paths(
+        args.disppos, args.dispneither, args.dispneg))
+    with open(key_to_path_pkl, 'w') as f:
+        pickle.dump(key_to_path, f)
 
 
 if __name__ == "__main__":
