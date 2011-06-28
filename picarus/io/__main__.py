@@ -111,11 +111,9 @@ def load_local(local_input, hdfs_output, output_format='kv', max_record_size=Non
     Args:
         local_input: Local directory path
         hdfs_output: HDFS output path
-        output_format: One of 'kv' or 'record'.  If 'kv' then output one
-            sequence file of the form (sha1_hash, binary_file_data).  If 'record'
-            make a directory at the hdfs_output path and put inside one sequence
-            file called 'records' of the form (sha1_hash, metadata)
-            # TODO(brandyn) Update ^^^
+        output_format: One of 'kv' or 'record'.  If 'kv' then output sequence
+            files of the form (sha1_hash, binary_file_data).  If 'record'
+            then output sequence files of the form (sha1_hash, metadata)
             where metadata has keys
             sha1: Sha1 hash
             extension: File extension without a period (blah.avi -> avi,
@@ -128,7 +126,7 @@ def load_local(local_input, hdfs_output, output_format='kv', max_record_size=Non
             where only one of data or hdfs_path has to exist.
         max_record_size: If using 'record' and the filesize (in bytes) is larger
             than this, then store the contents of the file in a directory called
-            'blobs' inside output path with the name as the sha1 hash prefixed
+            '_blobs' inside output path with the name as the sha1 hash prefixed
             to the original file name (example, hdfs_output/blobs/sha1hash_origname).
             If None then there is no limit to the record size (default is None).
         max_kv_per_file: If not None then only put this number of kv pairs in each
