@@ -14,4 +14,6 @@ def _freeze_script(script_path):
 def _launch_frozen(in_path, out_path, script_path, *args, **kw):
     import hadoopy
     kw['frozen_tar_path'] = _freeze_script(script_path)['frozen_tar_path']
+    if 'reducer' not in kw and 'num_reducers' not in kw:
+        kw['num_reducers'] = 1
     return hadoopy.launch_frozen(in_path, out_path, script_path, *args, **kw)
