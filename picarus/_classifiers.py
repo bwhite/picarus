@@ -18,7 +18,7 @@ def train(classifier_name, classifier_extra, label_values):
                 hadoopy.counter('X-Val', 'Rounds')
                 yield x
         b = classipy.select_parameters(classipy.SVMLinear, label_values,
-                                       {'c': (10**-2, 10**2, 10)},
+                                       {'c': (10**-2, 10**1, 10)},
                                        wrapped_optimizer,
                                        options={'B': '1'})[1]
         print(b)
