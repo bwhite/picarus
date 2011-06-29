@@ -21,31 +21,31 @@ def _parser(sps):
 
     # Report Clustering
     s = sps.add_parser('clusters', help='Report Clusters')
-    s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('local_json_output', help='report output')
     s.add_argument('category', help='category tag for this clustering')
     s.add_argument('--make_faces', action="store_true", help='set this for face clusters')
+    s.add_argument('hdfs_input', nargs='+', **ca['input'])
     s.set_defaults(func=_report_clusters)
 
     # Make Thumbnails
     s = sps.add_parser('make_thumbnails', help='Make Thumbnails')
-    s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('hdfs_output', **ca['output'])
     s.add_argument('thumb_size', help='thumbnail width in pixels', type=int)
     s.add_argument('image_type', choices=['record','cluster','kv','frame'])
+    s.add_argument('hdfs_input', nargs='+', **ca['input'])
     s.set_defaults(func=make_thumbnails)
 
     # Local Thumbnail Output
     s = sps.add_parser('thumbnails', help='Report Categories from Face Clustering')
-    s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('local_thumb_output', help='local thumbnail output directory')
+    s.add_argument('hdfs_input', nargs='+', **ca['input'])
     s.set_defaults(func=report_thumbnails)
 
     # Report Video Keyframes
     s = sps.add_parser('video_keyframe', help='Report Video Keyframes')
-    s.add_argument('hdfs_input', **ca['input'])
     s.add_argument('local_json_output', help='local json report output')
     s.add_argument('--local_thumb_output', help='local thumbnail output directory')
+    s.add_argument('hdfs_input', nargs='+', **ca['input'])
     s.set_defaults(func=_report_video_keyframe)
 
 
