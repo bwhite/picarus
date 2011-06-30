@@ -13,19 +13,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Test
+"""
+Tests that the distance between Eigenface features of
+a jpg file saved with OpenCV differs from one saved with PIL
+is close to zero.
 """
 __author__ = 'Vlad I. Morariu <morariu@umd.edu>'
 __license__ = 'GPL V3'
 
 
-import face_feature
+from picarus.vision import face_feature
 import imfeat
 import cv
 import Image
-import glob
 import random
 import numpy as np
+import lfwcrop_data
 try:
     import unittest2 as unittest
 except ImportError:
@@ -51,9 +54,9 @@ class Test(unittest.TestCase):
     def test_identity(self):
         # for now, test if the code runs without errors
         images = [cv.LoadImage(x)
-                  for x in random.sample(glob.glob(
-                      '/home/morariu/downloads/lfwcrop_color/faces/*'), 100)]
-        test_image = 'test_identity.jpg'
+                  for x in random.sample(
+                      lfwcrop_data.get_unique_lfw_training_images('data'), 100)]
+        test_image = 'data/exemplar1.jpg'
         im1 = cv.LoadImage(test_image)
         im2 = pil_to_cv(open(test_image))
         feat = face_feature.Eigenfaces(images)
@@ -63,7 +66,7 @@ class Test(unittest.TestCase):
             np.linalg.norm(out1 - out2)/len(out1)))
         print('||cv - pil|| = %g' % (np.linalg.norm(
             cv_to_array(im1)-cv_to_array(im2))/len(cv_to_array(im1))))
-
+        np.testing.assert_almost_equal(out1, out2)
 
 if __name__ == '__main__':
     unittest.main()

@@ -19,9 +19,10 @@ __author__ = 'Vlad I. Morariu <morariu@umd.edu>'
 __license__ = 'GPL V3'
 
 
-import face_feature
+from picarus.vision import face_feature
 import imfeat
 import cv
+import lfwcrop_data
 try:
     import unittest2 as unittest
 except ImportError:
@@ -31,11 +32,9 @@ except ImportError:
 class Test(unittest.TestCase):
 
     def test_0(self):
-        # for now, test if the code runs without errors
-        import glob
+        # test if the code runs without errors
         images = [cv.LoadImage(x)
-                  for x in glob.glob(
-                      '/home/morariu/downloads/lfwcrop_color/faces/*')[:100]]
+                  for x in lfwcrop_data.get_unique_lfw_training_images('data')[:100]]
         vectors = range(3, 64)
         feat = face_feature.Eigenfaces(images, vectors)
         out = imfeat.compute(feat, images[0])

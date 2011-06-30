@@ -42,12 +42,6 @@ def _parser(sps):
     s.add_argument('--local_json_output', help='Local output path')
     s.set_defaults(func=picarus.cluster.run_kmeans)
 
-    # Hierarchical Agglomerative Clustering
-    s = sps.add_parser('hac', help='Hierarhical Agglomerative Clustering')
-    s.add_argument('hdfs_input', **ca['input'])
-    s.add_argument('hdfs_output', **ca['output'])
-    s.set_defaults(func=picarus.cluster.run_hac)
-
 
 def run_whiten(hdfs_input, hdfs_output, **kw):
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('whiten.py'))
@@ -109,8 +103,14 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
     print('Samples[%s]' % cur_output)
 
 
-def run_hac(**kw):
-    pass
+def run_hac(hdfs_input='/user/brandyn/tp/image_cluster/run-1309347098.533365/test_feat/nonpr0n/part-00002', **kw):
+    import scipy as sp
+    import scipy.cluster
+    import scipy.spatial.distance
+    x = np.array([x[1] for x in hadoopy.readtb(hdfs_input)])
+    y = sp.spatial.distance.pdist(x)
+    return sp.cluster.hierarchy.linkage(y)
+    
 
 
 def fetch_clusters_from_hdfs(hdfs_input):

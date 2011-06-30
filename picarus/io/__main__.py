@@ -59,7 +59,10 @@ def _record_to_fp(v):
         File object (either a NamedTemporaryFile or StringIO)
     """
     try:
-        return StringIO.StringIO(v['data'])
+        val = v['data']
+        if not val:  # Empty data
+            raise KeyError
+        return StringIO.StringIO(val)
     except KeyError:
         try:
             fn = tempfile.NamedTemporaryFile().name

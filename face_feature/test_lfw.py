@@ -19,10 +19,10 @@ __author__ = 'Vlad I. Morariu <morariu@umd.edu>'
 __license__ = 'GPL V3'
 
 
-import face_feature
+from picarus.vision import face_feature
 import imfeat
 import cv
-import os
+import lfwcrop_data
 import numpy as np
 import random
 try:
@@ -31,64 +31,10 @@ except ImportError:
     import unittest
 
 
-def get_lfw_cropped_data(split='dv_train'):
-    """
-    Args:
-    split: Dataset split, one of:
-       'dv_train', 'dv_test',
-       '01_train', '01_test',
-       '02_train', '02_test',
-       '03_train', '03_test',
-       '04_train', '04_test',
-       '05_train', '05_test',
-       '06_train', '06_test',
-       '07_train', '07_test',
-       '08_train', '08_test',
-       '09_train', '09_test',
-       '10_train', '10_test'
-       (default: 'dv_train')
-
-    Returns:
-    Dataset as specified by 'split'
-
-    Data is in the form of out[[image_path1,image_path2]] = objects, where
-    objects is {'class': class_name}.  Here classname is either
-    'same' or 'diff' based on whether the images are of the same
-    person or not.
-    """
-    lfw_cropped_path = '/home/morariu/downloads/lfwcrop_color'
-    lists_path = '%s/lists' % lfw_cropped_path
-    faces_path = '%s/faces' % lfw_cropped_path
-    splitnums = set(map(lambda x: '%02i' % x, range(1, 11)) + ['dv'])
-    splittypes = set(['train', 'test'])
-    classnames = set(['same', 'diff'])
-
-    components = split.lower().split('_')
-    if(len(components) < 2  or len(components) > 3 or
-       not components[0] in splitnums or
-       not components[1] in splittypes or
-       len(components) == 3 and not components[2] in classnames):
-        raise ValueError('Unrecognized \'split\' value \'%s\'' % split)
-
-    if(len(components) == 2):
-        lists = [components + ['same'], components + ['diff']]
-    else:
-        lists = [components]
-
-    out = {}
-    for l in lists:
-        with open('%s/%s.txt' % (lists_path, '_'.join(l)), 'r') as f:
-            for line in f.read().strip().split('\n'):
-                files = map(lambda x: '%s/%s.ppm' % (faces_path, x),
-                            line.strip(' ').split())
-                out[tuple(files)] = {'class' : l[-1]}
-    return out
-
-
 def get_lfw_restricted_accuracy(split):
     max_train_ims = 3000
-    train_data = get_lfw_cropped_data('%s_train' % split)
-    test_data = get_lfw_cropped_data('%s_test' % split)
+    train_data = lfwcrop_data.get_lfw_cropped_data('%s_train' % split, 'data')
+    test_data = lfwcrop_data.get_lfw_cropped_data('%s_test' % split, 'data')
 
     # get a list of unique training images
     train_fns = []
