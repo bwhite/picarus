@@ -14,7 +14,11 @@ def mapper(key, value):
         key: image_hash
         value: binary file data
     """
-    fp = picarus.io._record_to_fp(value)
+    try:
+        fp = picarus.io._record_to_fp(value)
+    except IOError:
+        hadoopy.counter('INPUT_ERROR', 'REMOTE_READ_FAILED')
+        return
     yield key, fp.read()
 
 
