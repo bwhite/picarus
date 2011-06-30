@@ -24,7 +24,6 @@ import Image
 import imfeat
 import cStringIO as StringIO
 import cv
-import numpy as np
 import os
 import glob
 import subprocess
@@ -189,6 +188,20 @@ def make_eigenfaces_training_set(inputdir, outputdir):
 
 
 def main():
+    # defaults
+    default_hdfs = '/user/root/flickr_hash_faces7'
+    default_min = 0
+    default_max = 4000
+    default_dispneither = 'faces_disp_neither'
+    default_disppos = 'faces_disp_pos'
+    default_dispneg = 'faces_disp_neg'
+    default_pos = 'faces_pos'
+    default_neg = 'faces_neg'
+    default_posfile = 'faces_train_pos.txt'
+    default_negfile = 'faces_train_neg.txt'
+    default_classifier = 'faces_classifier'
+    default_cropdir = 'faces_cropped'
+    
     parser = argparse.ArgumentParser(
         description='Face detector and feature training code. Can be used to '
         'download images with detected faces from HDFS, sort them manually '
@@ -198,51 +211,53 @@ def main():
     # parameters for downloading flickr files with detected faces
     parser.add_argument('--hdfs', type=str,
                         help='HDFS path containing the output of the face-finder. '
-                        '(default \'/user/root/flickr_hash_faces7\')',
-                        default='/user/root/flickr_hash_faces7')
-    parser.add_argument('--min', type=int, help='index of first image to consider from sequence file (default 0)',
-                        default=0)
-    parser.add_argument('--max', type=int, help='index of last image to consider from sequence file (default 4000)',
-                        default=4000)
+                        '(default \'%s\')' % default_hdfs,
+                        default=default_hdfs)
+    parser.add_argument('--min', type=int, help='index of first image to consider '
+                        'from sequence file (default %i)' % default_min,
+                        default=default_min)
+    parser.add_argument('--max', type=int, help='index of last image to consider '
+                        'from sequence file (default %i)' % default_max,
+                        default=default_max)
     # args for displaying and manually sorting/annotating images with detected faces (downloaded from above)
     parser.add_argument('--dispneither', type=str,
                         help='Directory to which display faces will be saved before annotation'
-                        '(see --annotate and --checkpos) (default \'faces_disp_neither\')',
-                        default='faces_disp_neither')
+                        '(see --annotate and --checkpos) (default \'%s\')' % default_dispneither,
+                        default=default_dispneither)
     parser.add_argument('--disppos', type=str,
                         help='Directory to which positive display faces will be moved during manual annotation '
-                        '(see --annotate and --checkpos) (default \'faces_disp_pos\')',
-                        default='faces_disp_pos')
+                        '(see --annotate and --checkpos) (default \'%s\')' % default_disppos,
+                        default=default_disppos)
     parser.add_argument('--dispneg', type=str,
                         help='Directory to which negative display faces will be moved during manual annotation '
-                        '(see --annotate and --checkpos) (default \'faces_disp_neg\')',
-                        default='faces_disp_neg')
+                        '(see --annotate and --checkpos) (default \'%s\')' % default_dispneg,
+                        default=default_dispneg)
     # directories in which training images will be downloaded
     parser.add_argument('--pos', type=str,
                         help='Directory to which positive training images will be saved '
-                        '(default \'faces_pos\')',
-                        default='faces_pos')
+                        '(default \'%s\')' % default_pos,
+                        default=default_pos)
     parser.add_argument('--neg', type=str,
                         help='Directory to which negative training images will be saved '
-                        '(default \'faces_neg\')',
-                        default='faces_neg')
+                        '(default \'%s\')' % default_neg,
+                        default=default_neg)
     # opencv classifier training files
     parser.add_argument('--posfile', type=str,
                         help='File listing the positive training images and boxes (from --pos directory) '
-                        '(default \'train_pos.txt\')',
-                        default='train_pos.txt')
+                        '(default \'%s\')' % default_posfile,
+                        default=default_posfile)
     parser.add_argument('--negfile', type=str,
                         help='File listing the negative training images (from --neg directory) '
-                        '(default \'train_neg.txt\')',
-                        default='train_neg.txt')
+                        '(default \'%s\')' % default_negfile,
+                        default=default_negfile)
     parser.add_argument('--classifier', type=str,
                         help='Trained classifier path '
-                        '(default \'faces_classifier\')',
-                        default='faces_classifier')
+                        '(default \'%s\')' % default_classifier,
+                        default=default_classifier)
     parser.add_argument('--cropdir', type=str,
                         help='Place cropped faces here (from the positive dir --pos) '
-                        '(default \'faces_cropped\')',
-                        default='faces_cropped')
+                        '(default \'%s\')' % default_cropdir,
+                        default=default_cropdir)
     # flags enabling various training steps (nothing happens, by default)
     parser.add_argument('--downloaddisp', action='store_true',
                         help='Download and save display images from HDFS.')
@@ -283,20 +298,26 @@ def main():
     # that contain no faces), and neither (those that contain false positives
     # or false negatives).
     if args.annotate:
+        
         cmd = ('python -m image_server --thumbsize 200 --imagedir %s '
                '--movedirs %s --movedirs %s '
                '--limit 500 --port 20001' % (
                    args.dispneither, args.disppos, args.dispneg))
-        subprocess.call(cmd.split())
-
+        try:
+            subprocess.call(cmd.split())
+        except KeyboardInterrupt:  # the only way to quit the image_server is via Ctrl+C
+            pass
     # double-check positives
     if args.checkpos:
         cmd = ('python -m image_server --thumbsize 200 --imagedir %s '
                '--movedirs %s --movedirs %s '
                '--limit 500 --port 20001' % (
                    args.disppos, args.dispneither, args.dispneg))
-        subprocess.call(cmd.split())
-
+        try:
+            subprocess.call(cmd.split())
+        except KeyboardInterrupt:  # the only way to quit the image_server is via Ctrl+C
+            pass
+ 
     # after manually sorting the downloaded files, make the training set
     # by downloading the original images (w/o overlayed boxes) corresponding to
     # the manually chosen positives and negatives

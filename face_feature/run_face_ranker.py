@@ -40,8 +40,19 @@ def _compute_exemplar_feature(exemplar_fn, feature_pkl, fp):
 
 def run_face_ranker(hdfs_input, hdfs_output,
                     feature_pkl, exemplar_fn):
+    """
+    Runs the face_ranker.py hadoopy script.  The output consists of
+    the distance of each image to an exemplar as key, and the
+    input tuple of (key, imagedata) as value.
+    Inputs:
+    - hdfs_input: path to hdfs input: (key, imagedata) pairs
+    - hdfs_output: path to the hdfs output tuples: (dist, (key, imagedata))
+      where dist is the distance in Eigenfaces feature space to the exemplar
+      image
+    - feature_pkl: pickle file containing a trained Eigenfaces feature
+    - exemplar_fn: filename of the exemplar image
+    """
     fp = tempfile.NamedTemporaryFile()
-    #fp = open('side/exemplar.pkl', 'wb')
     _compute_exemplar_feature(exemplar_fn, feature_pkl, fp)
     fp.flush()
     hadoopy.launch_frozen(hdfs_input, hdfs_output,
@@ -53,7 +64,7 @@ def run_face_ranker(hdfs_input, hdfs_output,
 
 # all functions below are for setting up inputs and testing run_face_ranker()
 def _train_feature(feature_pkl):
-    # train and save an eigenfaces feature if it does not already exist
+    """train and save an eigenfaces feature if it does not already exist"""
     if not os.path.exists(feature_pkl):
         print('Training eigenfaces feature (%s)...' % feature_pkl)
         import eigenfaces_train
@@ -62,11 +73,10 @@ def _train_feature(feature_pkl):
 
 
 def _load_input_data(data_fn):
-    # copy fddb data to hdfs if it is not already there
+    """copy fddb data to hdfs if it is not already there"""
     if not hadoopy.exists(data_fn):
         print('Creating input data \'%s\'...' % data_fn)
         import fddb_data
-        #fddb_data.write_tb(data_fn, 1)
         fddb_data.write_tb(data_fn)
 
 
@@ -93,13 +103,17 @@ def _download_outputs(out_path):
 
 
 def test_face_ranker():
+    """
+    Set up input data, run face_finder on it, and then use the output of
+    face_finder as input to the face_ranker.  Finally download the
+    results for visualization.
+    """
     cur_time = time.time()
     data_fn = 'fddb_test_data/all_folds.tb'
     out_path = 'face_feature_out/%f/' % cur_time
-    side_path = 'side/'
+    side_path = 'data/'
     feature_pkl = side_path + 'eigenfaces_flickr.pkl'
-    #exemplar_path = '/home/morariu/downloads/lfwcrop_color/faces/George_W_Bush_0026.ppm'
-    exemplar_path = 'test_identity/exemplar2.jpg'
+    exemplar_path = side_path + 'exemplar2.jpg'
     os.makedirs(out_path)
     if not os.path.exists(side_path):
         os.makedirs(side_path)
