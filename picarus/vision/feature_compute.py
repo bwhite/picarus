@@ -19,7 +19,10 @@ class Mapper(object):
         except:
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
             return
-        image = image.resize((self._image_length, self._image_length))
+        try:
+            image = image.resize((self._image_length, self._image_length))
+        except:
+            hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
         try:
             yield name, np.asfarray(imfeat.compute(self._feat, image)[0])
         except ValueError, e:
