@@ -84,7 +84,11 @@ class Mapper(object):
         except:
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
             return
-        faces = self._detect_faces(image_cv)
+        try:
+            faces = self._detect_faces(image_cv)
+        except:
+            hadoopy.counter('DATA_ERRORS2', 'ImageLoadError')
+            return
         if not faces:
             return
         if self._output_boxes:
