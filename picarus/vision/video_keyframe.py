@@ -173,9 +173,13 @@ def mapper(videohash, metadata):
         kf = keyframe.Histogram(min_interval)
 
         # Do this instead of 'return' in order to keep the tempfile around
-        for k, v in  keyframes(iter1, iter2, metadata, kf, resolution):
-            #print 'yield', k
-            yield k, v
+        try:
+            for k, v in  keyframes(iter1, iter2, metadata, kf, resolution):
+                #print 'yield', k
+                yield k, v
+        except:
+            hadoopy.counter('INPUT_ERROR', 'VIDEO_READ_ERROR')
+            return
     finally:
         os.remove(filename)
 
