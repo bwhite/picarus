@@ -42,8 +42,11 @@ def mapper(key, value):
         image_file = StringIO.StringIO(image_metadata['image_data'])
 
     thumb_size = int(os.environ['THUMB_SIZE'])
-    image = Image.open(image_file)
-    image.thumbnail((thumb_size, thumb_size))
+    try:
+        image = Image.open(image_file)
+        image.thumbnail((thumb_size, thumb_size))
+    except:
+        hadoopy.counter('INPUT_ERROR', 'IMAGE_DATA_ERROR')
     image = image.convert('RGB')
     s = StringIO.StringIO()
     image.save(s, 'JPEG')
