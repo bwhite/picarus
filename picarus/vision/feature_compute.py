@@ -25,8 +25,7 @@ class Mapper(object):
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
         try:
             yield name, np.asfarray(imfeat.compute(self._feat, image)[0])
-        except ValueError, e:
-            print(e)
+        except:
             hadoopy.counter('DATA_ERRORS', 'UnkImageType')
             return
 
