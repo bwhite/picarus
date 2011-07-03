@@ -5,7 +5,6 @@ import numpy as np
 import cPickle as pickle
 import picarus
 import scipy as sp
-import scipy.cluster
 
 
 def _lf(fn):
@@ -103,7 +102,7 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
     print('Samples[%s]' % cur_output)
 
 
-def run_hac(hdfs_input='/user/brandyn/tp/image_cluster/run-1309347098.533365/test_feat/nonpr0n/part-00002', **kw):
+def run_hac(hdfs_input, **kw):
     import scipy as sp
     import scipy.cluster
     import scipy.spatial.distance
