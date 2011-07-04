@@ -66,7 +66,7 @@ def run_classifier_labels(hdfs_input_pos, hdfs_input_neg, hdfs_output, classifie
     file_parse.dump(labels, local_labels)
 
 
-def run_train_classifier(hdfs_input, hdfs_output, local_labels, **kw):
+def run_train_classifier(hdfs_input, hdfs_output, local_labels, num_reducers=15, **kw):
     import classipy
     # NOTE: Adds necessary files
     files = glob.glob(classipy.__path__[0] + "/lib/*")
@@ -74,6 +74,7 @@ def run_train_classifier(hdfs_input, hdfs_output, local_labels, **kw):
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('train_classifier.py'),
                            files=files,
                            cmdenvs=['LOCAL_LABELS_FN=%s' % os.path.basename(local_labels)],
+                           num_reducers=num_reducers,
                            jobconfs=['mapred.child.java.opts=-Xmx512M'])
 
 
