@@ -2,6 +2,9 @@ import hadoopy
 import vidfeat
 import os
 import picarus
+import glob
+import tempfile
+from picarus import _file_parse as file_parse
 
 
 def _lf(fn):
@@ -39,9 +42,12 @@ def _parser(sps):
     s.set_defaults(func=picarus.vision.run_video_keyframe)
 
 
-def run_image_feature(hdfs_input, hdfs_output, feature, image_length, **kw):
-    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('feature_compute.py'), reducer=None,
-                           cmdenvs=['IMAGE_LENGTH=%d' % image_length,
+def run_image_feature(hdfs_input, hdfs_output, feature, image_length=None, image_height=None, image_width=None, **kw):
+    if image_length:
+        image_height = image_width = image_length
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('feature_compute.py'),
+                           cmdenvs=['IMAGE_HEIGHT=%d' % image_height,
+                                    'IMAGE_WIDTH=%d' % image_width,
                                     'FEATURE=%s' % feature],
                            files=[_lf('data/eigenfaces_lfw_cropped.pkl')])
 
@@ -53,6 +59,25 @@ def run_face_finder(hdfs_input, hdfs_output, image_length, boxes, **kw):
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('face_finder.py'), reducer=None,
                            cmdenvs=cmdenvs,
                            files=[_lf('data/haarcascade_frontalface_default.xml')])
+
+
+def run_predict_windows(hdfs_input, hdfs_classifier_input, feature, hdfs_output, image_height, image_width, **kw):
+    import classipy
+    # NOTE: Adds necessary files
+    files = glob.glob(classipy.__path__[0] + "/lib/*")
+    fp = tempfile.NamedTemporaryFile(suffix='.pkl.gz')
+    file_parse.dump(list(hadoopy.readtb(hdfs_classifier_input)), fp.name)
+    files.append(fp.name)
+    files.append(_lf('data/haarcascade_frontalface_default.xml'))
+    cmdenvs = ['CLASSIFIERS_FN=%s' % os.path.basename(fp.name)]
+    cmdenvs += ['IMAGE_HEIGHT=%d' % image_height,
+                'IMAGE_WIDTH=%d' % image_width,
+                'FEATURE=%s' % feature]
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('predict_windows.py'),
+                           cmdenvs=cmdenvs,
+                           files=files,
+                           jobconfs=['mapred.child.java.opts=-Xmx1024M'],
+                           dummy_arg=fp)
 
 
 def run_video_keyframe(hdfs_input, hdfs_output, min_interval, resolution, ffmpeg, **kw):

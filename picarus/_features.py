@@ -20,6 +20,10 @@ def _hog():
     return imfeat.HOGLatent()
 
 
+def _meta_hog_gradient():
+    return imfeat.MetaFeature(imfeat.HOGLatent(), imfeat.GradientHistogram())
+
+
 def _autocorrelogram():
     return imfeat.Autocorrelogram()
 
@@ -46,4 +50,5 @@ def select_feature(feat_name):
             'spatial_hist_joint': _spatial_hist_joint,
             'meta_gist_spatial_hist': _meta_gist_spatial_hist,
             'meta_gist_spatial_hist_autocorrelogram': _meta_gist_spatial_hist_autocorrelogram,
-            'meta_hog_gist_hist': _meta_hog_gist_hist}[feat_name]()
+            'meta_hog_gist_hist': _meta_hog_gist_hist,
+            'meta_hog_gradient': _meta_hog_gradient}[feat_name]()

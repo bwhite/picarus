@@ -31,7 +31,7 @@ def _parser(sps):
     s = sps.add_parser('make_thumbnails', help='Make Thumbnails')
     s.add_argument('hdfs_output', **ca['output'])
     s.add_argument('thumb_size', help='thumbnail width in pixels', type=int)
-    s.add_argument('image_type', choices=['record','cluster','kv','frame'])
+    s.add_argument('image_type', choices=['record', 'cluster', 'kv', 'frame'])
     s.add_argument('hdfs_input', nargs='+', **ca['input'])
     s.set_defaults(func=make_thumbnails)
 
@@ -115,7 +115,6 @@ def _report_clusters(hdfs_input, local_json_output, category, make_faces, **kw):
 def make_thumbnails(hdfs_input, hdfs_output, thumb_size, image_type, **kw):
     script = 'make_thumbnails.py'
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf(script),
-                          reducer=None,
                           cmdenvs=['THUMB_SIZE=%d' % thumb_size,
                                    'IMAGE_TYPE=%s' % image_type])
 
