@@ -5,6 +5,7 @@ import numpy as np
 import cPickle as pickle
 import picarus
 import scipy as sp
+import scipy.cluster
 
 
 def _lf(fn):
