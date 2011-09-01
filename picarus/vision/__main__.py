@@ -45,6 +45,8 @@ def _parser(sps):
 def run_image_feature(hdfs_input, hdfs_output, feature, image_length=None, image_height=None, image_width=None, **kw):
     if image_length:
         image_height = image_width = image_length
+    if image_height is None or image_width is None:
+        raise ValueError('Please specify image_height/image_width or image_length')
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('feature_compute.py'),
                            cmdenvs=['IMAGE_HEIGHT=%d' % image_height,
                                     'IMAGE_WIDTH=%d' % image_width,
