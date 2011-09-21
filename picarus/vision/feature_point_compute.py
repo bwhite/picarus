@@ -1,5 +1,6 @@
 import hadoopy
 import imfeat
+import impoint
 import os
 import numpy as np
 import picarus._features as features
@@ -17,7 +18,7 @@ def _parse_height_width():
 class Mapper(object):
 
     def __init__(self):
-        self._feat = features.select_feature(os.environ['FEATURE'])
+        self._feat = features.select_feature_point(os.environ['FEATURE'])
         self._image_height, self._image_width = _parse_height_width()
 
     def map(self, name, image_data):
@@ -31,7 +32,8 @@ class Mapper(object):
         except:
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
         try:
-            yield name, self._feat(image)
+            for x in self._feat(image):
+                yield name, x
         except:
             hadoopy.counter('DATA_ERRORS', 'UnkImageType')
             return

@@ -1,6 +1,6 @@
 __all__ = ['vision', 'cluster', 'report', 'classify', 'io']
 from picarus import vision, cluster, report, classify, io
-
+import picarus._file_parse as file_parse
 _FROZEN_PATHS = {}
 
 

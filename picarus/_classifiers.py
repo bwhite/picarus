@@ -11,6 +11,8 @@ def train(classifier_name, classifier_extra, label_values):
         return classipy.SVMLinear(options={'B': '1'}).train(label_values)
     elif classifier_name == 'svm':
         return classipy.SVM(options={'t': '2'}).train(label_values)
+    elif classifier_name == 'svm_hik':
+        return classipy.SVMScikit(kernel=classipy.kernels.histogram_intersection)
     elif classifier_name == 'svmlinear_autotune':
 
         def wrapped_optimizer(*args, **kw):
@@ -39,5 +41,7 @@ def loads(classifier_ser):
         return classipy.SVMLinear.loads(d['classifier'])
     elif d['classifier_name'] == 'svm':
         return classipy.SVM.loads(d['classifier'])
+    elif d['classifier_name'] == 'svm_hik':
+        return classipy.SVMScikit.loads(d['classifier'])
     else:
         raise ValueError('Unknown classifier [%s]' % d['classifier_name'])

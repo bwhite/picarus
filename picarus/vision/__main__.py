@@ -4,6 +4,7 @@ import os
 import picarus
 import glob
 import tempfile
+import imfeat
 from picarus import _file_parse as file_parse
 
 
@@ -51,7 +52,19 @@ def run_image_feature(hdfs_input, hdfs_output, feature, image_length=None, image
                            cmdenvs=['IMAGE_HEIGHT=%d' % image_height,
                                     'IMAGE_WIDTH=%d' % image_width,
                                     'FEATURE=%s' % feature],
-                           files=[_lf('data/eigenfaces_lfw_cropped.pkl')])
+                           files=[_lf('data/hog_8_2_clusters.pkl'), _lf('data/eigenfaces_lfw_cropped.pkl')] + glob.glob(imfeat.__path__[0] + "/_object_bank/data/*"))
+
+
+def run_image_feature_point(hdfs_input, hdfs_output, feature, image_length=None, image_height=None, image_width=None, **kw):
+    if image_length:
+        image_height = image_width = image_length
+    if image_height is None or image_width is None:
+        raise ValueError('Please specify image_height/image_width or image_length')
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('feature_point_compute.py'),
+                           cmdenvs=['IMAGE_HEIGHT=%d' % image_height,
+                                    'IMAGE_WIDTH=%d' % image_width,
+                                    'FEATURE=%s' % feature],
+                           files=[_lf('data/eigenfaces_lfw_cropped.pkl')] + glob.glob(imfeat.__path__[0] + "/_object_bank/data/*"))
 
 
 def run_face_finder(hdfs_input, hdfs_output, image_length, boxes, **kw):
