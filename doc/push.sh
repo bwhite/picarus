@@ -18,6 +18,9 @@ git rm -rf .
 touch .nojekyll
 git add .nojekyll
 
+# Add CNAME file
+echo "picar.us" > CNAME
+
 # Update git
 mv ./doc_temp/* .
 git add *
