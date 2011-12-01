@@ -14,7 +14,7 @@ Requirements
 ------------
 Our projects
 
-- hadoopy_ ('doc <hadoopy.co>'_): Cython based Hadoop library for Python.  Efficient, simple, and powerful.
+- hadoopy_ (`doc <hadoopy.co>`_): Cython based Hadoop library for Python.  Efficient, simple, and powerful.
 - imfeat_: Image features (take image, produce feature vector) and support functions.
 - classipy_: Classifiers using a simple standardized interface (supports scikit-learn_).
 - distpy_: Distance metrics.
