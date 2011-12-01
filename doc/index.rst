@@ -11,6 +11,7 @@ About
 ---------------------------
 
 Utility Calls
+--------------
 ..  autofunction:: picarus.vision.run_image_feature
 ..  autofunction:: picarus.vision.run_video_keyframe
 ..  autofunction:: picarus.vision.run_predict_windows
