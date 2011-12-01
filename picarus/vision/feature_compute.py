@@ -1,6 +1,7 @@
 import hadoopy
 import imfeat
 import os
+import sys
 import numpy as np
 import picarus._features as features
 
@@ -30,11 +31,12 @@ class Mapper(object):
             image = imfeat.resize_image(image, self._image_height, self._image_width)
         except:
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
-        try:
-            yield name, self._feat(image)
-        except:
-            hadoopy.counter('DATA_ERRORS', 'UnkImageType')
-            return
+        #try:
+        yield name, self._feat(image)
+        #except Exception, e:
+        #    hadoopy.counter('DATA_ERRORS', 'UnkImageType')
+        #    print(str(e) + '\n')
+        #    return
 
 
 if __name__ == '__main__':

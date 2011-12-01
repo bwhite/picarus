@@ -91,7 +91,7 @@ def run_predict_windows(hdfs_input, hdfs_classifier_input, feature, hdfs_output,
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('predict_windows.py'),
                            cmdenvs=cmdenvs,
                            files=files,
-                           jobconfs=['mapred.child.java.opts=-Xmx1024M'],
+                           jobconfs=['mapred.child.java.opts=-Xmx512M'],
                            dummy_arg=fp)
 
 

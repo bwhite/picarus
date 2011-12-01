@@ -75,15 +75,17 @@ def run_train_classifier(hdfs_input, hdfs_output, local_labels, num_reducers=15,
                            files=files,
                            cmdenvs=['LOCAL_LABELS_FN=%s' % os.path.basename(local_labels)],
                            num_reducers=num_reducers,
-                           jobconfs=['mapred.child.java.opts=-Xmx1024M'])
+                           jobconfs=['mapred.child.java.opts=-Xmx1024M',
+                                     'mapred.task.timeout=6000000'])
 
 
-def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, **kw):
+def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, classes=None, **kw):
     import classipy
     # NOTE: Adds necessary files
     files = glob.glob(classipy.__path__[0] + "/lib/*")
     fp = tempfile.NamedTemporaryFile(suffix='.pkl.gz')
-    file_parse.dump(list(hadoopy.readtb(hdfs_classifier_input)), fp.name)
+    file_parse.dump([x for x in hadoopy.readtb(hdfs_classifier_input)
+                     if classes is None or x[0] in classes], fp.name)
     files.append(fp.name)
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('predict_classifier.py'),
                           files=files, reducer=None,

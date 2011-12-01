@@ -2,6 +2,7 @@ import classipy
 import pyram
 import cPickle as pickle
 import hadoopy
+import zlib
 
 
 def train(classifier_name, classifier_extra, label_values):
@@ -12,7 +13,7 @@ def train(classifier_name, classifier_extra, label_values):
     elif classifier_name == 'svm':
         return classipy.SVM(options={'t': '2'}).train(label_values)
     elif classifier_name == 'svm_hik':
-        return classipy.SVMScikit(kernel=classipy.kernels.histogram_intersection)
+        return classipy.SVMScikit(kernel=classipy.kernels.histogram_intersection).train(label_values)
     elif classifier_name == 'svmlinear_autotune':
 
         def wrapped_optimizer(*args, **kw):
@@ -30,6 +31,10 @@ def train(classifier_name, classifier_extra, label_values):
 
 
 def dumps(classifier_name, classifier_extra, classifier):
+    if classifier_name in ['svm_hik']:
+        return pickle.dumps({'classifier_name': classifier_name,
+                             'classifier_extra': classifier_extra,
+                             'classifier': zlib.compress(classifier.dumps())})
     return pickle.dumps({'classifier_name': classifier_name,
                          'classifier_extra': classifier_extra,
                          'classifier': classifier.dumps()})
@@ -37,11 +42,16 @@ def dumps(classifier_name, classifier_extra, classifier):
 
 def loads(classifier_ser):
     d = pickle.loads(classifier_ser)
-    if d['classifier_name'] in ('svmlinear', 'svmlinear_autotune'):
+    classifier_name = d['classifier_name']
+    if classifier_name in ('svmlinear', 'svmlinear_autotune'):
         return classipy.SVMLinear.loads(d['classifier'])
-    elif d['classifier_name'] == 'svm':
+    elif classifier_name == 'svm':
         return classipy.SVM.loads(d['classifier'])
-    elif d['classifier_name'] == 'svm_hik':
-        return classipy.SVMScikit.loads(d['classifier'])
+    elif classifier_name == 'svm_hik':
+        import sys
+        decomp = zlib.decompress(d['classifier'])
+        del d  # NOTE(brandyn): Some of these get very large
+        sys.stderr.write('[%s] DecompSz[%d]\n' % (classifier_name, len(decomp)))
+        return classipy.SVMScikit.loads(decomp)
     else:
-        raise ValueError('Unknown classifier [%s]' % d['classifier_name'])
+        raise ValueError('Unknown classifier [%s]' % classifier_name)
