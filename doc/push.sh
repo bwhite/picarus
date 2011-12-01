@@ -1,1 +1,1 @@
-rm -r html && make html && cp -R ./ ../doc_temp && git checkout gh-pages && pushd .. && rm -fr _* && mv ./doc_temp/html/* . &&  git add -u && git commit -m "Bump" && git push && popd && git checkout master
+rm -r html && make html && cp -R ./ ../doc_temp && cd .. && git stash && git checkout gh-pages && rm -fr _* && mv ./doc_temp/html/* . &&  git add -u && git add ./_* && git commit -m "Bump" && git push && git checkout master && git stash apply && cd doc
