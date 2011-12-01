@@ -20,10 +20,7 @@ git add .nojekyll
 
 # Update git
 mv ./doc_temp/* .
-git add *.html
-git add *.js
-git add *.inv
-git add ./_*
+git add *
 git commit -m "Docs Commit"
 
 # Push this copy to the true git repo (local on this machine)
