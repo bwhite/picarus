@@ -1,0 +1,251 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Picarus &mdash; Picarus v.0.1.0 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '.0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Picarus v.0.1.0 documentation" href="#" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="#">Picarus v.0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="picarus">
+<h1>Picarus<a class="headerlink" href="#picarus" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<p>Visit <a class="reference external" href="https://github.com/bwhite/picarus/">https://github.com/bwhite/picarus/</a> for the source.</p>
+<div class="section" id="about">
+<h2>About<a class="headerlink" href="#about" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="hadoop-vision-jobs">
+<h2>Hadoop Vision Jobs<a class="headerlink" href="#hadoop-vision-jobs" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="picarus.vision.run_image_feature">
+<tt class="descclassname">picarus.vision.</tt><tt class="descname">run_image_feature</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_output</em>, <em>feature</em>, <em>image_length=None</em>, <em>image_height=None</em>, <em>image_width=None</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.vision.run_image_feature" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.vision.run_video_keyframe">
+<tt class="descclassname">picarus.vision.</tt><tt class="descname">run_video_keyframe</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_output</em>, <em>min_interval</em>, <em>resolution</em>, <em>ffmpeg</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.vision.run_video_keyframe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.vision.run_predict_windows">
+<tt class="descclassname">picarus.vision.</tt><tt class="descname">run_predict_windows</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_classifier_input</em>, <em>feature</em>, <em>hdfs_output</em>, <em>image_height</em>, <em>image_width</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.vision.run_predict_windows" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="hadoop-cluster-jobs">
+<h2>Hadoop Cluster Jobs<a class="headerlink" href="#hadoop-cluster-jobs" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="picarus.cluster.run_whiten">
+<tt class="descclassname">picarus.cluster.</tt><tt class="descname">run_whiten</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_output</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.cluster.run_whiten" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.cluster.run_sample">
+<tt class="descclassname">picarus.cluster.</tt><tt class="descname">run_sample</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_output</em>, <em>num_clusters</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.cluster.run_sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.cluster.run_kmeans">
+<tt class="descclassname">picarus.cluster.</tt><tt class="descname">run_kmeans</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_prev_clusters</em>, <em>hdfs_image_data</em>, <em>hdfs_output</em>, <em>num_clusters</em>, <em>num_iters</em>, <em>num_samples</em>, <em>metric='l2sqr'</em>, <em>local_json_output=None</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.cluster.run_kmeans" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.cluster.run_hac">
+<tt class="descclassname">picarus.cluster.</tt><tt class="descname">run_hac</tt><big>(</big><em>hdfs_input</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.cluster.run_hac" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.cluster.run_local_kmeans">
+<tt class="descclassname">picarus.cluster.</tt><tt class="descname">run_local_kmeans</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_output</em>, <em>num_clusters</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.cluster.run_local_kmeans" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="hadoop-classification-jobs">
+<h2>Hadoop Classification Jobs<a class="headerlink" href="#hadoop-classification-jobs" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="picarus.classify.run_classifier_labels">
+<tt class="descclassname">picarus.classify.</tt><tt class="descname">run_classifier_labels</tt><big>(</big><em>hdfs_input_pos</em>, <em>hdfs_input_neg</em>, <em>hdfs_output</em>, <em>classifier_name</em>, <em>classifier_extra</em>, <em>local_labels</em>, <em>classifier</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.classify.run_classifier_labels" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.classify.run_train_classifier">
+<tt class="descclassname">picarus.classify.</tt><tt class="descname">run_train_classifier</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_output</em>, <em>local_labels</em>, <em>num_reducers=15</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.classify.run_train_classifier" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.classify.run_predict_classifier">
+<tt class="descclassname">picarus.classify.</tt><tt class="descname">run_predict_classifier</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_classifier_input</em>, <em>hdfs_output</em>, <em>classes=None</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.classify.run_predict_classifier" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.classify.run_join_predictions">
+<tt class="descclassname">picarus.classify.</tt><tt class="descname">run_join_predictions</tt><big>(</big><em>hdfs_predictions_input</em>, <em>hdfs_input</em>, <em>hdfs_output</em>, <em>local_image_output</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.classify.run_join_predictions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.classify.run_thresh_predictions">
+<tt class="descclassname">picarus.classify.</tt><tt class="descname">run_thresh_predictions</tt><big>(</big><em>hdfs_predictions_input</em>, <em>hdfs_input</em>, <em>hdfs_output</em>, <em>class_name</em>, <em>class_thresh</em>, <em>output_class</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.classify.run_thresh_predictions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="hadoop-io">
+<h2>Hadoop IO<a class="headerlink" href="#hadoop-io" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="picarus.io.load_local">
+<tt class="descclassname">picarus.io.</tt><tt class="descname">load_local</tt><big>(</big><em>local_input</em>, <em>hdfs_output</em>, <em>output_format='kv'</em>, <em>max_record_size=None</em>, <em>max_kv_per_file=None</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.io.load_local" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read data, de-duplicate, and put on HDFS in the specified format</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">local_input: Local directory path
+hdfs_output: HDFS output path
+output_format: One of &#8216;kv&#8217; or &#8216;record&#8217;.  If &#8216;kv&#8217; then output sequence</p>
+<blockquote>
+<div><p>files of the form (sha1_hash, binary_file_data).  If &#8216;record&#8217;
+then output sequence files of the form (sha1_hash, metadata)
+where metadata has keys
+sha1: Sha1 hash
+extension: File extension without a period (blah.avi -&gt; avi,</p>
+<blockquote>
+<div>blah.foo.avi -&gt; avi, blah -&gt; &#8216;&#8217;)</div></blockquote>
+<p>full_path: Local file path
+hdfs_path: HDFS path of the file (if any), the data should be the</p>
+<blockquote>
+<div>binary contents of the file stored at this location on HDFS.</div></blockquote>
+<p>data: Binary file contents</p>
+<p>where only one of data or hdfs_path has to exist.</p>
+</div></blockquote>
+<dl class="last docutils">
+<dt>max_record_size: If using &#8216;record&#8217; and the filesize (in bytes) is larger</dt>
+<dd>than this, then store the contents of the file in a directory called
+&#8216;_blobs&#8217; inside output path with the name as the sha1 hash prefixed
+to the original file name (example, hdfs_output/blobs/sha1hash_origname).
+If None then there is no limit to the record size (default is None).</dd>
+<dt>max_kv_per_file: If not None then only put this number of kv pairs in each</dt>
+<dd>sequence file (default None).</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="picarus.io.dump_local">
+<tt class="descclassname">picarus.io.</tt><tt class="descname">dump_local</tt><big>(</big><em>hdfs_input</em>, <em>local_output</em>, <em>extension=''</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.io.dump_local" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read data from hdfs and store the contents as hash.ext</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd><p class="first">hdfs_input: HDFS input path in either &#8216;kv&#8217; or &#8216;record&#8217; format
+local_output: Local directory output path
+extension: Use this file extension if none available (kv format or</p>
+<blockquote class="last">
+<div>record with missing extension) (default &#8216;&#8217;)</div></blockquote>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="picarus.io.run_record_to_kv">
+<tt class="descclassname">picarus.io.</tt><tt class="descname">run_record_to_kv</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_output</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.io.run_record_to_kv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="picarus.io.run_kv_to_record">
+<tt class="descclassname">picarus.io.</tt><tt class="descname">run_kv_to_record</tt><big>(</big><em>hdfs_input</em>, <em>hdfs_output</em>, <em>extension</em>, <em>base_path</em>, <em>**kw</em><big>)</big><a class="headerlink" href="#picarus.io.run_kv_to_record" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="#">
+              <img class="logo" src="_static/logo.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Picarus</a><ul>
+<li><a class="reference internal" href="#about">About</a></li>
+<li><a class="reference internal" href="#hadoop-vision-jobs">Hadoop Vision Jobs</a></li>
+<li><a class="reference internal" href="#hadoop-cluster-jobs">Hadoop Cluster Jobs</a></li>
+<li><a class="reference internal" href="#hadoop-classification-jobs">Hadoop Classification Jobs</a></li>
+<li><a class="reference internal" href="#hadoop-io">Hadoop IO</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="#">Picarus v.0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Dapper Vision, Inc..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
