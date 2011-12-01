@@ -25,8 +25,13 @@ git add *.js
 git add *.inv
 git add ./_*
 git commit -m "Docs Commit"
+
+# Push this copy to the true git repo (local on this machine)
 git push -f origin gh-pages
 
 # Return to the base doc directory and remove temp clone
 popd
 rm -rf temp_clone
+
+# Push the final copy to github
+git push -f origin gh-pages
