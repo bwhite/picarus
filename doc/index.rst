@@ -14,10 +14,10 @@ Requirements
 ------------
 Our projects
 
-- hadoopy_ (`doc <hadoopy.co>`_): Cython based Hadoop library for Python.  Efficient, simple, and powerful.
-- imfeat_: Image features (take image, produce feature vector) and support functions.
+- hadoopy_ (`doc <http://hadoopy.co>`_): Cython based Hadoop library for Python.  Efficient, simple, and powerful.
+- imfeat_ (`doc <http://bwhite.github.com/imfeat/>`_): Image features (take image, produce feature vector) and support functions.
 - classipy_: Classifiers using a simple standardized interface (supports scikit-learn_).
-- distpy_: Distance metrics.
+- distpy_ (`doc <http://bwhite.github.com/distpy/>`_): Distance metrics.
 - impoint_: Image feature point detection and description.
 - vidfeat_: Video features (take video, produce feature vector) and support functions.
 - keyframe_: Video keyframe algorithms (take video, identify frame changes).
