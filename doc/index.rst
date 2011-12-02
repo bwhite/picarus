@@ -13,7 +13,7 @@ Picarus is a web-scale machine learning library with a focus on computer vision 
 
 Who
 ---
-Picarus is developed by `Dapper Vision, Inc. <http://dappervision.com>`_ (`Brandyn White <http://brandynwhite.com>`_ and `Andrew Miller <http://blog.soc1024.com/pages/about-andrew-miller>`_).  We are both PhD students at UMD and UCF respectively and we are interested in Computer Vision, Web-Scale Machine Learning, HCI, and Social Networks.
+Picarus is developed by `Dapper Vision, Inc. <http://dappervision.com>`_ (`Brandyn White <http://brandynwhite.com>`_ and `Andrew Miller <http://blog.soc1024.com/pages/about-andrew-miller>`_).  We are PhD students at UMD and UCF respectively and are interested in Computer Vision, Web-Scale Machine Learning, HCI, and Social Networks.
 
 Use Cases
 ---------
