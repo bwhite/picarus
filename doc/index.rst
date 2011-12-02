@@ -9,6 +9,27 @@ Visit https://github.com/bwhite/picarus/ for the source.
 
 About
 ---------------------------
+Picarus is a web-scale machine learning library with a focus on computer vision applications.  This is still _highly_ experimental and we are working out in the open, if you are interested in working with us or trying it out send us an email.
+
+Use Cases
+---------
+Current
+
+- Image classification: Determine if an image is one class or another (e.g., indoor/outdoor, person/not person).  Includes training.
+- Image clustering: Group images based on visual similarity.
+- Face detection: Find all faces.
+- Keyframe: Find all keyframes in a set of videos (e.g., shot transitions, fast motion).
+
+Private (we have the code but are working on releasing it for various reasons)
+
+- Object detection: Find the location of a specific object (e.g., car, person).  Faces are currently supported.
+- Segmentation/Pixel-level classification: Classify individual image pixels as belonging to a specific class.
+- Image Search: Build an image search index 
+
+Planned/Experimental
+
+- Video classification: Determine if a video is one class or another (e.g., dancing, skateboarding)
+
 
 Requirements
 ------------
