@@ -60,15 +60,15 @@ def handler_help_test():
 @bottle.get('/help/configuration.json')
 def handler_help_configuration():
     bottle.response.content_type = 'application/json'
-    return {}
+    return {'version': SERVER_VERSION,
+            'max_request_size': bottle.BaseRequest.MEMFILE_MAX,
+            'time': time.time()}
 
 
 @bottle.get('/help/status.json')
 def handler_help_status():
     bottle.response.content_type = 'application/json'
-    return {'version': SERVER_VERSION,
-            'max_request_size': bottle.BaseRequest.MEMFILE_MAX,
-            'time': time.time()}
+    return {}
 
 
 # # # Handlers: /legal/

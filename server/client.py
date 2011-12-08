@@ -39,7 +39,9 @@ image_urls = ['http://farm4.static.flickr.com/3267/3112736300_03ee1bb778.jpg']
 # assertNotRegexpMatches(s, re)  not regex.search(s)
 # assertItemsEqual(a, b)    sorted(a) == sorted(b) and works with unhashable objs
 # assertDictContainsSubset(a, b)      all the key/value pairs in a exist in b
-CLIENT_VERSION = '"version":' + json.dumps({'major': 0, 'minor': 0, 'patch': 0, 'branch': 'dv'})
+CLIENT_VERSION = {'major': 0, 'minor': 0, 'patch': 0, 'branch': 'dv'}
+CLIENT_VERSION_PART = '"version":' + json.dumps(CLIENT_VERSION)
+
 
 class Test(unittest.TestCase):
 
@@ -49,33 +51,42 @@ class Test(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def test_help_status(self):
+        r = requests.get(url + 'help/configuration.json', headers=headers)
+        content = json.loads(r.content)
+        self.assertEqual(content['version'], CLIENT_VERSION)
+        self.assertIn('max_request_size', content)
+        self.assertIn('version', content)
+        self.assertIn('time', content)
+        self.assertEqual(r.status_code, 200)
+
     def test_help_test(self):
         r = requests.get(url + 'help/test.json', headers=headers)
         self.assertEqual(r.content, '"ok"')
         self.assertEqual(r.status_code, 200)
 
     def test_image_bad_auth(self):
-        data = '{"data": [], "query": {}, %s}' % (CLIENT_VERSION,)
+        data = '{"data": [], "query": {}, %s}' % (CLIENT_VERSION_PART,)
         r = requests.put(url + 'query/classify.json', auth=('nobody', 'nobody'), data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 401)
 
     def test_image_b64(self):
         image_data_b64 = base64.b64encode(requests.get(image_urls[0]).content)
-        data = '{"data": [{"type": "image", "binary_b64": "%s"}], "query": {}, %s}' % (image_data_b64, CLIENT_VERSION)
+        data = '{"data": [{"type": "image", "binary_b64": "%s"}], "query": {}, %s}' % (image_data_b64, CLIENT_VERSION_PART)
         r = requests.put(url + 'query/classify.json', auth=auth, data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 200)
 
     def test_image_url(self):
-        data = '{"data": [{"type": "image", "image_url": "%s"}], "query": {}, %s}' % (image_urls[0], CLIENT_VERSION)
+        data = '{"data": [{"type": "image", "image_url": "%s"}], "query": {}, %s}' % (image_urls[0], CLIENT_VERSION_PART)
         r = requests.put(url + 'query/classify.json', auth=auth, data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 200)
 
     def test_image_b64_url(self):
         image_data_b64 = base64.b64encode(requests.get(image_urls[0]).content)
-        data = '{"data": [{"type": "image", "binary_b64": "%s", "image_url": "%s"}], "query": {}, %s}' % (image_data_b64, image_urls[0], CLIENT_VERSION)
+        data = '{"data": [{"type": "image", "binary_b64": "%s", "image_url": "%s"}], "query": {}, %s}' % (image_data_b64, image_urls[0], CLIENT_VERSION_PART)
         r = requests.put(url + 'query/classify.json', auth=auth, data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 200)
