@@ -1,10 +1,8 @@
-import gevent
 from gevent import monkey
 monkey.patch_all()
 import bottle
 import argparse
 import time
-import json
 bottle.debug(True)
 bottle.BaseRequest.MEMFILE_MAX = 10 * 1024 ** 2  # NOTE(brandyn): This changes the default MEMFILE size, necessary for bottle.request.json to work
 SERVER_VERSION = {'major': 0, 'minor': 0, 'patch': 0, 'branch': 'dv'}
@@ -86,62 +84,81 @@ def handler_legal_tos():
     return '"TODO"'
 
 
-# # # Handlers: /query/
+# # # Handlers: /analyze/
 
-@bottle.put('/query/classify.json')
+
+@bottle.put('/analyze/tags.json')
 @require_size
 @require_auth
 @require_version
-def handler_query_classify():
+def handler_analyze_tags():
     return {'result': {}}
 
 
-@require_version
-@bottle.put('/query/detect.json')
-@require_auth
-def handler_query_detect():
-    return {'result': {}}
-
-
-@bottle.put('/query/scene.json')
+@bottle.put('/analyze/objects.json')
+@require_size
 @require_auth
 @require_version
-def handler_query_scene():
+def handler_analyze_objects():
     return {'result': {}}
+
+
+@bottle.put('/analyze/scene.json')
+@require_size
+@require_auth
+@require_version
+def handler_analyze_scene():
+    return {'result': {}}
+
+
+@bottle.put('/analyze/location.json')
+@require_size
+@require_auth
+@require_version
+def handler_analyze_location():
+    return {'result': {}}
+
+
+@bottle.put('/analyze/time.json')
+@require_size
+@require_auth
+@require_version
+def handler_analyze_time():
+    return {'result': {}}
+
+
+@bottle.put('/analyze/faces.json')
+@require_size
+@require_auth
+@require_version
+def handler_analyze_faces():
+    return {'result': {}}
+
+
+@bottle.put('/analyze/rotate.json')
+@require_size
+@require_auth
+@require_version
+def handler_analyze_rotate():
+    return {'result': {}}
+
+
+@bottle.put('/analyze/segments.json')
+@require_size
+@require_auth
+@require_version
+def handler_analyze_segments():
+    return {'result': {}}
+
+
+# # # Handlers: /query/
 
 
 @bottle.put('/query/similar.json')
+@require_size
 @require_auth
 @require_version
 def handler_query_similar():
-    return {'result': {}}
-
-
-@bottle.put('/query/location.json')
-@require_auth
-@require_version
-def handler_query_location():
-    return {'result': {}}
-
-
-@bottle.put('/query/faces.json')
-@require_auth
-@require_version
-def handler_query_faces():
-    return {'result': {}}
-
-
-@bottle.put('/query/rotated.json')
-@require_auth
-@require_version
-def handler_query_rotate():
-    return {'result': {}}
-
-
-@bottle.put('/query/segmentation.json')
-@require_auth
-@require_version
-def handler_query_segmentation():
     return {'result': {}}
 
 
@@ -149,16 +166,34 @@ def handler_query_segmentation():
 
 
 @bottle.put('/process/info.json')
+@require_size
 @require_auth
 @require_version
-def handler_query_info():
+def handler_process_info():
     return {'result': {}}
 
 
 @bottle.put('/process/register.json')
+@require_size
 @require_auth
 @require_version
-def handler_query_register():
+def handler_process_register():
+    return {'result': {}}
+
+
+@bottle.put('/process/convert.json')
+@require_size
+@require_auth
+@require_version
+def handler_process_convert():
+    return {'result': {}}
+
+
+@bottle.put('/process/cluster.json')
+@require_size
+@require_auth
+@require_version
+def handler_process_cluster():
     return {'result': {}}
 
 

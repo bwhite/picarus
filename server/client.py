@@ -8,7 +8,9 @@ except ImportError:
 headers = {'content-type': 'application/json'}
 auth = ('user', 'pass')
 url = 'http://localhost:8080/'
-image_urls = ['http://farm4.static.flickr.com/3267/3112736300_03ee1bb778.jpg']
+image_urls = ['http://farm4.static.flickr.com/3267/3112736300_03ee1bb778.jpg',
+              'http://farm6.static.flickr.com/5016/5540039736_8429b2e8ee.jpg',
+              'http://farm2.static.flickr.com/1302/532195789_0a18ea91f4.jpg']
 
 # Cheat Sheet (method/test) <http://docs.python.org/library/unittest.html>
 #
@@ -67,27 +69,35 @@ class Test(unittest.TestCase):
 
     def test_image_bad_auth(self):
         data = '{"data": [], "query": {}, %s}' % (CLIENT_VERSION_PART,)
-        r = requests.put(url + 'query/classify.json', auth=('nobody', 'nobody'), data=data, headers=headers)
+        r = requests.put(url + 'analyze/tags.json', auth=('nobody', 'nobody'), data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 401)
 
     def test_image_b64(self):
         image_data_b64 = base64.b64encode(requests.get(image_urls[0]).content)
-        data = '{"data": [{"type": "image", "binary_b64": "%s"}], "query": {}, %s}' % (image_data_b64, CLIENT_VERSION_PART)
-        r = requests.put(url + 'query/classify.json', auth=auth, data=data, headers=headers)
+        data = '{"data": {"type": "image", "binary_b64": "%s"}, "query": {}, %s}' % (image_data_b64, CLIENT_VERSION_PART)
+        r = requests.put(url + 'analyze/tags.json', auth=auth, data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 200)
 
     def test_image_url(self):
-        data = '{"data": [{"type": "image", "image_url": "%s"}], "query": {}, %s}' % (image_urls[0], CLIENT_VERSION_PART)
-        r = requests.put(url + 'query/classify.json', auth=auth, data=data, headers=headers)
+        data = '{"data": {"type": "image", "image_url": "%s"}, "query": {}, %s}' % (image_urls[0], CLIENT_VERSION_PART)
+        r = requests.put(url + 'analyze/tags.json', auth=auth, data=data, headers=headers)
+        print(r.content)
+        self.assertEqual(r.status_code, 200)
+
+    def test_image_url_multi(self):
+        data = '{"data": [{"type": "image", "image_url": "%s"}, {"type": "image", "image_url": "%s"}], "query": {}, %s}' % (image_urls[0],
+                                                                                                                            image_urls[1],
+                                                                                                                            CLIENT_VERSION_PART)
+        r = requests.put(url + 'analyze/tags.json', auth=auth, data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 200)
 
     def test_image_b64_url(self):
         image_data_b64 = base64.b64encode(requests.get(image_urls[0]).content)
-        data = '{"data": [{"type": "image", "binary_b64": "%s", "image_url": "%s"}], "query": {}, %s}' % (image_data_b64, image_urls[0], CLIENT_VERSION_PART)
-        r = requests.put(url + 'query/classify.json', auth=auth, data=data, headers=headers)
+        data = '{"data": {"type": "image", "binary_b64": "%s", "image_url": "%s"}, "query": {}, %s}' % (image_data_b64, image_urls[0], CLIENT_VERSION_PART)
+        r = requests.put(url + 'analyze/tags.json', auth=auth, data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 200)
 
