@@ -1,0 +1,83 @@
+import requests
+import base64
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+headers = {'content-type': 'application/json'}
+auth = ('user', 'pass')
+url = 'http://localhost:8080/'
+image_urls = ['http://farm4.static.flickr.com/3267/3112736300_03ee1bb778.jpg']
+
+# Cheat Sheet (method/test) <http://docs.python.org/library/unittest.html>
+#
+# assertEqual(a, b)       a == b   
+# assertNotEqual(a, b)    a != b    
+# assertTrue(x)     bool(x) is True  
+# assertFalse(x)    bool(x) is False  
+# assertRaises(exc, fun, *args, **kwds) fun(*args, **kwds) raises exc
+# assertAlmostEqual(a, b)  round(a-b, 7) == 0         
+# assertNotAlmostEqual(a, b)          round(a-b, 7) != 0
+# 
+# Python 2.7+ (or using unittest2)
+#
+# assertIs(a, b)  a is b
+# assertIsNot(a, b) a is not b
+# assertIsNone(x)   x is None
+# assertIsNotNone(x)  x is not None
+# assertIn(a, b)      a in b
+# assertNotIn(a, b)   a not in b
+# assertIsInstance(a, b)    isinstance(a, b)
+# assertNotIsInstance(a, b) not isinstance(a, b)
+# assertRaisesRegexp(exc, re, fun, *args, **kwds) fun(*args, **kwds) raises exc and the message matches re
+# assertGreater(a, b)       a > b
+# assertGreaterEqual(a, b)  a >= b
+# assertLess(a, b)      a < b
+# assertLessEqual(a, b) a <= b
+# assertRegexpMatches(s, re) regex.search(s)
+# assertNotRegexpMatches(s, re)  not regex.search(s)
+# assertItemsEqual(a, b)    sorted(a) == sorted(b) and works with unhashable objs
+# assertDictContainsSubset(a, b)      all the key/value pairs in a exist in b
+
+
+class Test(unittest.TestCase):
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_help_test(self):
+        r = requests.get(url + 'help/test.json', headers=headers)
+        self.assertEqual(r.content, '"ok"')
+        self.assertEqual(r.status_code, 200)
+
+    def test_image_bad_auth(self):
+        data = '{"data": [], "query": {}, "version": {"major": 0, "minor": 0, "patch": 0}}'
+        r = requests.put(url + 'query.json', auth=('nobody', 'nobody'), data=data, headers=headers)
+        self.assertEqual(r.status_code, 401)
+        return r.content
+
+    def test_image_b64(self):
+        image_data_b64 = base64.b64encode(requests.get(image_urls[0]).content)
+        data = '{"data": [{"type": "image", "binary_b64": "%s"}], "query": {}, "version": {"major": 0, "minor": 0, "patch": 0}}' % (image_data_b64,)
+        r = requests.put(url + 'query.json', auth=auth, data=data, headers=headers)
+        self.assertEqual(r.status_code, 200)
+        return r.content
+
+    def test_image_url(self):
+        data = '{"data": [{"type": "image", "image_url": "%s"}], "query": {}, "version": {"major": 0, "minor": 0, "patch": 0}}' % (image_urls[0],)
+        r = requests.put(url + 'query.json', auth=auth, data=data, headers=headers)
+        self.assertEqual(r.status_code, 200)
+        return r.content
+
+    def test_image_b64_url(self):
+        image_data_b64 = base64.b64encode(requests.get(image_urls[0]).content)
+        data = '{"data": [{"type": "image", "binary_b64": "%s", "image_url": "%s"}], "query": {}, "version": {"major": 0, "minor": 0, "patch": 0}}' % (image_data_b64, image_urls[0])
+        r = requests.put(url + 'query.json', auth=auth, data=data, headers=headers)
+        self.assertEqual(r.status_code, 200)
+        return r.content
+
+if __name__ == '__main__':
+    unittest.main()
