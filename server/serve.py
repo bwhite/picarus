@@ -4,12 +4,15 @@ monkey.patch_all()
 import bottle
 import argparse
 import time
+import json
 bottle.debug(True)
-# Designed to be sent over HTTPS
-# {"data": [{"type": "image", "binary_b64": "sdfskjdkfsjkjsd98sfskj"}], "query": {"nouns": ["car", "dog"]}, "version": {"major": 0, "minor": 0, "patch": 0}}
+bottle.BaseRequest.MEMFILE_MAX = 10 * 1024 ** 2  # NOTE(brandyn): This changes the default MEMFILE size, necessary for bottle.request.json to work
+SERVER_VERSION = {'major': 0, 'minor': 0, 'patch': 0, 'branch': 'dv'}
+
+# # # Decorators
 
 
-def auth(func):
+def require_auth(func):
     """Authentication decorator
 
     This verifies that the user is able to access the requested resource, handles
@@ -17,10 +20,31 @@ def auth(func):
     requiring authentication (anything requiring priveleges must be used from here).
     """
     def inner(*args, **kw):
+        print('Auth Check[%s]' % (bottle.request.auth,))
         if bottle.request.auth != ('user', 'pass'):
             bottle.abort(401)
         else:
-            return func(auth_funcs={}, *args, **kw)
+            return func(*args, **kw)
+    return inner
+
+
+def require_version(func):
+
+    def inner(*args, **kw):
+        if bottle.request.json['version'] != SERVER_VERSION:
+            bottle.abort(403)
+        else:
+            return func(*args, **kw)
+    return inner
+
+
+def require_size(func):
+
+    def inner(*args, **kw):
+        if bottle.request.MEMFILE_MAX <= bottle.request.content_length:
+            bottle.abort(413)
+        else:
+            return func(*args, **kw)
     return inner
 
 
@@ -36,13 +60,15 @@ def handler_help_test():
 @bottle.get('/help/configuration.json')
 def handler_help_configuration():
     bottle.response.content_type = 'application/json'
-    return '"ok"'
+    return {}
 
 
 @bottle.get('/help/status.json')
 def handler_help_status():
     bottle.response.content_type = 'application/json'
-    return '"ok"'
+    return {'version': SERVER_VERSION,
+            'max_request_size': bottle.BaseRequest.MEMFILE_MAX,
+            'time': time.time()}
 
 
 # # # Handlers: /legal/
@@ -62,68 +88,78 @@ def handler_legal_tos():
 
 # # # Handlers: /query/
 
-
 @bottle.put('/query/classify.json')
-@auth
+@require_size
+@require_auth
+@require_version
 def handler_query_classify():
-    print(bottle.request.auth)
-    return {'result': {'nouns': ['car', 'dog']}}
+    return {'result': {}}
 
 
+@require_version
 @bottle.put('/query/detect.json')
-@auth
+@require_auth
 def handler_query_detect():
-    print(bottle.request.auth)
-    return {'result': {'nouns': ['car', 'dog']}}
+    return {'result': {}}
 
 
 @bottle.put('/query/scene.json')
-@auth
+@require_auth
+@require_version
 def handler_query_scene():
-    print(bottle.request.auth)
-    return {'result': {'nouns': ['car', 'dog']}}
+    return {'result': {}}
 
 
-@bottle.put('/query/search.json')
-@auth
-def handler_query_search():
-    print(bottle.request.auth)
-    return {'result': {'nouns': ['car', 'dog']}}
+@bottle.put('/query/similar.json')
+@require_auth
+@require_version
+def handler_query_similar():
+    return {'result': {}}
+
+
+@bottle.put('/query/location.json')
+@require_auth
+@require_version
+def handler_query_location():
+    return {'result': {}}
 
 
 @bottle.put('/query/faces.json')
-@auth
+@require_auth
+@require_version
 def handler_query_faces():
-    print(bottle.request.auth)
-    return {'result': {'nouns': ['car', 'dog']}}
+    return {'result': {}}
 
 
 @bottle.put('/query/rotated.json')
-@auth
+@require_auth
+@require_version
 def handler_query_rotate():
-    print(bottle.request.auth)
-    return {'result': {'nouns': ['car', 'dog']}}
+    return {'result': {}}
 
 
-@bottle.put('/query/segment.json')
-@auth
-def handler_query_segment():
-    print(bottle.request.auth)
-    return {'result': {'nouns': ['car', 'dog']}}
+@bottle.put('/query/segmentation.json')
+@require_auth
+@require_version
+def handler_query_segmentation():
+    return {'result': {}}
 
 
-@bottle.put('/query/info.json')
-@auth
+# # # Handlers: /process/
+
+
+@bottle.put('/process/info.json')
+@require_auth
+@require_version
 def handler_query_info():
-    print(bottle.request.auth)
-    return {'result': {'nouns': ['car', 'dog']}}
+    return {'result': {}}
 
 
-@bottle.put('/query/register.json')
-@auth
+@bottle.put('/process/register.json')
+@require_auth
+@require_version
 def handler_query_register():
-    print(bottle.request.auth)
-    return {'result': {'nouns': ['car', 'dog']}}
+    return {'result': {}}
 
 
 if __name__ == '__main__':
