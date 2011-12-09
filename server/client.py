@@ -64,7 +64,7 @@ class Test(unittest.TestCase):
 
     def test_help_test(self):
         r = requests.get(url + 'help/test.json', headers=headers)
-        self.assertEqual(r.content, '"ok"')
+        self.assertEqual(json.loads(r.content)['result'], 'ok')
         self.assertEqual(r.status_code, 200)
 
     def test_image_bad_auth(self):

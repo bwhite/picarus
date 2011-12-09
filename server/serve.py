@@ -46,16 +46,41 @@ def require_size(func):
     return inner
 
 
+def method_info(quality=0, doc='', author={}, url='', method='GET'):
+
+    def inner0(func):
+
+        def inner1(*args, **kw):
+            quality_codes = dict((x, [x, y]) for x, y in enumerate(['unimplemented', 'preliminary implementation',
+                                                                    'partial implementation', 'draft implementation',
+                                                                    'alpha implementation', 'beta implementation',
+                                                                    'production implementation']))
+            out = func(*args, **kw)
+            out['info'] = {'quality': quality_codes[quality], 'handler_name': func.__name__}
+            if doc:
+                out['info']['doc'] = doc
+            if author:
+                out['info']['author'] = author
+            if url:
+                out['info']['url'] = url
+            return out
+        return inner1
+    return inner0
+
+
+HANDLERS = {'/help/test': {'meth': }}
+
 # # # Handlers: /help/
 
-
 @bottle.get('/help/test.json')
+@method_info(3, method='get')
 def handler_help_test():
     bottle.response.content_type = 'application/json'
-    return '"ok"'
+    return {'result': 'ok'}
 
 
 @bottle.get('/help/configuration.json')
+@method_info(1, ['get'])
 def handler_help_configuration():
     bottle.response.content_type = 'application/json'
     return {'version': SERVER_VERSION,
@@ -64,6 +89,7 @@ def handler_help_configuration():
 
 
 @bottle.get('/help/status.json')
+@method_info()
 def handler_help_status():
     bottle.response.content_type = 'application/json'
     return {}
@@ -71,26 +97,27 @@ def handler_help_status():
 
 # # # Handlers: /legal/
 
-
 @bottle.get('/legal/privacy.json')
+@method_info()
 def handler_legal_privacy():
     bottle.response.content_type = 'application/json'
-    return '"TODO"'
+    return {'result': 'TODO'}
 
 
 @bottle.get('/legal/tos.json')
+@method_info()
 def handler_legal_tos():
     bottle.response.content_type = 'application/json'
-    return '"TODO"'
+    return {'result': 'TODO'}
 
 
 # # # Handlers: /analyze/
-
 
 @bottle.put('/analyze/tags.json')
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_analyze_tags():
     return {'result': {}}
 
@@ -99,6 +126,7 @@ def handler_analyze_tags():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_analyze_objects():
     return {'result': {}}
 
@@ -107,6 +135,7 @@ def handler_analyze_objects():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_analyze_scene():
     return {'result': {}}
 
@@ -115,6 +144,7 @@ def handler_analyze_scene():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_analyze_location():
     return {'result': {}}
 
@@ -123,7 +153,17 @@ def handler_analyze_location():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_analyze_time():
+    return {'result': {}}
+
+
+@bottle.put('/analyze/who.json')
+@require_size
+@require_auth
+@require_version
+@method_info()
+def handler_analyze_who():
     return {'result': {}}
 
 
@@ -131,6 +171,7 @@ def handler_analyze_time():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_analyze_faces():
     return {'result': {}}
 
@@ -139,6 +180,7 @@ def handler_analyze_faces():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_analyze_rotate():
     return {'result': {}}
 
@@ -147,6 +189,7 @@ def handler_analyze_rotate():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_analyze_segments():
     return {'result': {}}
 
@@ -158,6 +201,7 @@ def handler_analyze_segments():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_query_similar():
     return {'result': {}}
 
@@ -169,6 +213,7 @@ def handler_query_similar():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_process_info():
     return {'result': {}}
 
@@ -177,7 +222,17 @@ def handler_process_info():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_process_register():
+    return {'result': {}}
+
+
+@bottle.put('/process/stabilize.json')
+@require_size
+@require_auth
+@require_version
+@method_info()
+def handler_process_stabilize():
     return {'result': {}}
 
 
@@ -185,6 +240,7 @@ def handler_process_register():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_process_convert():
     return {'result': {}}
 
@@ -193,7 +249,26 @@ def handler_process_convert():
 @require_size
 @require_auth
 @require_version
+@method_info()
 def handler_process_cluster():
+    return {'result': {}}
+
+
+@bottle.put('/process/points.json')
+@require_size
+@require_auth
+@require_version
+@method_info()
+def handler_process_points():
+    return {'result': {}}
+
+
+@bottle.put('/process/features.json')
+@require_size
+@require_auth
+@require_version
+@method_info()
+def handler_process_features():
     return {'result': {}}
 
 
