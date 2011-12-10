@@ -37,7 +37,7 @@ def require_version(func):
 
 
 def require_size(func):
-
+    
     def inner(*args, **kw):
         if bottle.request.MEMFILE_MAX <= bottle.request.content_length:
             bottle.abort(413)
@@ -46,41 +46,40 @@ def require_size(func):
     return inner
 
 
-def method_info(quality=0, doc='', author={}, url='', method='GET'):
+def method_info(quality=0, doc='', author={}, url=''):
 
     def inner0(func):
+        quality_codes = dict((x, [x, y]) for x, y in enumerate(['unimplemented', 'preliminary implementation',
+                                                                'partial implementation', 'draft implementation',
+                                                                'alpha implementation', 'beta implementation',
+                                                                'production implementation']))
+        info = {'quality': quality_codes[quality], 'handler_name': func.__name__}
+        if doc:
+            info['doc'] = doc
+        if author:
+            info['author'] = author
+        if url:
+            info['url'] = url
 
         def inner1(*args, **kw):
-            quality_codes = dict((x, [x, y]) for x, y in enumerate(['unimplemented', 'preliminary implementation',
-                                                                    'partial implementation', 'draft implementation',
-                                                                    'alpha implementation', 'beta implementation',
-                                                                    'production implementation']))
             out = func(*args, **kw)
-            out['info'] = {'quality': quality_codes[quality], 'handler_name': func.__name__}
-            if doc:
-                out['info']['doc'] = doc
-            if author:
-                out['info']['author'] = author
-            if url:
-                out['info']['url'] = url
+            out['info'] = info
             return out
         return inner1
     return inner0
 
 
-HANDLERS = {'/help/test': {'meth': }}
-
 # # # Handlers: /help/
 
 @bottle.get('/help/test.json')
-@method_info(3, method='get')
+@method_info(3)
 def handler_help_test():
     bottle.response.content_type = 'application/json'
     return {'result': 'ok'}
 
 
 @bottle.get('/help/configuration.json')
-@method_info(1, ['get'])
+@method_info(1)
 def handler_help_configuration():
     bottle.response.content_type = 'application/json'
     return {'version': SERVER_VERSION,
