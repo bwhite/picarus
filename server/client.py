@@ -64,25 +64,26 @@ class Test(unittest.TestCase):
 
     def test_help_test(self):
         r = requests.get(url + 'help/test.json', headers=headers)
-        self.assertEqual(json.loads(r.content)['result'], 'ok')
+        print(r.content)
+        self.assertEqual(json.loads(r.content), 'ok')
         self.assertEqual(r.status_code, 200)
 
     def test_image_bad_auth(self):
         data = '{"data": [], "query": {}, %s}' % (CLIENT_VERSION_PART,)
-        r = requests.put(url + 'analyze/tags.json', auth=('nobody', 'nobody'), data=data, headers=headers)
+        r = requests.put(url + 'see/tags.json', auth=('nobody', 'nobody'), data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 401)
 
     def test_image_b64(self):
         image_data_b64 = base64.b64encode(requests.get(image_urls[0]).content)
         data = '{"data": {"type": "image", "binary_b64": "%s"}, "query": {}, %s}' % (image_data_b64, CLIENT_VERSION_PART)
-        r = requests.put(url + 'analyze/tags.json', auth=auth, data=data, headers=headers)
+        r = requests.put(url + 'see/tags.json', auth=auth, data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 200)
 
     def test_image_url(self):
         data = '{"data": {"type": "image", "image_url": "%s"}, "query": {}, %s}' % (image_urls[0], CLIENT_VERSION_PART)
-        r = requests.put(url + 'analyze/tags.json', auth=auth, data=data, headers=headers)
+        r = requests.put(url + 'see/tags.json', auth=auth, data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 200)
 
@@ -90,14 +91,14 @@ class Test(unittest.TestCase):
         data = '{"data": [{"type": "image", "image_url": "%s"}, {"type": "image", "image_url": "%s"}], "query": {}, %s}' % (image_urls[0],
                                                                                                                             image_urls[1],
                                                                                                                             CLIENT_VERSION_PART)
-        r = requests.put(url + 'analyze/tags.json', auth=auth, data=data, headers=headers)
+        r = requests.put(url + 'see/tags.json', auth=auth, data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 200)
 
     def test_image_b64_url(self):
         image_data_b64 = base64.b64encode(requests.get(image_urls[0]).content)
         data = '{"data": {"type": "image", "binary_b64": "%s", "image_url": "%s"}, "query": {}, %s}' % (image_data_b64, image_urls[0], CLIENT_VERSION_PART)
-        r = requests.put(url + 'analyze/tags.json', auth=auth, data=data, headers=headers)
+        r = requests.put(url + 'see/tags.json', auth=auth, data=data, headers=headers)
         print(r.content)
         self.assertEqual(r.status_code, 200)
 

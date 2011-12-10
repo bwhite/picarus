@@ -3,6 +3,7 @@ monkey.patch_all()
 import bottle
 import argparse
 import time
+import json
 bottle.debug(True)
 bottle.BaseRequest.MEMFILE_MAX = 10 * 1024 ** 2  # NOTE(brandyn): This changes the default MEMFILE size, necessary for bottle.request.json to work
 SERVER_VERSION = {'major': 0, 'minor': 0, 'patch': 0, 'branch': 'dv'}
@@ -46,9 +47,16 @@ def require_size(func):
     return inner
 
 
-def method_info(quality=0, doc='', author={}, url=''):
+def return_json(func):
+    def inner(*args, **kw):
+        bottle.response.content_type = 'application/json'
+        return json.dumps(func(*args, **kw))
+    return inner
 
-    def inner0(func):
+
+def register_with_underscores(quality=0, doc='', author={}, url='', method='get'):
+
+    def inner(func):
         quality_codes = dict((x, [x, y]) for x, y in enumerate(['unimplemented', 'preliminary implementation',
                                                                 'partial implementation', 'draft implementation',
                                                                 'alpha implementation', 'beta implementation',
@@ -61,23 +69,23 @@ def method_info(quality=0, doc='', author={}, url=''):
         if url:
             info['url'] = url
 
-        def inner1(*args, **kw):
-            out = func(*args, **kw)
-            out['info'] = info
-            return out
-        return inner1
-    return inner0
+        route = '/'.join([''] + func.__name__.split('__'))
+        for ext, return_conv in [('.json', return_json)]:
+            methods = [method] if isinstance(method, str) else method
+            for m in methods:
+                if m.lower() == 'get':
+                    bottle.route(route + ext, method=m)(return_conv(func))
+                else:
+                    bottle.route(route + ext, method=m)(return_conv(require_version(require_auth(require_size(func)))))
+        return func
+    return inner
 
 
-#bottle.response.content_type = 'application/json'
-#@require_size
-#@require_auth
-#@require_version
 # # # Handlers: /help/
 
 @register_with_underscores(quality=3)
 def help__test():
-    return '"ok"'
+    return 'ok'
 
 
 @register_with_underscores(quality=1)
