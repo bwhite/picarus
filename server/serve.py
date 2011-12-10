@@ -73,14 +73,14 @@ def method_info(quality=0, doc='', author={}, url=''):
 
 @bottle.get('/help/test.json')
 @method_info(3)
-def handler_help_test():
+def help_test():
     bottle.response.content_type = 'application/json'
     return {'result': 'ok'}
 
 
 @bottle.get('/help/configuration.json')
 @method_info(1)
-def handler_help_configuration():
+def help_configuration():
     bottle.response.content_type = 'application/json'
     return {'version': SERVER_VERSION,
             'max_request_size': bottle.BaseRequest.MEMFILE_MAX,
@@ -89,7 +89,7 @@ def handler_help_configuration():
 
 @bottle.get('/help/status.json')
 @method_info()
-def handler_help_status():
+def help_status():
     bottle.response.content_type = 'application/json'
     return {}
 
@@ -98,98 +98,98 @@ def handler_help_status():
 
 @bottle.get('/legal/privacy.json')
 @method_info()
-def handler_legal_privacy():
+def legal_privacy():
     bottle.response.content_type = 'application/json'
     return {'result': 'TODO'}
 
 
 @bottle.get('/legal/tos.json')
 @method_info()
-def handler_legal_tos():
+def legal_tos():
     bottle.response.content_type = 'application/json'
     return {'result': 'TODO'}
 
 
-# # # Handlers: /analyze/
+# # # Handlers: /see/
 
-@bottle.put('/analyze/tags.json')
+@bottle.put('/see/tags.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_analyze_tags():
+def see_tags():
     return {'result': {}}
 
 
-@bottle.put('/analyze/objects.json')
+@bottle.put('/see/objects.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_analyze_objects():
+def see_objects():
     return {'result': {}}
 
 
-@bottle.put('/analyze/scene.json')
+@bottle.put('/see/scene.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_analyze_scene():
+def see_scene():
     return {'result': {}}
 
 
-@bottle.put('/analyze/location.json')
+@bottle.put('/see/location.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_analyze_location():
+def see_location():
     return {'result': {}}
 
 
-@bottle.put('/analyze/time.json')
+@bottle.put('/see/time.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_analyze_time():
+def see_time():
     return {'result': {}}
 
 
-@bottle.put('/analyze/who.json')
+@bottle.put('/see/who.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_analyze_who():
+def see_who():
     return {'result': {}}
 
 
-@bottle.put('/analyze/faces.json')
+@bottle.put('/see/faces.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_analyze_faces():
+def see_faces():
     return {'result': {}}
 
 
-@bottle.put('/analyze/rotate.json')
+@bottle.put('/see/rotate.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_analyze_rotate():
+def see_rotate():
     return {'result': {}}
 
 
-@bottle.put('/analyze/segments.json')
+@bottle.put('/see/segments.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_analyze_segments():
+def see_segments():
     return {'result': {}}
 
 
@@ -201,73 +201,73 @@ def handler_analyze_segments():
 @require_auth
 @require_version
 @method_info()
-def handler_query_similar():
+def query_similar():
     return {'result': {}}
 
 
-# # # Handlers: /process/
+# # # Handlers: /
 
 
-@bottle.put('/process/info.json')
+@bottle.put('/info.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_process_info():
+def info():
     return {'result': {}}
 
 
-@bottle.put('/process/register.json')
+@bottle.put('/register.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_process_register():
+def register():
     return {'result': {}}
 
 
-@bottle.put('/process/stabilize.json')
+@bottle.put('/stabilize.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_process_stabilize():
+def stabilize():
     return {'result': {}}
 
 
-@bottle.put('/process/convert.json')
+@bottle.put('/convert.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_process_convert():
+def convert():
     return {'result': {}}
 
 
-@bottle.put('/process/cluster.json')
+@bottle.put('/cluster.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_process_cluster():
+def compute_clusters():
     return {'result': {}}
 
 
-@bottle.put('/process/points.json')
+@bottle.put('/points.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_process_points():
+def compute_points():
     return {'result': {}}
 
 
-@bottle.put('/process/features.json')
+@bottle.put('/features.json')
 @require_size
 @require_auth
 @require_version
 @method_info()
-def handler_process_features():
+def compute_features():
     return {'result': {}}
 
 
