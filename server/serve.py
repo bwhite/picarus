@@ -69,204 +69,127 @@ def method_info(quality=0, doc='', author={}, url=''):
     return inner0
 
 
+#bottle.response.content_type = 'application/json'
+#@require_size
+#@require_auth
+#@require_version
 # # # Handlers: /help/
 
-@bottle.get('/help/test.json')
-@method_info(3)
-def help_test():
-    bottle.response.content_type = 'application/json'
-    return {'result': 'ok'}
+@register_with_underscores(quality=3)
+def help__test():
+    return '"ok"'
 
 
-@bottle.get('/help/configuration.json')
-@method_info(1)
-def help_configuration():
-    bottle.response.content_type = 'application/json'
+@register_with_underscores(quality=1)
+def help__configuration():
     return {'version': SERVER_VERSION,
             'max_request_size': bottle.BaseRequest.MEMFILE_MAX,
             'time': time.time()}
 
 
-@bottle.get('/help/status.json')
-@method_info()
-def help_status():
-    bottle.response.content_type = 'application/json'
+@register_with_underscores(quality=1)
+def help__status():
     return {}
 
 
 # # # Handlers: /legal/
 
-@bottle.get('/legal/privacy.json')
-@method_info()
-def legal_privacy():
-    bottle.response.content_type = 'application/json'
-    return {'result': 'TODO'}
+@register_with_underscores()
+def legal__privacy():
+    return 'TODO'
 
 
-@bottle.get('/legal/tos.json')
-@method_info()
-def legal_tos():
-    bottle.response.content_type = 'application/json'
-    return {'result': 'TODO'}
+@register_with_underscores()
+def legal__tos():
+    return 'TODO'
 
 
 # # # Handlers: /see/
 
-@bottle.put('/see/tags.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
-def see_tags():
+@register_with_underscores(method='put')
+def see__tags():
     return {'result': {}}
 
 
-@bottle.put('/see/objects.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
-def see_objects():
+@register_with_underscores(method='put')
+def see__objects():
     return {'result': {}}
 
 
-@bottle.put('/see/scene.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
-def see_scene():
+@register_with_underscores(method='put')
+def see__scene():
     return {'result': {}}
 
 
-@bottle.put('/see/location.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
-def see_location():
+@register_with_underscores(method='put')
+def see__location():
     return {'result': {}}
 
 
-@bottle.put('/see/time.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
-def see_time():
+@register_with_underscores(method='put')
+def see__time():
     return {'result': {}}
 
 
-@bottle.put('/see/who.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
-def see_who():
+@register_with_underscores(method='put')
+def see__who():
     return {'result': {}}
 
 
-@bottle.put('/see/faces.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
-def see_faces():
+@register_with_underscores(method='put')
+def see__faces():
     return {'result': {}}
 
 
-@bottle.put('/see/rotate.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
-def see_rotate():
+@register_with_underscores(method='put')
+def see__orientation():
     return {'result': {}}
 
-
-@bottle.put('/see/segments.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
-def see_segments():
+@register_with_underscores(method='put')
+def see__segments():
     return {'result': {}}
 
 
 # # # Handlers: /query/
 
-
-@bottle.put('/query/similar.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
-def query_similar():
+@register_with_underscores(method='put')
+def query__similar():
     return {'result': {}}
 
 
 # # # Handlers: /
 
-
-@bottle.put('/info.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
+@register_with_underscores(method='put')
 def info():
     return {'result': {}}
 
 
-@bottle.put('/register.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
+@register_with_underscores(method='put')
 def register():
     return {'result': {}}
 
 
-@bottle.put('/stabilize.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
+@register_with_underscores(method='put')
 def stabilize():
     return {'result': {}}
 
 
-@bottle.put('/convert.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
+@register_with_underscores(method='put')
 def convert():
     return {'result': {}}
 
 
-@bottle.put('/cluster.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
+@register_with_underscores(method='put')
 def compute_clusters():
     return {'result': {}}
 
 
-@bottle.put('/points.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
+@register_with_underscores(method='put')
 def compute_points():
     return {'result': {}}
 
 
-@bottle.put('/features.json')
-@require_size
-@require_auth
-@require_version
-@method_info()
+@register_with_underscores(method='put')
 def compute_features():
     return {'result': {}}
 
