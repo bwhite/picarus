@@ -4,6 +4,9 @@ import bottle
 import argparse
 import time
 import json
+import imfeat
+import base64
+import requests
 bottle.debug(True)
 bottle.BaseRequest.MEMFILE_MAX = 10 * 1024 ** 2  # NOTE(brandyn): This changes the default MEMFILE size, necessary for bottle.request.json to work
 SERVER_VERSION = {'major': 0, 'minor': 0, 'patch': 0, 'branch': 'dv'}
@@ -21,7 +24,7 @@ def require_auth(func):
     def inner(*args, **kw):
         print('Auth Check[%s]' % (bottle.request.auth,))
         if bottle.request.auth != ('user', 'pass'):
-            bottle.abort(401)
+            bottle.abort(401, 'Invalid username or password.')
         else:
             return func(*args, **kw)
     return inner
@@ -70,6 +73,7 @@ def register_with_underscores(quality=0, doc='', author={}, url='', method='get'
             info['url'] = url
 
         route = '/'.join([''] + func.__name__.split('__'))
+        # Install routes for all specified methods
         for ext, return_conv in [('.json', return_json)]:
             methods = [method] if isinstance(method, str) else method
             for m in methods:
@@ -81,8 +85,50 @@ def register_with_underscores(quality=0, doc='', author={}, url='', method='get'
     return inner
 
 
-# # # Handlers: /help/
+def single_image_handler(mode_or_modes=None):
+    if mode_or_modes is None:
+        mode_or_modes = {'type': 'numpy', 'dtype': 'uint8', 'mode': 'bgr'}
 
+    def inner0(func):
+
+        def inner1():
+            request = bottle.request.json
+            if 'image' in request:
+                if request['image']['type'] == 'b64':
+                    image_data = base64.b64decode(request['image']['image_data'])
+                elif request['image']['type'] == 'url':
+                    image_data = requests.get(request['image']['url']).content
+                else:
+                    bottle.abort(400)
+                result = func(imfeat.image_fromstring(image_data, mode_or_modes))
+            else:
+                bottle.abort(400)
+            return result
+        inner1.__name__ = func.__name__
+        return inner1
+    return inner0
+
+
+def multi_image_handler():
+    return lambda x: x
+
+
+def multi_vector_handler():
+    return lambda x: x
+
+
+@bottle.error(400)
+@bottle.error(401)
+@bottle.error(403)
+@bottle.error(404)
+@bottle.error(414)
+@bottle.error(500)
+def error_handler(r):
+    bottle.response.content_type = 'application/json'
+    return json.dumps({'message': r.output})
+    
+
+# # # Handlers: /help/
 @register_with_underscores(quality=3)
 def help__test():
     return 'ok'
@@ -115,91 +161,117 @@ def legal__tos():
 # # # Handlers: /see/
 
 @register_with_underscores(method='put')
-def see__tags():
-    return {'result': {}}
+@single_image_handler()
+def see__tags(image):
+    return {}
 
 
 @register_with_underscores(method='put')
-def see__objects():
-    return {'result': {}}
+@single_image_handler()
+def see__objects(image):
+    return {}
 
 
 @register_with_underscores(method='put')
-def see__scene():
-    return {'result': {}}
+@single_image_handler()
+def see__scene(image):
+    return {}
 
 
 @register_with_underscores(method='put')
-def see__location():
-    return {'result': {}}
+@single_image_handler()
+def see__location(image):
+    return {}
 
 
 @register_with_underscores(method='put')
-def see__time():
-    return {'result': {}}
+@single_image_handler()
+def see__time(image):
+    return {}
 
 
 @register_with_underscores(method='put')
-def see__who():
-    return {'result': {}}
+@single_image_handler()
+def see__who(image):
+    return {}
 
 
 @register_with_underscores(method='put')
-def see__faces():
-    return {'result': {}}
+@single_image_handler()
+def see__faces(image):
+    return {}
 
 
 @register_with_underscores(method='put')
-def see__orientation():
-    return {'result': {}}
+@single_image_handler()
+def see__orientation(image):
+    return {}
+
 
 @register_with_underscores(method='put')
-def see__segments():
-    return {'result': {}}
+@single_image_handler()
+def see__segments(image):
+    return {}
 
 
 # # # Handlers: /query/
 
 @register_with_underscores(method='put')
-def query__similar():
-    return {'result': {}}
+@single_image_handler()
+def query__similar(image):
+    return {}
+
+# # # Handlers: /demo/
+
+
+@bottle.get('/demo/all.html')
+def demo__all():
+    return bottle.static_file('demo_all.html', root='static/')
 
 
 # # # Handlers: /
 
 @register_with_underscores(method='put')
-def info():
-    return {'result': {}}
+@single_image_handler()
+def info(image):
+    return {'height': image.shape[0],
+            'width': image.shape[1]}
 
 
 @register_with_underscores(method='put')
-def register():
-    return {'result': {}}
+@multi_image_handler()
+def register(images):
+    return {}
 
 
 @register_with_underscores(method='put')
-def stabilize():
-    return {'result': {}}
+@multi_image_handler()
+def stabilize(images):
+    return {}
 
 
 @register_with_underscores(method='put')
-def convert():
-    return {'result': {}}
+@single_image_handler()
+def convert(image):
+    return {}
 
 
 @register_with_underscores(method='put')
-def compute_clusters():
-    return {'result': {}}
+@multi_vector_handler()
+def compute_clusters(vectors):
+    return {}
 
 
 @register_with_underscores(method='put')
-def compute_points():
-    return {'result': {}}
+@single_image_handler()
+def compute_points(image):
+    return {}
 
 
 @register_with_underscores(method='put')
-def compute_features():
-    return {'result': {}}
+@single_image_handler()
+def compute_features(image):
+    return {}
 
 
 if __name__ == '__main__':
