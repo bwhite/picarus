@@ -16,7 +16,7 @@
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
     <script type="text/javascript" src="http://stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
     <script type="text/javascript" src="http://twitter.github.com/bootstrap/1.4.0/bootstrap-alerts.js"></script>
-    <script type="text/javascript" src="http://twitter.github.com/bootstrap/1.4.0/bootstrap-scrollspy.js"></script>
+    <!-- <script type="text/javascript" src="http://twitter.github.com/bootstrap/1.4.0/bootstrap-scrollspy.js"></script>-->
     <style type="text/css">
       /* Override some defaults */
       html, body {
@@ -76,44 +76,70 @@
 
   <body>
     <script type="text/javascript">
-      function picarus_api_call(url, method, data, user, pass, result_selector) {
+      function picarus_api_test(url, method, data, user, pass, result_selector) {
           function clear_error() {
               $('#demobutton').removeClass('danger info success');
           }
           function report_result(xhr, label_type) {
-              result_selector.html('<span class="label ' + label_type +'">' + xhr.status + '</span><p><pre>' + xhr.getAllResponseHeaders() + '</pre></p><p><pre>' + xhr.responseText + '</pre></p>');
+              result_selector.html('<span class="label ' + label_type +'">' + xhr.status + '</span><p><pre>' + data  +  '</pre></p><p><pre>' + xhr.getAllResponseHeaders() + '</pre></p><p><pre>' + xhr.responseText + '</pre></p>');
           }
-          clear_error();
-          $('#demobutton').addClass('success');
+          function before_send(xhr) {
+              clear_error();
+              $('#demobutton').addClass('success');
+              result_selector.html('<span class="label warning">' + 'Running' + '</span>');
+          }
+          function success(msg, text_status, xhr) {
+              report_result(xhr, "success");
+          }
+          function fail(xhr, text_status) {
+              clear_error();
+              $('#demobutton').addClass('danger');
+              report_result(xhr, "important");
+          }
+          picarus_api(url, method, data, user, pass, before_send, success, fail);
+      }
+      function picarus_api(url, method, data, user, pass, before_send, success, fail) {
+          if (typeof before_send == 'undefined' ) before_send = function() {};
+          if (typeof success == 'undefined' ) success = function() {};
+          if (typeof fail == 'undefined' ) fail = function() {};
           var request = $.ajax({
           type: method,
           url: url,
           dataType: "json",
           contentType: "application/json; charset=utf-8",
           beforeSend: function(xhr) {
-              result_selector.html('<span class="label warning">' + 'Running' + '</span>');
               xhr.setRequestHeader("Authorization", "Basic " + base64.encode(user + ":" + pass));
+              before_send(xhr);
           },
           data: data,
-          success: function( msg, text_status, xhr) {
-              report_result(xhr, "success");
-          }
+          success: success
           });
-          request.fail(function(xhr, text_status) {
-              clear_error();
-              $('#demobutton').addClass('danger');
-              report_result(xhr, "important");
-          });
+          request.fail(fail);
       }
       function update_box() {
-          data = JSON.stringify({"image": {"type": "url", "url": $('#demourl').val()}, "query": {}, "version": {"major": 0, "branch": "dv", "minor": 0, "patch": 0}});
-          picarus_api_call("/info.json", "PUT", data, $('#demouser').val(), $('#demopass').val(), $("#results_info"));
-          picarus_api_call("/help/test.json", "GET", '', $('#demouser').val(), $('#demopass').val(), $("#results_help__test"));
-          picarus_api_call("/help/configuration.json", "GET", '', $('#demouser').val(), $('#demopass').val(), $("#results_help__configuration"));
+          $('#input_img').attr('src', $('#demourl').val())
+          $('#input_img_a').attr('href', $('#demourl').val())
+          <!-- Setup test variables -->
+          var data = {"image": {"type": "url", "url": $('#demourl').val()}, "version": {"major": 0, "branch": "dv", "minor": 0, "patch": 0}};
+          picarus_api_test("/info.json", "PUT", JSON.stringify(data), $('#demouser').val(), $('#demopass').val(), $("#results_info"));
+          picarus_api_test("/see/faces.json", "PUT", JSON.stringify(data), $('#demouser').val(), $('#demopass').val(), $("#results_see__faces"));
+          data.height = 50
+          data.width = 50
+          picarus_api_test("/convert.json", "PUT", JSON.stringify(data), $('#demouser').val(), $('#demopass').val(), $("#results_convert"));
+          data.feature_name = 'hist_joint'
+          picarus_api_test("/compute_features.json", "PUT", JSON.stringify(data), $('#demouser').val(), $('#demopass').val(), $("#results_compute_features"));
+          picarus_api_test("/help/test.json", "GET", '', $('#demouser').val(), $('#demopass').val(), $("#results_help__test"));
+          picarus_api_test("/help/configuration.json", "GET", '', $('#demouser').val(), $('#demopass').val(), $("#results_help__configuration"));
+          picarus_api_test("/help/status.json", "GET", '', $('#demouser').val(), $('#demopass').val(), $("#results_help__status"));
+          picarus_api_test("/legal/privacy.json", "GET", '', $('#demouser').val(), $('#demopass').val(), $("#results_legal__privacy"));
+          picarus_api_test("/legal/tos.json", "GET", '', $('#demouser').val(), $('#demopass').val(), $("#results_legal__tos"));
+          picarus_api_test("/convert.json", "PUT", JSON.stringify(data), $('#demouser').val(), $('#demopass').val(), $("#results_convert"));
+          <!-- Uses of the api for the actual demo -->
+          <!-- picarus_api_call("/convert.json", "PUT", JSON.stringify(data), $('#demouser').val(), $('#demopass').val(), function() {}, function());-->
       }
       function entry_func() {
           $('#demobutton').click(update_box);
-          submit_func = function(event) {
+          var submit_func = function(event) {
               if(event.keyCode == 13) {
                   $("#demobutton").click();
               }
@@ -121,7 +147,7 @@
           $("#demourl").keyup(submit_func);
           $("#demouser").keyup(submit_func);
           $("#demopass").keyup(submit_func);
-          $('#topbar').scrollSpy()
+          <!-- $('#topbar').scrollSpy()-->
           update_box();
       }
       $(document).ready(entry_func)
@@ -134,8 +160,10 @@
           <a class="brand" href="#">picar.us</a>
           <ul class="nav">
             <li><a href="#">Input</a></li>
-            <li><a href="#base">*.json</a></li>
-            <li><a href="#help">help/*.json</a></li>
+            <li><a href="#base">/</a></li>
+            <li><a href="#see">/see/</a></li>
+            <li><a href="#help">/help/</a></li>
+            <li><a href="#legal">/legal/</a></li>
           </ul>
         </div>
       </div>
@@ -154,15 +182,29 @@
             <input class="input-small" type="text" placeholder="Username" id="demouser" value="user">
             <input class="input-small" type="password" placeholder="Password" id="demopass" value="pass">
             <button class="btn" type="submit" id="demobutton">Run Demo</button>
+            <a id="input_img_a" target="_blank"><img id="input_img" height=28 width=28 src="" style="vertical-align:bottom"/></a>
             </div>
             <div id="base" style="position:relative;top:-35px;"></div>
             <h2>PUT /info.json</h2>
             <div id="results_info"></div>
+            <h2>PUT /convert.json</h2>
+            <div id="results_convert"></div>
+            <h2>PUT /compute_features.json</h2>
+            <div id="results_compute_features"></div>
+            <h2>PUT /see/faces.json</h2>
+            <div id="results_see__faces"></div>
             <div id="help" style="position:relative;top:-35px;"></div>
             <h2>GET /help/test.json</h2>
             <div id="results_help__test"></div>
             <h2>GET /help/configuration.json</h2>
             <div id="results_help__configuration"></div>
+            <h2>GET /help/status.json</h2>
+            <div id="results_help__status"></div>
+            <div id="legal" style="position:relative;top:-35px;"></div>
+            <h2>GET /legal/privacy.json</h2>
+            <div id="results_legal__privacy"></div>
+            <h2>GET /legal/tos.json</h2>
+            <div id="results_legal__tos"></div>
           </div>
         </div>
       </div>

@@ -7,6 +7,11 @@ import json
 import imfeat
 import base64
 import requests
+import handlers.see
+import hashlib
+import shelve
+import picarus
+import picarus._features
 bottle.debug(True)
 bottle.BaseRequest.MEMFILE_MAX = 10 * 1024 ** 2  # NOTE(brandyn): This changes the default MEMFILE size, necessary for bottle.request.json to work
 SERVER_VERSION = {'major': 0, 'minor': 0, 'patch': 0, 'branch': 'dv'}
@@ -57,9 +62,17 @@ def return_json(func):
     return inner
 
 
-def register_with_underscores(quality=0, doc='', author={}, url='', method='get'):
+def return_jpeg(func):
+    def inner(*args, **kw):
+        bottle.response.content_type = 'application/json'
+        return json.dumps(func(*args, **kw))
+    return inner
 
-    def inner(func):
+
+def register_with_underscores(quality=0, doc='', author={}, url='', method='get', path='',
+                              return_types=(('.json', return_json),)):
+
+    def inner(func, path=path):
         quality_codes = dict((x, [x, y]) for x, y in enumerate(['unimplemented', 'preliminary implementation',
                                                                 'partial implementation', 'draft implementation',
                                                                 'alpha implementation', 'beta implementation',
@@ -71,16 +84,16 @@ def register_with_underscores(quality=0, doc='', author={}, url='', method='get'
             info['author'] = author
         if url:
             info['url'] = url
-
-        route = '/'.join([''] + func.__name__.split('__'))
+        if not path:
+            path = '/'.join([''] + func.__name__.split('__'))
         # Install routes for all specified methods
-        for ext, return_conv in [('.json', return_json)]:
+        for ext, return_conv in return_types:
             methods = [method] if isinstance(method, str) else method
             for m in methods:
                 if m.lower() == 'get':
-                    bottle.route(route + ext, method=m)(return_conv(func))
+                    bottle.route(path + ext, method=m)(return_conv(func))
                 else:
-                    bottle.route(route + ext, method=m)(return_conv(require_version(require_auth(require_size(func)))))
+                    bottle.route(path+ ext, method=m)(return_conv(require_version(require_auth(require_size(func)))))
         return func
     return inner
 
@@ -115,6 +128,12 @@ def multi_image_handler():
 
 def multi_vector_handler():
     return lambda x: x
+
+
+def image_to_string_hash(image, ext):
+    image_data = imfeat.image_tostring(image, ext)
+    h = base64.urlsafe_b64encode(hashlib.sha1(image_data).digest())
+    return image_data, h
 
 
 @bottle.error(400)
@@ -197,9 +216,10 @@ def see__who(image):
 
 
 @register_with_underscores(method='put')
-@single_image_handler()
+@single_image_handler({'type': 'opencv', 'dtype': 'uint8', 'mode': 'gray'})
 def see__faces(image):
-    return {}
+    return handlers.see.faces(image)
+    #return {}
 
 
 @register_with_underscores(method='put')
@@ -253,7 +273,33 @@ def stabilize(images):
 @register_with_underscores(method='put')
 @single_image_handler()
 def convert(image):
-    return {}
+    height = bottle.request.json.get('height', image.shape[0])
+    width = bottle.request.json.get('width', image.shape[1])
+    mode = bottle.request.json.get('mode', None)
+    ext = bottle.request.json.get('ext', 'jpg')
+    new_image = imfeat.resize_image(image, height, width, mode)
+    new_image_data, new_image_hash = image_to_string_hash(new_image, 'jpeg' if ext == 'jpg' else ext)
+    new_image_name = ''.join([new_image_hash, '.', ext])
+    if new_image_name not in DATA:
+        DATA[new_image_name] = new_image_data
+    return {'output': '/data/' + new_image_name, 'width': width, 'height': height}
+
+
+DATA = shelve.open('shelf.bin')
+DATA['lena.jpg'] = open('static/lena.jpg').read()
+DATA['bible.jpg'] = open('static/bible.jpg').read()
+
+
+@register_with_underscores(path='/data/<data_id:re:[a-zA-Z0-9\-_]+[\=]*>.<ext:re:[a-zA-Z0-9\.]+>',
+                           return_types=(('', lambda x: x),))
+def data(data_id, ext):
+    try:
+        ext = ext.lower()
+        if ext in ('jpeg', 'jpg'):
+            bottle.response.content_type = 'image/jpg'
+        return DATA[data_id + '.' + ext]
+    except KeyError:
+        bottle.abort(404)
 
 
 @register_with_underscores(method='put')
@@ -271,7 +317,8 @@ def compute_points(image):
 @register_with_underscores(method='put')
 @single_image_handler()
 def compute_features(image):
-    return {}
+    f = picarus._features.select_feature(bottle.request.json['feature_name'])
+    return {'feature': f(image).tolist()}
 
 
 if __name__ == '__main__':
