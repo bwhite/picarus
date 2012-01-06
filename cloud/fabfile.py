@@ -23,7 +23,7 @@ def install_picarus_launcher():
     sudo('apt-get -y install libavcodec-dev libswscale-dev libavformat-dev gfortran ffmpeg fftw3-dev python-dev build-essential git-core python-setuptools cmake libjpeg62-dev libpng12-dev libblas-dev liblapack-dev libevent-dev python-scipy python-numpy scons')
     with cd(work_dir):
         # Apt Get
-        sudo('easy_install scons cython gevent bottle pil argparse scikit-learn')
+        sudo('easy_install scons cython gevent bottle pil argparse scikit-learn fabric')
         install_git('https://github.com/bwhite/static_server')
         install_git('https://github.com/bwhite/image_server')
         install_git('https://github.com/bwhite/vidfeat')

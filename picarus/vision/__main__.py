@@ -92,7 +92,6 @@ def run_predict_windows(hdfs_input, hdfs_classifier_input, feature, hdfs_output,
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('predict_windows.py'),
                            cmdenvs=cmdenvs,
                            files=files,
-                           jobconfs=['mapred.child.java.opts=-Xmx512M'],
                            dummy_arg=fp)
 
 
@@ -101,21 +100,16 @@ def run_video_keyframe(hdfs_input, hdfs_output, min_interval, resolution, ffmpeg
     if not ffmpeg:
         picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
                                reducer=None,
-                               cmdenvs=[
-                                   'MIN_INTERVAL=%f' % min_interval,
-                                   'RESOLUTION=%f' % resolution],
-                               jobconfs=['mapred.child.java.opts=-Xmx512M'],
-                               )
+                               cmdenvs=['MIN_INTERVAL=%f' % min_interval,
+                                        'RESOLUTION=%f' % resolution])
     else:
         fp = vidfeat.freeze_ffmpeg()
         picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
                                reducer=None,
-                               cmdenvs=[
-                                   'MIN_INTERVAL=%f' % min_interval,
-                                   'RESOLUTION=%f' % resolution,
-                                   'USE_FFMPEG=1'],
+                               cmdenvs=['MIN_INTERVAL=%f' % min_interval,
+                                        'RESOLUTION=%f' % resolution,
+                                        'USE_FFMPEG=1'],
                                files=[fp.__enter__()],
-                               jobconfs=['mapred.child.java.opts=-Xmx512M'],
                                dummy_arg=fp)
 
     picarus._launch_frozen(hdfs_output + '/keyframe', hdfs_output + '/allframes', _lf('video_keyframe_filter.py'),

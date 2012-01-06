@@ -87,8 +87,7 @@ def run_train_classifier(hdfs_input, hdfs_output, local_labels, num_reducers=1, 
                            files=files,
                            cmdenvs=['LOCAL_LABELS_FN=%s' % os.path.basename(local_labels)],
                            num_reducers=num_reducers,
-                           jobconfs=['mapred.child.java.opts=-Xmx512M',
-                                     'mapred.task.timeout=6000000'])
+                           jobconfs=['mapred.task.timeout=6000000'])
 
 
 def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, classes=None, image_hashes=None, **kw):
