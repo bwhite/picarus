@@ -2,6 +2,7 @@ import hadoopy
 import picarus._file_parse as file_parse
 import os
 import picarus._classifiers as classifiers
+import picarus
 
 
 class Mapper(object):
@@ -10,6 +11,7 @@ class Mapper(object):
         self._classifiers = [(x, classifiers.loads(y))
                              for x, y in file_parse.load(os.environ['CLASSIFIERS_FN'])]
 
+    @picarus.valid_image_check
     def map(self, image_hash, feature):
         """
 

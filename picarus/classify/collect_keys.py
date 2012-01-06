@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import hadoopy
 import numpy as np
 

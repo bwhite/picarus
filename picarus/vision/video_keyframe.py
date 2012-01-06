@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import pyffmpeg
 import StringIO
 import hashlib
 import Image
@@ -161,14 +160,8 @@ def mapper(videohash, metadata):
     min_interval = float(os.environ['MIN_INTERVAL'])
     resolution = float(os.environ['RESOLUTION'])
     try:
-        if not 'USE_FFMPEG' in os.environ:
-            video = pyffmpeg.VideoStream()
-            video.open(filename)
-            iter1 = lambda : vidfeat.convert_video(video, ('frameiterskip', keyframe.histogram.MODES, 5))
-            iter2 = lambda : vidfeat.convert_video(video, ('frameiterskip', ['RGB'], 5))
-        else:
-            iter1 = lambda : vidfeat.convert_video_ffmpeg(filename, ('frameiterskip', keyframe.histogram.MODES, 5), frozen=True)
-            iter2 = lambda : vidfeat.convert_video_ffmpeg(filename, ('frameiterskip', ['RGB'], 5), frozen=True)
+        iter1 = lambda : vidfeat.convert_video_ffmpeg(filename, ('frameiterskip', keyframe.histogram.MODES, 5), frozen=True)
+        iter2 = lambda : vidfeat.convert_video_ffmpeg(filename, ('frameiterskip', ['RGB'], 5), frozen=True)
 
         kf = keyframe.Histogram(min_interval)
 

@@ -58,8 +58,14 @@ class Eigenfaces(object):
 
     def make_features(self, image_cv):
         image = np.asarray(cv.GetMat(image_cv), dtype=np.float32).ravel()
-        out = np.dot(image - self.mean, self.vectors)
+        if image.size != self.mean.size:
+            raise ValueError('Face Feature input size[%d] != mean size[%d]' % (image.size, self.mean.size))
+        out = np.asfarray(np.dot(image - self.mean, self.vectors))
         return [out]
+
+    def __call__(self, image):
+        image_cv = imfeat.convert_image(image, self.MODES)
+        return self.make_features(image_cv)[0]
 
 
 def main():

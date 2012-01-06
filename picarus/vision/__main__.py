@@ -67,13 +67,14 @@ def run_image_feature_point(hdfs_input, hdfs_output, feature, image_length=None,
                            files=[_lf('data/eigenfaces_lfw_cropped.pkl')] + glob.glob(imfeat.__path__[0] + "/_object_bank/data/*"))
 
 
-def run_face_finder(hdfs_input, hdfs_output, image_length, boxes, **kw):
+def run_face_finder(hdfs_input, hdfs_output, image_length, boxes, image_hashes=None, **kw):
     cmdenvs = ['IMAGE_LENGTH=%d' % image_length]
     if boxes:
         cmdenvs.append('OUTPUT_BOXES=True')
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('face_finder.py'), reducer=None,
                            cmdenvs=cmdenvs,
-                           files=[_lf('data/haarcascade_frontalface_default.xml')])
+                           files=[_lf('data/haarcascade_frontalface_default.xml')],
+                           image_hashes=image_hashes)
 
 
 def run_predict_windows(hdfs_input, hdfs_classifier_input, feature, hdfs_output, image_height, image_width, **kw):
@@ -113,7 +114,7 @@ def run_video_keyframe(hdfs_input, hdfs_output, min_interval, resolution, ffmpeg
                                    'MIN_INTERVAL=%f' % min_interval,
                                    'RESOLUTION=%f' % resolution,
                                    'USE_FFMPEG=1'],
-                               files=fp.__enter__(),
+                               files=[fp.__enter__()],
                                jobconfs=['mapred.child.java.opts=-Xmx512M'],
                                dummy_arg=fp)
 

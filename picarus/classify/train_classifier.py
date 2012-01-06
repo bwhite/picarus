@@ -57,10 +57,12 @@ class Reducer(object):
             classifier_name: (see mapper)
             classifier: Serialized classifier
         """
+        print('Starting [%s]' % str(classifier_name))
         cur_labels = self._labels[classifier_name]
         classifier = classifiers.train(cur_labels['classifier'], cur_labels['classifier_extra'], label_values)
         classifier_ser = classifiers.dumps(cur_labels['classifier'], cur_labels['classifier_extra'], classifier)
         yield classifier_name, classifier_ser
+        print('Ending [%s,%d]' % (str(classifier_name), len(classifier_ser)))
 
 
 if __name__ == '__main__':

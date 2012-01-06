@@ -1,5 +1,6 @@
 import hadoopy
 import numpy as np
+import picarus
 
 
 class Mapper(object):
@@ -7,6 +8,7 @@ class Mapper(object):
     def __init__(self):
         pass
 
+    @picarus.valid_image_check
     def map(self, image_hash, feature):
         """
 

@@ -25,9 +25,11 @@ import hadoopy
 import os
 import numpy as np
 import distpy
+import picarus
 
 
 class Mapper(object):
+
     def __init__(self):
         self._norm = distpy.L2Sqr()
         self._clusters = self._load_clusters()
@@ -36,6 +38,7 @@ class Mapper(object):
         with open(os.environ['CLUSTERS_FN']) as fp:
             return np.ascontiguousarray(pickle.load(fp), dtype=np.float64)
 
+    @picarus.valid_image_check
     def map(self, image_id, point_or_image):
         """Take in a point, find its NN or if an image, pass through.
 

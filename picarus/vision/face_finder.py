@@ -23,6 +23,7 @@ import imfeat
 import cStringIO as StringIO
 import os
 import cv
+import picarus
 
 
 class Mapper(object):
@@ -68,6 +69,7 @@ class Mapper(object):
         image = image.convert('RGB')
         return image, imfeat.convert_image(image, [('opencv', 'rgb', 8)])
 
+    @picarus.valid_image_check
     def map(self, key, value):
         """
         Args:

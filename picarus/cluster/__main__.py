@@ -42,8 +42,9 @@ def _parser(sps):
     s.set_defaults(func=picarus.cluster.run_kmeans)
 
 
-def run_whiten(hdfs_input, hdfs_output, **kw):
-    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('whiten.py'))
+def run_whiten(hdfs_input, hdfs_output, image_hashes=None, **kw):
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('whiten.py'),
+                           image_hashes=image_hashes)
 
 
 def run_sample(hdfs_input, hdfs_output, num_clusters, **kw):
@@ -53,13 +54,14 @@ def run_sample(hdfs_input, hdfs_output, num_clusters, **kw):
 
 def run_local_kmeans(hdfs_input, hdfs_output, num_clusters, **kw):
     # TODO(brandyn): Update command interface
+    import scipy.cluster
     data = np.asfarray([y for x, y in hadoopy.readtb(hdfs_input)])
     clusters = sp.cluster.vq.kmeans(data, num_clusters)[0]
     hadoopy.writetb(hdfs_output, enumerate(clusters))
 
 
 def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num_clusters,
-               num_iters, num_samples, metric='l2sqr', local_json_output=None, **kw):
+               num_iters, num_samples, metric='l2sqr', local_json_output=None, image_hashes=None, **kw):
     for cur_iter_num in range(num_iters):
         clusters_fp = fetch_clusters_from_hdfs(hdfs_prev_clusters)
         clusters_fn = os.path.basename(clusters_fp.name)
@@ -79,6 +81,7 @@ def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num
                            cmdenvs=['CLUSTERS_FN=%s' % clusters_fn],
                            files=[clusters_fp.name],
                            num_reducers=max(1, num_clusters / 2),
+                           image_hashes=image_hashes,
                            dummy_arg=clusters_fp)
     cur_output = '%s/assign' % hdfs_output
     picarus._launch_frozen(hdfs_input, cur_output, _lf('kmeans_assign.py'),
