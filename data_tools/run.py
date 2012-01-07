@@ -3,7 +3,8 @@ import time
 
 r = 'flickr_data/run-%f/' % time.time()
 tags = 'christmas flower rose bird tree'
-hadoopy.writetb(r + 'tags', enumerate(tags.split()))
+for x, y in enumerate(tags.split()):
+    hadoopy.writetb(r + 'tags/%.4d' % x, [(0, y)])
 print('Wrote tags')
 hadoopy.launch_frozen(r + 'tags', r + 'out/flickr_metadata', 'flickr_bulk.py')
 print('Mined flickr')
