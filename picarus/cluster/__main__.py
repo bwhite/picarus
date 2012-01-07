@@ -52,37 +52,40 @@ def run_sample(hdfs_input, hdfs_output, num_clusters, **kw):
                           cmdenvs=['SAMPLE_SIZE=%d' % num_clusters])
 
 
-def _run_local_kmeans(q, num_clusters):
-    # TODO(brandyn): Update command interface
+def _run_local_kmeans(data, q, num_clusters):
     import scipy.cluster
-    data = q.get()
+    print('Starting to cluster')
     clusters = sp.cluster.vq.kmeans(data, num_clusters)[0]
-    q.put(clusters)
+    print('Putting clusters')
+    while 1:
+        try:
+            q.put(clusters, timeout=10)
+            break
+        except Queue.Full:
+            print('Queue put failed')
+            time.sleep(0)
+    print('Done Putting clusters')
 
 
 def run_local_kmeans(hdfs_input, hdfs_output, num_clusters, *args, **kw):
     import multiprocessing
+    import Queue
+    import time
+    q = multiprocessing.Queue()
     data = np.asfarray([y for x, y in hadoopy.readtb(hdfs_input)])
-    q = multiprocess.Queue()
-    p = multiprocessing.Process(target=_run_local_kmeans, args=(q, num_clusters))
+    p = multiprocessing.Process(target=_run_local_kmeans, args=(data, q, num_clusters))
     p.start()
+    while 1:
+        try:
+            clusters = q.get(timeout=10)
+            break
+        except Queue.Empty:
+            print('Queue get failed')
+            time.sleep(0)
     p.join()
-    hadoopy.writetb(hdfs_output, enumerate(q.get()))
-
-
-def _run_local_kmeans(hdfs_input, hdfs_output, num_clusters, **kw):
-    # TODO(brandyn): Update command interface
-    import scipy.cluster
-    clusters = sp.cluster.vq.kmeans(data, num_clusters)[0]
     hadoopy.writetb(hdfs_output, enumerate(clusters))
-
-
-def run_local_kmeans(*args, **kw):
-    import multiprocessing
-    data = np.asfarray([y for x, y in hadoopy.readtb(hdfs_input)])
-    p = multiprocessing.Process(target=_run_local_kmeans, args=args, kwargs=kw)
-    p.start()
-    p.join()
+    print('Done Writing to HDFS')
+    print('Done joining')
 
 
 def run_kmeans(hdfs_input, hdfs_prev_clusters, hdfs_image_data, hdfs_output, num_clusters,
