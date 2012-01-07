@@ -62,7 +62,7 @@ def _run_local_kmeans(hdfs_input, hdfs_output, num_clusters, **kw):
 
 def run_local_kmeans(*args, **kw):
     import multiprocessing
-    p = multiprocessing.Process(_run_local_kmeans, args=args, kwargs=kw)
+    p = multiprocessing.Process(target=_run_local_kmeans, args=args, kwargs=kw)
     p.start()
     p.join()
 
