@@ -147,6 +147,8 @@ def keyframes(iter1, iter2, metadata, kf, resolution):
 
 
 def mapper(videohash, metadata):
+    print('videohash[%s]' % videohash)
+    print('hdfs_path[%s]' % metadata['hdfs_path'])
     print 'mapper', videohash
 
     filename = 'hardcodedvideo.' + metadata['extension']
