@@ -24,7 +24,7 @@ class Mapper(object):
         self.earliest = 1167631200
         self.date_radius = 1296000  # seconds_in_month/2
         self.per_page = 500
-        self.tag_iters = 1
+        self.tag_iters = os.environ.get('TAG_ITERS', 1)
         self.sleep_penalty = 15
         self.sleep_penalty_orig = 15
         self.extras = 'description,license,date_upload,date_taken,owner_name,icon_server,original_format,last_update,geo,tags,machine_tags,o_dims,views,media,path_alias,url_sq,url_t,url_s,url_m,url_o'

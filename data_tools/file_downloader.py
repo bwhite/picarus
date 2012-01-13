@@ -25,7 +25,7 @@ def mapper(key, value):
     except Exception:
         hadoopy.counter('FILE_DOWNLOADER', 'Exception')
     else:
-        yield url, data
+        yield url, (data, value)
 
 
 if __name__ == "__main__":
