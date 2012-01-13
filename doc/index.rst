@@ -98,7 +98,6 @@ Video Feature Computation
 .. image:: images/fig_video_pipeline.png
 
 
-
 Hadoop Cluster Jobs
 -------------------
 ..  autofunction:: picarus.cluster.run_whiten
