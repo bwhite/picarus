@@ -1,7 +1,7 @@
 import hadoopy
 import time
 
-r = 'flickr_data/run-%f/' % time.time()
+r = 'flickr_data_picarus/run-%f/' % time.time()
 tags = 'car person people dog cat table tree flower book desert baseball shoe building sign stallman richard maryland texas'.split()
 
 
