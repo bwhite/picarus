@@ -35,6 +35,33 @@ Planned/Experimental
 - Video classification: Determine if a video is one class or another (e.g., dancing, skateboarding)
 
 
+Contents
+--------
+:doc:`installation`
+  How to install picarus.
+
+:doc:`tutorial`
+  A short overview of picarus usage.
+
+:doc:`api/index`
+  The picarus server API documentation.
+
+:doc:`vision/video`
+  Video analysis
+
+:doc:`vision/image`
+  Image analysis
+
+:doc:`classify`
+  Classification
+
+:doc:`clustering`
+  Clustering
+
+:doc:`io`
+  Data IO
+
+
 Requirements
 ------------
 Our projects
