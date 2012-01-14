@@ -40,18 +40,21 @@ class Mapper(object):
             prev_frame_time = None
             prev_frame_num = None
             prev_frame = None
-            for (frame_num, frame_time, frame), iskeyframe in self.kf(vidfeat.convert_video_ffmpeg(fp.name, modes=('frameiterskiptime', self.kf.MODES,
-                                                                                                                   self.frame_skip),
-                                                                                                   frozen=True)):
-                if iskeyframe and prev_frame:
-                    yield event_filename, {'prev_frame_time': prev_frame_time,
-                                           'prev_frame_num': prev_frame_num,
-                                           'prev_frame': imfeat.image_tostring(prev_frame, 'JPEG'),
-                                           'frame_time': frame_time,
-                                           'frame_num': frame_num,
-                                           'frame': imfeat.image_tostring(frame, 'JPEG')}
-                prev_frame_num = frame_num
-                prev_frame = frame
+            try:
+                for (frame_num, frame_time, frame), iskeyframe in self.kf(vidfeat.convert_video_ffmpeg(fp.name, modes=('frameiterskiptime', self.kf.MODES,
+                                                                                                                       self.frame_skip),
+                                                                                                       frozen=True)):
+                    if iskeyframe and prev_frame:
+                        yield event_filename, {'prev_frame_time': prev_frame_time,
+                                               'prev_frame_num': prev_frame_num,
+                                               'prev_frame': imfeat.image_tostring(prev_frame, 'JPEG'),
+                                               'frame_time': frame_time,
+                                               'frame_num': frame_num,
+                                               'frame': imfeat.image_tostring(frame, 'JPEG')}
+                    prev_frame_num = frame_num
+                    prev_frame = frame
+            except:
+                hadoopy.counter('VIDEO_ERROR', 'FFMPEGCantParse')
 
 
 if __name__ == '__main__':

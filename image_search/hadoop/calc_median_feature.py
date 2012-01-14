@@ -10,5 +10,5 @@ def reducer(key, values):
     yield key, np.median(np.fromiter(values, dtype=np.float64))
 
 if __name__ == "__main__":
-    hadoopy.run(mapper)
+    hadoopy.run(mapper, reducer)
 
