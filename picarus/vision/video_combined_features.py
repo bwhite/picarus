@@ -20,4 +20,4 @@ class Mapper(object):
 
 
 if __name__ == '__main__':
-    hadoopy.run(Mapper, block_features.Reducer)
+    hadoopy.run(Mapper, video_block_features.Reducer)

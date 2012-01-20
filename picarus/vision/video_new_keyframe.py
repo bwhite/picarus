@@ -3,6 +3,7 @@ import hadoopy
 import tempfile
 import imfeat
 import vidfeat
+import picarus._keyframers
 
 
 class Mapper(object):
@@ -11,7 +12,7 @@ class Mapper(object):
         # MIN_INTERVAL: The shortest period of time (sec) that keyframes can be output.  Anything faster
         # than this is not output as a keyframe. (default: 3)
         # FRAME_SKIP: Amount of time between frames considered (converted after reading FPS from video)
-        self.kf = keyframe.SURF(min_interval=float(os.environ.get('MIN_INTERVAL', 3)))
+        self.kf = picarus._keyframers.select_keyframer(os.environ.get('KEYFRAMER', 'uniform'))(min_interval=float(os.environ.get('MIN_INTERVAL', 3)))
         self.frame_skip = float(os.environ.get('FRAME_SKIP', 0.))
         
 

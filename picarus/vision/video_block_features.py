@@ -4,7 +4,6 @@ import tempfile
 import cStringIO as StringIO
 import Image
 import vidfeat
-import pyffmpeg
 import keyframe
 import imfeat
 import numpy as np

@@ -113,17 +113,29 @@ def run_video_keyframe(hdfs_input, hdfs_output, min_interval, resolution, ffmpeg
                                dummy_arg=fp)
 
     picarus._launch_frozen(hdfs_output + '/keyframe', hdfs_output + '/allframes', _lf('video_keyframe_filter.py'),
-                      reducer=None)
+                           reducer=None)
 
 
-def run_new_video_keyframe(hdfs_input, hdfs_output, frame_skip=.25, min_interval=0, max_interval=float('inf'), **kw):
+def run_new_video_keyframe(hdfs_input, hdfs_output, frame_skip=.25, min_interval=0, max_interval=float('inf'), keyframer='uniform', **kw):
     fp = vidfeat.freeze_ffmpeg()
     picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_new_keyframe.py'),
                            cmdenvs=['MIN_INTERVAL=%f' % min_interval,
                                     'MAX_INTERVAL=%f' % max_interval,
-                                    'FRAME_SKIP=%f' % frame_skip],
+                                    'FRAME_SKIP=%f' % frame_skip,
+                                    'KEYFRAMER=%s' % keyframer],
                            jobconfs=['mapred.child.java.opts=-Xmx512M',
-                                     'mapred.task.timeout=6000000',
+                                     'mapred.task.timeout=12000000',
+                                     'mapred.map.max.attempts=10'],
+                           files=[fp.__enter__()],
+                           dummy_arg=fp)
+
+
+def run_video_features(hdfs_input, hdfs_output, **kw):
+    fp = vidfeat.freeze_ffmpeg()
+    picarus._launch_frozen(hdfs_input, hdfs_output + '/features', _lf('video_combined_features.py'),
+                           cmdenvs=[],
+                           jobconfs=['mapred.child.java.opts=-Xmx512M',
+                                     'mapred.task.timeout=12000000',
                                      'mapred.map.max.attempts=10'],
                            files=[fp.__enter__()],
                            dummy_arg=fp)
