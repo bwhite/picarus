@@ -211,6 +211,6 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['hadoopy', 'imfeat', 'vidfeat', 'classipy', 'cv', 'cv2', 'numpy']
+MOCK_MODULES = ['hadoopy', 'imfeat', 'vidfeat', 'classipy', 'cv', 'cv2', 'numpy', 'scipy']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
