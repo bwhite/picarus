@@ -1,5 +1,5 @@
 numpy
 requests
 bottle
-https://github.com/bwhite/hadoopy/tarball/master
-https://github.com/bwhite/vidfeat/zipball/master
+-e git+https://github.com/bwhite/hadoopy.git
+-e git+https://github.com/bwhite/vidfeat.git
