@@ -1,6 +1,6 @@
-numpy>=1.6.1
-requests>=0.9.1
-bottle>=0.10.7
+numpy
+requests
+bottle
 https://github.com/bwhite/hadoopy/tarball/master
 https://github.com/bwhite/vidfeat/tarball/master
 https://github.com/bwhite/imfeat/tarball/master
