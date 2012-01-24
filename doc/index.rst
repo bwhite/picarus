@@ -23,17 +23,14 @@ Current
 - Image clustering: Group images based on visual similarity.
 - Face detection: Find all faces.
 - Keyframe: Find all keyframes in a set of videos (e.g., shot transitions, fast motion).
+- Image Search: Build an image search index (initial code available)
+- Real-time REST api (initial code available)
 
 Private (we have the code but are working on releasing it for various reasons)
 
+- Video classification: Determine if a video is one class or another (e.g., dancing, skateboarding)
 - Object detection: Find the location of a specific object (e.g., car, person).  Faces are currently supported.
 - Segmentation/Pixel-level classification: Classify individual image pixels as belonging to a specific class.
-- Image Search: Build an image search index 
-
-Planned/Experimental
-
-- Video classification: Determine if a video is one class or another (e.g., dancing, skateboarding)
-
 
 Requirements
 ------------
