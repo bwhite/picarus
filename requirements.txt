@@ -2,6 +2,6 @@ numpy
 requests
 bottle
 https://github.com/bwhite/hadoopy/tarball/master
-https://github.com/bwhite/vidfeat/tarball/master
+https://github.com/bwhite/vidfeat/zipball/master
 https://github.com/bwhite/imfeat/tarball/master
 https://github.com/bwhite/classipy/tarball/master
