@@ -1,7 +1,2 @@
-numpy
-requests
-bottle
 git+git://github.com/bwhite/hadoopy.git#egg=hadoopy
 git+git://github.com/bwhite/vidfeat.git#egg=vidfeat
-hadoopy
-vidfeat
