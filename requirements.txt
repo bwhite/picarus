@@ -1,5 +1,5 @@
 numpy
 requests
 bottle
--e git+https://github.com/bwhite/hadoopy.git
--e git+https://github.com/bwhite/vidfeat.git
+-e git+https://github.com/bwhite/hadoopy.git#egg=hadoopy
+-e git+https://github.com/bwhite/vidfeat.git#egg=vidfeat
