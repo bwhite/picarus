@@ -16,7 +16,6 @@ import imfeat
 import picarus._classifiers as classifiers
 import picarus._file_parse as file_parse
 import picarus._features as features
-import psutil
 import contextlib
 import cPickle as pickle
 
@@ -45,20 +44,11 @@ class Timer(object):
             self.total_times[timer] = diff
             self.total_counts[timer] = 1
 
-    def print_mem(self, prefix):
-        usage = psutil.phymem_usage()
-        a = usage.total / (1024. ** 3)
-        u = usage.used / (1024. ** 3)
-        f = usage.free / (1024. ** 3)
-        print('%s: Avail[%f] Used[%f] Free[%f] (in GB)' % (prefix, a, u, f))
-
     @contextlib.contextmanager
     def __call__(self, timer):
-        #self.print_mem('Mem before [%s]' % timer)
         self.start(timer)
         yield
         self.stop(timer)
-        #self.print_mem('Mem after [%s]' % timer)
 
     def __del__(self):
         print('Timers')
@@ -163,7 +153,6 @@ class Mapper(object):
             predictions: Dictionary of predictions
         """
         sys.stderr.write('In Raw:%s\n' % str(event_filename))
-        self.timer.print_mem('Start')
         print(event_filename)
         ext = '.' + event_filename[1].rsplit('.')[1]
         with tempfile.NamedTemporaryFile(suffix=ext) as fp:

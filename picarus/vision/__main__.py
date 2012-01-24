@@ -137,5 +137,5 @@ def run_video_features(hdfs_input, hdfs_output, **kw):
                            jobconfs=['mapred.child.java.opts=-Xmx512M',
                                      'mapred.task.timeout=12000000',
                                      'mapred.map.max.attempts=10'],
-                           files=[fp.__enter__()],
+                           files=[fp.__enter__(), _lf('data/haarcascade_frontalface_default.xml')],
                            dummy_arg=fp)

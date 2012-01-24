@@ -12,7 +12,7 @@ def _freeze_script(script_path):
     return _FROZEN_PATHS[script_path]
         
 
-def _launch_frozen(in_path, out_path, script_path, *args, **kw):
+def _launch_frozen(in_path, out_path, script_path, jobconfs_default=(), *args, **kw):
     import hadoopy
     import os
     kw = dict(kw)  # Make a copy as we will be mutating it
@@ -23,6 +23,15 @@ def _launch_frozen(in_path, out_path, script_path, *args, **kw):
         kw['jobconfs'] = kw['jobconfs'] + GLOBAL_JOBCONFS
     else:
         kw['jobconfs'] = GLOBAL_JOBCONFS
+    if 'jobconfs' not in kw:
+        kw['jobconfs'] = []
+    if jobconfs_default:
+        jobconfs_dict = dict(x.split('=', 1) for x in kw['jobconfs'])
+        jobconfs_default_dict = dict(x.split('=', 1) for x in jobconfs_default)
+        for jobconf_name, jobconf_value in jobconfs_default_dict.items():
+            if jobconf_name not in jobconfs_dict:
+                jobconfs_dict[jobconf_name] = jobconf_value
+        kw['jobconfs'] = ['%s=%s' % x for x in jobconfs_dict.items()]
     if 'image_hashes' in kw and kw['image_hashes'] is not None:
         import tempfile
         fp = tempfile.NamedTemporaryFile(suffix='.pkl.gz')
