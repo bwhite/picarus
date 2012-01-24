@@ -1,2 +1,3 @@
 git+git://github.com/bwhite/hadoopy.git#egg=hadoopy
 git+git://github.com/bwhite/vidfeat.git#egg=vidfeat
+git+git://github.com/bwhite/vidfeat.git#egg=imfeat
