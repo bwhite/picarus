@@ -12,7 +12,7 @@ def reducer(k, vs):
     for v in vs:
         print(type(v))
         if isinstance(v, dict):
-            metadata = v[1]
+            metadata = v
         else:
             feature_hash = v
     try:

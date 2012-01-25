@@ -17,6 +17,7 @@ def compute_database(flickr_data):
     hadoopy.launch_frozen([h_path, flickr_data], j_path, 'join.py',
                           num_reducers=10)
     hashes, metadatas = zip(*[x[1] for x in hadoopy.readtb(j_path)])
+    hashes = np.array([x.ravel() for x in hashes])
     with open('database.pkl', 'w') as fp:
         pickle.dump((hashes, metadatas, median), fp, -1)
 
