@@ -8,5 +8,3 @@ setup(name='picarus',
       package_data={'picarus.vision.data': ['*.xml', '*.pkl', '*.html', '*.jpg'],
                     'picarus.report.data': ['*.html']},
       packages=find_packages())
-#['picarus', 'picarus.vision', 'picarus.vision.data', 'picarus.cluster', 'picarus.classify',
-#'picarus.report', 'picarus.report.data', 'picarus.io']
