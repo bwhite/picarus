@@ -71,9 +71,11 @@ Our projects (ordered by relevance)
 - vision_data_: Library of computer vision dataset interfaces with standardized output formats.
 - image_server_: Server that displays all images in the current directory as a website (very convenient on headless servers).
 - static_server_: Server that allows static file access to the current directory.
+- pycassa_server_: Pycassa viewer.
 - vision_results_: Library HTML and Javascript tools to display computer vision results.
 - hadoop_log_: Tool to scrape Hadoop jobtracker logs and provide stderr output (simplifies debugging).
 - pyram_: Tiny parameter optimization library (useful when tuning up algorithms).
+- mturk_vision_: Mechanical turk scripts.
 
 .. _hadoopy_flow: https://github.com/bwhite/hadoopy_flow
 .. _vision_data: https://github.com/bwhite/vision_data
@@ -82,6 +84,8 @@ Our projects (ordered by relevance)
 .. _image_server: https://github.com/bwhite/image_server
 .. _vision_results: https://github.com/bwhite/vision_results
 .. _static_server: https://github.com/bwhite/static_server
+.. _mturk_vision: https://github.com/bwhite/mturk_vision
+.. _pycassa_server: https://github.com/bwhite/pycassa_server
 
 Hadoop Vision Jobs
 ------------------
