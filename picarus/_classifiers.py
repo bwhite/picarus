@@ -3,6 +3,9 @@ import pyram
 import cPickle as pickle
 import hadoopy
 import zlib
+import sklearn.svm
+import numpy as np
+import snappy
 
 
 def train(classifier_name, classifier_extra, label_values):
@@ -26,32 +29,18 @@ def train(classifier_name, classifier_extra, label_values):
                                        options={'B': '1'})[1]
         print(b)
         return classipy.SVMLinear(b).train(label_values)
+    elif classifier_name == 'svmsklinear':
+        return sklearn.svm.LinearSVC().fit(*zip(*label_values)[::-1])
     else:
         raise ValueError('Unknown classifier [%s]' % classifier_name)
 
 
 def dumps(classifier_name, classifier_extra, classifier):
-    if classifier_name in ['svm_hik']:
-        return pickle.dumps({'classifier_name': classifier_name,
-                             'classifier_extra': classifier_extra,
-                             'classifier': zlib.compress(classifier.dumps())})
-    return pickle.dumps({'classifier_name': classifier_name,
-                         'classifier_extra': classifier_extra,
-                         'classifier': classifier.dumps()})
+    return snappy.compress(pickle.dumps({'classifier_name': classifier_name,
+                                         'classifier_extra': classifier_extra,
+                                         'classifier': classifier}, -1))
 
 
 def loads(classifier_ser):
-    d = pickle.loads(classifier_ser)
-    classifier_name = d['classifier_name']
-    if classifier_name in ('svmlinear', 'svmlinear_autotune'):
-        return classipy.SVMLinear.loads(d['classifier'])
-    elif classifier_name == 'svm':
-        return classipy.SVM.loads(d['classifier'])
-    elif classifier_name == 'svm_hik':
-        import sys
-        decomp = zlib.decompress(d['classifier'])
-        del d  # NOTE(brandyn): Some of these get very large
-        sys.stderr.write('[%s] DecompSz[%d]\n' % (classifier_name, len(decomp)))
-        return classipy.SVMScikit.loads(decomp)
-    else:
-        raise ValueError('Unknown classifier [%s]' % classifier_name)
+    d = pickle.loads(snappy.decompress(classifier_ser))
+    return d['classifier']
