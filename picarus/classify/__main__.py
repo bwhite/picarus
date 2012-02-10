@@ -90,6 +90,25 @@ def run_train_classifier(hdfs_input, hdfs_output, local_labels, **kw):
                            **kw)
 
 
+def run_compute_kernels(hdfs_input, hdfs_output, local_labels_x, local_labels_y=None, **kw):
+    cmdenvs = ['LOCAL_LABELS_FN_X=%s' % os.path.basename(local_labels_x)]
+    files = [local_labels_x]
+    if local_labels_y is not None:
+        cmdenvs.append('LOCAL_LABELS_FN_Y=%s' % os.path.basename(local_labels_y))
+        files.append(local_labels_y)
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('compute_kernels.py'),
+                           cmdenvs=cmdenvs,
+                           jobconfs_default=['mapred.task.timeout=6000000'],
+                           files=files,
+                           **kw)
+
+
+def run_assemble_kernels(hdfs_input, hdfs_output, **kw):
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('assemble_kernels.py'),
+                           jobconfs_default=['mapred.task.timeout=6000000'],
+                           **kw)
+
+
 def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, classes=None, image_hashes=None, **kw):
     import classipy
     # NOTE: Adds necessary files
@@ -103,6 +122,15 @@ def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, class
                            cmdenvs=['CLASSIFIERS_FN=%s' % os.path.basename(fp.name)],
                            image_hashes=image_hashes,
                            dummy_arg=fp)
+
+
+def run_join_predictions_by_class(hdfs_input, hdfs_output, **kw):
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('join_predictions_by_class.py'))
+    #partitioner='org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner',
+    #                       jobconfs=['mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator',
+    #                                 'mapred.text.key.comparator.options=-k1,2',
+    #                                 'mapred.text.key.partitioner.options=-k1']
+
 
 
 def run_join_predictions(hdfs_predictions_input, hdfs_input, hdfs_output, local_image_output, **kw):

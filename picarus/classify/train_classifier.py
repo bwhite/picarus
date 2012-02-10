@@ -7,17 +7,7 @@ import picarus._classifiers as classifiers
 class Mapper(object):
 
     def __init__(self):
-        labels = file_parse.load(os.environ['LOCAL_LABELS_FN'])
-        self._hash_class_labels = self._invert_labels(labels)
-
-    def _invert_labels(self, labels):
-        inverted = {}
-        for classifier_name in labels:
-            for label, keys in labels[classifier_name]['labels'].items():
-                label = int(label)
-                for k in keys:
-                    inverted.setdefault(k, []).append((classifier_name, label))
-        return inverted
+        self.labels = file_parse.load(os.environ['LOCAL_LABELS_FN'])
 
     def map(self, image_hash, feature):
         """
@@ -32,24 +22,25 @@ class Mapper(object):
             label_value: (label, feature) where label is an int
         """
         try:
-            class_labels = self._hash_class_labels[image_hash]
+            label_classes = self.labels['inputs'][image_hash]['classes'].items()
         except KeyError:
             hadoopy.counter('DATA_ERRORS', 'UNKNOWN_IMAGE_HASH')
             return
-        for classifier_name, label in class_labels:
-            yield classifier_name, (label, feature)
+        for label, class_names in label_classes:
+            for class_name in class_names:
+                yield class_name, (int(label), feature)
 
 
 class Reducer(object):
 
     def __init__(self):
-        self._labels = file_parse.load(os.environ['LOCAL_LABELS_FN'])
+        self.labels = file_parse.load(os.environ['LOCAL_LABELS_FN'])
 
-    def reduce(self, classifier_name, label_values):
+    def reduce(self, class_name, label_values):
         """
 
         Args:
-            classifier_name: (see mapper)
+            class_name: (see mapper)
             label_values: Iterator of label_values (see mapper)
 
         Yields:
@@ -57,12 +48,14 @@ class Reducer(object):
             classifier_name: (see mapper)
             classifier: Serialized classifier
         """
-        print('Starting [%s]' % str(classifier_name))
-        cur_labels = self._labels[classifier_name]
-        classifier = classifiers.train(cur_labels['classifier'], cur_labels['classifier_extra'], label_values)
-        classifier_ser = classifiers.dumps(cur_labels['classifier'], cur_labels['classifier_extra'], classifier)
-        yield classifier_name, classifier_ser
-        print('Ending [%s,%d]' % (str(classifier_name), len(classifier_ser)))
+        label_values = list(label_values)
+        for classifier_name in self.labels['classes'][class_name]['classifiers']:
+            print('Starting [%s,%s]' % (class_name, classifier_name))
+            classifier_extra = self.labels['classifiers'][classifier_name].get('extra', '')
+            classifier = classifiers.train(self.labels['classifiers'][classifier_name]['name'], classifier_extra, label_values)
+            classifier_ser = classifiers.dumps(classifier_name, classifier_extra, classifier)
+            yield ' '.join([class_name, classifier_name]), classifier_ser
+            print('Ending [%s,%s,%d]' % (class_name, classifier_name, len(classifier_ser)))
 
 
 if __name__ == '__main__':

@@ -2,7 +2,13 @@ __all__ = ['vision', 'cluster', 'report', 'classify', 'io']
 from picarus import vision, cluster, report, classify, io
 import picarus._file_parse as file_parse
 _FROZEN_PATHS = {}  # [script_path] = frozen_path
-GLOBAL_JOBCONFS = []
+#GLOBAL_JOBCONFS = ['mapred.map.output.compression.codec=org.apache.hadoop.io.compress.SnappyCodec',
+#                   'mapred.compress.map.output=true',
+#                   'mapred.output.compress=true',
+#                   'mapred.output.compression.codec=org.apache.hadoop.io.compress.SnappyCodec']
+
+GLOBAL_JOBCONFS = ['mapred.map.output.compression.codec=org.apache.hadoop.io.compress.SnappyCodec',
+                   'mapred.compress.map.output=true']
 
 
 def _freeze_script(script_path):
