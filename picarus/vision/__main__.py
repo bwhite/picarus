@@ -52,7 +52,7 @@ def run_image_feature(hdfs_input, hdfs_output, feature, image_length=None, image
                            cmdenvs=['IMAGE_HEIGHT=%d' % image_height,
                                     'IMAGE_WIDTH=%d' % image_width,
                                     'FEATURE=%s' % feature],
-                           files=[_lf('data/hog_8_2_clusters.pkl'), _lf('data/eigenfaces_lfw_cropped.pkl')] + glob.glob(imfeat.__path__[0] + "/_object_bank/data/*"))
+                           files=[_lf('data/hog_8_2_clusters.pkl'), _lf('data/eigenfaces_lfw_cropped.pkl')] + glob.glob(imfeat.__path__[0] + "/_object_bank/data/*"), **kw)
 
 
 def run_image_feature_point(hdfs_input, hdfs_output, feature, image_length=None, image_height=None, image_width=None, **kw):

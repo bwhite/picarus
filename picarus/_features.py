@@ -8,8 +8,16 @@ def _hist_joint():
     return imfeat.Histogram('rgb', style='joint')
 
 
+def _lab_hist_joint_8bins():
+    return imfeat.Histogram('lab', style='joint', num_bins=8)
+
+
 def _spatial_hist_joint():
     return imfeat.SpatialHistogram(3, mode='hsv', style='joint')
+
+
+def _spatial3_lab_hist_joint_4bins():
+    return imfeat.SpatialHistogram(3, mode='lab', style='joint', num_bins=4)
 
 
 def _gist():
@@ -63,7 +71,9 @@ def select_feature(feat_name):
             'meta_hog_gist_hist': _meta_hog_gist_hist,
             'meta_hog_gradient': _meta_hog_gradient,
             'object_bank': _object_bank,
-            'bovw_hog': _bovw_hog}[feat_name]()
+            'bovw_hog': _bovw_hog,
+            'spatial3_lab_hist_joint_4bins': _spatial3_lab_hist_joint_4bins,
+            'lab_hist_joint_8bins': '_lab_hist_joint_8bins'}[feat_name]()
 
 
 def _dense_surf():
