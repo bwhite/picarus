@@ -32,6 +32,10 @@ def _object_bank():
     return imfeat.ObjectBank()
 
 
+def _gradient_hist():
+    return imfeat.GradientHistogram()
+
+
 def _meta_hog_gradient():
     return imfeat.MetaFeature(imfeat.HOGLatent(), imfeat.GradientHistogram())
 
@@ -64,7 +68,8 @@ def _bovw_hog():
 
 def select_feature(feat_name):
     return {'gist': _gist, 'hist_joint': _hist_joint, 'eigenface': _eigenface,
-            'hog': _hog, 'autocorrelogram': _autocorrelogram,
+            'hog': _hog,
+            'autocorrelogram': _autocorrelogram,
             'spatial_hist_joint': _spatial_hist_joint,
             'meta_gist_spatial_hist': _meta_gist_spatial_hist,
             'meta_gist_spatial_hist_autocorrelogram': _meta_gist_spatial_hist_autocorrelogram,
@@ -73,7 +78,8 @@ def select_feature(feat_name):
             'object_bank': _object_bank,
             'bovw_hog': _bovw_hog,
             'spatial3_lab_hist_joint_4bins': _spatial3_lab_hist_joint_4bins,
-            'lab_hist_joint_8bins': '_lab_hist_joint_8bins'}[feat_name]()
+            'lab_hist_joint_8bins': _lab_hist_joint_8bins,
+            'gradient_hist': _gradient_hist}[feat_name]()
 
 
 def _dense_surf():
