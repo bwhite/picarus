@@ -90,14 +90,13 @@ def run_train_classifier(hdfs_input, hdfs_output, local_labels, **kw):
                            **kw)
 
 
-def run_compute_kernels(hdfs_input, hdfs_output, local_labels_x=None, local_labels_y=None, **kw):
-    if local_labels_y is None:
-        raise ValueError('local_labels_y must not be None!')
+def run_compute_kernels(hdfs_input, hdfs_output, local_labels_x, local_labels_y, **kw):
+    if local_labels_y is None or local_labels_x is None:
+        raise ValueError('local_labels_* must not be None!')
     cmdenvs = ['LOCAL_LABELS_FN_Y=%s' % os.path.basename(local_labels_y)]
     files = [local_labels_y]
-    if local_labels_x is not None:
-        cmdenvs.append('LOCAL_LABELS_FN_X=%s' % os.path.basename(local_labels_x))
-        files.append(local_labels_x)
+    cmdenvs.append('LOCAL_LABELS_FN_X=%s' % os.path.basename(local_labels_x))
+    files.append(local_labels_x)
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('compute_kernels.py'),
                            cmdenvs=cmdenvs,
                            jobconfs_default=['mapred.task.timeout=6000000'],

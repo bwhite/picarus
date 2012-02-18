@@ -10,14 +10,11 @@ class Mapper(object):
     def __init__(self):
         # |X| x |Y| : Each feature in X corresponds to a row and each feature in Y corresponds to a column
         self.rows_per_chunk = os.environ.get('ROWS_PER_CHUNK', 500)
+        self.cols_per_chunk = os.environ.get('COLS_PER_CHUNK', 500)
         self.input_to_id_y = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_Y'])['inputs'].keys())))
-        self.input_to_id_x = None
-        if 'LOCAL_LABELS_FN_X' in os.environ:
-            self.input_to_id_x = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_X'])['inputs'].keys())))
-        if self.input_to_id_x is not None:
-            self.num_chunks = int(np.ceil(len(self.input_to_id_x) / float(self.rows_per_chunk)))
-        else:
-            self.num_chunks = int(np.ceil(len(self.input_to_id_y) / float(self.rows_per_chunk)))
+        self.input_to_id_x = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_X'])['inputs'].keys())))
+        self.num_row_chunks = int(np.ceil(len(self.input_to_id_x) / float(self.rows_per_chunk)))
+        self.num_col_chunks = int(np.ceil(len(self.input_to_id_y) / float(self.cols_per_chunk)))
 
     def map(self, image_hash, feature):
         """
@@ -31,23 +28,28 @@ class Mapper(object):
             classifier_name: String representing the classifier
             label_value: (label, feature) where label is an int
         """
+        # Each Y value needs to get send to each row (one column chunk for that row will get it)
         if image_hash in self.input_to_id_y:
             col_num = self.input_to_id_y[image_hash]
-            for chunk_num in range(self.num_chunks):
-                yield chunk_num, ('y', col_num, feature)
+            col_chunk_num = col_num / self.cols_per_chunk
+            for row_chunk_num in range(self.num_row_chunks):
+                yield (row_chunk_num, col_chunk_num), ('y', col_num, feature)
 
-        if self.input_to_id_x is not None and image_hash in self.input_to_id_x:
+        # Each X value needs to get send to each col (one row chunk for that col will get it)
+        if image_hash in self.input_to_id_x:
             row_num = self.input_to_id_x[image_hash]
-            yield row_num / self.rows_per_chunk, ('x', row_num, feature)
+            row_chunk_num = row_num / self.rows_per_chunk
+            for col_chunk_num in range(self.num_col_chunks):
+                yield (row_chunk_num, col_chunk_num), ('x', row_num, feature)
 
 
 class Reducer(object):
 
     def __init__(self):
-        self.use_y_as_x = 'LOCAL_LABELS_FN_X' not in os.environ
         self.rows_per_chunk = os.environ.get('ROWS_PER_CHUNK', 500)
+        self.cols_per_chunk = os.environ.get('COLS_PER_CHUNK', 500)
 
-    def reduce(self, chunk_num, values):
+    def reduce(self, row_col_chunk_num, values):
         """
 
         Args:
@@ -59,7 +61,8 @@ class Reducer(object):
             key: 
             value: 
         """
-        target_kernels = ['hik']
+        row_chunk_num, col_chunk_num = row_col_chunk_num
+        target_kernels = ['hik', 'chi2', 'linear']
         x_values = []
         y_values = []
         for x, y, z in values:
@@ -69,14 +72,13 @@ class Reducer(object):
                 y_values.append((y, z))
             else:
                 raise ValueError(x)
-        y_matrix = np.vstack([x[1] for x in sorted(y_values)])
-        if self.use_y_as_x:
-            for row_num in range(chunk_num * self.rows_per_chunk, min((chunk_num + 1) * self.rows_per_chunk, y_matrix.shape[0])):
-                row_feature = y_matrix[row_num]
-                x_values.append((row_num, row_feature))
+        y_values = sorted(y_values)
+        col_num = y_values[0][0]
+        y_matrix = np.vstack([x[1] for x in y_values])
         for row_num, row_feature in x_values:
+            row_feature = row_feature.reshape((1, row_feature.size))
             for kernel in target_kernels:
-                yield (kernel, row_num), kernels.compute(kernel, row_feature.reshape((1, row_feature.size)), y_matrix).ravel()
+                yield (kernel, row_num, col_num), kernels.compute(kernel, row_feature, y_matrix).ravel()
 
 
 if __name__ == '__main__':
