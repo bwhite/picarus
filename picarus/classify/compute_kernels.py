@@ -3,6 +3,7 @@ import picarus._file_parse as file_parse
 import os
 import picarus._kernels as kernels
 import numpy as np
+import time
 
 
 class Mapper(object):
@@ -49,6 +50,9 @@ class Reducer(object):
     def __init__(self):
         self.rows_per_chunk = int(os.environ.get('ROWS_PER_CHUNK', 500))
         self.cols_per_chunk = int(os.environ.get('COLS_PER_CHUNK', 500))
+        self._total_time = 0.
+        self._num_dims = 0.
+        self._num_vecs = 0
 
     def reduce(self, row_col_chunk_num, values):
         """
@@ -77,10 +81,19 @@ class Reducer(object):
         col_num = y_values[0][0]
         y_matrix = np.vstack([x[1] for x in y_values])
         print(y_matrix.shape)
+        self._num_dims = y_matrix.shape[1]
         for row_num, row_feature in x_values:
             row_feature = row_feature.reshape((1, row_feature.size))
             for kernel in target_kernels:
-                yield (kernel, row_num, col_num), kernels.compute(kernel, row_feature, y_matrix).ravel()
+                st = time.time()
+                k = kernels.compute(kernel, row_feature, y_matrix).ravel()
+                self._total_time += time.time() - st
+                self._num_vecs += y_matrix.shape[0]
+                yield (kernel, row_num, col_num), k
+
+    def close(self):
+        if self._num_vecs:
+            print('Average Row Chunk Time [%f] Dims[%d]' % (self._total_time / self._num_vecs, self._num_dims))
 
 
 if __name__ == '__main__':
