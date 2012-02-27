@@ -3,6 +3,7 @@ import imfeat
 import os
 import sys
 import numpy as np
+import time
 import picarus._features as features
 
 
@@ -20,6 +21,8 @@ class Mapper(object):
     def __init__(self):
         self._feat = features.select_feature(os.environ['FEATURE'])
         self._image_height, self._image_width = _parse_height_width()
+        self._total_time = 0.
+        self._num_images = 0
 
     def map(self, name, image_data):
         try:
@@ -31,13 +34,15 @@ class Mapper(object):
             image = imfeat.resize_image(image, self._image_height, self._image_width)
         except:
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
-        #try:
-        yield name, self._feat(image)
-        #except Exception, e:
-        #    hadoopy.counter('DATA_ERRORS', 'UnkImageType')
-        #    print(str(e) + '\n')
-        #    return
+        start_time = time.time()
+        f = self._feat(image)
+        self._total_time += time.time() - start_time
+        self._num_images += 1
+        yield name, f
 
+    def close(self):
+        print('Average Feature Time [%f]' % (self._total_time / self._num_images))
+        
 
 if __name__ == '__main__':
     hadoopy.run(Mapper)

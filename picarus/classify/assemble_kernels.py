@@ -13,16 +13,16 @@ class Mapper(object):
         """
 
         Args:
-            key: 
-            value: 
+            key: (kernel, row_num, col_num)
+            value: value
 
         Yields:
             A tuple in the form of (key, value)
-            key: 
-            value: 
+            key: (kernel, row_num)
+            value: (col_num, value)
         """
-        kernel, row_num = key
-        yield kernel, (row_num, value)
+        kernel, row_num, col_num = key
+        yield (kernel, row_num), (col_num, value)
 
 
 class Reducer(object):
@@ -42,20 +42,7 @@ class Reducer(object):
             key: 
             value: 
         """
-        g = None
-        for row_num, row in values:
-            if g is None:
-                sys.stderr.write('Allocating G!\n')
-                g = np.zeros((row.size, row.size))
-                sys.stderr.write('G was allocated!\n')
-            g[row_num, :] = row.ravel()
-        sys.stderr.write('Coercing to string!\n')
-        g = g.tostring()
-        sys.stderr.write('Done Coercing to string!\n')
-        sys.stderr.write('Compress to string!\n')
-        g = snappy.compress(g)
-        sys.stderr.write('Done Compress to string!\n')
-        yield key, g
+        yield key, np.hstack([y[1] for y in sorted(values, key=lambda x: x[0])])
 
 if __name__ == '__main__':
     hadoopy.run(Mapper, Reducer)

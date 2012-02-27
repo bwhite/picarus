@@ -16,6 +16,10 @@ def _lab_hist_joint_8bins():
     return imfeat.Histogram('lab', style='joint', num_bins=8)
 
 
+def _lab_pyramid_4level_hist_4_11_11bins():
+    return imfeat.PyramidHistogram('lab', levels=4, num_bins=[4, 11, 11])
+
+
 def _spatial_hist_joint():
     return imfeat.SpatialHistogram(3, mode='hsv', style='joint')
 
@@ -70,6 +74,14 @@ def _bovw_hog():
     return imfeat.BoVW(lambda x: hog.make_bow_mask(x, clusters), clusters.shape[0], 3)
 
 
+def _texton_4levels():
+    return imfeat.TextonSpatialHistogram(levels=4)
+
+
+def _texton_5levels_norm_thresh35pct():
+    return imfeat.TextonSpatialHistogram(levels=5, norm=True, other_class_thresh=.35)
+
+
 def select_feature(feat_name):
     return {'gist': _gist, 'hist_joint': _hist_joint, 'eigenface': _eigenface,
             'hog': _hog,
@@ -84,7 +96,10 @@ def select_feature(feat_name):
             'spatial3_lab_hist_joint_4bins': _spatial3_lab_hist_joint_4bins,
             'lab_hist_joint_8bins': _lab_hist_joint_8bins,
             'gradient_hist': _gradient_hist,
-            'tiny_image': _tiny_image}[feat_name]()
+            'tiny_image': _tiny_image,
+            'texton_4levels': _texton_4levels,
+            'texton_5levels_norm_thresh35pct': _texton_5levels_norm_thresh35pct,
+            'lab_pyramid_4level_hist_4_11_11bins': _lab_pyramid_4level_hist_4_11_11bins}[feat_name]()
 
 
 def _dense_surf():

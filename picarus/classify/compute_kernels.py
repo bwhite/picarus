@@ -9,12 +9,13 @@ class Mapper(object):
 
     def __init__(self):
         # |X| x |Y| : Each feature in X corresponds to a row and each feature in Y corresponds to a column
-        self.rows_per_chunk = os.environ.get('ROWS_PER_CHUNK', 500)
-        self.cols_per_chunk = os.environ.get('COLS_PER_CHUNK', 500)
-        self.input_to_id_y = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_Y'])['inputs'].keys())))
+        self.rows_per_chunk = int(os.environ.get('ROWS_PER_CHUNK', 500))
+        self.cols_per_chunk = int(os.environ.get('COLS_PER_CHUNK', 500))
         self.input_to_id_x = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_X'])['inputs'].keys())))
+        self.input_to_id_y = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_Y'])['inputs'].keys())))
         self.num_row_chunks = int(np.ceil(len(self.input_to_id_x) / float(self.rows_per_chunk)))
         self.num_col_chunks = int(np.ceil(len(self.input_to_id_y) / float(self.cols_per_chunk)))
+        print('Row Chunks[%d] Col Chunks[%d]' % (self.num_row_chunks, self.num_col_chunks))
 
     def map(self, image_hash, feature):
         """
@@ -46,8 +47,8 @@ class Mapper(object):
 class Reducer(object):
 
     def __init__(self):
-        self.rows_per_chunk = os.environ.get('ROWS_PER_CHUNK', 500)
-        self.cols_per_chunk = os.environ.get('COLS_PER_CHUNK', 500)
+        self.rows_per_chunk = int(os.environ.get('ROWS_PER_CHUNK', 500))
+        self.cols_per_chunk = int(os.environ.get('COLS_PER_CHUNK', 500))
 
     def reduce(self, row_col_chunk_num, values):
         """
@@ -62,7 +63,7 @@ class Reducer(object):
             value: 
         """
         row_chunk_num, col_chunk_num = row_col_chunk_num
-        target_kernels = ['hik', 'chi2', 'linear']
+        target_kernels = ['hik', 'linear']
         x_values = []
         y_values = []
         for x, y, z in values:
@@ -75,6 +76,7 @@ class Reducer(object):
         y_values = sorted(y_values)
         col_num = y_values[0][0]
         y_matrix = np.vstack([x[1] for x in y_values])
+        print(y_matrix.shape)
         for row_num, row_feature in x_values:
             row_feature = row_feature.reshape((1, row_feature.size))
             for kernel in target_kernels:
