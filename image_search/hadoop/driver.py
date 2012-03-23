@@ -2,6 +2,9 @@ import hadoopy
 import time
 import cPickle as pickle
 import numpy as np
+import logging
+logging.basicConfig(level=20)
+
 
 def compute_database(flickr_data):
     r = 'image_search/%f/' % time.time()
@@ -21,4 +24,4 @@ def compute_database(flickr_data):
     with open('database.pkl', 'w') as fp:
         pickle.dump((hashes, metadatas, median), fp, -1)
 
-compute_database('/user/brandyn/flickr_data_picarus/run-1326494695.490887/out/flickr_images')
+compute_database('/user/brandyn/flickr_data_picarus/run-1332389347.807608/out/flickr_images/part-00000')
