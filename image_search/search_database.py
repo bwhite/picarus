@@ -9,7 +9,9 @@ import cPickle as pickle
 
 
 def evaluate_image(image, hashes, image_metadatas, median_feature, k=50, max_tags=10):
-    h = compute_hash(compute_feature(image), median_feature)
+    feature = compute_feature(image)
+    feature = feature.reshape((1, feature.size))
+    h = compute_hash(feature, median_feature).ravel()
     # Compute K-nn
     d = distpy.Hamming(len(h))
     tags = []
