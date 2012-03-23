@@ -113,6 +113,12 @@ def run_assemble_kernels(hdfs_input, hdfs_output, **kw):
                            **kw)
 
 
+def run_multiple_kernel_combine(hdfs_input, hdfs_output, **kw):
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('multiple_kernel_combine.py'),
+                           jobconfs_default=['mapred.task.timeout=6000000'],
+                           **kw)
+
+
 def run_predict_classifier(hdfs_input, hdfs_classifier_input, hdfs_output, classes=None, image_hashes=None, **kw):
     import classipy
     # NOTE: Adds necessary files

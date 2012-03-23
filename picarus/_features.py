@@ -83,23 +83,28 @@ def _texton_5levels_norm_thresh35pct():
 
 
 def select_feature(feat_name):
-    return {'gist': _gist, 'hist_joint': _hist_joint, 'eigenface': _eigenface,
-            'hog': _hog,
-            'autocorrelogram': _autocorrelogram,
-            'spatial_hist_joint': _spatial_hist_joint,
-            'meta_gist_spatial_hist': _meta_gist_spatial_hist,
-            'meta_gist_spatial_hist_autocorrelogram': _meta_gist_spatial_hist_autocorrelogram,
-            'meta_hog_gist_hist': _meta_hog_gist_hist,
-            'meta_hog_gradient': _meta_hog_gradient,
-            'object_bank': _object_bank,
-            'bovw_hog': _bovw_hog,
-            'spatial3_lab_hist_joint_4bins': _spatial3_lab_hist_joint_4bins,
-            'lab_hist_joint_8bins': _lab_hist_joint_8bins,
-            'gradient_hist': _gradient_hist,
-            'tiny_image': _tiny_image,
-            'texton_4levels': _texton_4levels,
-            'texton_5levels_norm_thresh35pct': _texton_5levels_norm_thresh35pct,
-            'lab_pyramid_4level_hist_4_11_11bins': _lab_pyramid_4level_hist_4_11_11bins}[feat_name]()
+    f = {'gist': _gist, 'hist_joint': _hist_joint, 'eigenface': _eigenface,
+         'hog': _hog,
+         'autocorrelogram': _autocorrelogram,
+         'spatial_hist_joint': _spatial_hist_joint,
+         'meta_gist_spatial_hist': _meta_gist_spatial_hist,
+         'meta_gist_spatial_hist_autocorrelogram': _meta_gist_spatial_hist_autocorrelogram,
+         'meta_hog_gist_hist': _meta_hog_gist_hist,
+         'meta_hog_gradient': _meta_hog_gradient,
+         'object_bank': _object_bank,
+         'bovw_hog': _bovw_hog,
+         'spatial3_lab_hist_joint_4bins': _spatial3_lab_hist_joint_4bins,
+         'lab_hist_joint_8bins': _lab_hist_joint_8bins,
+         'gradient_hist': _gradient_hist,
+         'tiny_image': _tiny_image,
+         'texton_4levels': _texton_4levels,
+         'texton_5levels_norm_thresh35pct': _texton_5levels_norm_thresh35pct,
+         'lab_pyramid_4level_hist_4_11_11bins': _lab_pyramid_4level_hist_4_11_11bins}[feat_name]()
+
+    def post_process(x):
+        out = np.asfarray(f(x))
+        return out
+    return post_process
 
 
 def _dense_surf():

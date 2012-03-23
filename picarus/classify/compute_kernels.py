@@ -4,6 +4,8 @@ import os
 import picarus._kernels as kernels
 import numpy as np
 import time
+import json
+import collections
 
 
 class Mapper(object):
@@ -50,9 +52,9 @@ class Reducer(object):
     def __init__(self):
         self.rows_per_chunk = int(os.environ.get('ROWS_PER_CHUNK', 500))
         self.cols_per_chunk = int(os.environ.get('COLS_PER_CHUNK', 500))
-        self._total_time = 0.
-        self._num_dims = 0.
-        self._num_vecs = 0
+        self._total_time = collections.defaultdict(lambda: 0)
+        self._num_dims = 0
+        self._num_vecs = collections.defaultdict(lambda: 0)
 
     def reduce(self, row_col_chunk_num, values):
         """
@@ -67,7 +69,8 @@ class Reducer(object):
             value: 
         """
         row_chunk_num, col_chunk_num = row_col_chunk_num
-        target_kernels = ['hik', 'linear']
+        unnormalized_target_kernels = ['linear']
+        normalized_target_kernels = ['hik']
         x_values = []
         y_values = []
         for x, y, z in values:
@@ -82,18 +85,33 @@ class Reducer(object):
         y_matrix = np.vstack([x[1] for x in y_values])
         print(y_matrix.shape)
         self._num_dims = y_matrix.shape[1]
+
+        # Unnormalized
         for row_num, row_feature in x_values:
             row_feature = row_feature.reshape((1, row_feature.size))
-            for kernel in target_kernels:
+            for kernel in unnormalized_target_kernels:
                 st = time.time()
                 k = kernels.compute(kernel, row_feature, y_matrix).ravel()
-                self._total_time += time.time() - st
-                self._num_vecs += y_matrix.shape[0]
+                self._total_time[kernel] += time.time() - st
+                self._num_vecs[kernel] += y_matrix.shape[0]
+                yield (kernel, row_num, col_num), k
+
+        # Normalized
+        y_matrix = (y_matrix.T / np.sum(y_matrix, 1)).T
+        for row_num, row_feature in x_values:
+            row_feature = row_feature.reshape((1, row_feature.size)) / np.sum(row_feature)
+            for kernel in normalized_target_kernels:
+                st = time.time()
+                k = kernels.compute(kernel, row_feature, y_matrix).ravel()
+                self._total_time[kernel] += time.time() - st
+                self._num_vecs[kernel] += y_matrix.shape[0]
                 yield (kernel, row_num, col_num), k
 
     def close(self):
         if self._num_vecs:
-            print('Average Row Chunk Time [%f] Dims[%d]' % (self._total_time / self._num_vecs, self._num_dims))
+            print(json.dumps({'total_time': dict(self._total_time),
+                              'num_vecs': dict(self._num_vecs),
+                              'num_dims': self._num_dims}))
 
 
 if __name__ == '__main__':
