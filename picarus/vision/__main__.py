@@ -1,5 +1,5 @@
 import hadoopy
-import vidfeat
+import viderator
 import os
 import picarus
 import glob
@@ -34,13 +34,13 @@ def _parser(sps):
     s.set_defaults(func=picarus.vision.run_face_finder)
 
     # Run Video Keyframing
-    s = sps.add_parser('video_keyframe', help='Run Video Keyframing')
-    s.add_argument('hdfs_output', **ca['output'])
-    s.add_argument('min_interval', type=float, help='Minimum duration (seconds) between keyframes')
-    s.add_argument('--resolution', type=float, help='Duration (seconds) between output frames (default: all frames)', default=0.0)
-    s.add_argument('--ffmpeg', help='Use frozen ffmpeg binary instead of pyffmpeg (works with more kinds of encoded videos, poorly enocded videos)', action='store_true')
-    s.add_argument('hdfs_input', nargs='+', **ca['input'])
-    s.set_defaults(func=picarus.vision.run_video_keyframe)
+    #s = sps.add_parser('video_keyframe', help='Run Video Keyframing')
+    #s.add_argument('hdfs_output', **ca['output'])
+    #s.add_argument('min_interval', type=float, help='Minimum duration (seconds) between keyframes')
+    #s.add_argument('--resolution', type=float, help='Duration (seconds) between output frames (default: all frames)', default=0.0)
+    #s.add_argument('--ffmpeg', help='Use frozen ffmpeg binary instead of pyffmpeg (works with more kinds of encoded videos, poorly enocded videos)', action='store_true')
+    #s.add_argument('hdfs_input', nargs='+', **ca['input'])
+    #s.set_defaults(func=picarus.vision.run_video_keyframe)
 
 
 def run_image_feature(hdfs_input, hdfs_output, feature, image_length=None, image_height=None, image_width=None, **kw):
@@ -94,30 +94,8 @@ def run_predict_windows(hdfs_input, hdfs_classifier_input, feature, hdfs_output,
                            files=files,
                            dummy_arg=fp)
 
-
-def run_video_keyframe(hdfs_input, hdfs_output, min_interval, resolution, ffmpeg, **kw):
-
-    if not ffmpeg:
-        picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
-                               reducer=None,
-                               cmdenvs=['MIN_INTERVAL=%f' % min_interval,
-                                        'RESOLUTION=%f' % resolution])
-    else:
-        fp = vidfeat.freeze_ffmpeg()
-        picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
-                               reducer=None,
-                               cmdenvs=['MIN_INTERVAL=%f' % min_interval,
-                                        'RESOLUTION=%f' % resolution,
-                                        'USE_FFMPEG=1'],
-                               files=[fp.__enter__()],
-                               dummy_arg=fp)
-
-    picarus._launch_frozen(hdfs_output + '/keyframe', hdfs_output + '/allframes', _lf('video_keyframe_filter.py'),
-                           reducer=None)
-
-
-def run_new_video_keyframe(hdfs_input, hdfs_output, frame_skip=.25, min_interval=0, max_interval=float('inf'), keyframer='uniform', **kw):
-    fp = vidfeat.freeze_ffmpeg()
+def run_video_keyframe(hdfs_input, hdfs_output, frame_skip=.25, min_interval=0, max_interval=float('inf'), keyframer='uniform', **kw):
+    fp = viderator.freeze_ffmpeg()
     picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_new_keyframe.py'),
                            cmdenvs=['MIN_INTERVAL=%f' % min_interval,
                                     'MAX_INTERVAL=%f' % max_interval,
@@ -131,7 +109,7 @@ def run_new_video_keyframe(hdfs_input, hdfs_output, frame_skip=.25, min_interval
 
 
 def run_video_features(hdfs_input, hdfs_output, **kw):
-    fp = vidfeat.freeze_ffmpeg()
+    fp = viderator.freeze_ffmpeg()
     picarus._launch_frozen(hdfs_input, hdfs_output + '/features', _lf('video_combined_features.py'),
                            cmdenvs=[],
                            jobconfs=['mapred.child.java.opts=-Xmx512M',

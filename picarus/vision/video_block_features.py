@@ -3,7 +3,7 @@ import hadoopy
 import tempfile
 import cStringIO as StringIO
 import Image
-import vidfeat
+import viderator
 import keyframe
 import imfeat
 import numpy as np
