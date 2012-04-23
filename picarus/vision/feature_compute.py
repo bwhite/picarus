@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import hadoopy
 import imfeat
 import os
