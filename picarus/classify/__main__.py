@@ -53,12 +53,16 @@ def run_train_classifier(hdfs_input, hdfs_output, local_labels, **kw):
                            **kw)
 
 
-def run_compute_kernels(hdfs_input, hdfs_output, local_labels_x, local_labels_y=None, **kw):
-    cmdenvs = ['LOCAL_LABELS_FN_X=%s' % os.path.basename(local_labels_x)]
-    files = [local_labels_x]
-    if local_labels_y is not None:
-        cmdenvs.append('LOCAL_LABELS_FN_Y=%s' % os.path.basename(local_labels_y))
-        files.append(local_labels_y)
+def run_compute_kernels(hdfs_input, hdfs_output, local_labels_x, local_labels_y, per_chunk=2000, **kw):
+    rows_per_chunk = cols_per_chunk = per_chunk
+    if local_labels_y is None or local_labels_x is None:
+        raise ValueError('local_labels_* must not be None!')
+    cmdenvs = ['LOCAL_LABELS_FN_Y=%s' % os.path.basename(local_labels_y),
+               'ROWS_PER_CHUNK=%d' % rows_per_chunk,
+               'COLS_PER_CHUNK=%d' % cols_per_chunk]
+    files = [local_labels_y]
+    cmdenvs.append('LOCAL_LABELS_FN_X=%s' % os.path.basename(local_labels_x))
+    files.append(local_labels_x)
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('compute_kernels.py'),
                            cmdenvs=cmdenvs,
                            jobconfs_default=['mapred.task.timeout=6000000'],
@@ -68,6 +72,12 @@ def run_compute_kernels(hdfs_input, hdfs_output, local_labels_x, local_labels_y=
 
 def run_assemble_kernels(hdfs_input, hdfs_output, **kw):
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('assemble_kernels.py'),
+                           jobconfs_default=['mapred.task.timeout=6000000'],
+                           **kw)
+
+
+def run_multiple_kernel_combine(hdfs_input, hdfs_output, **kw):
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('multiple_kernel_combine.py'),
                            jobconfs_default=['mapred.task.timeout=6000000'],
                            **kw)
 

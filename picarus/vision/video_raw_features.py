@@ -4,7 +4,7 @@ import tempfile
 import cStringIO as StringIO
 import Image
 import sys
-import vidfeat
+import viderator
 import keyframe
 import imfeat
 import numpy as np
@@ -139,7 +139,6 @@ class Mapper(object):
 
             frame_features: List of frame features
             file_size: Size in bytes
-            duration: Duration in seconds
 
             where each frame feature is a dictionary of
 
@@ -165,19 +164,16 @@ class Mapper(object):
             prev_frame_num = 0
             all_out = []
             sz = len(video_data)
-            duration = None
+
             self.timer.start('KF')
             try:
-                for (frame_num, frame_time, frame), iskeyframe in kf(vidfeat.convert_video_ffmpeg(fp.name, modes=('frameiter', kf.MODES),
-                                                                                                  frozen=True)):
+                for (frame_num, frame_time, frame), iskeyframe in kf(viderator.frame_iter(fp.name,
+                                                                                          frozen=True)):
                     hadoopy.counter('RawFeatures', 'NumFrames')
                     self.timer.stop('KF')
                     print(frame_time)
                     if frame_num > self._max_frames:
                         break
-                    if duration is None and vidfeat.main.DURATION is not None:
-                        duration = vidfeat.main.DURATION
-                        print('Duration[%f]' % duration)
                     if frame_num % 100 == 0:
                         with self.timer('Computing face features'):
                             faces = _detect_faces(imfeat.convert_image(frame, [('opencv', 'gray', 8)]),
@@ -211,20 +207,18 @@ class Mapper(object):
                     if len(all_out) >= self._block_size:
                         with self.timer('Yield'):
                             yield event_filename, {'frame_features': all_out,
-                                                   'file_size': sz,
-                                                   'duration': duration if duration else 0.}
+                                                   'file_size': sz}
                             all_out = []
                     prev_frame = frame
                     prev_frame_num = frame_num
                 self.timer.start('KF')
-            except vidfeat.FPSParseException:  # NOTE(brandyn): This will disregard videos with this error
+            except viderator.FPSParseException:  # NOTE(brandyn): This will disregard videos with this error
                 hadoopy.counter('SkippedVideos', 'FPSParseException')
                 return
             if all_out:
                 with self.timer('Yield'):
                     yield event_filename, {'frame_features': all_out,
-                                           'file_size': sz,
-                                           'duration': duration if duration else 0.}
+                                           'file_size': sz}
 
 if __name__ == '__main__':
     hadoopy.run(Mapper)

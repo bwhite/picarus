@@ -3,22 +3,22 @@ import picarus._file_parse as file_parse
 import os
 import picarus._kernels as kernels
 import numpy as np
-
-ROWS_PER_CHUNK = 100
+import time
+import json
+import collections
 
 
 class Mapper(object):
 
     def __init__(self):
-        # |Y| x |X| : Each feature in Y corresponds to a row and each feature in X corresponds to a column
+        # |X| x |Y| : Each feature in X corresponds to a row and each feature in Y corresponds to a column
+        self.rows_per_chunk = int(os.environ.get('ROWS_PER_CHUNK', 500))
+        self.cols_per_chunk = int(os.environ.get('COLS_PER_CHUNK', 500))
         self.input_to_id_x = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_X'])['inputs'].keys())))
-        self.input_to_id_y = None
-        if 'LOCAL_LABELS_FN_Y' in os.environ:
-            self.input_to_id_y = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_Y'])['inputs'].keys())))
-        if self.input_to_id_y is not None:
-            self.num_chunks = int(np.ceil(len(self.input_to_id_y) / float(ROWS_PER_CHUNK)))
-        else:
-            self.num_chunks = int(np.ceil(len(self.input_to_id_x) / float(ROWS_PER_CHUNK)))
+        self.input_to_id_y = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_Y'])['inputs'].keys())))
+        self.num_row_chunks = int(np.ceil(len(self.input_to_id_x) / float(self.rows_per_chunk)))
+        self.num_col_chunks = int(np.ceil(len(self.input_to_id_y) / float(self.cols_per_chunk)))
+        print('Row Chunks[%d] Col Chunks[%d]' % (self.num_row_chunks, self.num_col_chunks))
 
     def map(self, image_hash, feature):
         """
@@ -32,22 +32,31 @@ class Mapper(object):
             classifier_name: String representing the classifier
             label_value: (label, feature) where label is an int
         """
-        if image_hash in self.input_to_id_x:
-            col_num = self.input_to_id_x[image_hash]
-            for chunk_num in range(self.num_chunks):
-                yield chunk_num, ('x', col_num, feature)
+        # Each Y value needs to get send to each row (one column chunk for that row will get it)
+        if image_hash in self.input_to_id_y:
+            col_num = self.input_to_id_y[image_hash]
+            col_chunk_num = col_num / self.cols_per_chunk
+            for row_chunk_num in range(self.num_row_chunks):
+                yield (row_chunk_num, col_chunk_num), ('y', col_num, feature)
 
-        if self.input_to_id_y is not None and image_hash in self.input_to_id_y:
-            row_num = self.input_to_id_y[image_hash]
-            yield row_num / ROWS_PER_CHUNK, ('y', row_num, feature)
+        # Each X value needs to get send to each col (one row chunk for that col will get it)
+        if image_hash in self.input_to_id_x:
+            row_num = self.input_to_id_x[image_hash]
+            row_chunk_num = row_num / self.rows_per_chunk
+            for col_chunk_num in range(self.num_col_chunks):
+                yield (row_chunk_num, col_chunk_num), ('x', row_num, feature)
 
 
 class Reducer(object):
 
     def __init__(self):
-        self.use_x_as_y = 'LOCAL_LABELS_FN_Y' not in os.environ
+        self.rows_per_chunk = int(os.environ.get('ROWS_PER_CHUNK', 500))
+        self.cols_per_chunk = int(os.environ.get('COLS_PER_CHUNK', 500))
+        self._total_time = collections.defaultdict(lambda: 0)
+        self._num_dims = 0
+        self._num_vecs = collections.defaultdict(lambda: 0)
 
-    def reduce(self, chunk_num, values):
+    def reduce(self, row_col_chunk_num, values):
         """
 
         Args:
@@ -59,7 +68,9 @@ class Reducer(object):
             key: 
             value: 
         """
-        target_kernels = ['hik']
+        row_chunk_num, col_chunk_num = row_col_chunk_num
+        unnormalized_target_kernels = ['linear']
+        normalized_target_kernels = ['hik']
         x_values = []
         y_values = []
         for x, y, z in values:
@@ -69,14 +80,38 @@ class Reducer(object):
                 y_values.append((y, z))
             else:
                 raise ValueError(x)
-        x_matrix = np.vstack([x[1] for x in sorted(x_values)])
-        if self.use_x_as_y:
-            for row_num in range(chunk_num * ROWS_PER_CHUNK, min((chunk_num + 1) * ROWS_PER_CHUNK, x_matrix.shape[0])):
-                row_feature = x_matrix[row_num]
-                y_values.append((row_num, row_feature))
-        for row_num, row_feature in y_values:
-            for kernel in target_kernels:
-                yield (kernel, row_num), kernels.compute(kernel, x_matrix, row_feature.reshape((1, row_feature.size)))
+        y_values = sorted(y_values)
+        col_num = y_values[0][0]
+        y_matrix = np.vstack([x[1] for x in y_values])
+        print(y_matrix.shape)
+        self._num_dims = y_matrix.shape[1]
+
+        # Unnormalized
+        for row_num, row_feature in x_values:
+            row_feature = row_feature.reshape((1, row_feature.size))
+            for kernel in unnormalized_target_kernels:
+                st = time.time()
+                k = kernels.compute(kernel, row_feature, y_matrix).ravel()
+                self._total_time[kernel] += time.time() - st
+                self._num_vecs[kernel] += y_matrix.shape[0]
+                yield (kernel, row_num, col_num), k
+
+        # Normalized
+        y_matrix = (y_matrix.T / np.sum(y_matrix, 1)).T
+        for row_num, row_feature in x_values:
+            row_feature = row_feature.reshape((1, row_feature.size)) / np.sum(row_feature)
+            for kernel in normalized_target_kernels:
+                st = time.time()
+                k = kernels.compute(kernel, row_feature, y_matrix).ravel()
+                self._total_time[kernel] += time.time() - st
+                self._num_vecs[kernel] += y_matrix.shape[0]
+                yield (kernel, row_num, col_num), k
+
+    def close(self):
+        if self._num_vecs:
+            print(json.dumps({'total_time': dict(self._total_time),
+                              'num_vecs': dict(self._num_vecs),
+                              'num_dims': self._num_dims}))
 
 
 if __name__ == '__main__':
