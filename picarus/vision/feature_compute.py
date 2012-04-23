@@ -3,40 +3,29 @@ import imfeat
 import os
 import sys
 import numpy as np
+import json
 import picarus._features as features
-
-
-def _parse_height_width():
-    try:
-        image_width = image_height = int(os.environ['IMAGE_LENGTH'])
-    except KeyError:
-        image_width = int(os.environ['IMAGE_WIDTH'])
-        image_height = int(os.environ['IMAGE_HEIGHT'])
-    return image_height, image_width
+from picarus._importer import call_import
 
 
 class Mapper(object):
 
     def __init__(self):
-        self._feat = features.select_feature(os.environ['FEATURE'])
-        self._image_height, self._image_width = _parse_height_width()
+        try:
+            self._feat = features.select_feature(os.environ['FEATURE'])
+        except KeyError:
+            self._feat = call_import(json.loads(os.environ['FEATURE']))
 
-    def map(self, name, image_data):
-        try:
-            image = imfeat.image_fromstring(image_data)
-        except:
-            hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
-            return
-        try:
-            image = imfeat.resize_image(image, self._image_height, self._image_width)
-        except:
-            hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
-        #try:
+    def map(self, name, image_or_data):
+        if isinstance(image_or_data, str):
+            try:
+                image = imfeat.image_fromstring(image_or_data)
+            except:
+                hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
+                return
+        else:
+            image = image_or_data
         yield name, self._feat(image)
-        #except Exception, e:
-        #    hadoopy.counter('DATA_ERRORS', 'UnkImageType')
-        #    print(str(e) + '\n')
-        #    return
 
 
 if __name__ == '__main__':

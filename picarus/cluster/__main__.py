@@ -12,36 +12,6 @@ def _lf(fn):
     return os.path.join(__path__[0], fn)
 
 
-def _parser(sps):
-    import picarus.__main__
-    ca = picarus.__main__._ca
-    # Whiten Features
-    s = sps.add_parser('whiten', help='Scale features to zero mean unit variance')
-    s.add_argument('hdfs_input', **ca['input'])
-    s.add_argument('hdfs_output', **ca['output'])
-    s.set_defaults(func=picarus.cluster.run_whiten)
-
-    # Uniform Sample
-    s = sps.add_parser('sample', help='Uniformly sample a specified number of features (random clustering)')
-    s.add_argument('hdfs_input', **ca['input'])
-    s.add_argument('hdfs_output', **ca['output'])
-    s.add_argument('num_clusters', **ca['num_clusters'])
-    s.add_argument('--local_json_output', help='Local output path')  # TODO: Implement
-    s.set_defaults(func=picarus.cluster.run_sample)
-
-    # K-Means Cluster
-    s = sps.add_parser('kmeans', help='K-Means Cluster')
-    s.add_argument('hdfs_input', **ca['input'])
-    s.add_argument('hdfs_prev_clusters', help='HDFS path to previous clusters')
-    s.add_argument('hdfs_image_data', **ca['image_data'])
-    s.add_argument('hdfs_output', **ca['output'])
-    s.add_argument('num_clusters', **ca['num_clusters'])
-    s.add_argument('num_iters', type=int, help='Maximum number of iterations')
-    s.add_argument('num_samples', type=int, help='Number of samples')
-    s.add_argument('--local_json_output', help='Local output path')
-    s.set_defaults(func=picarus.cluster.run_kmeans)
-
-
 def run_whiten(hdfs_input, hdfs_output, image_hashes=None, **kw):
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('whiten.py'),
                            image_hashes=image_hashes)

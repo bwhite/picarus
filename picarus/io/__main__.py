@@ -186,39 +186,3 @@ def run_kv_to_record(hdfs_input, hdfs_output, extension, base_path, **kw):
     hadoopy.launch_frozen(hdfs_input, hdfs_output, _lf('kv_to_record.py'), reducer=None,
                           cmdenvs=['EXTENSION=%s' % extension,
                                    'BASE_PATH=%s' % base_path])
-
-
-def _parser(sps):
-    import picarus.__main__
-    ca = picarus.__main__._ca
-    # Load from local directory
-    s = sps.add_parser('load_local', help='Writes data in a (key, value) format to hdfs')
-    s.add_argument('local_input', help='Local input directory path (all files in directory used)')
-    s.add_argument('hdfs_output', **ca['output'])
-    s.add_argument('--output_format', help=("Data format to use.  'kv': (sha1_hash, binary_data) or 'record'"
-                                            " (sha1_hash, metadata) (see docstring) (default 'kv')"), default='kv')
-    s.add_argument('--max_record_size', help="If using record format, larger files are placed directly on HDFS (see docstring) (default None)",
-                   default=None, type=int)
-    s.set_defaults(func=picarus.io.load_local)
-
-    # Dump to local directory
-    s = sps.add_parser('dump_local', help='Writes data as local_output/sha1hash.ext')
-    s.add_argument('hdfs_input', **ca['input'])
-    s.add_argument('local_output', help='Local output directory path (created if not there)')
-    s.add_argument('--extension', help="Extension to give output files, only used if not provided by the data. (default '')", default='')
-    s.set_defaults(func=picarus.io.dump_local)
-
-    # Convert record to kv
-    s = sps.add_parser('run_record_to_kv', help='Converts from (sha1hash, record) to (sha1hash, data) (see docs)')
-    s.add_argument('hdfs_input', **ca['input'])
-    s.add_argument('hdfs_output', **ca['output'])
-    s.set_defaults(func=picarus.io.run_record_to_kv)
-
-    # Convert kv to record
-    s = sps.add_parser('run_kv_to_record', help=('Converts from sha1hash, data) to (sha1hash, record) (see docs).  '
-                                                 'The full_path is set to base_path/sha1hash.extension.'))
-    s.add_argument('hdfs_input', **ca['input'])
-    s.add_argument('hdfs_output', **ca['output'])
-    s.add_argument('extension', help="Extension to give output files")
-    s.add_argument('base_path', help="Base of the generates full_path's")
-    s.set_defaults(func=picarus.io.run_kv_to_record)
