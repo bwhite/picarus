@@ -6,6 +6,7 @@ import urllib2
 import httplib
 import hadoopy
 import flickrapi
+import os
 api_key = ''  # NOTE(brandyn): Include your flickr api key and secret here
 api_secret = ''
 try:
@@ -25,6 +26,7 @@ class Mapper(object):
         self.date_radius = 1296000  # seconds_in_month/2
         self.per_page = 500
         self.tag_iters = int(os.environ.get('TAG_ITERS', 1))
+        self.has_geo = 'HAS_GEO' in os.environ
         self.sleep_penalty = 15
         self.sleep_penalty_orig = 15
         self.extras = 'description,license,date_upload,date_taken,owner_name,icon_server,original_format,last_update,geo,tags,machine_tags,o_dims,views,media,path_alias,url_sq,url_t,url_s,url_m,url_o'
@@ -41,6 +43,8 @@ class Mapper(object):
                 kw['max_upload_date'] = dates[1]
             if page:
                 kw['page'] = page
+            if self.has_geo:
+                kw['has_geo'] = 1
             return self.flickr.photos_search(text=value,
                                              extras=self.extras,
                                              per_page=self.per_page,
