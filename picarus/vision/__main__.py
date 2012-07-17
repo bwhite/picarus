@@ -5,6 +5,9 @@ import picarus
 import glob
 import tempfile
 import imfeat
+import cPickle as pickle
+import base64
+import zlib
 from picarus import _file_parse as file_parse
 
 
@@ -64,6 +67,7 @@ def run_predict_windows(hdfs_input, hdfs_classifier_input, feature, hdfs_output,
                            files=files,
                            dummy_arg=fp)
 
+
 def run_video_keyframe(hdfs_input, hdfs_output, frame_skip=.25, min_interval=0, max_interval=float('inf'), keyframer='uniform', **kw):
     fp = viderator.freeze_ffmpeg()
     picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_new_keyframe.py'),
@@ -76,6 +80,64 @@ def run_video_keyframe(hdfs_input, hdfs_output, frame_skip=.25, min_interval=0, 
                                      'mapred.map.max.attempts=10'],
                            files=[fp.__enter__()],
                            dummy_arg=fp)
+
+
+def run_video_grep_frames(hdfs_input, hdfs_output, feature, max_frames_per_video=None, max_outputs_per_video=None, output_frame=True, **kw):
+    fp = viderator.freeze_ffmpeg()
+    feature_fp = tempfile.NamedTemporaryFile(suffix='.pkl')
+    pickle.dump(feature, feature_fp, -1)
+    feature_fp.flush()
+    cmdenvs = ['FEATURE_FN=%s' % os.path.basename(feature_fp.name)]
+    if max_frames_per_video is not None:
+        cmdenvs.append('MAX_FRAMES_PER_VIDEO=%d' % (max_frames_per_video))
+    if max_outputs_per_video is not None:
+        cmdenvs.append('MAX_OUTPUTS_PER_VIDEO=%d' % (max_outputs_per_video))
+    cmdenvs.append('OUTPUT_FRAME=%d' % int(output_frame))
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('video_grep_frames.py'),
+                           cmdenvs=cmdenvs,
+                           jobconfs=['mapred.child.java.opts=-Xmx512M',
+                                     'mapred.task.timeout=12000000',
+                                     'mapred.map.max.attempts=10'],
+                           files=[fp.__enter__(), feature_fp.name],
+                           dummy_arg=(fp, feature_fp))
+
+
+def run_video_max_conf_frames(hdfs_input, hdfs_output, feature, max_frames_per_video=None, max_outputs=None, output_frame=True, **kw):
+    fp = viderator.freeze_ffmpeg()
+    feature_fp = tempfile.NamedTemporaryFile(suffix='.pkl')
+    pickle.dump(feature, feature_fp, -1)
+    feature_fp.flush()
+    cmdenvs = ['FEATURE_FN=%s' % os.path.basename(feature_fp.name)]
+    if max_frames_per_video is not None:
+        cmdenvs.append('MAX_FRAMES_PER_VIDEO=%d' % (max_frames_per_video))
+    if max_outputs is not None:
+        cmdenvs.append('MAX_OUTPUTS=%d' % (max_outputs))
+    cmdenvs.append('OUTPUT_FRAME=%d' % int(output_frame))
+    picarus._launch_frozen(hdfs_input, hdfs_output, _lf('video_max_conf_frames.py'),
+                           cmdenvs=cmdenvs,
+                           jobconfs=['mapred.child.java.opts=-Xmx512M',
+                                     'mapred.task.timeout=12000000',
+                                     'mapred.map.max.attempts=10'],
+                           files=[fp.__enter__(), feature_fp.name],
+                           dummy_arg=(fp, feature_fp))
+
+
+def run_video_predicate_frames(hdfs_input, hdfs_output, features, max_frames_per_video=None, **kw):
+    fp = viderator.freeze_ffmpeg()
+    features_fp = tempfile.NamedTemporaryFile(suffix='.pkl')
+    pickle.dump(features, features_fp, -1)
+    features_fp.flush()
+    cmdenvs = ['FEATURES_FN=%s' % os.path.basename(features_fp.name)]
+    if max_frames_per_video is not None:
+        cmdenvs.append('MAX_FRAMES_PER_VIDEO=%d' % (max_frames_per_video))
+    picarus._launch_frozen(hdfs_input, hdfs_output + '/predicate_frames', _lf('video_predicate_frames.py'),
+                           cmdenvs=cmdenvs,
+                           jobconfs=['mapred.child.java.opts=-Xmx512M',
+                                     'mapred.task.timeout=12000000',
+                                     'mapred.map.max.attempts=10'],
+                           files=[fp.__enter__(), features_fp.name],
+                           dummy_arg=(fp, features_fp))
+
 
 
 def run_video_features(hdfs_input, hdfs_output, **kw):
