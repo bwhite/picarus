@@ -14,8 +14,8 @@ class Mapper(object):
         # |X| x |Y| : Each feature in X corresponds to a row and each feature in Y corresponds to a column
         self.rows_per_chunk = int(os.environ.get('ROWS_PER_CHUNK', 500))
         self.cols_per_chunk = int(os.environ.get('COLS_PER_CHUNK', 500))
-        self.input_to_id_x = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_X'])['inputs'].keys())))
-        self.input_to_id_y = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_Y'])['inputs'].keys())))
+        self.input_to_id_x = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_X']))))
+        self.input_to_id_y = dict((y, x) for x, y in enumerate(sorted(file_parse.load(os.environ['LOCAL_LABELS_FN_Y']))))
         self.num_row_chunks = int(np.ceil(len(self.input_to_id_x) / float(self.rows_per_chunk)))
         self.num_col_chunks = int(np.ceil(len(self.input_to_id_y) / float(self.cols_per_chunk)))
         print('Row Chunks[%d] Col Chunks[%d]' % (self.num_row_chunks, self.num_col_chunks))
