@@ -9,6 +9,7 @@ import os
 import vidfeat
 import cPickle as pickle
 import heapq
+import time
 
 
 class Mapper(object):
@@ -17,7 +18,7 @@ class Mapper(object):
         self._feat = pickle.load(open(os.environ['FEATURE_FN']))
         if isinstance(self._feat, dict):
             self._feat = call_import(self._feat)
-        self.frame_skip = 30
+        self.frame_skip = 60
         self.max_outputs = int(os.environ.get('MAX_OUTPUTS', 100))
         self.max_outputs_per_video = int(os.environ.get('MAX_OUTPUTS_PER_VIDEO', 5))
         self.max_frames_per_video = float(os.environ.get('MAX_FRAMES_PER_VIDEO', float('inf')))
@@ -52,7 +53,9 @@ class Mapper(object):
                         frame = frame[sz[0]:sz[1], sz[2]:sz[3], :]
                         if not frame.size:  # Empty
                             continue
+                    st = time.time()
                     c = self._feat(frame)[0]
+                    print('FrameTime[%f]' % time.time() - st)
                     if c > heap[0][0]:
                         if self.output_frame:
                             heapq.heappushpop(heap,
