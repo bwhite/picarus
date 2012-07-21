@@ -10,6 +10,7 @@ import vidfeat
 import cPickle as pickle
 import heapq
 import time
+import sys
 
 
 class Mapper(object):
@@ -41,10 +42,12 @@ class Mapper(object):
         with tempfile.NamedTemporaryFile(suffix=ext) as fp:
             fp.write(video_data)
             fp.flush()
+            sys.stderr.write('Prevideo\n')
             try:
                 for frame_num, frame_time, frame in viderator.frame_iter(fp.name,
                                                                          frozen=True,
                                                                          frame_skip=self.frame_skip):
+                    sys.stderr.write('FrameNum[%d]\n' % frame_num)
                     if frame_num >= self.max_frames_per_video:
                         break
                     frame_orig = frame
@@ -55,6 +58,7 @@ class Mapper(object):
                             continue
                     st = time.time()
                     c = self._feat(frame)[0]
+                    sys.stderr.write('FrameTime[%f]\n' % time.time() - st)
                     print('FrameTime[%f]' % time.time() - st)
                     if c > heap[0][0]:
                         if self.output_frame:
