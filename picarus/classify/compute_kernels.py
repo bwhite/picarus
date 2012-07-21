@@ -88,7 +88,9 @@ class Reducer(object):
             y_values = list(values)
             y_values = sorted(y_values)
             self.col_num = y_values[0][0]
-            self.y_matrix = np.vstack([x[1] for x in y_values])
+            y_values = [x[1] for x in y_values]
+            self.y_matrix = np.vstack(y_values)
+            del y_values
             print(self.y_matrix.shape)
             self._num_dims = self.y_matrix.shape[1]
         else:
