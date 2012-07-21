@@ -8,6 +8,13 @@ import json
 import collections
 
 
+def _tuple_to_key(key):
+    return u'\t'.join(map(str, key))
+
+
+def _key_to_tuple(key):
+    return key.split('\t')
+
 class Mapper(object):
 
     def __init__(self):
@@ -37,14 +44,14 @@ class Mapper(object):
             col_num = self.input_to_id_y[image_hash]
             col_chunk_num = col_num / self.cols_per_chunk
             for row_chunk_num in range(self.num_row_chunks):
-                yield (row_chunk_num, col_chunk_num), ('y', col_num, feature)
+                yield _tuple_to_key((row_chunk_num, col_chunk_num, 0)), (col_num, feature)
 
         # Each X value needs to get send to each col (one row chunk for that col will get it)
         if image_hash in self.input_to_id_x:
             row_num = self.input_to_id_x[image_hash]
             row_chunk_num = row_num / self.rows_per_chunk
             for col_chunk_num in range(self.num_col_chunks):
-                yield (row_chunk_num, col_chunk_num), ('x', row_num, feature)
+                yield _tuple_to_key((row_chunk_num, col_chunk_num, 1)), (row_num, feature)
 
 
 class Reducer(object):
@@ -55,6 +62,9 @@ class Reducer(object):
         self._total_time = collections.defaultdict(lambda: 0)
         self._num_dims = 0
         self._num_vecs = collections.defaultdict(lambda: 0)
+        self._prev_row_chunk_num = None
+        self.col_num = None
+        self.y_matrix = None
 
     def reduce(self, row_col_chunk_num, values):
         """
@@ -68,7 +78,50 @@ class Reducer(object):
             key: 
             value: 
         """
-        row_chunk_num, col_chunk_num = row_col_chunk_num
+        print(row_col_chunk_num)
+        row_chunk_num, col_chunk_num, vec = map(int, _key_to_tuple(row_col_chunk_num))
+        if self._prev_row_chunk_num is None:
+            self.reset(row_chunk_num)
+        if row_chunk_num != self._prev_row_chunk_num:
+            self.reset(row_chunk_num)
+        if vec == 0:
+            y_values = list(values)
+            y_values = sorted(y_values)
+            self.col_num = y_values[0][0]
+            self.y_matrix = np.vstack([x[1] for x in y_values])
+            print(self.y_matrix.shape)
+            self._num_dims = self.y_matrix.shape[1]
+        else:
+            unnormalized_target_kernels = ['linear']
+            normalized_target_kernels = ['hik']
+            # Unnormalized
+            for row_num, row_feature in values:
+                row_feature = row_feature.reshape((1, row_feature.size))
+                for kernel in unnormalized_target_kernels:
+                    st = time.time()
+                    k = kernels.compute(kernel, row_feature, self.y_matrix).ravel()
+                    self._total_time[kernel] += time.time() - st
+                    self._num_vecs[kernel] += self.y_matrix.shape[0]
+                    yield (kernel, row_num, self.col_num), k
+
+            # Normalized
+            self.y_matrix = (self.y_matrix.T / np.sum(self.y_matrix, 1)).T
+            for row_num, row_feature in values:
+                row_feature = row_feature.reshape((1, row_feature.size)) / np.sum(row_feature)
+                for kernel in normalized_target_kernels:
+                    st = time.time()
+                    k = kernels.compute(kernel, row_feature, self.y_matrix).ravel()
+                    self._total_time[kernel] += time.time() - st
+                    self._num_vecs[kernel] += self.y_matrix.shape[0]
+                    yield (kernel, row_num, self.col_num), k
+
+    def reset(self, row_chunk_num):
+        self._prev_row_chunk_num = row_chunk_num
+        self.col_num = None
+        self.y_matrix = None
+
+    def process(self):
+        # Old
         unnormalized_target_kernels = ['linear']
         normalized_target_kernels = ['hik']
         x_values = []

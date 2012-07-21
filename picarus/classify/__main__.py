@@ -65,7 +65,8 @@ def run_compute_kernels(hdfs_input, hdfs_output, local_labels_x, local_labels_y,
     files.append(local_labels_x)
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('compute_kernels.py'),
                            cmdenvs=cmdenvs,
-                           jobconfs_default=['mapred.task.timeout=6000000'],
+                           partitioner='org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner',
+                           jobconfs_default=['mapred.task.timeout=6000000', 'mapred.text.key.partitioner.options=-k1,2'],
                            files=files,
                            **kw)
 
