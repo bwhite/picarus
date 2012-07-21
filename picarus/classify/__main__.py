@@ -54,7 +54,6 @@ def run_train_classifier(hdfs_input, hdfs_output, local_labels, **kw):
 
 
 def run_compute_kernels(hdfs_input, hdfs_output, local_labels_x, local_labels_y, rows_per_chunk, cols_per_chunk=10000000, **kw):
-    rows_per_chunk = cols_per_chunk = per_chunk
     if local_labels_y is None or local_labels_x is None:
         raise ValueError('local_labels_* must not be None!')
     cmdenvs = ['LOCAL_LABELS_FN_Y=%s' % os.path.basename(local_labels_y),
