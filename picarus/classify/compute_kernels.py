@@ -94,73 +94,34 @@ class Reducer(object):
             print(self.y_matrix.shape)
             self._num_dims = self.y_matrix.shape[1]
         else:
-            unnormalized_target_kernels = [] # 'linear'
+            unnormalized_target_kernels = []  # 'linear'
             normalized_target_kernels = ['hik']
-            # Unnormalized
-            for row_num, row_feature in values:
-                row_feature = row_feature.reshape((1, row_feature.size))
-                for kernel in unnormalized_target_kernels:
-                    st = time.time()
-                    k = kernels.compute(kernel, row_feature, self.y_matrix).ravel()
-                    self._total_time[kernel] += time.time() - st
-                    self._num_vecs[kernel] += self.y_matrix.shape[0]
-                    yield (kernel, row_num, self.col_num), k
-
-            # Normalized
-            self.y_matrix = (self.y_matrix.T / np.sum(self.y_matrix, 1)).T
-            for row_num, row_feature in values:
-                row_feature = row_feature.reshape((1, row_feature.size)) / np.sum(row_feature)
-                for kernel in normalized_target_kernels:
-                    st = time.time()
-                    k = kernels.compute(kernel, row_feature, self.y_matrix).ravel()
-                    self._total_time[kernel] += time.time() - st
-                    self._num_vecs[kernel] += self.y_matrix.shape[0]
-                    yield (kernel, row_num, self.col_num), k
+            if 0:
+                # Unnormalized
+                for row_num, row_feature in values:
+                    row_feature = row_feature.reshape((1, row_feature.size))
+                    for kernel in unnormalized_target_kernels:
+                        st = time.time()
+                        k = kernels.compute(kernel, row_feature, self.y_matrix).ravel()
+                        self._total_time[kernel] += time.time() - st
+                        self._num_vecs[kernel] += self.y_matrix.shape[0]
+                        yield (kernel, row_num, self.col_num), k
+            else:
+                # Normalized
+                self.y_matrix = (self.y_matrix.T / np.sum(self.y_matrix, 1)).T
+                for row_num, row_feature in values:
+                    row_feature = row_feature.reshape((1, row_feature.size)) / np.sum(row_feature)
+                    for kernel in normalized_target_kernels:
+                        st = time.time()
+                        k = kernels.compute(kernel, row_feature, self.y_matrix).ravel()
+                        self._total_time[kernel] += time.time() - st
+                        self._num_vecs[kernel] += self.y_matrix.shape[0]
+                        yield (kernel, row_num, self.col_num), k
 
     def reset(self, col_chunk_num):
         self._prev_col_chunk_num = col_chunk_num
         self.col_num = None
         self.y_matrix = None
-
-    def process(self):
-        # Old
-        unnormalized_target_kernels = ['linear']
-        normalized_target_kernels = ['hik']
-        x_values = []
-        y_values = []
-        for x, y, z in values:
-            if 'x' == x:
-                x_values.append((y, z))
-            elif 'y' == x:
-                y_values.append((y, z))
-            else:
-                raise ValueError(x)
-        y_values = sorted(y_values)
-        col_num = y_values[0][0]
-        y_matrix = np.vstack([x[1] for x in y_values])
-        print(y_matrix.shape)
-        self._num_dims = y_matrix.shape[1]
-
-        # Unnormalized
-        for row_num, row_feature in x_values:
-            row_feature = row_feature.reshape((1, row_feature.size))
-            for kernel in unnormalized_target_kernels:
-                st = time.time()
-                k = kernels.compute(kernel, row_feature, y_matrix).ravel()
-                self._total_time[kernel] += time.time() - st
-                self._num_vecs[kernel] += y_matrix.shape[0]
-                yield (kernel, row_num, col_num), k
-
-        # Normalized
-        y_matrix = (y_matrix.T / np.sum(y_matrix, 1)).T
-        for row_num, row_feature in x_values:
-            row_feature = row_feature.reshape((1, row_feature.size)) / np.sum(row_feature)
-            for kernel in normalized_target_kernels:
-                st = time.time()
-                k = kernels.compute(kernel, row_feature, y_matrix).ravel()
-                self._total_time[kernel] += time.time() - st
-                self._num_vecs[kernel] += y_matrix.shape[0]
-                yield (kernel, row_num, col_num), k
 
     def close(self):
         if self._num_vecs:
