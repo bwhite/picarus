@@ -58,8 +58,8 @@ class Mapper(object):
                             continue
                     st = time.time()
                     c = self._feat(frame)[0]
-                    sys.stderr.write('FrameTime[%f]\n' % time.time() - st)
-                    print('FrameTime[%f]' % time.time() - st)
+                    sys.stderr.write('FrameTime[%f]\n' % (time.time() - st))
+                    print('FrameTime[%f]' % (time.time() - st))
                     if c > heap[0][0]:
                         if self.output_frame:
                             heapq.heappushpop(heap,
