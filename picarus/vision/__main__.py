@@ -115,7 +115,7 @@ def run_video_max_conf_frames(hdfs_input, hdfs_output, feature, max_frames_per_v
     cmdenvs.append('OUTPUT_FRAME=%d' % int(output_frame))
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('video_max_conf_frames.py'),
                            cmdenvs=cmdenvs,
-                           jobconfs=['mapred.child.java.opts=-Xmx512M',
+                           jobconfs=['mapred.child.java.opts=-Xmx768M',
                                      'mapred.task.timeout=12000000',
                                      'mapred.map.max.attempts=10'],
                            files=[fp.__enter__(), feature_fp.name],
