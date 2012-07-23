@@ -51,10 +51,12 @@ class Mapper(object):
             except IOError:
                 hadoopy.counter('PICARUS', 'CantProcessVideo')
         yield event, (filename, np.asfarray(out))
+        hadoopy.counter('SkippingTaskCounters', 'MapProcessedRecords')
 
 
 def reducer(event, filename_predicates):
     yield event, dict(filename_predicates)
+    hadoopy.counter('SkippingTaskCounters', 'ReduceProcessedGroups')
 
 if __name__ == '__main__':
     hadoopy.run(Mapper, reducer)
