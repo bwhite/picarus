@@ -108,9 +108,9 @@ class Reducer(object):
                         yield (kernel, row_num, self.col_num), k
             else:
                 # Normalized
-                #self.y_matrix = (self.y_matrix.T / np.sum(self.y_matrix, 1)).T
+                self.y_matrix = (self.y_matrix.T / np.sum(self.y_matrix, 1)).T
                 for row_num, row_feature in values:
-                    row_feature = row_feature.reshape((1, row_feature.size))  # / np.sum(row_feature)
+                    row_feature = row_feature.reshape((1, row_feature.size)) / np.sum(row_feature)
                     for kernel in normalized_target_kernels:
                         st = time.time()
                         k = kernels.compute(kernel, row_feature, self.y_matrix).ravel()
