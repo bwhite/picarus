@@ -136,6 +136,7 @@ def run_video_predicate_frames(hdfs_input, hdfs_output, features, max_frames_per
                            jobconfs=['mapred.child.java.opts=-Xmx768M',
                                      'mapred.skip.attempts.to.start.skipping=2',
                                      'mapred.skip.map.max.skip.records=1',
+                                     'mapred.skip.mode.enabled=true',
                                      'mapred.task.timeout=12000000',
                                      'mapred.map.max.attempts=10'],
                            files=[fp.__enter__(), features_fp.name],
