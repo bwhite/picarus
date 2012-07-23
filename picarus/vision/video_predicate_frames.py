@@ -50,6 +50,8 @@ class Mapper(object):
                     out.append([x.predict(frame) for x in self._feats] + [frame_num, frame_time])
             except IOError:
                 hadoopy.counter('PICARUS', 'CantProcessVideo')
+                hadoopy.counter('SkippingTaskCounters', 'MapProcessedRecords')
+                return
         yield event, (filename, np.asfarray(out))
         hadoopy.counter('SkippingTaskCounters', 'MapProcessedRecords')
 
