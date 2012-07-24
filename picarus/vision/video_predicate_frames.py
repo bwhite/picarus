@@ -32,6 +32,8 @@ class Mapper(object):
             is the number of frames.  The last two columns are frame_num
             and frame_time.
         """
+        print(os.environ['map_input_file'])
+        print(event_filename)
         ext = '.' + event_filename[1].rsplit('.')[1]
         event, filename = event_filename
         out = []
