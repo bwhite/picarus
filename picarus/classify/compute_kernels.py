@@ -94,9 +94,9 @@ class Reducer(object):
             print(self.y_matrix.shape)
             self._num_dims = self.y_matrix.shape[1]
         else:
-            unnormalized_target_kernels = []  # 'linear'
-            normalized_target_kernels = ['hik']
-            if 0:
+            unnormalized_target_kernels = ['hik']  # 'linear'
+            normalized_target_kernels = []
+            if 1:
                 # Unnormalized
                 for row_num, row_feature in values:
                     row_feature = row_feature.reshape((1, row_feature.size))
