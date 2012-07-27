@@ -96,7 +96,7 @@ class Reducer(object):
         else:
             unnormalized_target_kernels = []  # 'linear'
             normalized_target_kernels = ['hik']
-            if 1:
+            if 0:
                 # Unnormalized
                 for row_num, row_feature in values:
                     row_feature = row_feature.reshape((1, row_feature.size))
