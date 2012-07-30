@@ -42,7 +42,8 @@ class Mapper(object):
             prev_frame_time = None
             prev_frame_num = None
             prev_frame = None
-            try:
+            #try:
+            if 1:
                 for (frame_num, frame_time, frame), iskeyframe in self.kf(viderator.frame_iter(fp.name,
                                                                                                frame_skip=self.frame_skip,
                                                                                                frozen=True)):
@@ -55,9 +56,9 @@ class Mapper(object):
                                                'frame': imfeat.image_tostring(frame, 'JPEG')}
                     prev_frame_num = frame_num
                     prev_frame = frame
-            except Exception, e:
-                print(e)
-                hadoopy.counter('VIDEO_ERROR', 'FFMPEGCantParse')
+            #except Exception, e:
+            #    print(e)
+            #    hadoopy.counter('VIDEO_ERROR', 'FFMPEGCantParse')
 
 
 if __name__ == '__main__':
