@@ -55,7 +55,8 @@ class Mapper(object):
                                                'frame': imfeat.image_tostring(frame, 'JPEG')}
                     prev_frame_num = frame_num
                     prev_frame = frame
-            except:
+            except Exception, e:
+                print(e)
                 hadoopy.counter('VIDEO_ERROR', 'FFMPEGCantParse')
 
 
