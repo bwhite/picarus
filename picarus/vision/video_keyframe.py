@@ -47,7 +47,7 @@ class Mapper(object):
                 for (frame_num, frame_time, frame), iskeyframe in self.kf(viderator.frame_iter(fp.name,
                                                                                                frame_skip=self.frame_skip,
                                                                                                frozen=True)):
-                    if iskeyframe and prev_frame:
+                    if iskeyframe and prev_frame is not None:
                         yield event_filename, {'prev_frame_time': prev_frame_time,
                                                'prev_frame_num': prev_frame_num,
                                                'prev_frame': imfeat.image_tostring(prev_frame, 'JPEG'),
