@@ -44,8 +44,8 @@ class Mapper(object):
             prev_frame = None
             try:
                 for (frame_num, frame_time, frame), iskeyframe in self.kf(viderator.frame_iter(fp.name,
-                                                                                               frame_skip=self.frame_skip),
-                                                                                               frozen=True):
+                                                                                               frame_skip=self.frame_skip,
+                                                                                               frozen=True)):
                     if iskeyframe and prev_frame:
                         yield event_filename, {'prev_frame_time': prev_frame_time,
                                                'prev_frame_num': prev_frame_num,
