@@ -5,9 +5,9 @@ Files:
     target.jpg: JPEG file of the target image.
 """
 import hadoopy
-import Image
 import numpy as np
 import re
+import cv2
 import cStringIO as StringIO
 import imfeat
 import distpy
@@ -23,41 +23,15 @@ _subtiles_per_tile = _subtiles_per_tile_length * _subtiles_per_tile_length
 assert _subtiles_per_tile_length / 2 ** _levels >= 1
 
 
-def _image_to_str(img):
-    """
-    Args:
-        img: PIL Image
-
-    Returns:
-        JPEG string of the data.
-    """
-    out = StringIO.StringIO()
-    img.save(out, 'JPEG')
-    out.seek(0)
-    return out.read()
-
-
-def _image_from_str(s):
-    """
-    Args:
-        s: JPEG image string
-
-    Returns:
-        PIL Image
-    """
-    return Image.open(StringIO.StringIO(s))
-
-
 class Mapper(object):
 
     def __init__(self):
-        _target_image = Image.open('target.jpg')
-        _target_image = imfeat.resize_image(_target_image,  # NOTE(brandyn): Resize to an even length
-                                            (_target_image.size[1]) // _tile_length * _tile_length,
-                                            (_target_image.size[0]) // _tile_length * _tile_length)
+        _target_image = cv2.imread('target.jpg')
+        _target_image = cv2.resize(_target_image, (_target_image.shape[1] // _tile_length * _tile_length,
+                                                   _target_image.shape[0] // _tile_length * _tile_length))
         self.target_tiles = {}
-        xtiles = _target_image.size[0] / _tile_length
-        ytiles = _target_image.size[1] / _tile_length
+        ytiles = _target_image.shape[0] / _tile_length
+        xtiles = _target_image.shape[1] / _tile_length
         print('Xtiles[%d] Ytiles[%d]' % (xtiles, ytiles))
         assert xtiles > 0 and ytiles > 0
         xsubtiles = xtiles * _subtiles_per_tile_length
@@ -77,10 +51,7 @@ class Mapper(object):
                 #'\t'.join(
                 key = (tile_id[0], tile_id[1], subtile_id[0], subtile_id[1])
                 yp = ysubtiles - y - 1  # NOTE(brandyn): Flip coordinates for y axis
-                tile = _target_image.crop((x * _subtile_length,
-                                           yp * _subtile_length,
-                                           (x + 1) * _subtile_length,
-                                           (yp + 1) * _subtile_length))
+                tile = _target_image[(yp * _subtile_length):((yp + 1) * _subtile_length), (x * _subtile_length): (x + 1) * _subtile_length, :]
                 self.target_tiles[key] = np.asfarray(tile)
 
     @staticmethod
@@ -98,16 +69,18 @@ class Mapper(object):
                 or mode isn't RGB
             IOError: Image is unreadable
         """
+        if isinstance(s, tuple):
+            s = s[0]
         try:
-            img = _image_from_str(s)
+            img = imfeat.image_fromstring(s)
         except IOError, e:
             hadoopy.counter('Stats', 'IMG_BAD')
             raise e
-        min_side = min(img.size)
+        min_side = min(img.shape[:2])
         if min_side < _initial_image_size:
             hadoopy.counter('Stats', 'IMG_TOO_SMALL')
             raise ValueError
-        if img.mode != 'RGB':
+        if img.ndim != 3:
             hadoopy.counter('Stats', 'IMG_WRONG_MODE')
             raise ValueError
         return imfeat.resize_image(img, _initial_image_size, _initial_image_size)
@@ -132,13 +105,13 @@ class Mapper(object):
         print(key)
         try:
             images = [self._crop_image_from_str(value)]
-        except (ValueError, IOError):
+        except (ValueError, IOError, AttributeError):
             return
         # Keep resizing until we get one for each layer, save them for later use
         prev_size = _initial_image_size
         for layer in range(1, _levels):
             prev_size /= 2
-            images.append(images[-1].resize((prev_size, prev_size)))
+            images.append(cv2.resize(images[-1], (prev_size, prev_size)))
         scoring_tile = np.asfarray(images[-1])
         # Compute dist for each tile position, emit for each
         # Optimize by only emitting when we know the value is smaller than
@@ -159,7 +132,7 @@ class Mapper(object):
         """
         assert sorted(self.target_tiles.keys()) == sorted(self.min_dists.keys())
         for key, (dist, images) in self.min_dists.items():  # sorted(
-            images_jpg = map(_image_to_str, images)  # JPEG's are much smaller
+            images_jpg = [imfeat.image_tostring(x, 'jpg') for x in images]  # JPEG's are much smaller
             yield key, [dist, images_jpg]
 
 
@@ -185,12 +158,11 @@ class Reducer(object):
         self._sub_tiles = {}
         _parse_key_re = re.compile('([0-9]+)_([0-9]+)\t([0-9]+)_([0-9]+)')
         self._parse_key = lambda x: x  # map(int, _parse_key_re.search(x).groups())
-        _target_image = Image.open('target.jpg')
-        _target_image = imfeat.resize_image(_target_image,  # NOTE(brandyn): Resize to an even length
-                                            _target_image.size[1] // _tile_length * _tile_length,
-                                            _target_image.size[0] // _tile_length * _tile_length)
-        self.num_xtiles = _target_image.size[0] / _tile_length
-        self.num_ytiles = _target_image.size[1] / _tile_length
+        _target_image = cv2.imread('target.jpg')
+        _target_image = cv2.resize(_target_image, (_target_image.shape[1] // _tile_length * _tile_length,
+                                                   _target_image.shape[0] // _tile_length * _tile_length))
+        self.num_ytiles = _target_image.shape[0] / _tile_length
+        self.num_xtiles = _target_image.shape[1] / _tile_length
 
     def _find_output(self, key, scale, subtiles_per_tile_len, subtile_len):
         xtile, ytile, xsubtile, ysubtile = self._parse_key(key)
@@ -225,8 +197,8 @@ class Reducer(object):
         """
         # Select minimum distance image, throw away score, and order images from smallest to largest powers of 2
         self._sub_tiles[key] = min(values, key=lambda x: x[0])[1][::-1]
-        # As the images were JPEG, we need to make them PIL again
-        self._sub_tiles[key] = map(_image_from_str, self._sub_tiles[key])
+        # As the images were JPEG, we need to make them arrays again
+        self._sub_tiles[key] = [imfeat.image_fromstring(x) for x in self._sub_tiles[key]]
         # If we don't have all of the necessary subtiles.
         if len(self._sub_tiles) != _subtiles_per_tile:
             return
@@ -241,21 +213,22 @@ class Reducer(object):
             cur_subtiles = [(self._find_output(key, scale, subtiles_per_tile_len, subtile_len), images[level])
                          for key, images in self._sub_tiles.items()]
             cur_subtiles.sort(key=lambda x: x[0])
-            cur_tile = Image.new('RGB', (_tile_length, _tile_length))
+            cur_tile = np.zeros((_tile_length, _tile_length, 3), dtype=np.uint8)
             assert len(cur_subtiles) / subtiles_per_tile == num_tiles
             cur_outtile = None
             for subtile_ind, ((xouttile, youttile, xoffset, yoffset), image) in enumerate(cur_subtiles):
                 if cur_outtile is None:
                     cur_outtile = (xouttile, youttile)
                 assert cur_outtile == (xouttile, youttile)
-                cur_tile.paste(image, (xoffset, yoffset))
+                #cur_tile.paste(image, (xoffset, yoffset))  # TODO Suspect
+                cur_tile[yoffset:yoffset + image.shape[0], xoffset:xoffset + image.shape[1], :] = image
                 if not (subtile_ind + 1) % subtiles_per_tile:
                     tile_name = '%d_%d_%d.jpg' % (level, xouttile, youttile)
-                    yield tile_name, _image_to_str(cur_tile)
-                    cur_tile = Image.new('RGB', (_tile_length, _tile_length))
+                    yield tile_name, imfeat.image_tostring(cur_tile, 'jpg')
+                    cur_tile = np.zeros((_tile_length, _tile_length, 3), dtype=np.uint8)
                     cur_outtile = None
         self._sub_tiles = {}
 
 
 if __name__ == '__main__':
-    hadoopy.run(Mapper, Reducer)  #, combiner
+    hadoopy.run(Mapper, Reducer)
