@@ -26,7 +26,7 @@ class Mapper(object):
                 return
         else:
             image = image_or_data
-        sys.stderr.write('Image Size[%s]' % (image.shape))
+        sys.stderr.write('Image Size[%s]' % (image.shape,))
         yield name, self._feat(image)
 
 
