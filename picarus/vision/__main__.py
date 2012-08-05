@@ -29,10 +29,12 @@ def run_image_feature(hdfs_input, hdfs_output, feature, files=(), **kw):
                            files=files, **kw)
 
 
-def run_image_clean(hdfs_input, hdfs_output, max_side=None, **kw):
+def run_image_clean(hdfs_input, hdfs_output, max_side=None, filter_side=None, **kw):
     cmdenvs = {}
     if max_side is not None:
         cmdenvs['MAX_SIDE'] = max_side
+    if filter_side is not None:
+        cmdenvs['FILTER_SIDE'] = filter_side
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('image_clean.py'),
                            cmdenvs=cmdenvs, **kw)
 
