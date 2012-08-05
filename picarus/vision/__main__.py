@@ -16,16 +16,23 @@ def _lf(fn):
     return os.path.join(__path__[0], fn)
 
 
-def run_image_feature(hdfs_input, hdfs_output, feature, image_length=None, image_height=None, image_width=None, **kw):
+def run_image_feature(hdfs_input, hdfs_output, feature, image_length=None, image_height=None, image_width=None, files=(), **kw):
     if image_length:
         image_height = image_width = image_length
     if image_height is None or image_width is None:
         raise ValueError('Please specify image_height/image_width or image_length')
+    files = list(files)
+    # This allows for replacing the default models
+    cur_files = set([os.path.basename(x) for x in files])
+    for x in [_lf('data/hog_8_2_clusters.pkl'), _lf('data/eigenfaces_lfw_cropped.pkl')] + glob.glob(imfeat.__path__[0] + "/_object_bank/data/*"):
+        if os.path.basename(x) not in cur_files:
+            files.append(x)
+            cur_files.add(x)
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('feature_compute.py'),
                            cmdenvs=['IMAGE_HEIGHT=%d' % image_height,
                                     'IMAGE_WIDTH=%d' % image_width,
                                     'FEATURE=%s' % feature],
-                           files=[_lf('data/hog_8_2_clusters.pkl'), _lf('data/eigenfaces_lfw_cropped.pkl')] + glob.glob(imfeat.__path__[0] + "/_object_bank/data/*"), **kw)
+                           files=files, **kw)
 
 
 def run_image_feature_point(hdfs_input, hdfs_output, feature, image_length=None, image_height=None, image_width=None, **kw):

@@ -37,7 +37,7 @@ class Mapper(object):
         xsubtiles = xtiles * _subtiles_per_tile_length
         ysubtiles = ytiles * _subtiles_per_tile_length
         self.min_dists = {}
-        self.dist = distpy.L2Sqr()
+        self.dist = lambda x, y: np.sum(np.abs(x - y))  # distpy.L2Sqr().dist
         for y in xrange(ysubtiles):
             for x in xrange(xsubtiles):
                 # Defines which tile the subtile is in
@@ -94,7 +94,7 @@ class Mapper(object):
         Returns:
             Float valued distance where smaller means they are closer
         """
-        return self.dist.dist(img0.ravel(), img1.ravel())
+        return self.dist(img0.ravel(), img1.ravel())
 
     def map(self, key, value):
         """
