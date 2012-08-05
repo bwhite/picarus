@@ -7,8 +7,8 @@ import numpy as np
 class Mapper(object):
 
     def __init__(self):
-        self.max_side = os.environ.get('MAX_SIDE')
-        self.filter_side = os.environ.get('FILTER_SIDE')
+        self.max_side = int(os.environ.get('MAX_SIDE'))
+        self.filter_side = int(os.environ.get('FILTER_SIDE'))
 
     def map(self, name, image_data):
         try:
