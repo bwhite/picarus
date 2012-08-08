@@ -90,7 +90,14 @@ Our projects (ordered by relevance)
 Hadoop Vision Jobs
 ------------------
 ..  autofunction:: picarus.vision.run_image_feature
+..  autofunction:: picarus.vision.run_image_feature_points
+..  autofunction:: picarus.vision.run_face_finder
+..  autofunction:: picarus.vision.run_image_clean
 ..  autofunction:: picarus.vision.run_video_keyframe
+..  autofunction:: picarus.vision.run_video_grep_frames
+..  autofunction:: picarus.vision.run_video_max_conf_frames
+..  autofunction:: picarus.vision.run_video_predict_frames
+..  autofunction:: picarus.vision.run_video_features
 ..  autofunction:: picarus.vision.run_predict_windows
 
 
@@ -110,9 +117,13 @@ Hadoop Cluster Jobs
 Hadoop Classification Jobs
 --------------------------
 ..  autofunction:: picarus.classify.run_classifier_labels
+..  autofunction:: picarus.classify.run_compute_kernels
+..  autofunction:: picarus.classify.run_assemble_kernels
+..  autofunction:: picarus.classify.run_multiple_kernel_combine
 ..  autofunction:: picarus.classify.run_train_classifier
 ..  autofunction:: picarus.classify.run_predict_classifier
 ..  autofunction:: picarus.classify.run_join_predictions
+..  autofunction:: picarus.classify.run_join_predictions_by_class
 ..  autofunction:: picarus.classify.run_thresh_predictions
 
 
