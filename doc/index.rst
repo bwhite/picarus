@@ -24,11 +24,12 @@ Current
 - Face detection: Find all faces.
 - Keyframe: Find all keyframes in a set of videos (e.g., shot transitions, fast motion).
 - Image Search: Build an image search index (initial code available)
-- Real-time REST api (initial code available)
+- Video classification: Determine if a video is one class or another (e.g., dancing, skateboarding)
+- Kernel computation: Compute large classifier kernels
 
 Private (we have the code but are working on releasing it for various reasons)
 
-- Video classification: Determine if a video is one class or another (e.g., dancing, skateboarding)
+- Real-time REST api (initial code available)
 - Object detection: Find the location of a specific object (e.g., car, person).  Faces are currently supported.
 - Segmentation/Pixel-level classification: Classify individual image pixels as belonging to a specific class.
 
@@ -86,50 +87,3 @@ Our projects (ordered by relevance)
 .. _static_server: https://github.com/bwhite/static_server
 .. _mturk_vision: https://github.com/bwhite/mturk_vision
 .. _pycassa_server: https://github.com/bwhite/pycassa_server
-
-Hadoop Vision Jobs
-------------------
-..  autofunction:: picarus.vision.run_image_feature
-..  autofunction:: picarus.vision.run_image_feature_points
-..  autofunction:: picarus.vision.run_face_finder
-..  autofunction:: picarus.vision.run_image_clean
-..  autofunction:: picarus.vision.run_video_keyframe
-..  autofunction:: picarus.vision.run_video_grep_frames
-..  autofunction:: picarus.vision.run_video_max_conf_frames
-..  autofunction:: picarus.vision.run_video_predict_frames
-..  autofunction:: picarus.vision.run_video_features
-..  autofunction:: picarus.vision.run_predict_windows
-
-
-Video Feature Computation
---------------------------
-.. image:: images/fig_video_pipeline.png
-
-
-Hadoop Cluster Jobs
--------------------
-..  autofunction:: picarus.cluster.run_whiten
-..  autofunction:: picarus.cluster.run_sample
-..  autofunction:: picarus.cluster.run_kmeans
-..  autofunction:: picarus.cluster.run_hac
-..  autofunction:: picarus.cluster.run_local_kmeans
-
-Hadoop Classification Jobs
---------------------------
-..  autofunction:: picarus.classify.run_classifier_labels
-..  autofunction:: picarus.classify.run_compute_kernels
-..  autofunction:: picarus.classify.run_assemble_kernels
-..  autofunction:: picarus.classify.run_multiple_kernel_combine
-..  autofunction:: picarus.classify.run_train_classifier
-..  autofunction:: picarus.classify.run_predict_classifier
-..  autofunction:: picarus.classify.run_join_predictions
-..  autofunction:: picarus.classify.run_join_predictions_by_class
-..  autofunction:: picarus.classify.run_thresh_predictions
-
-
-Hadoop IO
---------------------------
-..  autofunction:: picarus.io.load_local
-..  autofunction:: picarus.io.dump_local
-..  autofunction:: picarus.io.run_record_to_kv
-..  autofunction:: picarus.io.run_kv_to_record
