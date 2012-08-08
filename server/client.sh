@@ -1,1 +1,0 @@
-curl localhost:8080 -d '{"data": [{"type": "image", "binary_b64": "sdfskjdkfsjkjsd98sfskj"}], "query": {"nouns": ["car", "dog"]}, "version": {"major": 0, "minor": 0, "patch": 0}, "auth": {"epoch": "1323275714.431811", "nonce": "0.8786304041622558", "sid": "kjsdflkjsdfkjsdkf", "mac": "skdfskfjk"}}' -X PUT -H "Content-Type: application/json"
