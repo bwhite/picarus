@@ -13,9 +13,9 @@ class Mapper(object):
         # MIN_INTERVAL: The shortest period of time (sec) that keyframes can be output.  Anything faster
         # than this is not output as a keyframe. (default: 3)
         # FRAME_SKIP: Amount of time between frames considered (converted after reading FPS from video)
-        self.kf = picarus._keyframers.select_keyframer(os.environ.get('KEYFRAMER', 'uniform'))(min_interval=float(os.environ.get('MIN_INTERVAL', 10)))
+        self.kf = picarus._keyframers.select_keyframer(os.environ.get('KEYFRAMER', 'uniform'))(min_interval=float(os.environ.get('MIN_INTERVAL', 0)))
         self.frame_skip = float(os.environ.get('FRAME_SKIP', 0.))
-        self.max_time = float(os.environ.get('MAX_TIME', 30))
+        self.max_time = float(os.environ.get('MAX_TIME', 'inf'))
 
     def map(self, event_filename, video_data):
         """
@@ -42,8 +42,7 @@ class Mapper(object):
             prev_frame_time = None
             prev_frame_num = None
             prev_frame = None
-            #try:
-            if 1:
+            try:
                 for (frame_num, frame_time, frame), iskeyframe in self.kf(viderator.frame_iter(fp.name,
                                                                                                frame_skip=self.frame_skip,
                                                                                                frozen=True)):
@@ -58,9 +57,9 @@ class Mapper(object):
                                                'frame': imfeat.image_tostring(frame, 'JPEG')}
                     prev_frame_num = frame_num
                     prev_frame = frame
-            #except Exception, e:
-            #    print(e)
-            #    hadoopy.counter('VIDEO_ERROR', 'FFMPEGCantParse')
+            except Exception, e:
+                print(e)
+                hadoopy.counter('VIDEO_ERROR', 'FFMPEGCantParse')
 
 
 if __name__ == '__main__':
