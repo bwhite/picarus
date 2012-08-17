@@ -84,7 +84,7 @@ def run_video_keyframe(hdfs_input, hdfs_output, frame_skip=1, min_interval=5, ma
     picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
                            cmdenvs=['MIN_INTERVAL=%f' % min_interval,
                                     'MAX_INTERVAL=%f' % max_interval,
-                                    'FRAME_SKIP=%f' % frame_skip,
+                                    'FRAME_SKIP=%d' % frame_skip,
                                     'KEYFRAMER=%s' % keyframer,
                                     'MAX_TIME=%f' % max_time],
                            jobconfs=['mapred.child.java.opts=-Xmx768M',
