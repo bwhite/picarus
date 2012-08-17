@@ -79,7 +79,7 @@ def run_predict_windows(hdfs_input, hdfs_classifier_input, feature, hdfs_output,
                            dummy_arg=fp)
 
 
-def run_video_keyframe(hdfs_input, hdfs_output, frame_skip=0., min_interval=5, max_interval=float('inf'), max_time=float('inf'), keyframer='uniform', **kw):
+def run_video_keyframe(hdfs_input, hdfs_output, frame_skip=1, min_interval=5, max_interval=float('inf'), max_time=float('inf'), keyframer='uniform', **kw):
     fp = viderator.freeze_ffmpeg()
     picarus._launch_frozen(hdfs_input, hdfs_output + '/keyframe', _lf('video_keyframe.py'),
                            cmdenvs=['MIN_INTERVAL=%f' % min_interval,

@@ -14,7 +14,7 @@ class Mapper(object):
         # than this is not output as a keyframe. (default: 3)
         # FRAME_SKIP: Amount of time between frames considered (converted after reading FPS from video)
         self.kf = picarus._keyframers.select_keyframer(os.environ.get('KEYFRAMER', 'uniform'))(min_interval=float(os.environ.get('MIN_INTERVAL', 0)))
-        self.frame_skip = float(os.environ.get('FRAME_SKIP', 0.))
+        self.frame_skip = int(os.environ.get('FRAME_SKIP', 1))
         self.max_time = float(os.environ.get('MAX_TIME', 'inf'))
 
     def map(self, event_filename, video_data):
