@@ -1,4 +1,3 @@
-import classipy
 import pyram
 import cPickle as pickle
 import hadoopy
@@ -14,6 +13,7 @@ import snappy
 
 
 def train(classifier_name, classifier_extra, label_values):
+    import classipy
     label_values = list(label_values)
     hadoopy.counter('FeatureShape', str(len(label_values[0][1])))
     if classifier_name == 'svmlinear':
