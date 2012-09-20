@@ -5,6 +5,7 @@ import os
 import sys
 import numpy as np
 import json
+import base64
 import picarus._features as features
 from picarus._importer import call_import
 
@@ -15,7 +16,7 @@ class Mapper(object):
         try:
             self._feat = features.select_feature(os.environ['FEATURE'])
         except KeyError:
-            self._feat = call_import(json.loads(os.environ['FEATURE']))
+            self._feat = call_import(json.loads(base64.b64decode(os.environ['FEATURE'])))
 
     def map(self, name, image_or_data):
         if isinstance(image_or_data, str):
