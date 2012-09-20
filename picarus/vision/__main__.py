@@ -8,6 +8,7 @@ import imfeat
 import cPickle as pickle
 import base64
 import zlib
+import json
 from picarus import _file_parse as file_parse
 
 
@@ -18,6 +19,8 @@ def _lf(fn):
 
 def run_image_feature(hdfs_input, hdfs_output, feature, files=(), **kw):
     files = list(files)
+    if isinstance(feature, dict):
+        feature = json.dumps(feature)
     # This allows for replacing the default models
     cur_files = set([os.path.basename(x) for x in files])
     for x in [_lf('data/hog_8_2_clusters.pkl'), _lf('data/eigenfaces_lfw_cropped.pkl')] + glob.glob(imfeat.__path__[0] + "/_object_bank/data/*"):
