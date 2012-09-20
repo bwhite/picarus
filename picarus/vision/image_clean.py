@@ -10,7 +10,7 @@ class Mapper(object):
         self.max_side = os.environ.get('MAX_SIDE')
         if self.max_side is not None:
             self.max_side = int(self.max_side)
-        self.filter_side = int(os.environ.get('FILTER_SIDE'))
+        self.filter_side = os.environ.get('FILTER_SIDE')
         if self.filter_side is not None:
             self.filter_side = int(self.filter_side)
 
