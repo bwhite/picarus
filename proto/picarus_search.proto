@@ -1,0 +1,24 @@
+message SearchIndex {
+  required string name = 1;
+  enum SerFormat {
+    JSON_IMPORT = 0;
+    PICKLE = 1;
+  }
+  optional SerFormat feature_format = 2 [default = JSON_IMPORT];
+  required bytes feature = 3;
+  optional SerFormat hash_format = 4 [default = JSON_IMPORT];
+  required bytes hash = 5;
+  optional SerFormat metric_format = 6 [default = JSON_IMPORT];
+  required bytes metric = 7;
+  required int32 feature_dims = 8;
+  required int32 id_bytes = 9;
+  required int32 hash_bytes = 10;
+  enum IndexFormat {
+    PLANAR_HASH_ID = 0;
+  }
+  optional IndexFormat index_format = 11 [default = PLANAR_HASH_ID];
+  optional double creation_time = 12;
+  optional int32 part_num = 13;
+  optional int32 num_parts = 14;
+  optional bytes index = 15;
+}
