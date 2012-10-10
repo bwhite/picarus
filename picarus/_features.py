@@ -68,9 +68,11 @@ def _eigenface():
     return pickle.load(open('eigenfaces_lfw_cropped.pkl'))
 
 
-def _bovw_hog():
+def _bovw_hog(clusters=None):
+    if clusters is None:
+        clusters = pickle.load(open('hog_8_2_clusters.pkl'))
+    clusters = np.asfarray(clusters)
     hog = imfeat.HOGLatent(8, 2)
-    clusters = pickle.load(open('hog_8_2_clusters.pkl'))
     return imfeat.BoVW(lambda x: hog.make_bow_mask(x, clusters), clusters.shape[0], 3)
 
 
