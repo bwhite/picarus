@@ -1,4 +1,5 @@
 import zmq
+from _picarus_search_pb2 import SearchIndex
 
 class InternalServer(object):
 
