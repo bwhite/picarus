@@ -25,8 +25,6 @@ class Test(unittest.TestCase):
         raw_size += len(si.metric)
         si.feature_dims = 10
         raw_size += 4
-        si.id_bytes = 4
-        raw_size += 4
         si.hash_bytes = 8
         raw_size += 4
         si.index = 'sdfsdfsdf'
