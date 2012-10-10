@@ -20,16 +20,21 @@ def _lf(fn):
 def run_image_feature(hdfs_input, hdfs_output, feature, files=(), **kw):
     files = list(files)
     if isinstance(feature, dict):
-        feature = base64.b64encode(json.dumps(feature))
+        feature = zlib.compress(json.dumps(feature), 9)
+    feature_fp = tempfile.NamedTemporaryFile()
+    feature_fp.write(feature)
+    feature_fp.flush()
     # This allows for replacing the default models
     cur_files = set([os.path.basename(x) for x in files])
     for x in [_lf('data/hog_8_2_clusters.pkl'), _lf('data/eigenfaces_lfw_cropped.pkl')] + glob.glob(imfeat.__path__[0] + "/_object_bank/data/*"):
         if os.path.basename(x) not in cur_files:
             files.append(x)
             cur_files.add(x)
+    files.append(feature_fp.name)
     picarus._launch_frozen(hdfs_input, hdfs_output, _lf('feature_compute.py'),
-                           cmdenvs=['FEATURE=%s' % feature],
-                           files=files, **kw)
+                           cmdenvs=['FEATURE=%s' % os.path.basename(feature_fp.name)],
+                           files=files,
+                           dummy_arg=feature_fp, **kw)
 
 
 def run_image_clean(hdfs_input, hdfs_output, max_side=None, filter_side=None, **kw):

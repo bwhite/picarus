@@ -21,13 +21,7 @@ class Test(unittest.TestCase):
         raw_size += len(si.feature)
         si.hash = '{"name": "Hash"}'
         raw_size += len(si.hash)
-        si.metric = '{"name": "Metric"}'
-        raw_size += len(si.metric)
-        si.feature_dims = 10
-        raw_size += 4
-        si.hash_bytes = 8
-        raw_size += 4
-        si.index = 'sdfsdfsdf'
+        si.index = '{"name": "Index"}'
         raw_size += len(si.index)
         print('PB:[%d] Raw:[%d]' % (len(si.SerializeToString()), raw_size))
 

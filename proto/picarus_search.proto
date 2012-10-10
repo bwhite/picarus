@@ -5,20 +5,13 @@ message SearchIndex {
     PICKLE = 1;
   }
   optional SerFormat feature_format = 2 [default = JSON_IMPORT];
-  optional bytes feature = 3;
-  optional SerFormat hash_format = 4 [default = JSON_IMPORT];
-  optional bytes hash = 5;
-  optional SerFormat metric_format = 6 [default = JSON_IMPORT];
-  optional bytes metric = 7;
-  optional int32 feature_dims = 8;
-  optional int32 hash_bytes = 9;
-  enum IndexFormat {
-    PLANAR_HASH = 0;
-  }
-  optional IndexFormat index_format = 10 [default = PLANAR_HASH];
-  optional double creation_time = 11;
-  optional int32 part_num = 12;
-  optional int32 num_parts = 13;
-  optional bytes index = 14;
-  repeated bytes metadata = 15;
+  optional SerFormat hash_format = 3 [default = JSON_IMPORT];
+  optional SerFormat index_format = 4 [default = JSON_IMPORT];
+  optional double creation_time = 5;
+  optional int32 part_num = 6;
+  optional int32 num_parts = 7;
+  optional bytes feature = 8;
+  optional bytes hash = 9;
+  optional bytes index = 10;
+  repeated bytes metadata = 11;
 }
