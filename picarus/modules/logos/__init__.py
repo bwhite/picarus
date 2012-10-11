@@ -14,10 +14,20 @@ def _lf(fn):
 
 class LogoProcessor(picarus.modules.HashRetrievalClassifier):
 
-    def __init__(self, hash_bits=None):
+    def __init__(self):
         self.max_side = 160
-        features = []
-        features.append({'name': 'picarus._features._bovw_hog', 'kw': {'clusters': pickle.load(open('hog_8_2_clusters.pkl')).tolist()}})
-        features.append({'name': 'imfeat.SpatialHistogram', 'args': [4, 4], 'kw': {'mode': 'lab', 'num_bins': 4}})
-        self.feature_dict = {'name': 'imfeat.MetaFeature', 'args': features}
+        self._feature_dict = None
         super(LogoProcessor, self).__init__()
+
+    @property
+    def feature_dict(self):
+        if self._feature_dict is None:
+            features = []
+            features.append({'name': 'picarus._features._bovw_hog', 'kw': {'clusters': pickle.load(open('hog_8_2_clusters.pkl')).tolist()}})
+            features.append({'name': 'imfeat.SpatialHistogram', 'args': [4, 4], 'kw': {'mode': 'lab', 'num_bins': 4}})
+            self._feature_dict = {'name': 'imfeat.MetaFeature', 'args': features}
+        return self._feature_dict
+
+    @feature_dict.setter
+    def feature_dict(self, value):
+        self._feature_dict = value

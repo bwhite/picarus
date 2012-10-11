@@ -7,8 +7,6 @@
 
 /db/<table>/<col>?vision=scene/indoor
 
-
-
 /see/
 /see/search/logo
 /see/detect/
@@ -30,6 +28,7 @@ import argparse
 import random
 import base64
 import imfeat
+import hadoopy_hbase
 from picarus.modules.logos import LogoProcessor
 bottle.debug(True)
 
@@ -73,9 +72,9 @@ def echo(value):
     return {'message': value}
 
 
-@bottle.put('/db/:table/:row/:col')
-@bottle.delete('/db/:table/:row/:col')
-@bottle.get('/db/:table/:row/:col')
+@bottle.put('/db/<table:re:[^/]*>/<row:re:[^/]*>/<col:re:[^/]*>')
+@bottle.delete('/db/<table:re:[^/]*>/<row:re:[^/]*>/<col:re:[^/]*>')
+@bottle.get('/db/<table:re:[^/]*>/<row:re:[^/]*>/<col:re:[^/]*>')
 @mimerender.map_exceptions(mapping=((ValueError, '500 Internal Server Error'),),
                            xml=render_xml_exception,
                            json=render_json_exception)
@@ -88,16 +87,49 @@ def data(table, row, col):
     # TODO Check authentication
     method = bottle.request.method.upper()
     print_request()
+    if table != 'testtable':
+        raise ValueError('Only testtable allowed for now!')
     if method == 'GET':
-        return {'value': DB[table][row][col]}
+        if table and row and col:
+            return {'data': THRIFT.get(table, row, col)}
+        elif table and row:
+            result = THRIFT.getRow(table, row)
+            if not result:
+                raise ValueError('Row not found!')
+            return {'data': dict(result[0].columns)}
     elif method == 'PUT':
-        DB[table].setdefault(row, {})[col] = bottle.request.files['data'].file.read()
+        mutations = []
+        if col:
+            if 'data' in bottle.request.files:
+                mutations.append(hadoopy_hbase.Mutation(column=col, value=bottle.request.files['data'].file.read()))
+            elif 'data' in bottle.request.params:
+                mutations.append(hadoopy_hbase.Mutation(column=col, value=bottle.request.params['data']))
+            else:
+                raise ValueError('"data" must be specified!')
+        else:
+            for x in bottle.request.files:
+                mutations.append(hadoopy_hbase.Mutation(column=x, value=bottle.request.files[x].file.read()))
+            for x in bottle.request.params:
+                mutations.append(hadoopy_hbase.Mutation(column=x, value=bottle.request.files[x].file.read()))
+            if not mutations:
+                raise ValueError('No columns specified!')
+        THRIFT.mutateRow(table, row, mutations)
         return {}
     elif method == 'DELETE':
+        mutations = []
+        if col:
+            mutations.append(hadoopy_hbase.Mutation(column=col, isDelete=True))
+        else:
+            for x in bottle.request.files:
+                mutations.append(hadoopy_hbase.Mutation(column=x, isDelete=True))
+            for x in bottle.request.params:
+                mutations.append(hadoopy_hbase.Mutation(column=x, isDelete=True))
+            if not mutations:
+                raise ValueError('No columns specified!')
+        THRIFT.mutateRow(table, row, mutations)
         return {}
     else:
         raise ValueError
-    return {'message': [table, row, col]}
 
 #@mimerender.map_exceptions(mapping=((ValueError, '500 Internal Server Error'),),
 #                           xml=render_xml_exception,
@@ -129,7 +161,7 @@ def see_search():
 
 FEATURE_FUN = [imfeat.GIST, imfeat.Histogram, imfeat.Moments, imfeat.TinyImage, imfeat.GradientHistogram]
 FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
-SEARCH_FUN = {'see/search/logos': LogoProcessor().load(open('index.pb').read())}
+SEARCH_FUN = {'see/search/logos': LogoProcessor().load(open('logo_index.pb').read())}
 
 def _action_handle(function, params, files):
     try:
@@ -161,4 +193,5 @@ if __name__ == "__main__":
     parser.add_argument('--thrift_server', default='localhost')
     parser.add_argument('--thrift_port', default='9090')
     ARGS = parser.parse_args()
+    THRIFT = hadoopy_hbase.connect(ARGS.thrift_server, ARGS.thrift_port)
     bottle.run(host='0.0.0.0', port=ARGS.port, server='gevent')
