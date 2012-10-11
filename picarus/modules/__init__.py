@@ -112,4 +112,5 @@ class HashRetrievalClassifier(MultiClassClassifier):
         print('FeatShape[%s]' % str(feat.shape))
         h = self.hasher(feat).ravel()
         print('HashShape[%s]' % str(h.shape))
-        return [{'entity': x} for x in self.metadata[self.index.search_hash_knn(h, k)].tolist()]
+        entity_files = [json.loads(x) for x in self.metadata[self.index.search_hash_knn(h, k)].tolist()]
+        return [{'entity': x, 'file': y} for x, y in entity_files]
