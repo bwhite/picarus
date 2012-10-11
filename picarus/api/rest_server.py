@@ -30,7 +30,7 @@ import argparse
 import random
 import base64
 import imfeat
-
+from picarus.modules.logos import LogoProcessor
 bottle.debug(True)
 
 
