@@ -1,7 +1,7 @@
 #!usr/bin/env python
 import hadoopy
 import StringIO
-import Image
+from PIL import Image
 import os
 import numpy as np
 import picarus

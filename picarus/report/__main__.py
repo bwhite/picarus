@@ -2,7 +2,7 @@ import heapq
 import hadoopy
 import os
 import cStringIO as StringIO
-import Image
+from PIL import Image
 import re
 import random
 from picarus import _file_parse as file_parse

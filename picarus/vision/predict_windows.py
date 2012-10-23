@@ -3,7 +3,7 @@ import picarus._file_parse as file_parse
 import os
 import picarus._classifiers as classifiers
 import imfeat
-import Image
+from PIL import Image
 import cStringIO as StringIO
 from picarus import _features as features
 from feature_compute import _parse_height_width

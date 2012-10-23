@@ -25,7 +25,7 @@ __license__ = 'GPL V3'
 from picarus.vision import face_feature
 import imfeat
 import cv
-import Image
+from PIL import Image
 import random
 import numpy as np
 import lfwcrop_data

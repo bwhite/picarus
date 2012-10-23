@@ -20,7 +20,7 @@ __license__ = 'GPL V3'
 import hadoopy
 import os
 import imfeat
-import Image
+from PIL import Image
 import cStringIO as StringIO
 import glob
 import shutil

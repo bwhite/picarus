@@ -10,7 +10,7 @@ import hadoopy
 import hadoopy_helper
 import imfeat
 import vidfeat
-import Image
+from PIL import Image
 import sklearn.svm
 import picarus.api
 import json

@@ -2,7 +2,7 @@
 import hadoopy
 import tempfile
 import cStringIO as StringIO
-import Image
+from PIL import Image
 import viderator
 import keyframe
 import imfeat

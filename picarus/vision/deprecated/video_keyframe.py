@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import StringIO
 import hashlib
-import Image
+from PIL import Image
 import keyframe
 import tempfile
 import hadoopy

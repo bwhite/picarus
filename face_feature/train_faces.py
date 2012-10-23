@@ -20,7 +20,7 @@ __author__ = 'Vlad I. Morariu <morariu@umd.edu>'
 __license__ = 'GPL V3'
 
 import hadoopy
-import Image
+from PIL import Image
 import imfeat
 import cStringIO as StringIO
 import cv
