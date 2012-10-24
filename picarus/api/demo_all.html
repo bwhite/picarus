@@ -82,6 +82,8 @@
 		<div id="results_gist" class="result_box"></div>
 		<h2>PUT /see/search/logos</h2>
 		<div id="results_logos" class="result_box"></div>
+		<h2>PUT /see/search/scenes</h2>
+		<div id="results_scenes" class="result_box"></div>
 		<h2>PUT /see/texton</h2>
 		<div id="results_texton" class="result_box"></div>
 		<h2>PUT /see/faces</h2>
@@ -155,6 +157,7 @@
           update_bar();
           picarus_api_test("/see/feature/GIST", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_gist"));
           picarus_api_test("/see/search/logos", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_logos"));
+          picarus_api_test("/see/search/scenes", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_scenes"));
           function success_texton_argmax(xhr) {
               $('#texton_argmax').attr('src', 'data:image/png;base64,' + JSON.parse(xhr.responseText)['argmax_pngb64']);
           }

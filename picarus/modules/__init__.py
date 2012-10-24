@@ -52,6 +52,7 @@ class HashRetrievalClassifier(MultiClassClassifier):
 
     def __init__(self, required_files=()):
         self.required_files = required_files
+        self.max_side = 320
 
     def _cluster_bovw(self, images, points_per_image=100, num_clusters=256):
         hog = imfeat.HOGLatent(8, 2)

@@ -32,7 +32,7 @@ import hadoopy_hbase
 import cPickle as pickle
 import numpy as np
 import cv2
-from picarus.modules.logos import LogoProcessor
+from picarus.modules import HashRetrievalClassifier
 bottle.debug(True)
 
 
@@ -178,7 +178,8 @@ def see(request):
 
 FEATURE_FUN = [imfeat.GIST, imfeat.Histogram, imfeat.Moments, imfeat.TinyImage, imfeat.GradientHistogram]
 FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
-SEARCH_FUN = {'see/search/logos': LogoProcessor().load(open('logo_index.pb').read())}
+SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
+              'see/search/scene': HashRetrievalClassifier().load(open('sun397_index.pb').read())}
 TP = pickle.load(open('tree_ser-texton.pkl'))
 TP2 = pickle.load(open('tree_ser-integral.pkl'))
 TEXTON = imfeat.TextonBase(tp=TP, tp2=TP2, num_classes=9)

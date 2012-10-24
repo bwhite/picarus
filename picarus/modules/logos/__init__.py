@@ -15,9 +15,9 @@ def _lf(fn):
 class LogoProcessor(picarus.modules.HashRetrievalClassifier):
 
     def __init__(self):
+        super(LogoProcessor, self).__init__()
         self.max_side = 160
         self._feature_dict = None
-        super(LogoProcessor, self).__init__()
 
     @property
     def feature_dict(self):
