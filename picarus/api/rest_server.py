@@ -28,11 +28,13 @@ import argparse
 import random
 import base64
 import imfeat
+import redis
 import hadoopy_hbase
 import cPickle as pickle
 import numpy as np
 import cv2
 from picarus.modules import HashRetrievalClassifier
+from users import Users
 bottle.debug(True)
 
 
@@ -56,9 +58,11 @@ def print_request():
     for k in ks:
         print('%s: %s' % (k, str(dict(getattr(bottle.request, k)))))
 
-@bottle.get('/echo/:value')
-@bottle.put('/echo/:value')
-@bottle.post('/echo/:value')
+USERS = Users(redis.StrictRedis(port=6380, db=0))
+print USERS.add_user('brandyn')
+
+
+@bottle.get('/stats')
 @mimerender.map_exceptions(mapping=((ValueError, '500 Internal Server Error'),),
                            xml=render_xml_exception,
                            json=render_json_exception)
@@ -67,10 +71,9 @@ def print_request():
             xml=render_xml,
             json=render_json,
             txt=render_txt)
-def echo(value):
-    print_request()
-    return {'message': value}
-
+@USERS.auth(True)
+def stats(auth_user):
+    return auth_user.stats()
 
 
 # Working
@@ -96,6 +99,7 @@ def echo(value):
             xml=render_xml,
             json=render_json,
             txt=render_txt)
+@USERS.auth()
 def data(table, row, col):
     # TODO Check authentication
     method = bottle.request.method.upper()
@@ -166,6 +170,7 @@ def data(table, row, col):
             xml=render_xml,
             json=render_json,
             txt=render_txt)
+@USERS.auth()
 def see(request):
     print_request()
     try:
@@ -179,7 +184,7 @@ def see(request):
 FEATURE_FUN = [imfeat.GIST, imfeat.Histogram, imfeat.Moments, imfeat.TinyImage, imfeat.GradientHistogram]
 FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
 SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
-              'see/search/scene': HashRetrievalClassifier().load(open('sun397_index.pb').read())}
+              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/sun397_index.pb').read())}
 TP = pickle.load(open('tree_ser-texton.pkl'))
 TP2 = pickle.load(open('tree_ser-integral.pkl'))
 TEXTON = imfeat.TextonBase(tp=TP, tp2=TP2, num_classes=9)
@@ -187,10 +192,12 @@ CLASS_COLORS = json.load(open('class_colors.js'))
 COLORS_BGR = np.array([x[1]['color'][::-1] for x in sorted(CLASS_COLORS.items(), key=lambda x: x[1]['mask_num'])], dtype=np.uint8)
 FACES = imfeat.Faces()
 
+
 def _action_handle(function, params, image):
     print('Action[%s]' % function)
     try:
         ff = FEATURE_FUN[function]
+        image = imfeat.resize_image_max_side(image, 320)  # TODO: Expose this
         return {'feature': ff(**params)(image).tolist()}
     except KeyError:
         pass

@@ -88,6 +88,8 @@
 		<div id="results_texton" class="result_box"></div>
 		<h2>PUT /see/faces</h2>
 		<div id="results_faces" class="result_box"></div>
+		<h2>GET /stats</h2>
+		<div id="results_stats" class="result_box"></div>
               </div>
 	      </div>
 	    </div>
@@ -131,12 +133,14 @@
           if (typeof success == 'undefined' ) success = function() {};
           if (typeof fail == 'undefined' ) fail = function() {};
           var data = new FormData();
-          jQuery.each($('#demoimage')[0].files, function(i, file) {
-              data.append('image', file);
-          });
-          jQuery.each(data_dict, function(k, v) {
-              data.append(k, v);
-          });
+          if (data_dict != null) {
+              jQuery.each($('#demoimage')[0].files, function(i, file) {
+                  data.append('image', file);
+              });
+              jQuery.each(data_dict, function(k, v) {
+                  data.append(k, v);
+              });
+          }
           var request = $.ajax({
           type: method,
           url: url,
@@ -163,6 +167,7 @@
           }
           picarus_api_test("/see/texton", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_texton"), success_texton_argmax);
           picarus_api_test("/see/faces", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_faces"));
+          picarus_api_test("/stats", "GET", null, $('#demouser').val(), $('#demopass').val(), $("#results_stats"));
       }
       function reset_bar() {
           progress_total = $('.result_box').length;

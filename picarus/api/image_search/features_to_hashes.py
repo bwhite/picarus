@@ -31,7 +31,7 @@ class Mapper(HBaseMapper):
 
     def _map(self, row, feature_binary):
         try:
-            feature = np.fromstring(feature_binary, dtype=np.uint8)
+            feature = np.fromstring(feature_binary, dtype=np.float64)
         except:
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
         else:

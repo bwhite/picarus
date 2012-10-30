@@ -5,16 +5,21 @@ import image_search
 import numpy as np
 import cPickle as pickle
 import picarus.api
+import json
+import base64
 
 
 class Mapper(object):
 
     def __init__(self):
         self._hbase_input_column = os.environ['HBASE_INPUT_COLUMN'].split(':')
+        self._hbase_class_column = os.environ['HBASE_CLASS_COLUMN'].split(':')
         self._hbase_output_row = os.environ['HBASE_OUTPUT_ROW']
 
     def map(self, row, columns):
-        yield self._hbase_output_row, (row, columns[self._hbase_input_column[0]][self._hbase_input_column[1]])
+        cur_hash = columns[self._hbase_input_column[0]][self._hbase_input_column[1]]
+        cur_class = columns[self._hbase_class_column[0]][self._hbase_class_column[1]]
+        yield self._hbase_output_row, (json.dumps([cur_class, base64.b64encode(row)]), cur_hash)
 
 
 class Reducer(object):
@@ -34,4 +39,4 @@ class Reducer(object):
         self._hbase[row] = si.SerializeToString()
 
 if __name__ == '__main__':
-    hadoopy.run(Mapper, Reducer, required_cmdenvs=['HBASE_INPUT_COLUMN', 'HBASE_OUTPUT_ROW', 'HBASE_OUTPUT_TABLE', 'HBASE_OUTPUT_COLUMN', 'INDEX_FN'])
+    hadoopy.run(Mapper, Reducer, required_cmdenvs=['HBASE_INPUT_COLUMN', 'HBASE_CLASS_COLUMN', 'HBASE_OUTPUT_ROW', 'HBASE_OUTPUT_TABLE', 'HBASE_OUTPUT_COLUMN', 'INDEX_FN'])
