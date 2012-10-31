@@ -111,7 +111,6 @@ class HashRetrievalClassifier(MultiClassClassifier):
             List of {'name': name} in
             descending confidence order.
         """
-        print('ProjShape[%s]' % str(self.hasher.proj.shape))
         feat = self.feature(image)
         print('FeatShape[%s]' % str(feat.shape))
         h = self.hasher(feat).ravel()

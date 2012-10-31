@@ -214,7 +214,7 @@ FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
 print('search')
 SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
               'see/search/scenes': HashRetrievalClassifier().load(open('image_search/sun397_index.pb').read()),
-              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_mask_index.pb').read())}
+              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_mask_index.pb').read(), load_feature=False)}
 TP = pickle.load(open('tree_ser-texton.pkl'))
 TP2 = pickle.load(open('tree_ser-integral.pkl'))
 TEXTON = imfeat.TextonBase(tp=TP, tp2=TP2, num_classes=9)
