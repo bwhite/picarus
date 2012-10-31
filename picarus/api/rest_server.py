@@ -260,6 +260,22 @@ def _action_handle(function, params, image):
     return {}
 
 
+@bottle.post('/image')
+@mimerender(default='json',
+            html=render_html,
+            xml=render_xml,
+            json=render_json,
+            txt=render_txt)
+@USERS.auth()
+def image():
+    print_request()
+    # TODO(Cleanup)
+    image, params = _get_image()
+    image = imfeat.resize_image_max_side(image, 320)
+    image_string = imfeat.image_tostring(image, 'jpg')
+    return {'jpgb64': base64.b64encode(image_string)}
+
+
 @bottle.get('/')
 def index():
     return open('demo_all.html').read()

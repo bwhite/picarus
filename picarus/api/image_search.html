@@ -69,6 +69,9 @@
 		  <div class="bar bar-danger" style="width: 0%;" id="pbar-danger"></div>
 		</div>
 		<div>
+		  <img id="input_image"></img>
+		</div>
+		<div>
 		  <img id="texton_argmax"></img>
 		</div>
 	      </div>
@@ -188,19 +191,40 @@
           if ($('#demosave').is(':checked')) {
               store_cookie();
           }
-          function success_search(xhr) {
-          $('#results_search').html('');
+          function success_scene_search(xhr) {
+          $('#results_search_scenes').html('');
           $.each(JSON.parse(xhr.responseText)['results'], function (i, result) {
-              var cur_id = 'search_' + String(i);
+              var cur_id = 'search_scenes_' + String(i);
               function success_image(xhr) {
                   $('#' + cur_id).attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['data']);
               }
               var cur_img = $('<img>').attr('id', cur_id).attr('title', result['entity']);
-              $('#results_search').append(cur_img);
+              $('#results_search_scenes').append(cur_img);
               picarus_api_test("/db/images/" + b64_urlsafe(result.file) + "/ZGF0YTppbWFnZV83NXNx", "GET", null, $('#demouser').val(), $('#demopass').val(), $("#nothing"), success_image);
           });
           }
-          picarus_api_test("/see/search/masks", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_scenes"), success_search);    
+          function success_masks_search(xhr) {
+          $('#results_search_masks').html('');
+          $.each(JSON.parse(xhr.responseText)['results'], function (i, result) {
+              var cur_id = 'search_masks_' + String(i);
+              function success_image(xhr) {
+                  $('#' + cur_id).attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['data']);
+              }
+              var cur_img = $('<img>').attr('id', cur_id).attr('title', result['entity']);
+              $('#results_search_masks').append(cur_img);
+              picarus_api_test("/db/images/" + b64_urlsafe(result.file) + "/ZGF0YTppbWFnZV83NXNx", "GET", null, $('#demouser').val(), $('#demopass').val(), $("#nothing"), success_image);
+          });
+          }
+          picarus_api_test("/see/search/masks", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_masks"), success_masks_search);
+          picarus_api_test("/see/search/scenes", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_scenes"), success_scene_search);
+          function success_texton_argmax(xhr) {
+              $('#texton_argmax').attr('src', 'data:image/png;base64,' + JSON.parse(xhr.responseText)['argmax_pngb64']);
+          }
+          picarus_api_test("/see/texton", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_texton"), success_texton_argmax);
+          function success_input_image(xhr) {
+              $('#input_image').attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['jpgb64']);
+          }
+          picarus_api_test("/image", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_texton"), success_input_image);
       }
       function reset_bar() {
           progress_total = $('.result_box').length;
