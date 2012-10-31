@@ -218,7 +218,7 @@ SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_inde
 TP = pickle.load(open('tree_ser-texton.pkl'))
 TP2 = pickle.load(open('tree_ser-integral.pkl'))
 TEXTON = imfeat.TextonBase(tp=TP, tp2=TP2, num_classes=9)
-SEARCH_FUN['see/search/masks'].feature = lambda x: TEXTON._predict(x)[5]
+SEARCH_FUN['see/search/masks'].feature = lambda x: [TEXTON._predict(x)[5]]
 
 print('hasher')
 hasher = SEARCH_FUN['see/search/masks'].hasher

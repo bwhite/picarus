@@ -112,7 +112,6 @@ class HashRetrievalClassifier(MultiClassClassifier):
             descending confidence order.
         """
         feat = self.feature(image)
-        print('FeatShape[%s]' % str(feat.shape))
         h = self.hasher(feat).ravel()
         print('HashShape[%s]' % str(h.shape))
         entity_files = [json.loads(x) for x in self.metadata[self.index.search_hash_knn(h, k)].tolist()]
