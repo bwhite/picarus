@@ -33,18 +33,31 @@ import hadoopy_hbase
 import cPickle as pickle
 import numpy as np
 import cv2
-from picarus.modules import HashRetrievalClassifier
+import gevent
 from users import Users
-bottle.debug(True)
+from picarus.modules import HashRetrievalClassifier
 
+if __name__ == "__main__":
+    bottle.debug(True)
+    mimerender = mimerender.BottleMimeRender()
+    render_xml = lambda message: '<message>%s</message>'%message
+    render_json = lambda **args: json.dumps(args)
+    render_html = lambda message: '<html><body>%s</body></html>'%message
+    render_txt = lambda message: message
+    render_xml_exception = lambda exception: '<exception>%s</exception>' % exception.message
+    render_json_exception = lambda exception: json.dumps({'exception': exception.message})
 
-mimerender = mimerender.BottleMimeRender()
-render_xml = lambda message: '<message>%s</message>'%message
-render_json = lambda **args: json.dumps(args)
-render_html = lambda message: '<html><body>%s</body></html>'%message
-render_txt = lambda message: message
-render_xml_exception = lambda exception: '<exception>%s</exception>' % exception.message
-render_json_exception = lambda exception: json.dumps({'exception': exception.message})
+    parser = argparse.ArgumentParser(description='Run Picarus REST Frontend')
+    parser.add_argument('--redis_host', help='Redis Host', default='localhost')
+    parser.add_argument('--redis_port', type=int, help='Redis Port', default=6380)
+    parser.add_argument('--redis_db', type=int, help='Redis DB', default=0)
+    parser.add_argument('--port', default='15000')
+    parser.add_argument('--thrift_server', default='localhost')
+    parser.add_argument('--thrift_port', default='9090')
+    ARGS = parser.parse_args()
+    THRIFT = hadoopy_hbase.connect(ARGS.thrift_server, ARGS.thrift_port)
+    THRIFT_LOCK = gevent.coros.RLock()
+    USERS = Users(ARGS.redis_host, ARGS.redis_port, ARGS.redis_db)
 
 
 def print_request():
@@ -57,9 +70,6 @@ def print_request():
     ks = ['forms', 'params', 'query', 'cookies', 'headers']
     for k in ks:
         print('%s: %s' % (k, str(dict(getattr(bottle.request, k)))))
-
-USERS = Users(redis.StrictRedis(port=6380, db=0))
-print USERS.add_user('brandyn')
 
 
 @bottle.get('/stats')
@@ -101,22 +111,32 @@ def stats(auth_user):
             txt=render_txt)
 @USERS.auth()
 def data(table, row, col):
-    # TODO Check authentication
+    try:
+        THRIFT_LOCK.acquire()
+        return _data(table, row, col)
+    finally:
+        THRIFT_LOCK.release()
+
+
+def _data(table, row, col):
+    row = base64.urlsafe_b64decode(row)
+    col = base64.urlsafe_b64decode(col)
     method = bottle.request.method.upper()
     print_request()
-    if table != 'testtable':
-        raise ValueError('Only testtable allowed for now!')
+    # TODO Check authentication per table
+    if table != 'images':
+        raise ValueError('Only images allowed for now!')
     if method == 'GET':
         if table and row and col:
             result = THRIFT.get(table, row, col)
             if not result:
                 raise ValueError('Cell not found!')
-            return {'data': result[0].value}
+            return {'data': base64.b64encode(result[0].value)}
         elif table and row:
             result = THRIFT.getRow(table, row)
             if not result:
                 raise ValueError('Row not found!')
-            return {'data': dict((x, y.value) for x, y in result[0].columns.items())}
+            return {'data': dict((x, base64.b64encode(y.value)) for x, y in result[0].columns.items())}
     elif method == 'PUT':
         mutations = []
         if col:
@@ -161,6 +181,19 @@ def data(table, row, col):
         raise ValueError
 
 
+def _get_image():
+    params = dict(bottle.request.params)
+    try:
+        data = base64.b64decode(params['image_b64'])
+        del params['image_b64']
+    except KeyError:
+        try:
+            data = bottle.request.files['image'].file.read()
+        except KeyError:
+            raise ValueError('Missing image')
+    print('ImageData[%s]' % str(data[:25]))
+    return imfeat.image_fromstring(data), params
+
 #@mimerender.map_exceptions(mapping=((ValueError, '500 Internal Server Error'),),
 #                           xml=render_xml_exception,
 #                           json=render_json_exception)
@@ -173,21 +206,26 @@ def data(table, row, col):
 @USERS.auth()
 def see(request):
     print_request()
-    try:
-        data = bottle.request.files['image'].file.read()
-        print(data[:25])
-        image = imfeat.image_fromstring(data)
-    except KeyError:
-        raise ValueError('Missing image')
-    return _action_handle('see/%s' % request, dict(bottle.request.params), image)
+    image, params = _get_image()
+    return _action_handle('see/%s' % request, params, image)
 
 FEATURE_FUN = [imfeat.GIST, imfeat.Histogram, imfeat.Moments, imfeat.TinyImage, imfeat.GradientHistogram]
 FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
+print('search')
 SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
-              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/sun397_index.pb').read())}
+              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/sun397_index.pb').read()),
+              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_mask_index.pb').read())}
 TP = pickle.load(open('tree_ser-texton.pkl'))
 TP2 = pickle.load(open('tree_ser-integral.pkl'))
 TEXTON = imfeat.TextonBase(tp=TP, tp2=TP2, num_classes=9)
+SEARCH_FUN['see/search/masks'].feature = lambda x: TEXTON._predict(x)[5]
+
+print('hasher')
+hasher = SEARCH_FUN['see/search/masks'].hasher
+class_params = sorted(hasher.class_params.items(), key=lambda x: [0])
+weights = np.hstack([x[1]['w'] for x in class_params])
+print(weights)
+
 CLASS_COLORS = json.load(open('class_colors.js'))
 COLORS_BGR = np.array([x[1]['color'][::-1] for x in sorted(CLASS_COLORS.items(), key=lambda x: x[1]['mask_num'])], dtype=np.uint8)
 FACES = imfeat.Faces()
@@ -224,11 +262,11 @@ def _action_handle(function, params, image):
 def index():
     return open('demo_all.html').read()
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run Picarus REST Frontend')
-    parser.add_argument('--port', default='8080')
-    parser.add_argument('--thrift_server', default='localhost')
-    parser.add_argument('--thrift_port', default='9090')
-    ARGS = parser.parse_args()
-    THRIFT = hadoopy_hbase.connect(ARGS.thrift_server, ARGS.thrift_port)
+
+@bottle.get('/search')
+def search():
+    return open('image_search.html').read()
+
+
+if __name__ == '__main__':
     bottle.run(host='0.0.0.0', port=ARGS.port, server='gevent')

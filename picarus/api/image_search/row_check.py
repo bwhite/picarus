@@ -15,11 +15,11 @@ logging.basicConfig(level=logging.DEBUG)
 a = hadoopy_hbase.connect()
 hrc = picarus.modules.HashRetrievalClassifier()
 hrc.load(open('sun397_index.pb').read())
-for row, cols in hadoopy_hbase.scanner(a, 'sun397', start_row='[', columns=['hash:']):
-    continue
+for row, cols in hadoopy_hbase.scanner(a, 'images'):
     image = imfeat.image_fromstring(cols['data:image'])
     print imfeat.image_fromstring(cols['data:image']).shape
-    print imfeat.image_fromstring(cols['data:image_clean']).shape
+    print imfeat.image_fromstring(cols['data:image_320']).shape
+    print('image_75sq[%d]' % len(cols['data:image_75sq']))
     print row
     cur_f = np.fromstring(cols['feat:gist'], dtype=np.float64)
     cur_h = np.fromstring(cols['hash:gist'], dtype=np.uint8)

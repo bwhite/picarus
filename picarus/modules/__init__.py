@@ -59,14 +59,17 @@ class HashRetrievalClassifier(MultiClassClassifier):
         clusters = np.asfarray(imfeat.BoVW.cluster(images, hog.compute_dense, num_clusters, points_per_image))
         pickle.dump(clusters, open('hog_8_2_clusters.pkl', 'w'), -1)
 
-    def load(self, proto_data):
+    def load(self, proto_data, load_feature=True, load_hasher=True, load_index=True):
         si = picarus.api.SearchIndex()
         si.ParseFromString(proto_data)
         self.metadata = np.array(si.metadata)
-        self.index = pickle.loads(si.index)
-        self.hasher = pickle.loads(si.hash)
-        f = call_import(json.loads(si.feature))
-        self.feature = lambda y: f(imfeat.resize_image_max_side(y, self.max_side))
+        if load_index:
+            self.index = pickle.loads(si.index)
+        if load_hasher:
+            self.hasher = pickle.loads(si.hash)
+        if load_feature:
+            f = call_import(json.loads(si.feature))
+            self.feature = lambda y: f(imfeat.resize_image_max_side(y, self.max_side))
         return self
 
     def train(self, images):

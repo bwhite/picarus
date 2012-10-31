@@ -10,6 +10,7 @@ import cPickle as pickle
 import picarus.api
 import image_search
 import itertools
+import numpy as np
 logging.basicConfig(level=logging.DEBUG)
 
 #a = hadoopy_hbase.connect()
@@ -20,7 +21,7 @@ output_hdfs = 'picarus_temp/%f/' % time.time()
 
 
 def masks_to_hasher(masks, hash_bits):
-    masks_iter = (pickle.loads(x) for x in itertools.islice(masks, 1000))
+    masks_iter = (pickle.loads(x) for x in itertools.islice(masks, 100))
     out = image_search.HIKHasherGreedy(hash_bits=hash_bits).train(masks_iter)
     masks_iter = (pickle.loads(x) for x in itertools.islice(masks, 100))
     out_masks = out(masks_iter)
@@ -29,11 +30,24 @@ def masks_to_hasher(masks, hash_bits):
     return pickle.dumps(out, -1)
 
 
+def mask_hashes_to_index(metadata, hashes, si):
+    hasher = pickle.loads(si.hash)
+    class_params = sorted(hasher.class_params.items(), key=lambda x: [0])
+    weights = np.hstack([x[1]['w'] for x in class_params])
+    hashes = np.ascontiguousarray([np.fromstring(h, dtype=np.uint8) for h in hashes])
+    si.metadata.extend(metadata)
+    index = image_search.LinearHashJaccardDB(weights).store_hashes(hashes, np.arange(len(metadata), dtype=np.uint64))
+    si.index = pickle.dumps(index, -1)
+    si.index_format = si.PICKLE
+    return si.SerializeToString()
+
+
 class ImageRetrieval(object):
     
     def __init__(self):
         self.images_orig_column = 'data:image'
         self.images_column = 'data:image_320'
+        self.thumbnails_column = 'data:image_75sq'
         self.images_table = 'images'
         self.models_table = 'picarus_models'
         self.hb = hadoopy_hbase.connect()
@@ -55,6 +69,8 @@ class ImageRetrieval(object):
         # Index Settings
         self.index_row = self.images_table
         self.index_column = 'data:index_' + self.feature_name
+        self.masks_index_row = 'masks'
+        self.masks_index_column = 'data:index_masks'
         self.masks_column = 'feat:masks'
         self.class_column = 'meta:class_2'
 
@@ -68,6 +84,15 @@ class ImageRetrieval(object):
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'image_clean.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=4, columns=[cmdenvs['HBASE_INPUT_COLUMN']],
                              cmdenvs=cmdenvs)
+
+    def _thumbnail_images(self):
+        cmdenvs = {'HBASE_INPUT_COLUMN': self.images_orig_column,
+                   'HBASE_TABLE': self.images_table,
+                   'HBASE_OUTPUT_COLUMN': self.thumbnails_column}
+        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'image_thumbnail.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=4, columns=[cmdenvs['HBASE_INPUT_COLUMN']],
+                             cmdenvs=cmdenvs)
+
 
     def _feature(self):
         feature_fp = self._tempfile(zlib.compress(json.dumps(self.feature_dict)), suffix='.gz')
@@ -121,6 +146,17 @@ class ImageRetrieval(object):
                              num_mappers=2, columns=[cmdenvs['HBASE_INPUT_COLUMN']], files=[hashes_fp.name],
                              cmdenvs=cmdenvs, **kw)
 
+    def _mask_hashes(self, **kw):
+        hashes_fp = self._tempfile(self._get_mask_hasher(), suffix='.pkl')
+        cmdenvs = {'HBASE_INPUT_COLUMN': self.masks_column,
+                   'HBASE_TABLE': self.images_table,
+                   'HBASE_OUTPUT_COLUMN': self.masks_hash_column,
+                   'HASHER_FN': os.path.basename(hashes_fp.name)}
+        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'masks_to_hashes.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=2, columns=[cmdenvs['HBASE_INPUT_COLUMN']], files=[hashes_fp.name],
+                             cmdenvs=cmdenvs, **kw)
+
+
     def _build_index(self, **kw):
         si = picarus.api.SearchIndex()
         si.name = '%s-%s' % (self.images_table, self.feature_name)
@@ -140,6 +176,22 @@ class ImageRetrieval(object):
                              files=[index_fp.name],
                              cmdenvs=cmdenvs, **kw)
 
+    def _build_mask_index(self, **kw):
+        si = picarus.api.SearchIndex()
+        si.name = '%s-%s' % (self.images_table, 'masks')
+        si.feature = 'masks'  # TODO: Handle this server side, eventually need a real fix
+        si.hash = self._get_mask_hasher()
+        si.hash_format = si.PICKLE
+        row_dict = hadoopy_hbase.HBaseRowDict(self.models_table,
+                                              self.masks_index_column, db=self.hb)
+        row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
+                                         columns=[self.masks_hash_column, self.class_column], **kw)
+        print('Got scanner')
+        metadata, hashes = zip(*[(cols[self.class_column], cols[self.masks_hash_column]) for row, cols in row_cols])
+        print('Got metadata/hashes')
+        row_dict[self.masks_hasher_row] = mask_hashes_to_index(metadata, hashes, si)
+
+
     def _query_index(self):
         pass
 
@@ -152,28 +204,26 @@ class ImageRetrieval(object):
             raise ValueError('Hasher does not exist!')
         return out[0].value
 
+    def get_mask_hasher(self):
+        return pickle.loads(self._get_mask_hasher())
+
+    def _get_mask_hasher(self):
+        out = self.hb.get(self.models_table, self.masks_hasher_row, self.masks_hasher_column)
+        if not out:
+            raise ValueError('Hasher does not exist!')
+        return out[0].value
+
     def _get_index(self):
         out = self.hb.get(self.models_table, self.index_row, self.index_column)
         if not out:
             raise ValueError('Index does not exist!')
         return out[0].value
 
-    def learn(self):
-        # feature
-        self._feature()
-        # learn hash
-
-    def build(self):
-        # feature
-        # hash
-        # build index
-        pass
-
-    def search(self):
-        # feature
-        # hash
-        # query index
-        pass
+    def _get_mask_index(self):
+        out = self.hb.get(self.models_table, self.masks_index_row, self.masks_index_column)
+        if not out:
+            raise ValueError('Index does not exist!')
+        return out[0].value
 
 if __name__ == '__main__':
     image_retrieval = ImageRetrieval()
@@ -181,12 +231,18 @@ if __name__ == '__main__':
     #print image_retrieval.get_hasher()
     #print type(image_retrieval.get_hasher())
 
-    image_retrieval._clean_images()
-    image_retrieval._feature()
-    image_retrieval._masks()
+    #image_retrieval._thumbnail_images()
+    
+    #image_retrieval._clean_images()
+    #image_retrieval._feature()
+    #image_retrieval._masks()
 
-    image_retrieval._hash(start_row='sun397train')
-    image_retrieval._hashes()
-    image_retrieval._build_index(start_row='sun397train')
-    #open('sun397_index.pb', 'w').write(image_retrieval._get_index())
-    #image_retrieval._learn_masks_hasher('train')
+    #image_retrieval._hash(start_row='sun397train')
+    #image_retrieval._hashes()
+    #image_retrieval._build_index(start_row='sun397train')
+    
+    open('sun397_index.pb', 'w').write(image_retrieval._get_index())
+    #image_retrieval._learn_masks_hasher(start_row='sun397train')
+    #image_retrieval._mask_hashes()
+    #image_retrieval._build_mask_index()
+    #open('sun397_mask_index.pb', 'w').write(image_retrieval._get_mask_index())
