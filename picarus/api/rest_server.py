@@ -34,6 +34,7 @@ import cPickle as pickle
 import numpy as np
 import cv2
 import gevent
+import distpy
 from users import Users
 from picarus.modules import HashRetrievalClassifier
 
@@ -218,12 +219,13 @@ SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_inde
 TP = pickle.load(open('tree_ser-texton.pkl'))
 TP2 = pickle.load(open('tree_ser-integral.pkl'))
 TEXTON = imfeat.TextonBase(tp=TP, tp2=TP2, num_classes=9)
-SEARCH_FUN['see/search/masks'].feature = lambda x: [TEXTON._predict(x)[5]]
+SEARCH_FUN['see/search/masks'].feature = lambda x: [TEXTON._predict(imfeat.resize_image_max_side(x, 320))[5]]
 
 print('hasher')
 hasher = SEARCH_FUN['see/search/masks'].hasher
 class_params = sorted(hasher.class_params.items(), key=lambda x: [0])
 weights = np.hstack([x[1]['w'] for x in class_params])
+SEARCH_FUN['see/search/masks'].index._d = distpy.JaccardWeighted(weights)
 print(weights)
 
 CLASS_COLORS = json.load(open('class_colors.js'))

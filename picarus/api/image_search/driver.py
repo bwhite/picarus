@@ -11,6 +11,7 @@ import picarus.api
 import image_search
 import itertools
 import numpy as np
+import base64
 logging.basicConfig(level=logging.DEBUG)
 
 #a = hadoopy_hbase.connect()
@@ -187,7 +188,7 @@ class ImageRetrieval(object):
         row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
                                          columns=[self.masks_hash_column, self.class_column], **kw)
         print('Got scanner')
-        metadata, hashes = zip(*[(cols[self.class_column], cols[self.masks_hash_column]) for row, cols in row_cols])
+        metadata, hashes = zip(*[(json.dumps([cols[self.class_column], base64.b64encode(row)]), cols[self.masks_hash_column]) for row, cols in row_cols])
         print('Got metadata/hashes')
         row_dict[self.masks_hasher_row] = mask_hashes_to_index(metadata, hashes, si)
 
@@ -241,8 +242,8 @@ if __name__ == '__main__':
     #image_retrieval._hashes()
     #image_retrieval._build_index(start_row='sun397train')
     
-    open('sun397_index.pb', 'w').write(image_retrieval._get_index())
+    #open('sun397_index.pb', 'w').write(image_retrieval._get_index())
     #image_retrieval._learn_masks_hasher(start_row='sun397train')
     #image_retrieval._mask_hashes()
-    #image_retrieval._build_mask_index()
-    #open('sun397_mask_index.pb', 'w').write(image_retrieval._get_mask_index())
+    image_retrieval._build_mask_index()
+    open('sun397_mask_index.pb', 'w').write(image_retrieval._get_mask_index())
