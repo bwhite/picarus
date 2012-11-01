@@ -124,5 +124,8 @@ class TextonPredict(imfeat.TextonBase):
     def __init__(self, *args, **kw):
         super(TextonPredict, self).__init__(*args, **kw)
 
+    def __reduce__(self):
+        return (TextonPredict, super(TextonPredict, self).__reduce__()[1])
+
     def __call__(self, *args, **kw):
         return self._predict(*args, **kw)[5]

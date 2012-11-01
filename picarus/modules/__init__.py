@@ -70,7 +70,6 @@ class HashRetrievalClassifier(MultiClassClassifier):
             self.hasher = loader(si.hash_format, si.hash)
         if load_feature:
             f = loader(si.feature_format, si.feature)
-            print(f)
             self.feature = lambda y: f(imfeat.resize_image_max_side(y, self.max_side))
         return self
 
