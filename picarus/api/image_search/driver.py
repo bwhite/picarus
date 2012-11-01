@@ -12,6 +12,7 @@ import image_search
 import itertools
 import numpy as np
 import base64
+import picarus._features
 logging.basicConfig(level=logging.DEBUG)
 
 #a = hadoopy_hbase.connect()
@@ -25,7 +26,7 @@ def masks_to_hasher(masks, hash_bits):
     masks_iter = (pickle.loads(x) for x in itertools.islice(masks, 100))
     out = image_search.HIKHasherGreedy(hash_bits=hash_bits).train(masks_iter)
     masks_iter = (pickle.loads(x) for x in itertools.islice(masks, 100))
-    out_masks = out(masks_iter)
+    out_masks = np.array([out(masks) for masks in masks_iter])
     print(out_masks.shape)
     print(out_masks)
     return pickle.dumps(out, -1)
@@ -180,7 +181,10 @@ class ImageRetrieval(object):
     def _build_mask_index(self, **kw):
         si = picarus.api.SearchIndex()
         si.name = '%s-%s' % (self.images_table, 'masks')
-        si.feature = 'masks'  # TODO: Handle this server side, eventually need a real fix
+        tp = pickle.load(open('tree_ser-texton.pkl'))
+        tp2 = pickle.load(open('tree_ser-integral.pkl'))
+        si.feature = pickle.dumps(picarus._features.TextonPredict(tp=tp, tp2=tp2, num_classes=9))
+        si.feature_format = si.PICKLE
         si.hash = self._get_mask_hasher()
         si.hash_format = si.PICKLE
         row_dict = hadoopy_hbase.HBaseRowDict(self.models_table,

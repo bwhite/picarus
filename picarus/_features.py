@@ -95,7 +95,7 @@ def select_feature(feat_name):
          'meta_hog_gradient': _meta_hog_gradient,
          'object_bank': _object_bank,
          'bovw_hog': _bovw_hog,
-         'spatial3_lab_hist_joint_4bins': _spatial3_lab_hist_joint_4bins,
+5B         'spatial3_lab_hist_joint_4bins': _spatial3_lab_hist_joint_4bins,
          'lab_hist_joint_8bins': _lab_hist_joint_8bins,
          'gradient_hist': _gradient_hist,
          'tiny_image': _tiny_image,
@@ -117,3 +117,12 @@ def _dense_surf():
 
 def select_feature_point(feat_name):
     return {'surf_dense': _dense_surf}[feat_name]()
+
+
+class TextonPredict(imfeat.TextonBase):
+
+    def __init__(self, *args, **kw):
+        super(TextonPredict, self).__init__(*args, **kw)
+
+    def __call__(self, *args, **kw):
+        return self._predict(*args, **kw)[5]
