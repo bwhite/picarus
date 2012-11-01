@@ -62,13 +62,14 @@ class HashRetrievalClassifier(MultiClassClassifier):
     def load(self, proto_data, load_feature=True, load_hasher=True, load_index=True):
         si = picarus.api.SearchIndex()
         si.ParseFromString(proto_data)
+        loader = lambda x, y: pickle.loads(y) if x == si.PICKLE else call_import(json.loads(y))
         self.metadata = np.array(si.metadata)
         if load_index:
-            self.index = pickle.loads(si.index)
+            self.index = loader(si.index_format, si.index)
         if load_hasher:
-            self.hasher = pickle.loads(si.hash)
+            self.hasher = loader(si.hash_format, si.hash)
         if load_feature:
-            f = call_import(json.loads(si.feature))
+            f = loader(si.feature_format, si.feature)
             self.feature = lambda y: f(imfeat.resize_image_max_side(y, self.max_side))
         return self
 

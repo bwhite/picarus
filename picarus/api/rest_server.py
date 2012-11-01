@@ -215,12 +215,12 @@ FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
 print('search')
 SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
               'see/search/scenes': HashRetrievalClassifier().load(open('image_search/sun397_index.pb').read()),
-              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_mask_index.pb').read(), load_feature=False)}
-TP = pickle.load(open('tree_ser-texton.pkl'))  # TODO: support loading tp/tp2 as strings, move to imseg
-TP2 = pickle.load(open('tree_ser-integral.pkl'))
-TEXTON = picarus._features.TextonPredict(tp=TP, tp2=TP2, num_classes=9)
-TEXTON = pickle.loads(pickle.dumps(TEXTON, -1))
-SEARCH_FUN['see/search/masks'].feature = lambda x: [TEXTON._predict(imfeat.resize_image_max_side(x, 320))[5]]
+              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_mask_index.pb').read())}
+#TP = pickle.load(open('tree_ser-texton.pkl'))  # TODO: support loading tp/tp2 as strings, move to imseg
+#TP2 = pickle.load(open('tree_ser-integral.pkl'))
+#TEXTON = picarus._features.TextonPredict(tp=TP, tp2=TP2, num_classes=9)
+#TEXTON = pickle.loads(pickle.dumps(TEXTON, -1))
+#SEARCH_FUN['see/search/masks'].feature = lambda x: [TEXTON._predict(imfeat.resize_image_max_side(x, 320))[5]]
 
 print('hasher')
 hasher = SEARCH_FUN['see/search/masks'].hasher
