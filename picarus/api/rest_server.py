@@ -222,12 +222,12 @@ SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_inde
 #TEXTON = pickle.loads(pickle.dumps(TEXTON, -1))
 #SEARCH_FUN['see/search/masks'].feature = lambda x: [TEXTON._predict(imfeat.resize_image_max_side(x, 320))[5]]
 
-print('hasher')
-hasher = SEARCH_FUN['see/search/masks'].hasher
-class_params = sorted(hasher.class_params.items(), key=lambda x: [0])
-weights = np.hstack([x[1]['w'] for x in class_params])
-SEARCH_FUN['see/search/masks'].index._d = distpy.JaccardWeighted(weights)  # TODO: Support Cython deserialization
-print(weights)
+#print('hasher')
+#hasher = SEARCH_FUN['see/search/masks'].hasher
+#class_params = sorted(hasher.class_params.items(), key=lambda x: [0])
+#weights = np.hstack([x[1]['w'] for x in class_params])
+#SEARCH_FUN['see/search/masks'].index._d = distpy.JaccardWeighted(weights)  # TODO: Support Cython deserialization
+#print(weights)
 
 CLASS_COLORS = json.load(open('class_colors.js'))
 COLORS_BGR = np.array([x[1]['color'][::-1] for x in sorted(CLASS_COLORS.items(), key=lambda x: x[1]['mask_num'])], dtype=np.uint8)
@@ -244,6 +244,7 @@ def _action_handle(function, params, image):
         pass
     try:
         sf = SEARCH_FUN[function]
+        print(sf.feature)
         return {'results': sf.analyze_cropped(image)}
     except KeyError:
         pass
