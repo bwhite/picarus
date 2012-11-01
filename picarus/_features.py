@@ -95,7 +95,7 @@ def select_feature(feat_name):
          'meta_hog_gradient': _meta_hog_gradient,
          'object_bank': _object_bank,
          'bovw_hog': _bovw_hog,
-5B         'spatial3_lab_hist_joint_4bins': _spatial3_lab_hist_joint_4bins,
+         'spatial3_lab_hist_joint_4bins': _spatial3_lab_hist_joint_4bins,
          'lab_hist_joint_8bins': _lab_hist_joint_8bins,
          'gradient_hist': _gradient_hist,
          'tiny_image': _tiny_image,

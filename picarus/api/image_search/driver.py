@@ -158,7 +158,6 @@ class ImageRetrieval(object):
                              num_mappers=2, columns=[cmdenvs['HBASE_INPUT_COLUMN']], files=[hashes_fp.name],
                              cmdenvs=cmdenvs, **kw)
 
-
     def _build_index(self, **kw):
         si = picarus.api.SearchIndex()
         si.name = '%s-%s' % (self.images_table, self.feature_name)
@@ -195,10 +194,6 @@ class ImageRetrieval(object):
         metadata, hashes = zip(*[(json.dumps([cols[self.class_column], base64.b64encode(row)]), cols[self.masks_hash_column]) for row, cols in row_cols])
         print('Got metadata/hashes')
         row_dict[self.masks_hasher_row] = mask_hashes_to_index(metadata, hashes, si)
-
-
-    def _query_index(self):
-        pass
 
     def get_hasher(self):
         return pickle.loads(self._get_hasher())
