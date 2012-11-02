@@ -8,7 +8,7 @@ import cPickle as pickle
 from picarus._importer import call_import
 
 
-def _tempfile(self, data, suffix=''):
+def _tempfile(data, suffix=''):
     fp = tempfile.NamedTemporaryFile(suffix=suffix)
     fp.write(data)
     fp.flush()
