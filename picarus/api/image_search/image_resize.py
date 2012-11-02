@@ -2,10 +2,10 @@
 import hadoopy
 import imfeat
 import os
-from hbase_mapper import HBaseMapper
+import picarus.api
 
 
-class Mapper(HBaseMapper):
+class Mapper(picarus.api.HBaseMapper):
 
     def __init__(self):
         super(Mapper, self).__init__()
