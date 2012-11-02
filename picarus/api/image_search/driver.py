@@ -226,8 +226,8 @@ if __name__ == '__main__':
 
     #image_retrieval.image_resize()
     #image_retrieval.image_thumbnail()
-    #image_retrieval.image_to_feature()
-    #image_retrieval.image_to_masks()
+    image_retrieval.image_to_feature()
+    image_retrieval.image_to_masks()
     image_retrieval.features_to_hasher(start_row='sun397train', max_rows=100)
     image_retrieval.masks_to_hasher(start_row='sun397train', max_rows=100)  # TODO implement
     image_retrieval.feature_to_hash()
