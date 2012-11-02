@@ -15,3 +15,10 @@ message SearchIndex {
   optional bytes index = 10;
   repeated bytes metadata = 11;
 }
+
+
+message NDArray {
+  required bytes data = 1;
+  repeated int32 shape = 2;
+  required string dtype = 3;
+}

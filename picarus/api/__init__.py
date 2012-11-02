@@ -1,68 +1,46 @@
 import zmq
-from _picarus_search_pb2 import SearchIndex
+from _picarus_search_pb2 import SearchIndex, NDArray
+import numpy as np
+import zlib
+import json
+import tempfile
+import cPickle as pickle
+from picarus._importer import call_import
 
 
-class InternalServer(object):
-
-    def __init__(self):
-        super(InternalServer, self).__init__()
-
-    def listen(self, sock):
-        while True:
-            sock.send(self.output_tostring(self(self.input_fromstring(sock.recv()))))
-
-    @classmethod
-    def send(cls, sock, data):
-        sock.send(cls.input_tostring(data))
-        return cls.output_fromstring(sock.recv())
+def _tempfile(self, data, suffix=''):
+    fp = tempfile.NamedTemporaryFile(suffix=suffix)
+    fp.write(data)
+    fp.flush()
+    return fp
 
 
-class PBInternalServer(InternalServer):
-
-    def __init__(self):
-        super(PBInternalServer, self).__init__()
-
-    @classmethod
-    def _data_tostring(cls, pb_cls, data):
-        assert isinstance(data, dict)
-        pb = pb_cls()
-        for k, v in data.items():
-            if isinstance(v, list):
-                getattr(pb, k).extend(v)
-            else:
-                setattr(pb, k, v)
-        return pb.SerializeToString()
-
-    @classmethod
-    def input_tostring(cls, data):
-        return cls._data_tostring(cls.input_pb_cls, data)
-
-    @classmethod
-    def input_fromstring(cls, string):
-        return cls.input_pb_cls.ParseFromString(string)
-
-    @classmethod
-    def output_tostring(cls, data):
-        return cls._data_tostring(cls.output_pb_cls, data)
-
-    @classmethod
-    def output_fromstring(cls, string):
-        return cls.output_pb_cls.ParseFromString(string)
+def model_fromfile(path):
+    if path.endswith('.js.gz'):
+        return call_import(json.loads(zlib.decompress(open(path).read())))
+    elif path.endswith('.pkl.gz'):
+        return pickle.loads(zlib.decompress(open(path).read()))
+    else:
+        raise ValueError('Unknown model type[%s]' % path)
 
 
-class FeatureServer(PBInternalServer):
-
-    def __init__(self):
-        super(FeatureServer, self).__init__()
-
-    def __call__(image):
-        return ''
+def model_tofile(model):
+    if isinstance(model, dict):
+        return _tempfile(zlib.compress(json.dumps(model)), suffix='.js.gz')
+    else:
+        return _tempfile(zlib.compress(pickle.dumps(model)), suffix='.pkl.gz')
 
 
-class SearchServer(PBInternalServer):
+def np_tostring(array):
+    array = np.ascontiguousarray(array)
+    nda = NDArray()
+    nda.data = array.tostring()
+    nda.shape.extend(list(array.shape))
+    nda.dtype = array.dtype.name
+    return nda.SerializeToString()
 
-    def __init__(self):
-        super(SearchServer, self).__init__()
 
-    def __call__(image):
-        return ''
+def np_fromstring(array_ser):
+    nda = NDArray()
+    nda.ParseFromString(array_ser)
+    return np.fromstring(nda.data, dtype=nda.dtype).reshape(nda.shape)

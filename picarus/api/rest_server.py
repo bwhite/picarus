@@ -37,6 +37,7 @@ import gevent
 import distpy
 from users import Users
 from picarus.modules import HashRetrievalClassifier
+import picarus._features
 
 if __name__ == "__main__":
     bottle.debug(True)
@@ -216,9 +217,9 @@ print('search')
 SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
               'see/search/scenes': HashRetrievalClassifier().load(open('image_search/sun397_index.pb').read()),
               'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_mask_index.pb').read())}
-#TP = pickle.load(open('tree_ser-texton.pkl'))  # TODO: support loading tp/tp2 as strings, move to imseg
-#TP2 = pickle.load(open('tree_ser-integral.pkl'))
-#TEXTON = picarus._features.TextonPredict(tp=TP, tp2=TP2, num_classes=9)
+TP = pickle.load(open('tree_ser-texton.pkl'))  # TODO: support loading tp/tp2 as strings, move to imseg
+TP2 = pickle.load(open('tree_ser-integral.pkl'))
+TEXTON = picarus._features.TextonPredict(tp=TP, tp2=TP2, num_classes=9)
 #TEXTON = pickle.loads(pickle.dumps(TEXTON, -1))
 #SEARCH_FUN['see/search/masks'].feature = lambda x: [TEXTON._predict(imfeat.resize_image_max_side(x, 320))[5]]
 
@@ -251,7 +252,7 @@ def _action_handle(function, params, image):
     if function == 'see/texton':
         image = cv2.resize(image, (320, int(image.shape[0] * 320. / image.shape[1])))
         image = np.ascontiguousarray(image)
-        semantic_masks = TEXTON._predict(image)[5]
+        semantic_masks = TEXTON(image)
         texton_argmax2 = np.argmax(semantic_masks, 2)
         image_string = imfeat.image_tostring(COLORS_BGR[texton_argmax2], 'png')
         return {'argmax_pngb64': base64.b64encode(image_string)}

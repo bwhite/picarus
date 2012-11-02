@@ -4,6 +4,7 @@ import os
 import image_search
 import numpy as np
 import cPickle as pickle
+import picarus.api
 
 
 class Mapper(object):
@@ -23,7 +24,7 @@ class Reducer(object):
         self._hbase = hadoopy_hbase.HBaseRowDict(os.environ['HBASE_OUTPUT_TABLE'], os.environ['HBASE_OUTPUT_COLUMN'])
 
     def reduce(self, row, features):
-        self._hbase[row] = pickle.dumps(image_search.RRMedianHasher(self.hash_bits, normalize_features=False).train([np.fromstring(x, dtype=np.float64) for x in features]), -1)
+        self._hbase[row] = pickle.dumps(image_search.RRMedianHasher(self.hash_bits, normalize_features=False).train([picarus.api.np_fromstring(x) for x in features]), -1)
 
 if __name__ == '__main__':
     hadoopy.run(Mapper, Reducer, required_cmdenvs=['HASH_BITS', 'HBASE_INPUT_COLUMN', 'HBASE_OUTPUT_ROW', 'HBASE_OUTPUT_TABLE', 'HBASE_OUTPUT_COLUMN'])

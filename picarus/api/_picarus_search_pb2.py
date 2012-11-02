@@ -11,7 +11,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='picarus_search.proto',
   package='',
-  serialized_pb='\n\x14picarus_search.proto\"\xf3\x02\n\x0bSearchIndex\x12\x0c\n\x04name\x18\x01 \x01(\t\x12;\n\x0e\x66\x65\x61ture_format\x18\x02 \x01(\x0e\x32\x16.SearchIndex.SerFormat:\x0bJSON_IMPORT\x12\x38\n\x0bhash_format\x18\x03 \x01(\x0e\x32\x16.SearchIndex.SerFormat:\x0bJSON_IMPORT\x12\x39\n\x0cindex_format\x18\x04 \x01(\x0e\x32\x16.SearchIndex.SerFormat:\x0bJSON_IMPORT\x12\x15\n\rcreation_time\x18\x05 \x01(\x01\x12\x10\n\x08part_num\x18\x06 \x01(\x05\x12\x11\n\tnum_parts\x18\x07 \x01(\x05\x12\x0f\n\x07\x66\x65\x61ture\x18\x08 \x01(\x0c\x12\x0c\n\x04hash\x18\t \x01(\x0c\x12\r\n\x05index\x18\n \x01(\x0c\x12\x10\n\x08metadata\x18\x0b \x03(\x0c\"(\n\tSerFormat\x12\x0f\n\x0bJSON_IMPORT\x10\x00\x12\n\n\x06PICKLE\x10\x01')
+  serialized_pb='\n\x14picarus_search.proto\"\xf3\x02\n\x0bSearchIndex\x12\x0c\n\x04name\x18\x01 \x01(\t\x12;\n\x0e\x66\x65\x61ture_format\x18\x02 \x01(\x0e\x32\x16.SearchIndex.SerFormat:\x0bJSON_IMPORT\x12\x38\n\x0bhash_format\x18\x03 \x01(\x0e\x32\x16.SearchIndex.SerFormat:\x0bJSON_IMPORT\x12\x39\n\x0cindex_format\x18\x04 \x01(\x0e\x32\x16.SearchIndex.SerFormat:\x0bJSON_IMPORT\x12\x15\n\rcreation_time\x18\x05 \x01(\x01\x12\x10\n\x08part_num\x18\x06 \x01(\x05\x12\x11\n\tnum_parts\x18\x07 \x01(\x05\x12\x0f\n\x07\x66\x65\x61ture\x18\x08 \x01(\x0c\x12\x0c\n\x04hash\x18\t \x01(\x0c\x12\r\n\x05index\x18\n \x01(\x0c\x12\x10\n\x08metadata\x18\x0b \x03(\x0c\"(\n\tSerFormat\x12\x0f\n\x0bJSON_IMPORT\x10\x00\x12\n\n\x06PICKLE\x10\x01\"5\n\x07NDArray\x12\x0c\n\x04\x64\x61ta\x18\x01 \x02(\x0c\x12\r\n\x05shape\x18\x02 \x03(\x05\x12\r\n\x05\x64type\x18\x03 \x02(\t')
 
 
 
@@ -135,16 +135,65 @@ _SEARCHINDEX = descriptor.Descriptor(
   serialized_end=396,
 )
 
+
+_NDARRAY = descriptor.Descriptor(
+  name='NDArray',
+  full_name='NDArray',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    descriptor.FieldDescriptor(
+      name='data', full_name='NDArray.data', index=0,
+      number=1, type=12, cpp_type=9, label=2,
+      has_default_value=False, default_value="",
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='shape', full_name='NDArray.shape', index=1,
+      number=2, type=5, cpp_type=1, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    descriptor.FieldDescriptor(
+      name='dtype', full_name='NDArray.dtype', index=2,
+      number=3, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=398,
+  serialized_end=451,
+)
+
 _SEARCHINDEX.fields_by_name['feature_format'].enum_type = _SEARCHINDEX_SERFORMAT
 _SEARCHINDEX.fields_by_name['hash_format'].enum_type = _SEARCHINDEX_SERFORMAT
 _SEARCHINDEX.fields_by_name['index_format'].enum_type = _SEARCHINDEX_SERFORMAT
 _SEARCHINDEX_SERFORMAT.containing_type = _SEARCHINDEX;
 DESCRIPTOR.message_types_by_name['SearchIndex'] = _SEARCHINDEX
+DESCRIPTOR.message_types_by_name['NDArray'] = _NDARRAY
 
 class SearchIndex(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType
   DESCRIPTOR = _SEARCHINDEX
   
   # @@protoc_insertion_point(class_scope:SearchIndex)
+
+class NDArray(message.Message):
+  __metaclass__ = reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _NDARRAY
+  
+  # @@protoc_insertion_point(class_scope:NDArray)
 
 # @@protoc_insertion_point(module_scope)
