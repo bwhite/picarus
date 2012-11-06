@@ -35,12 +35,13 @@ import numpy as np
 import cv2
 import gevent
 import distpy
-from users import Users
+from users import Users, UnknownUser
 from picarus.modules import HashRetrievalClassifier
 import picarus._features
+import boto
+
 
 if __name__ == "__main__":
-    bottle.debug(True)
     mimerender = mimerender.BottleMimeRender()
     render_xml = lambda message: '<message>%s</message>'%message
     render_json = lambda **args: json.dumps(args)
@@ -85,6 +86,7 @@ def print_request():
             txt=render_txt)
 @USERS.auth(True)
 def stats(auth_user):
+    print(auth_user.user)
     return auth_user.stats()
 
 
@@ -290,10 +292,25 @@ def index():
     return open('demo_all.html').read()
 
 
+@bottle.get('/login')
+def login():
+    return open('login.html').read()
+
+
 @bottle.get('/search')
 def search():
     return open('image_search.html').read()
 
+
+@bottle.post('/auth')
+def auth():
+    print_request()
+    email = dict(bottle.request.params)['email']
+    try:
+        USERS.email_auth(email, bottle.request.remote_addr, bottle.request.params['recaptcha_challenge_field'], bottle.request.params['recaptcha_response_field'])
+    except UnknownUser:
+        bottle.abort(401)
+    return 'Emailing auth code'
 
 if __name__ == '__main__':
     import gevent.pywsgi

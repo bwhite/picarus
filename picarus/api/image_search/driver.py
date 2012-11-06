@@ -35,7 +35,7 @@ def hashes_to_index(si, index, metadata, hashes):
 class ImageRetrieval(object):
 
     def __init__(self):
-        self.images_orig_column = 'data:image'
+        self.image_orig_column = 'data:image'
         self.image_column = 'data:image_320'
         self.thumbnails_column = 'data:image_75sq'
         self.images_table = 'images'
@@ -69,7 +69,7 @@ class ImageRetrieval(object):
         self.hb.createTable(self.models_table, [hadoopy_hbase.ColumnDescriptor('data:')])
 
     def image_resize(self):
-        cmdenvs = {'HBASE_INPUT_COLUMN': self.images_orig_column,
+        cmdenvs = {'HBASE_INPUT_COLUMN': self.image_orig_column,
                    'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': self.image_column,
                    'MAX_SIDE': 320}
@@ -78,7 +78,7 @@ class ImageRetrieval(object):
                              cmdenvs=cmdenvs)
 
     def image_thumbnail(self):
-        cmdenvs = {'HBASE_INPUT_COLUMN': self.images_orig_column,
+        cmdenvs = {'HBASE_INPUT_COLUMN': self.image_orig_column,
                    'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': self.thumbnails_column,
                    'SIZE': 75}

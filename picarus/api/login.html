@@ -1,0 +1,74 @@
+<html>
+<head>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.2/jquery.cookie.js"></script>
+  <script type="text/javascript" src="//stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
+</head>
+<body>
+  <script type="text/javascript">
+    function getParameterByName(name) {
+        name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+        var regexS = "[\\?&]" + name + "=([^&#]*)";
+        var regex = new RegExp(regexS);
+        var results = regex.exec(window.location.search);
+        if(results == null)
+            return "";
+        else
+            return decodeURIComponent(results[1].replace(/\+/g, " "));
+    }
+    function entry_func() {
+        var email = getParameterByName('email');
+        var auth = getParameterByName('auth');
+        if (email != '' && auth != '') {
+            get_secure(email, auth);
+        } else {
+            var email = $.cookie("email");
+            var auth = $.cookie("auth");
+            if (email != null && auth != null) {
+                get_secure(email, auth);
+            }
+        }
+    }
+    function get_secure(email, auth) {
+        function success(xhr) {
+            $('#secure_div').html('Logged in email[' + email  + '] auth[' + auth + ']');
+            $.cookie("email", email, {expires : 30, secure: true});
+            $.cookie("auth", auth, {expires : 30, secure: true});
+        }
+        function fail(xhr) {
+            $('#secure_div').html('Bad auth email[' + email  + '] auth[' + auth + ']');
+        }
+        var request = $.ajax({
+          type: 'GET',
+          url: '/stats',
+          cache: false,
+          contentType: false,
+          processData: false,
+          beforeSend: function(xhr) {
+              xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email + ":" + auth));
+          },
+          success: success
+          });
+        request.fail(fail);
+    }
+    $(document).ready(entry_func);
+  </script>
+<p>Enter email and captcha, we will email you an auth code if you have access.</p>
+<form id="form" action="/auth" method="POST">
+  Email: <input type="text" name="email"><br>
+  <script type="text/javascript"
+          src="//www.google.com/recaptcha/api/challenge?k=6Ld4itgSAAAAAE3rpj2hMNCcir21qr68hbBRWzQz">
+  </script>
+  <noscript>
+     <iframe src="//www.google.com/recaptcha/api/noscript?k=6Ld4itgSAAAAAE3rpj2hMNCcir21qr68hbBRWzQz"
+         height="300" width="500" frameborder="0"></iframe><br>
+     <textarea name="recaptcha_challenge_field" rows="3" cols="40">
+     </textarea>
+     <input type="hidden" name="recaptcha_response_field"
+         value="manual_challenge">
+  </noscript>
+  <input type="submit">
+</form>
+<div id="secure_div">Not logged in</div>
+</body>
+</html>
