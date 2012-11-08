@@ -159,12 +159,12 @@
           request.fail(fail);
       }
       function store_cookie() {
-          $.cookie("user", $('#demouser').val(), {expires : 30, secure: true});
-          $.cookie("pass", $('#demopass').val(), {expires : 30, secure: true});
+          $.cookie("email", $('#demouser').val(), {expires : 30, secure: true});
+          $.cookie("auth", $('#demopass').val(), {expires : 30, secure: true});
       }
       function load_cookie() {
-          $('#demouser').val($.cookie("user"));
-          $('#demopass').val($.cookie("pass"));
+          $('#demouser').val($.cookie("email"));
+          $('#demopass').val($.cookie("auth"));
       }
       function display_alert(message) {
           $('#alert_placeholder').html('<div class="alert"><a class="close" data-dismiss="alert">×</a><span>' + message + '</span></div>');

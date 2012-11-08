@@ -217,8 +217,10 @@ FEATURE_FUN = [imfeat.GIST, imfeat.Histogram, imfeat.Moments, imfeat.TinyImage, 
 FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
 print('search')
 SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
-              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/sun397_index.pb').read()),
-              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_mask_index.pb').read())}
+              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/sun397_feature_index.pb').read()),
+              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_masks_index.pb').read())}
+PREDICT_FUN = {'see/classify/indoor': }
+
 TP = pickle.load(open('tree_ser-texton.pkl'))  # TODO: support loading tp/tp2 as strings, move to imseg
 TP2 = pickle.load(open('tree_ser-integral.pkl'))
 TEXTON = picarus._features.TextonPredict(tp=TP, tp2=TP2, num_classes=9)
@@ -235,6 +237,7 @@ TEXTON = picarus._features.TextonPredict(tp=TP, tp2=TP2, num_classes=9)
 CLASS_COLORS = json.load(open('class_colors.js'))
 COLORS_BGR = np.array([x[1]['color'][::-1] for x in sorted(CLASS_COLORS.items(), key=lambda x: x[1]['mask_num'])], dtype=np.uint8)
 FACES = imfeat.Faces()
+COLOR_NAMING = imfeat.ColorNaming()
 
 
 def _action_handle(function, params, image):
@@ -257,6 +260,13 @@ def _action_handle(function, params, image):
         semantic_masks = TEXTON(image)
         texton_argmax2 = np.argmax(semantic_masks, 2)
         image_string = imfeat.image_tostring(COLORS_BGR[texton_argmax2], 'png')
+        return {'argmax_pngb64': base64.b64encode(image_string)}
+    if function == 'see/colors':
+        image = cv2.resize(image, (320, int(image.shape[0] * 320. / image.shape[1])))
+        image = np.ascontiguousarray(image)
+        masks = COLOR_NAMING.make_feature_mask(image)
+        mask_argmax = np.argmax(masks, 2)
+        image_string = imfeat.image_tostring(COLOR_NAMING.color_values[mask_argmax], 'png')
         return {'argmax_pngb64': base64.b64encode(image_string)}
     if function == 'see/faces':
         results = [map(float, x) for x in FACES._detect_faces(image)]

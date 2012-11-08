@@ -16,6 +16,18 @@ message SearchIndex {
   repeated bytes metadata = 11;
 }
 
+message Classifier {
+  optional string name = 1;
+  enum SerFormat {
+    JSON_IMPORT = 0;
+    PICKLE = 1;
+  }
+  optional SerFormat feature_format = 2 [default = JSON_IMPORT];
+  optional SerFormat classifier_format = 3 [default = JSON_IMPORT];
+  optional double creation_time = 4;
+  optional bytes feature = 5;
+  optional bytes classifier = 6;
+}
 
 message NDArray {
   required bytes data = 1;
