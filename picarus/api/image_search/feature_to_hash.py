@@ -12,12 +12,8 @@ class Mapper(picarus.api.HBaseMapper):
         self._hasher = picarus.api.model_fromfile(os.environ['HASHER_FN'])
 
     def _map(self, row, feature_binary):
-        try:
-            feature = picarus.api.np_fromstring(feature_binary)
-        except:
-            hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
-        else:
-            yield row, self._hasher(feature).tostring()
+        feature = picarus.api.np_fromstring(feature_binary)
+        yield row, self._hasher(feature).tostring()
 
 
 if __name__ == '__main__':

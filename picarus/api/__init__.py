@@ -44,7 +44,7 @@ def classifier_fromstring(classifier_ser):
     loader = lambda x, y: pickle.loads(y) if x == cp.PICKLE else call_import(json.loads(y))
     feature = loader(cp.feature_format, cp.feature)
     classifier = loader(cp.classifier_format, cp.classifier)
-    return lambda image: int(classifier.predict(feature(image)).flat[0])
+    return lambda image: float(classifier.decision_function(feature(image)).flat[0])
 
 
 def model_tofile(model):

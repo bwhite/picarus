@@ -99,6 +99,8 @@
 		<div id="results_colors" class="result_box"></div>
 		<h2>PUT /see/faces</h2>
 		<div id="results_faces" class="result_box"></div>
+		<h2>PUT /see/classify/indoor</h2>
+		<div id="results_indoor" class="result_box"></div>
 		<h2>GET /stats</h2>
 		<div id="results_stats" class="result_box"></div>
               </div>
@@ -217,6 +219,7 @@
           }
           picarus_api_test("/image", "POST", {}, $('#demouser').val(), $('#demopass').val(), null, success_input_image);
           picarus_api_test("/see/faces", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_faces"));
+          picarus_api_test("/see/classify/indoor", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_indoor"));
           picarus_api_test("/stats", "GET", null, $('#demouser').val(), $('#demopass').val(), $("#results_stats"));
       }
       function reset_bar() {

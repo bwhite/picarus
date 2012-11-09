@@ -219,7 +219,7 @@ print('search')
 SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
               'see/search/scenes': HashRetrievalClassifier().load(open('image_search/sun397_feature_index.pb').read()),
               'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_masks_index.pb').read())}
-PREDICT_FUN = {'see/classify/indoor': picarus.api.classifier_fromstring(open('image_search/sun397_indoor_classifier.pb').read())}
+CLASSIFY_FUN = {'see/classify/indoor': picarus.api.classifier_fromstring(open('image_search/sun397_indoor_classifier.pb').read())}
 
 TP = pickle.load(open('tree_ser-texton.pkl'))  # TODO: support loading tp/tp2 as strings, move to imseg
 TP2 = pickle.load(open('tree_ser-integral.pkl'))
@@ -250,8 +250,15 @@ def _action_handle(function, params, image):
         pass
     try:
         sf = SEARCH_FUN[function]
+        image = imfeat.resize_image_max_side(image, 320)  # TODO: Expose this
         print(sf.feature)
         return {'results': sf.analyze_cropped(image)}
+    except KeyError:
+        pass
+    try:
+        cf = CLASSIFY_FUN[function]
+        image = imfeat.resize_image_max_side(image, 320)  # TODO: Expose this
+        return {'results': cf(image)}
     except KeyError:
         pass
     if function == 'see/texton':

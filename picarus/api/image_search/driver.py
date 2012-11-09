@@ -62,7 +62,7 @@ class ImageRetrieval(object):
         # Feature Classifier settings
         self.feature_classifier_row = self.images_table
         self.feature_classifier_column = 'data:classifier_' + self.feature_name
-        self.feature_classify_column = 'hash:predict_' + self.feature_name
+        self.feature_prediction_column = 'hash:predict_' + self.feature_name
         self.feature_class_positive = 'indoor'
         # Mask Hasher settings
         self.masks_hasher_row = 'masks'
@@ -184,6 +184,27 @@ class ImageRetrieval(object):
         row_dict[output_row] = cp.SerializeToString()
         print('Train')
 
+    def feature_to_prediction(self):
+        classifier = self._get_feature_classifier()
+        self._feature_to_prediction(classifier, self.images_table, self.feature_column, self.images_table, self.feature_prediction_column)
+
+    def _feature_to_prediction(self, classifier, input_table, input_column, output_table, output_column, **kw):
+        classifier_fp = tempfile.NamedTemporaryFile()
+        classifier_fp.write(classifier)
+        classifier_fp.flush()
+        cmdenvs = {'HBASE_INPUT_COLUMN': input_column,
+                   'HBASE_TABLE': input_table,
+                   'HBASE_OUTPUT_COLUMN': output_column,
+                   'HASHER_FN': os.path.basename(classifier_fp.name)}
+        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, columns=[cmdenvs['HBASE_INPUT_COLUMN']], files=[classifier_fp.name],
+                             cmdenvs=cmdenvs, dummy_fp=classifier_fp, **kw)
+
+    def get_feature_classifier(self):
+        cp = picarus.api.Classifier()
+        cp.ParseFromString(self._get_feature_classifier())
+        return cp
+
     def _get_feature_classifier(self):
         out = self.hb.get(self.models_table, self.feature_classifier_row, self.feature_classifier_column)
         if not out:
@@ -291,3 +312,4 @@ if __name__ == '__main__':
         # Classifier
         image_retrieval.features_to_classifier(start_row='sun397train', max_per_label=1000)
         open('sun397_indoor_classifier.pb', 'w').write(image_retrieval._get_feature_classifier())
+        image_retrieval.feature_to_prediction()
