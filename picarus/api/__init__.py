@@ -38,13 +38,21 @@ def model_fromfile(path):
         raise ValueError('Unknown model type[%s]' % path)
 
 
-def classifier_fromstring(classifier_ser):
+def image_classifier_fromstring(classifier_ser):
     cp = Classifier()
     cp.ParseFromString(classifier_ser)
     loader = lambda x, y: pickle.loads(y) if x == cp.PICKLE else call_import(json.loads(y))
     feature = loader(cp.feature_format, cp.feature)
     classifier = loader(cp.classifier_format, cp.classifier)
     return lambda image: float(classifier.decision_function(feature(image)).flat[0])
+
+
+def feature_classifier_fromstring(classifier_ser):
+    cp = Classifier()
+    cp.ParseFromString(classifier_ser)
+    loader = lambda x, y: pickle.loads(y) if x == cp.PICKLE else call_import(json.loads(y))
+    classifier = loader(cp.classifier_format, cp.classifier)
+    return lambda feature: float(classifier.decision_function(feature).flat[0])
 
 
 def model_tofile(model):

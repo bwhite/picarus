@@ -195,7 +195,7 @@ class ImageRetrieval(object):
         cmdenvs = {'HBASE_INPUT_COLUMN': input_column,
                    'HBASE_TABLE': input_table,
                    'HBASE_OUTPUT_COLUMN': output_column,
-                   'HASHER_FN': os.path.basename(classifier_fp.name)}
+                   'CLASSIFIER_FN': os.path.basename(classifier_fp.name)}
         hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[cmdenvs['HBASE_INPUT_COLUMN']], files=[classifier_fp.name],
                              cmdenvs=cmdenvs, dummy_fp=classifier_fp, **kw)
@@ -310,6 +310,6 @@ if __name__ == '__main__':
         open('sun397_masks_index.pb', 'w').write(image_retrieval._get_masks_index())
     else:
         # Classifier
-        image_retrieval.features_to_classifier(start_row='sun397train', max_per_label=1000)
-        open('sun397_indoor_classifier.pb', 'w').write(image_retrieval._get_feature_classifier())
+        #image_retrieval.features_to_classifier(start_row='sun397train', max_per_label=1000)
+        #open('sun397_indoor_classifier.pb', 'w').write(image_retrieval._get_feature_classifier())
         image_retrieval.feature_to_prediction()
