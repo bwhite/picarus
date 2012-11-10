@@ -200,6 +200,27 @@ class ImageRetrieval(object):
                              num_mappers=self.num_mappers, columns=[cmdenvs['HBASE_INPUT_COLUMN']], files=[classifier_fp.name],
                              cmdenvs=cmdenvs, dummy_fp=classifier_fp, **kw)
 
+    def prediction_to_conf_gt(self, **kw):
+        self._prediction_to_conf_gt(self.feature_class_positive, self.images_table, self.feature_prediction_column, self.indoor_class_column, **kw)
+
+    def _prediction_to_conf_gt(self, class_positive, input_table, input_prediction_column, input_class_column, **kw):
+        row_cols = hadoopy_hbase.scanner(self.hb, input_table,
+                                         columns=[input_prediction_column, input_class_column], **kw)
+        pos_confs = []
+        neg_confs = []
+        for row, cols in row_cols:
+            pred = float(np.fromstring(cols[input_prediction_column], dtype=np.double)[0])
+            print(repr(row))
+            if cols[input_class_column] == class_positive:
+                pos_confs.append(pred)
+            else:
+                neg_confs.append(pred)
+        pos_confs.sort()
+        neg_confs.sort()
+        open('confs.js', 'w').write(json.dumps({'pos_confs': pos_confs, 'neg_confs': neg_confs}))
+        print(len(pos_confs))
+        print(len(neg_confs))
+
     def get_feature_classifier(self):
         cp = picarus.api.Classifier()
         cp.ParseFromString(self._get_feature_classifier())
@@ -312,4 +333,5 @@ if __name__ == '__main__':
         # Classifier
         #image_retrieval.features_to_classifier(start_row='sun397train', max_per_label=1000)
         #open('sun397_indoor_classifier.pb', 'w').write(image_retrieval._get_feature_classifier())
-        image_retrieval.feature_to_prediction()
+        #image_retrieval.feature_to_prediction()
+        image_retrieval.prediction_to_conf_gt(stop_row='sun397train')

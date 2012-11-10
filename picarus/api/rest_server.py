@@ -319,6 +319,16 @@ def search():
     return open('image_search.html').read()
 
 
+@bottle.get('/classifier')
+def classifier():
+    return open('classifier_explore.html').read()
+
+
+@bottle.get('/confs.js')
+def classifier_confs():  # NOTE: Temporary
+    return open('confs.js').read()
+
+
 @bottle.post('/auth')
 def auth():
     print_request()
