@@ -310,10 +310,6 @@
           if (!_.isEqual(cms, [[4, 1, 1, 0, 1], [0, 0, 2, 4, Infinity]]))
               return 15;
           return 0;
-         /*
-                          TODO: add confidence values to cms and put in graphs, select a confidence value and apply thresholds to graphs, store classifier prediction in hbase, allow selecting classifier results in server, store feature in hbase with id, rewrite all calls that hardcode feature (reference the new feature key), allow starting jobs from server
-          */
-
       }
       function confs_to_confusion_matrix(pos_confs, neg_confs) {
           /* Takes in confs, produces Precision/Recall
