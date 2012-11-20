@@ -53,6 +53,7 @@ class ImageRetrieval(object):
         self.feature_name = 'gist'
         #self.feature_dict = {'name': 'imfeat.PyramidHistogram', 'args': ['lab'], 'kw': {'levels': 3, 'num_bins': [4, 11, 11]}}
         #self.feature_name = 'lab_pyramid_histogram_3level_4_11_11'
+        self.superpixel_column = 'feat:superpixel'
         self.feature_column = 'feat:' + self.feature_name
         # Feature Hasher settings
         self.feature_hasher_row = self.images_table
@@ -68,6 +69,7 @@ class ImageRetrieval(object):
         self.masks_hasher_row = 'masks'
         self.masks_hasher_column = 'data:hasher_masks'
         self.masks_hash_column = 'hash:masks'
+        self.masks_ilp_column = 'hash:masks_ilp'
         # Index Settings
         self.feature_index_row = self.images_table
         self.feature_index_column = 'data:index_' + self.feature_name
@@ -116,6 +118,18 @@ class ImageRetrieval(object):
                              cmdenvs=cmdenvs, files=[feature_fp.name],
                              jobconfs={'mapred.task.timeout': '6000000'}, dummy_fp=feature_fp)
 
+    def image_to_superpixels(self):
+        self._image_to_superpixels(self.images_table, self.image_column, self.images_table, self.superpixel_column)
+
+    def _image_to_superpixels(self, input_table, input_column, output_table, output_column):
+        cmdenvs = {'HBASE_INPUT_COLUMN': input_column,
+                   'HBASE_TABLE': output_table,
+                   'HBASE_OUTPUT_COLUMN': output_column}
+        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'image_to_superpixels.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, columns=[cmdenvs['HBASE_INPUT_COLUMN']],
+                             cmdenvs=cmdenvs, jobconfs={'mapred.task.timeout': '6000000'})
+
+
     def features_to_hasher(self, **kw):
         hash_bits = 256
         hasher = image_search.RRMedianHasher(hash_bits, normalize_features=False)
@@ -130,6 +144,17 @@ class ImageRetrieval(object):
         row_dict = hadoopy_hbase.HBaseRowDict(output_table, output_column, db=self.hb)
         features = hadoopy_hbase.scanner_column(self.hb, input_table, input_column, **kw)
         row_dict[output_row] = features_to_hasher(hasher, features)
+
+    def masks_to_ilp(self, **kw):
+        self._masks_to_ilp(self.images_table, self.masks_column, self.masks_ilp_column, **kw)
+
+    def _masks_to_ilp(self, input_table, input_column, output_column, **kw):
+        cmdenvs = {'HBASE_INPUT_COLUMN': input_column,
+                   'HBASE_TABLE': input_table,
+                   'HBASE_OUTPUT_COLUMN': output_column}
+        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'masks_to_ilp.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, columns=[cmdenvs['HBASE_INPUT_COLUMN']],
+                             cmdenvs=cmdenvs, **kw)
 
     def _tempfile(self, data, suffix=''):
         fp = tempfile.NamedTemporaryFile(suffix=suffix)
@@ -266,7 +291,7 @@ class ImageRetrieval(object):
     def _get_texton(self):
         tp = pickle.load(open('tree_ser-texton.pkl'))
         tp2 = pickle.load(open('tree_ser-integral.pkl'))
-        return picarus._features.TextonPredict(tp=tp, tp2=tp2, num_classes=9)
+        return picarus._features.TextonPredict(tp=tp, tp2=tp2, num_classes=8)
 
     def get_feature_hasher(self):
         return pickle.loads(self._get_feature_hasher())
@@ -320,18 +345,21 @@ if __name__ == '__main__':
     #image_retrieval.image_thumbnail()
     if 0:
         #image_retrieval.image_to_feature()
-        #image_retrieval.image_to_masks()
+        image_retrieval.image_to_masks()
         #image_retrieval.features_to_hasher(start_row='sun397train', max_rows=100)
-        #image_retrieval.masks_to_hasher(start_row='sun397train', max_rows=100)  # TODO implement
+        image_retrieval.masks_to_hasher(start_row='sun397train', max_rows=100)
         #image_retrieval.feature_to_hash()
-        #image_retrieval.masks_to_hash()
+        image_retrieval.masks_to_hash()
         #image_retrieval.build_feature_index()
-        #image_retrieval.build_masks_index()
-        open('sun397_feature_index.pb', 'w').write(image_retrieval._get_feature_index())
+        image_retrieval.build_masks_index()
+        #open('sun397_feature_index.pb', 'w').write(image_retrieval._get_feature_index())
         open('sun397_masks_index.pb', 'w').write(image_retrieval._get_masks_index())
     else:
+        pass
         # Classifier
         #image_retrieval.features_to_classifier(start_row='sun397train', max_per_label=1000)
         #open('sun397_indoor_classifier.pb', 'w').write(image_retrieval._get_feature_classifier())
         #image_retrieval.feature_to_prediction()
-        image_retrieval.prediction_to_conf_gt(stop_row='sun397train')
+        #image_retrieval.prediction_to_conf_gt(stop_row='sun397train')
+    #image_retrieval.image_to_superpixels()
+    image_retrieval.masks_to_ilp()

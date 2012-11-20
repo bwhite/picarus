@@ -88,8 +88,12 @@
 		<div id="base" style="position:relative;top:-35px;"></div>
                 <div id="graph_confidence_scatter" style="height:200px;width:600px"></div>
                 <div id="graph_confidence_scatter_norm" style="height:200px;width:600px"></div>
-                <div id="graph_rps" style="height:600px;width:600px"></div>
-                <div id="graph_roc" style="height:600px;width:600px"></div>
+                <div id="graph_rps" style="height:300px;width:300px;float:left;"></div>
+                <div id="graph_roc" style="height:300px;width:300px;float:left;"></div>
+                <div style="clear:both;">
+		<h2>PUT /see/classify/indoor</h2>
+		<div id="results_indoor" class="result_box"></div>
+                </div>
               </div>
 	      </div>
 	    </div>
@@ -184,10 +188,6 @@
       }
       function update_box() {
           /* Check input */
-          //if ($('#demoimage')[0].files.length != 1) {
-          //    display_alert('You must specify an image!');
-          //    return;
-          //}
           reset_state();
           if ($('#demosave').is(':checked')) {
               store_cookie();
@@ -197,6 +197,13 @@
               plot_confs(confs);
           }
           picarus_api_test("/confs.js", "GET", null, $('#demouser').val(), $('#demopass').val(), null, success_confs);
+          if ($('#demoimage')[0].files.length == 1) {
+              picarus_api_test("/see/classify/indoor", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_indoor"));
+              function success_input_image(xhr) {
+                  $('#input_image').attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['jpgb64']);
+              }
+              picarus_api_test("/image", "POST", {}, $('#demouser').val(), $('#demopass').val(), null, success_input_image);
+          }
       }
       function reset_bar() {
           progress_total = $('.result_box').length;
@@ -382,34 +389,62 @@
           var test_out = test_confs_to_confusion_matrix();
           if (test_out)
               alert(test_out);
-          var data = to_google_data(confs_to_conf_hist(confs.pos_confs, confs.neg_confs, 100), ['Confidence', '+', '-']);
+          var data0 = to_google_data(confs_to_conf_hist(confs.pos_confs, confs.neg_confs, 100), ['Confidence', '+', '-']);
           var options = {title: 'Classifier Confidence',
                          hAxis: {title: 'Confidence'}};
-          var chart = new google.visualization.LineChart(document.getElementById('graph_confidence_scatter'));
-          chart.draw(data, options);
-          var data = to_google_data(confs_to_conf_hist(confs.pos_confs, confs.neg_confs, 100, true), ['Confidence', '+', '-']);
+          var chart0 = new google.visualization.LineChart(document.getElementById('graph_confidence_scatter'));
+          chart0.draw(data0, options);
+
+          var data1 = to_google_data(confs_to_conf_hist(confs.pos_confs, confs.neg_confs, 100, true), ['Confidence', '+', '-']);
           options = {title: 'Classifier Confidence (normalized)',
                      hAxis: {title: 'Confidence'}};
-          chart = new google.visualization.LineChart(document.getElementById('graph_confidence_scatter_norm'));
-          chart.draw(data, options);
+          var chart1 = new google.visualization.LineChart(document.getElementById('graph_confidence_scatter_norm'));
+          chart1.draw(data1, options);
 
           // PR Curve
           var cms = confs_to_confusion_matrix(confs.pos_confs, confs.neg_confs);
-          data = to_google_data(cms_to_rps(cms), ['recall', 'precision'], true);
+          var data2 = to_google_data(cms_to_rps(cms), ['recall', 'precision'], true);
           options = {title: 'PR Curve',
                      hAxis: {title: 'Recall', minValue: 0, maxValue: 1},
                      vAxis: {title: 'Precision', minValue: 0, maxValue: 1},
-                     chartArea: {width: 500, height: 500}};
-          var chart = new google.visualization.LineChart(document.getElementById('graph_rps'));
-          chart.draw(data, options);
+                     chartArea: {width: 200, height: 200},
+                     legend: {position: 'none'}};
+          var chart2 = new google.visualization.LineChart(document.getElementById('graph_rps'));
+          chart2.draw(data2, options);
 
-          data = to_google_data(cms_to_fpr_tprs(cms), ['fpr', 'tpr'], true);
+          var data3 = to_google_data(cms_to_fpr_tprs(cms), ['fpr', 'tpr'], true);
           options = {title: 'ROC Curve',
                      hAxis: {title: 'FPR', minValue: 0, maxValue: 1},
                      vAxis: {title: 'TPR', minValue: 0, maxValue: 1},
-                     chartArea: {width: 500, height: 500}};
-          var chart = new google.visualization.LineChart(document.getElementById('graph_roc'));
-          chart.draw(data, options);
+                     chartArea: {width: 200, height: 200},
+                     legend: {position: 'none'}};
+          var chart3 = new google.visualization.LineChart(document.getElementById('graph_roc'));
+          chart3.draw(data3, options);
+
+          
+          // This connects all the charts together
+          function setNearest(chart, data, column, select_columns, val) {
+              var i, minVal = Infinity, minIndex, curVal;
+              for (i = 0; i < data.getNumberOfRows(); i++) {
+                  curVal = Math.abs(val - data.getValue(i, column));
+                  if (curVal < minVal) {
+                      minVal = curVal;
+                      minIndex = i;
+                  }
+              }
+                              
+              chart.setSelection(_.map(select_columns, function (col) {return {row: minIndex, column: col}}));
+          }
+          function setSelections(thresh) {
+              setNearest(chart0, data0, 0, [1, 2], thresh);
+              setNearest(chart1, data1, 0, [1, 2], thresh);
+              setNearest(chart2, data2, 2, [1], thresh);
+              setNearest(chart3, data3, 2, [1], thresh);
+          }
+          google.visualization.events.addListener(chart0, 'select', function () {var sel = chart0.getSelection(); setSelections(data0.getValue(sel[0].row, 0))});
+          google.visualization.events.addListener(chart1, 'select', function () {var sel = chart1.getSelection(); setSelections(data1.getValue(sel[0].row, 0))});
+          google.visualization.events.addListener(chart2, 'select', function () {var sel = chart2.getSelection(); setSelections(data2.getValue(sel[0].row, 2))});
+          google.visualization.events.addListener(chart3, 'select', function () {var sel = chart3.getSelection(); setSelections(data3.getValue(sel[0].row, 2))});
       }
       $(document).ready(entry_func);
       google.load("visualization", "1", {packages:["corechart"]});

@@ -223,7 +223,7 @@ CLASSIFY_FUN = {'see/classify/indoor': picarus.api.image_classifier_fromstring(o
 
 TP = pickle.load(open('tree_ser-texton.pkl'))  # TODO: support loading tp/tp2 as strings, move to imseg
 TP2 = pickle.load(open('tree_ser-integral.pkl'))
-TEXTON = picarus._features.TextonPredict(tp=TP, tp2=TP2, num_classes=9)
+TEXTON = picarus._features.TextonPredict(tp=TP, tp2=TP2, num_classes=8)
 #TEXTON = pickle.loads(pickle.dumps(TEXTON, -1))
 #SEARCH_FUN['see/search/masks'].feature = lambda x: [TEXTON._predict(imfeat.resize_image_max_side(x, 320))[5]]
 
@@ -252,7 +252,10 @@ def _action_handle(function, params, image):
         sf = SEARCH_FUN[function]
         image = imfeat.resize_image_max_side(image, 320)  # TODO: Expose this
         print(sf.feature)
-        return {'results': sf.analyze_cropped(image)}
+        out = {'results': sf.analyze_cropped(image)}
+        if function == 'see/search/masks':
+            out['classes'] = CLASS_COLORS
+        return out
     except KeyError:
         pass
     try:
@@ -267,7 +270,9 @@ def _action_handle(function, params, image):
         semantic_masks = TEXTON(image)
         texton_argmax2 = np.argmax(semantic_masks, 2)
         image_string = imfeat.image_tostring(COLORS_BGR[texton_argmax2], 'png')
-        return {'argmax_pngb64': base64.b64encode(image_string)}
+        out = {'argmax_pngb64': base64.b64encode(image_string)}
+        out['classes'] = CLASS_COLORS
+        return out
     if function == 'see/colors':
         image = cv2.resize(image, (320, int(image.shape[0] * 320. / image.shape[1])))
         image = np.ascontiguousarray(image)
