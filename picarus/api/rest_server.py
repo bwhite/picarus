@@ -334,6 +334,16 @@ def classifier_confs():  # NOTE: Temporary
     return open('confs.js').read()
 
 
+@bottle.get('/picarus_api.js')
+def picarus_api():  # NOTE: Temporary
+    return open('picarus_api.js').read()
+
+
+@bottle.get('/picarus_api_demo.js')
+def picarus_api_demo():  # NOTE: Temporary
+    return open('picarus_api_demo.js').read()
+
+
 @bottle.post('/auth')
 def auth():
     print_request()

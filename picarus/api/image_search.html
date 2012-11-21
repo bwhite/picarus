@@ -15,6 +15,8 @@
     <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.0/js/bootstrap.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.2/jquery.cookie.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.2/underscore-min.js"></script>
+    <script type="text/javascript" src="picarus_api.js"></script>
+    <script type="text/javascript" src="picarus_api_demo.js"></script>
     <style>
       body {
         padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
@@ -102,88 +104,7 @@
 
     </div> <!-- /container -->
     <script type="text/javascript">
-      function picarus_api_test(url, method, data, user, pass, result_selector, result_success) {
-          function clear_error() {
-              $('#demobutton').removeClass('danger info success');
-          }
-          function report_result(xhr, label_type) {
-              debug_output = xhr.responseText;
-              result_selector.html('<span class="label ' + label_type +'">' + xhr.status + '</span><p><pre>' + data  +  '</pre></p><p><pre>' + xhr.getAllResponseHeaders() + '</pre></p><p><pre>' + xhr.responseText + '</pre></p>');
-          }
-          function before_send(xhr) {
-              clear_error();
-              $('#demobutton').addClass('success');
-              result_selector.html('<span class="label warning">' + 'Running' + '</span>');
-          }
-          function success(msg, text_status, xhr) {
-              report_result(xhr, "label-success");
-              progress_success += 1;
-              update_bar();
-              if (typeof result_success != 'undefined') {
-                  result_success(xhr);
-              }
-          }
-          function fail(xhr, text_status) {
-              clear_error();
-              $('#demobutton').addClass('danger');
-              report_result(xhr, "label-important");
-              progress_fail += 1;
-              update_bar();
-          }
-          picarus_api(url, method, data, user, pass, before_send, success, fail);
-      }
-      function picarus_api(url, method, data_dict, user, pass, before_send, success, fail) {
-          if (typeof before_send == 'undefined' ) before_send = function() {};
-          if (typeof success == 'undefined' ) success = function() {};
-          if (typeof fail == 'undefined' ) fail = function() {};
-          var data = new FormData();
-          if (data_dict != null) {
-              jQuery.each($('#demoimage')[0].files, function(i, file) {
-                  data.append('image', file);
-              });
-              jQuery.each(data_dict, function(k, v) {
-                  data.append(k, v);
-              });
-          }
-          var request = $.ajax({
-          type: method,
-          url: url,
-          contentType: false,
-          processData: false,
-          cache: false,
-          beforeSend: function(xhr) {
-              xhr.setRequestHeader("Authorization", "Basic " + base64.encode(user + ":" + pass));
-              before_send(xhr);
-          },
-          data: data,
-          success: success
-          });
-          request.fail(fail);
-      }
-      function store_cookie() {
-          $.cookie("email", $('#demouser').val(), {expires : 30, secure: true});
-          $.cookie("auth", $('#demopass').val(), {expires : 30, secure: true});
-      }
-      function load_cookie() {
-          $('#demouser').val($.cookie("email"));
-          $('#demopass').val($.cookie("auth"));
-      }
-      function display_alert(message) {
-          $('#alert_placeholder').html('<div class="alert"><a class="close" data-dismiss="alert">×</a><span>' + message + '</span></div>');
-      }
-      function clear_alert() {
-          $('#alert_placeholder').html('');
-      }
-      function reset_state() {
-          clear_alert();
-          $('#texton_argmax').attr('src', '');
-          reset_bar();
-          update_bar();
-      }
-      function b64_urlsafe(data) {
-          return data.replace('+', '-').replace('/', '_');
-      }
-      function update_box() {
+      function run_demo() {
           /* Check input */
           if ($('#demoimage')[0].files.length != 1) {
               display_alert('You must specify an image!');
@@ -191,18 +112,19 @@
           }
           reset_state();
           if ($('#demosave').is(':checked')) {
-              store_cookie();
+              store_cookie($('#demouser').val(), $('#demopass').val());
           }
           function success_scene_search(xhr) {
           $('#results_search_scenes').html('');
           $.each(JSON.parse(xhr.responseText)['results'], function (i, result) {
               var cur_id = 'search_scenes_' + String(i);
               function success_image(xhr) {
+                  resp_text = xhr.responseText;
                   $('#' + cur_id).attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['data']);
               }
               var cur_img = $('<img>').attr('id', cur_id).attr('title', result['entity']);
               $('#results_search_scenes').append(cur_img);
-              picarus_api_test("/db/images/" + b64_urlsafe(result.file) + "/ZGF0YTppbWFnZV83NXNx", "GET", null, $('#demouser').val(), $('#demopass').val(), $("#nothing"), success_image);
+              picarus_api_test("/db/images/" + b64_urlsafe(result.file) + "/ZGF0YTppbWFnZV83NXNx", "GET", {email: $('#demouser').val(), auth: $('#demopass').val(), success: success_image});
           });
           }
           function success_masks_search(xhr) {
@@ -214,54 +136,21 @@
               }
               var cur_img = $('<img>').attr('id', cur_id).attr('title', result['entity']);
               $('#results_search_masks').append(cur_img);
-              picarus_api_test("/db/images/" + b64_urlsafe(result.file) + "/ZGF0YTppbWFnZV83NXNx", "GET", null, $('#demouser').val(), $('#demopass').val(), $("#nothing"), success_image);
+              picarus_api_test("/db/images/" + b64_urlsafe(result.file) + "/ZGF0YTppbWFnZV83NXNx", "GET", {email: $('#demouser').val(), auth: $('#demopass').val(), success: success_image});
           });
           }
-          picarus_api_test("/see/search/masks", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_masks"), success_masks_search);
-          picarus_api_test("/see/search/scenes", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_scenes"), success_scene_search);
+          picarus_api_test("/see/search/masks", "POST", {image: $('#demoimage')[0], email: $('#demouser').val(), auth: $('#demopass').val(), div: $("#results_masks"), success: success_masks_search});
+          picarus_api_test("/see/search/scenes", "POST", {image: $('#demoimage')[0], email: $('#demouser').val(), auth: $('#demopass').val(), div: $("#results_scenes"), success: success_scene_search});
           function success_texton_argmax(xhr) {
               mask_response = JSON.parse(xhr.responseText)
               $('#texton_argmax').attr('src', 'data:image/png;base64,' + mask_response['argmax_pngb64']);
               class_key(mask_response['classes'], $('#texton_key'));
           }
-          function class_key(classes, div) {
-              div.html('');
-              cur_classes = classes;
-              classes = _.map(classes, function (value, class_name) {
-                  value.name = class_name;
-                  return value;
-              });
-              classes = _.sortBy(classes, 'mask_num');
-              _.each(classes, function (value) {
-                  div.append($('<span>', {style: 'color:rgb(' + value['color'][0] + ','+ value['color'][1] + ',' + value['color'][2] + ')'}).html('&#x25A0;'));
-                  div.append(' (' + value['mask_num'] + ') ' + value['name']);
-                  div.append('<br>');
-             })
-          }
-          picarus_api_test("/see/texton", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_texton"), success_texton_argmax);
+          picarus_api_test("/see/texton", "POST", {image: $('#demoimage')[0], email: $('#demouser').val(), auth: $('#demopass').val(), div: $("#results_texton"), success: success_texton_argmax});
           function success_input_image(xhr) {
               $('#input_image').attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['jpgb64']);
           }
-          picarus_api_test("/image", "POST", {}, $('#demouser').val(), $('#demopass').val(), $("#results_texton"), success_input_image);
-      }
-      function reset_bar() {
-          progress_total = $('.result_box').length;
-          progress_success = 0;
-          progress_fail = 0;
-      }
-      function update_bar() {
-          $('#pbar-success').css('width', String(100 * progress_success / progress_total) + "%");
-          $('#pbar-danger').css('width', String(100 * progress_fail / progress_total) + "%");
-      }
-      function entry_func() {
-          $('#demobutton').click(update_box);
-          var submit_func = function(event) {
-              if(event.keyCode == 13) {
-                  $("#demobutton").click();
-              }
-          }
-          load_cookie();
-          reset_state();
+          picarus_api_test("/image", "POST", {image: $('#demoimage')[0], email: $('#demouser').val(), auth: $('#demopass').val(), success: success_input_image});
       }
       $(document).ready(entry_func)
     </script>
