@@ -461,9 +461,16 @@ class ImageRetrieval(object):
                 if x >= num_rows:
                     break
                 yield cols[self.indoor_class_column], imfeat.image_fromstring(cols[self.image_column])
-        c.train(inner(100, start_row='sun397train'))
+        c.train(inner(1000, start_row='sun397train'))
+        cms = {}
         for cur_class, image in inner(100):
-            print cur_class, c.analyze(image)
+            pred_class = c.analyze(image)[0]['class']
+            try:
+                cms.setdefault(cur_class, {})[pred_class] += 1
+            except KeyError:
+                cms[cur_class][pred_class] = 1
+            print cur_class, pred_class
+        print(cms)
 
 
 if __name__ == '__main__':

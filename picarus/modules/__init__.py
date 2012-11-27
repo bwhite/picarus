@@ -129,10 +129,10 @@ class NBNNClassifier(MultiClassClassifier):
     Cons
     """
 
-    def __init__(self, required_files=()):
+    def __init__(self, sbin=32, required_files=()):
         self.required_files = required_files
         self.max_side = 320
-        self.feature = imfeat.HOGLatent(32)
+        self.feature = imfeat.HOGLatent(sbin)
         self.db = None
         self.classes = None
         self.dist = distpy.L2Sqr()
