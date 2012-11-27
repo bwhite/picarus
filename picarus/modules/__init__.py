@@ -132,7 +132,7 @@ class NBNNClassifier(MultiClassClassifier):
     def __init__(self, sbin=32, max_side=320, num_points=None, required_files=()):
         self.required_files = required_files
         self.max_side = max_side
-        self._feature = self._feature_hist  # imfeat.HOGLatent(sbin).compute_dense
+        self._feature = imfeat.HOGLatent(sbin).compute_dense# self._feature_hist
         self.db = None
         self.num_points = num_points
         self.classes = None
