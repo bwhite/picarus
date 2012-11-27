@@ -132,14 +132,21 @@ class NBNNClassifier(MultiClassClassifier):
     def __init__(self, sbin=32, max_side=320, num_points=None, required_files=()):
         self.required_files = required_files
         self.max_side = max_side
-        self._feature = imfeat.HOGLatent(sbin)
+        self._feature = self._feature_hist  # imfeat.HOGLatent(sbin).compute_dense
         self.db = None
         self.num_points = num_points
         self.classes = None
         self.dist = distpy.L2Sqr()
+        self.sbin = sbin
+
+    def _feature_hist(self, image):
+        out = []
+        for block in imfeat.BlockGenerator(image, imfeat.CoordGeneratorRect, output_size=(self.sbin, self.sbin), step_delta=(self.sbin, self.sbin)):
+            out.append(imfeat.convert_image(image, {'type': 'numpy', 'dtype': 'float32', 'mode': 'lab'}).ravel())
+        return np.asfarray(out)
 
     def feature(self, image):
-        points = self._feature.compute_dense(imfeat.resize_image_max_side(image, self.max_side))
+        points = self._feature(imfeat.resize_image_max_side(image, self.max_side))
         if self.num_points is not None:
             return np.ascontiguousarray(random.sample(points, min(self.num_points, len(points))))
         return points
@@ -179,7 +186,7 @@ class NBNNClassifier(MultiClassClassifier):
 
 
 if __name__ == '__main__':
-    c = NBNNClassifier()
+    c = NBNNClassifier(num_points=100)
     images = [cv2.imread('/home/brandyn/projects/imfeat/tests/test_images/lena.ppm'),
               cv2.imread('/home/brandyn/projects/imfeat/tests/test_images/opp_color_circle.png')]
     c.train(zip(['lena', 'opp'], images))
