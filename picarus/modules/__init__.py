@@ -129,13 +129,19 @@ class NBNNClassifier(MultiClassClassifier):
     Cons
     """
 
-    def __init__(self, sbin=32, max_side=320, required_files=()):
+    def __init__(self, sbin=32, max_side=320, num_points=None, required_files=()):
         self.required_files = required_files
         self.max_side = max_side
-        self.feature = imfeat.HOGLatent(sbin)
+        self._feature = imfeat.HOGLatent(sbin)
         self.db = None
+        self.num_points = None
         self.classes = None
         self.dist = distpy.L2Sqr()
+
+    def feature(self, image):
+        points = self._feature.compute_dense(imfeat.resize_image_max_side(image, self.max_side))
+        if self.num_points is not None:
+            return random.sample(points, min(self.num_points, len(points))
 
     def train(self, class_images):
         self.classes = []
@@ -147,7 +153,7 @@ class NBNNClassifier(MultiClassClassifier):
                 class_to_num[cur_class] = len(class_to_num)
                 self.classes.append(cur_class)
             cur_class = class_to_num[cur_class]
-            cur_features = self.feature.compute_dense(imfeat.resize_image_max_side(image, self.max_side))
+            cur_features = self.feature(image)
             self.db.setdefault(cur_class, []).append(cur_features)
         for cur_class, features in self.db.items():
             self.db[cur_class] = np.vstack(self.db[cur_class])
@@ -162,7 +168,7 @@ class NBNNClassifier(MultiClassClassifier):
             List of {'name': name} in
             descending confidence order.
         """
-        features = self.feature.compute_dense(imfeat.resize_image_max_side(image, self.max_side))
+        features = self.feature(image)
         class_dists = {}  # [class] = total_dist
         for cur_class in self.db:
             dist_indeces = self.dist.nns(self.db[cur_class], features)

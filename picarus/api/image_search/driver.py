@@ -461,7 +461,7 @@ class ImageRetrieval(object):
                 if x >= num_rows:
                     break
                 yield cols[self.indoor_class_column], imfeat.image_fromstring(cols[self.image_column])
-        c.train(inner(1000, start_row='sun397train'))
+        c.train(inner(2000, start_row='sun397train'))
         cms = {}
         for cur_class, image in inner(100):
             pred_class = c.analyze(image)[0]['class']
