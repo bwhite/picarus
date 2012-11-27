@@ -452,7 +452,7 @@ class ImageRetrieval(object):
         print(ilps[0])
 
     def evaluate_nbnn(self):
-        c = picarus.modules.NBNNClassifier()
+        c = picarus.modules.NBNNClassifier(32)
 
         def inner(num_rows, **kw):
             row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
