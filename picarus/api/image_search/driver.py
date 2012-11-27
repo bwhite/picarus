@@ -15,6 +15,7 @@ import base64
 import picarus._features
 import picarus.api
 import sklearn.svm
+from confmat import save_confusion_matrix
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -49,10 +50,10 @@ class ImageRetrieval(object):
         self.models_table = 'picarus_models'
         self.hb = hadoopy_hbase.connect()
         # Feature Settings
-        self.feature_dict = {'name': 'imfeat.GIST'}
-        self.feature_name = 'gist'
-        #self.feature_dict = {'name': 'imfeat.PyramidHistogram', 'args': ['lab'], 'kw': {'levels': 3, 'num_bins': [4, 11, 11]}}
-        #self.feature_name = 'lab_pyramid_histogram_3level_4_11_11'
+        #self.feature_dict = {'name': 'imfeat.GIST'}
+        #self.feature_name = 'gist'
+        self.feature_dict = {'name': 'imfeat.PyramidHistogram', 'args': ['lab'], 'kw': {'levels': 2, 'num_bins': [4, 11, 11]}}
+        self.feature_name = 'lab_pyramid_histogram_2level_4_11_11'
         self.superpixel_column = 'feat:superpixel'
         self.feature_column = 'feat:' + self.feature_name
         # Feature Hasher settings
@@ -66,6 +67,8 @@ class ImageRetrieval(object):
         self.feature_prediction_column = 'hash:predict_' + self.feature_name
         self.feature_class_positive = 'indoor'
         # Mask Hasher settings
+        self.texton_num_classes = 8
+        self.texton_classes = json.load(open('../class_colors.js'))
         self.masks_hasher_row = 'masks'
         self.masks_hasher_column = 'data:hasher_masks'
         self.masks_hash_column = 'hash:masks'
@@ -76,9 +79,10 @@ class ImageRetrieval(object):
         self.masks_index_row = 'masks'
         self.masks_index_column = 'data:index_masks'
         self.masks_column = 'feat:masks'
+        self.masks_gt_column = 'feat:masks_gt'
         self.class_column = 'meta:class_2'
         self.indoor_class_column = 'meta:class_0'
-        self.num_mappers = 2
+        self.num_mappers = 10
 
     def create_tables(self):
         self.hb.createTable(self.models_table, [hadoopy_hbase.ColumnDescriptor('data:')])
@@ -128,7 +132,6 @@ class ImageRetrieval(object):
         hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'image_to_superpixels.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[cmdenvs['HBASE_INPUT_COLUMN']],
                              cmdenvs=cmdenvs, jobconfs={'mapred.task.timeout': '6000000'})
-
 
     def features_to_hasher(self, **kw):
         hash_bits = 256
@@ -289,9 +292,9 @@ class ImageRetrieval(object):
         row_dict[output_row] = hashes_to_index(si, index, metadata, hashes)
 
     def _get_texton(self):
-        tp = pickle.load(open('tree_ser-texton.pkl'))
-        tp2 = pickle.load(open('tree_ser-integral.pkl'))
-        return picarus._features.TextonPredict(tp=tp, tp2=tp2, num_classes=8)
+        tp = pickle.load(open('../tree_ser-texton.pkl'))
+        tp2 = pickle.load(open('../tree_ser-integral.pkl'))
+        return picarus._features.TextonPredict(tp=tp, tp2=tp2, num_classes=self.texton_num_classes)
 
     def get_feature_hasher(self):
         return pickle.loads(self._get_feature_hasher())
@@ -323,6 +326,144 @@ class ImageRetrieval(object):
             raise ValueError('Index does not exist!')
         return out[0].value
 
+    def annotation_masks_to_hbase(self):
+        import redis
+        import ast
+        import imfeat
+        import cv2
+        r = redis.StrictRedis(port=6381, db=6)
+        responses = [r.hgetall(x) for x in r.keys()]
+        print('Total Responses[%d]' % len(responses))
+        image_class_segments = {}  # [row][class_name] = segments
+        for x in responses:
+            if 'user_data' in x:
+                x['user_data'] = ast.literal_eval(x['user_data'])
+                if x['user_data']['segments']:
+                    row_key = x['image']
+                    image_class_segments.setdefault(row_key, {}).setdefault(x['user_data']['name'], []).append(x['user_data']['segments'])
+        for row_key, class_segments in image_class_segments.items():
+            columns = dict((x, y.value) for x, y in self.hb.getRowWithColumns(self.images_table, row_key, [self.image_column, self.superpixel_column])[0].columns.items())
+            image = imfeat.image_fromstring(columns[self.image_column])
+            segments = json.loads(columns[self.superpixel_column])
+            class_masks = {}
+            class_masks = np.zeros((image.shape[0], image.shape[1], self.texton_num_classes))
+            for name, user_segment_groups in class_segments.items():
+                cur_mask = np.zeros(image.shape[:2], dtype=np.uint8)
+                for user_segment_group in user_segment_groups:
+                    for user_segment in user_segment_group:
+                        hull = segments[user_segment]
+                        hull = np.asarray(hull).astype(np.int32).reshape(1, -1, 2)
+                        mask_color = 255
+                        cv2.drawContours(cur_mask, hull, -1, mask_color, -1)
+                        cv2.drawContours(cur_mask, hull, -1, mask_color, 2)
+                class_masks[:, :, self.texton_classes[name]['mask_num']] = cur_mask / 255.
+            class_masks_ser = picarus.api.np_tostring(class_masks)
+            print('Storing row [%s]' % repr(row_key))
+            self.hb.mutateRow(self.images_table, row_key, [hadoopy_hbase.Mutation(column=self.masks_gt_column, value=class_masks_ser)])
+
+    def evaluate_masks(self, cm_ilp):
+        # Go through each mask and compare it to the annotation results
+        row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
+                                         columns=[self.masks_gt_column])
+        cms = {'train': np.zeros((self.texton_num_classes, self.texton_num_classes), dtype=np.int32),
+               'test': np.zeros((self.texton_num_classes, self.texton_num_classes), dtype=np.int32)}
+        ilps = []
+        if cm_ilp:
+            ilp_weights = json.load(open('ilp_weights.js'))  # load weights from previous run
+            ilp_weights['ilp_tables'] = np.asfarray(ilp_weights['ilp_tables'])
+        for row, columns in row_cols:
+            gt = picarus.api.np_fromstring(columns[self.masks_gt_column])
+            ilp_pred = np.fromstring(self.hb.get(self.images_table, row, self.feature_prediction_column)[0].value, dtype=np.double)[0]
+            print(ilp_pred)
+            masks = picarus.api.np_fromstring(self.hb.get(self.images_table, row, self.masks_column)[0].value)
+            if cm_ilp:
+                try:
+                    bin_index = [x for x, y in enumerate(ilp_weights['bins']) if y >= ilp_pred][0]
+                except IndexError:
+                    bin_index = ilp_weights['ilp_tables'].shape[1]
+                if bin_index != 0:
+                    bin_index -= 1
+                print('bin_index[%d]' % bin_index)
+                masks *= ilp_weights['ilp_tables'][:, bin_index]
+            masks_argmax = np.argmax(masks, 2)
+            gt_sums = np.sum(gt.reshape(-1, gt.shape[2]), 0).tolist()
+            print(gt_sums)
+            if row.startswith('sun397train'):
+                cm = cms['train']
+                ilps.append({'gt_sums': gt_sums, 'ilp_pred': ilp_pred, 'gt_size': gt.shape[0] * gt.shape[1]})
+            else:
+                cm = cms['test']
+            for mask_num in range(gt.shape[2]):
+                if not np.any(gt[:, :, mask_num]):
+                    continue
+                print(mask_num)
+                #print (gt[:, :, mask_num] > 0).nonzero()
+                preds = masks_argmax[(gt[:, :, mask_num] > 0).nonzero()]
+                h, bins = np.histogram(preds, np.arange(self.texton_num_classes + 1))
+                np.testing.assert_equal(bins, np.arange(self.texton_num_classes + 1))
+                cm[mask_num] += h
+            json.dump({'cms': {'train': cms['train'].tolist(), 'test': cms['test'].tolist()}, 'cm_ilp': cm_ilp, 'ilps': ilps}, open('eval.js', 'w'))
+            for split in ['train', 'test']:
+                cm = cms[split]
+                print(split)
+                print(cm)
+                if np.any(cm):
+                    print(((cm / float(np.sum(cm))) * 100).astype(np.int32))
+        classes = [z[1] for z in sorted([(y['mask_num'], x) for x, y in self.texton_classes.items()])]
+        title_suffix = 'w ilp)' if cm_ilp else 'w/o ilp)'
+        fn_suffix = '_ilp.png' if cm_ilp else '.png'
+        save_confusion_matrix(cms['test'], classes, 'confmat_test' + fn_suffix, title='Confusion Matrix (test ' + title_suffix)
+        save_confusion_matrix(cms['train'], classes, 'confmat_train' + fn_suffix, title='Confusion Matrix (train ' + title_suffix)
+
+    def evaluate_masks_stats(self):
+        data = json.load(open('eval.js'))
+        ilps = data['ilps']
+        class_ilps = [[] for x in range(self.texton_num_classes)]
+        ilp_preds = []
+        for x in ilps:
+            for y, z in enumerate(np.array(x['gt_sums']) / float(x['gt_size'])):
+                class_ilps[y].append((x['ilp_pred'], z))
+            ilp_preds.append(x['ilp_pred'])
+        for x in class_ilps:
+            x.sort()
+
+        # Make ilp bins (roughly equal # of items each)
+        ilp_preds.sort()
+        num_ilp_bins = 5
+        elements_per_bin = int(np.round(len(ilp_preds) / num_ilp_bins))
+        bins = []
+        for x in range(num_ilp_bins + 1):
+            bins.append(ilp_preds[x * elements_per_bin])
+
+        mask_num_to_class = dict((y['mask_num'], x) for x, y in self.texton_classes.items())
+        ilp_tables = []
+        for y, x in enumerate(class_ilps):
+            ilp_confs, class_probs = zip(*x)
+            weighted_counts, bins2 = np.histogram(ilp_confs, bins, weights=class_probs)
+            counts, bins3 = np.histogram(ilp_confs, bins)
+            if y == 0:
+                print 'bin_counts', counts
+            ilp_tables.append((weighted_counts.astype(np.double) / counts).tolist())
+            print mask_num_to_class[y], ilp_tables[-1]
+        json.dump({'ilp_tables': ilp_tables, 'bins': bins}, open('ilp_weights.js', 'w'))
+        print(len(ilps))
+        print(ilps[0])
+
+    def evaluate_nbnn(self):
+        c = picarus.modules.NBNNClassifier()
+
+        def inner(num_rows, **kw):
+            row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
+                                             columns=[self.image_column, self.indoor_class_column], **kw)
+            for x, (_, cols) in enumerate(row_cols):
+                if x >= num_rows:
+                    break
+                yield cols[self.indoor_class_column], self.image_column
+        c.train(inner(100, start_row='sun397train'))
+        for cur_class, image in inner(100):
+            print cur_class, c.analyze(image)
+
+
 if __name__ == '__main__':
     image_retrieval = ImageRetrieval()
     #image_retrieval.create_tables()
@@ -343,23 +484,25 @@ if __name__ == '__main__':
 
     #image_retrieval.image_resize()
     #image_retrieval.image_thumbnail()
-    if 0:
-        #image_retrieval.image_to_feature()
-        image_retrieval.image_to_masks()
-        #image_retrieval.features_to_hasher(start_row='sun397train', max_rows=100)
-        image_retrieval.masks_to_hasher(start_row='sun397train', max_rows=100)
-        #image_retrieval.feature_to_hash()
-        image_retrieval.masks_to_hash()
-        #image_retrieval.build_feature_index()
-        image_retrieval.build_masks_index()
-        #open('sun397_feature_index.pb', 'w').write(image_retrieval._get_feature_index())
-        open('sun397_masks_index.pb', 'w').write(image_retrieval._get_masks_index())
-    else:
-        pass
+    #image_retrieval.annotation_masks_to_hbase()
+    #image_retrieval.evaluate_masks(False)
+    image_retrieval.evaluate_masks_stats()
+    quit()
+    if 1:
+        image_retrieval.image_to_feature()
+        #image_retrieval.image_to_masks()
+        image_retrieval.features_to_hasher(start_row='sun397train', max_rows=1000)
+        #image_retrieval.masks_to_hasher(start_row='sun397train', max_rows=1000)
+        image_retrieval.feature_to_hash()
+        #image_retrieval.masks_to_hash()
+        image_retrieval.build_feature_index()
+        #image_retrieval.build_masks_index()
+        open('sun397_feature_index.pb', 'w').write(image_retrieval._get_feature_index())
+        #open('sun397_masks_index.pb', 'w').write(image_retrieval._get_masks_index())
         # Classifier
-        #image_retrieval.features_to_classifier(start_row='sun397train', max_per_label=1000)
-        #open('sun397_indoor_classifier.pb', 'w').write(image_retrieval._get_feature_classifier())
-        #image_retrieval.feature_to_prediction()
-        #image_retrieval.prediction_to_conf_gt(stop_row='sun397train')
+        image_retrieval.features_to_classifier(start_row='sun397train', max_per_label=5000)
+        open('sun397_indoor_classifier.pb', 'w').write(image_retrieval._get_feature_classifier())
+        image_retrieval.feature_to_prediction()
+        image_retrieval.prediction_to_conf_gt(stop_row='sun397train')
     #image_retrieval.image_to_superpixels()
-    image_retrieval.masks_to_ilp()
+    #image_retrieval.masks_to_ilp()

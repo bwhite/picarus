@@ -77,9 +77,14 @@
                 <div>
 		  <img id="colors_argmax" title="ColorNaming Argmax"></img>
                 </div>
+		<div id="colors_key"></div>
 		<div>
 		  <img id="texton_argmax" title="Texton Argmax"></img>
 		</div>
+		<div>
+		  <img id="texton_ilp_argmax" title="Texton ILP Argmax"></img>
+		</div>
+		<div id="texton_key"></div>
 	      </div>
 	      <div class="span8">
 		<div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
@@ -124,17 +129,27 @@
           if ($('#demosave').is(':checked')) {
               store_cookie();
           }
+          var auth = {email: $('#demouser').val(), auth: $('#demopass').val()};
           var image = $('#demoimage')[0];
           picarus_api_test_demo("/see/feature/GIST", "POST", {div: $("#results_gist"), image: image});
           picarus_api_test_demo("/see/search/logos", "POST", {div: $("#results_logos"), image: image});
           picarus_api_test_demo("/see/search/scenes", "POST", {div: $("#results_scenes"), image: image});
           function success_texton_argmax(xhr) {
-              $('#texton_argmax').attr('src', 'data:image/png;base64,' + JSON.parse(xhr.responseText)['argmax_pngb64']);
+              mask_response = JSON.parse(xhr.responseText)
+              $('#texton_argmax').attr('src', 'data:image/png;base64,' + mask_response['argmax_pngb64']);
+              class_key(mask_response['classes'], $('#texton_key'));
+          }
+          function success_texton_ilp_argmax(xhr) {
+              mask_response = JSON.parse(xhr.responseText)
+              $('#texton_ilp_argmax').attr('src', 'data:image/png;base64,' + mask_response['argmax_pngb64']);
           }
           function success_colors_argmax(xhr) {
-              $('#colors_argmax').attr('src', 'data:image/png;base64,' + JSON.parse(xhr.responseText)['argmax_pngb64']);
+              mask_response = JSON.parse(xhr.responseText)
+              $('#colors_argmax').attr('src', 'data:image/png;base64,' + mask_response['argmax_pngb64']);
+              class_key(mask_response['classes'], $('#colors_key'));
           }
           picarus_api_test_demo("/see/texton", "POST", {div: $("#results_texton"), image: image, success: success_texton_argmax});
+          picarus_api_test_demo("/see/texton_ilp", "POST", {image: image, success: success_texton_ilp_argmax});
           picarus_api_test_demo("/see/colors", "POST", {div: $("#results_colors"), image: image, success: success_colors_argmax});
           function success_input_image(xhr) {
               $('#input_image').attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['jpgb64']);

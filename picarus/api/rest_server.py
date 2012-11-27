@@ -224,6 +224,9 @@ CLASSIFY_FUN = {'see/classify/indoor': picarus.api.image_classifier_fromstring(o
 TP = pickle.load(open('tree_ser-texton.pkl'))  # TODO: support loading tp/tp2 as strings, move to imseg
 TP2 = pickle.load(open('tree_ser-integral.pkl'))
 TEXTON = picarus._features.TextonPredict(tp=TP, tp2=TP2, num_classes=8)
+ILP_WEIGHTS = json.load(open('image_search/ilp_weights.js'))
+ILP_WEIGHTS['ilp_tables'] = np.array(ILP_WEIGHTS['ilp_tables'])
+
 #TEXTON = pickle.loads(pickle.dumps(TEXTON, -1))
 #SEARCH_FUN['see/search/masks'].feature = lambda x: [TEXTON._predict(imfeat.resize_image_max_side(x, 320))[5]]
 
@@ -264,10 +267,23 @@ def _action_handle(function, params, image):
         return {'results': cf(image)}
     except KeyError:
         pass
-    if function == 'see/texton':
+    if function == 'see/texton' or function == 'see/texton_ilp':
         image = cv2.resize(image, (320, int(image.shape[0] * 320. / image.shape[1])))
         image = np.ascontiguousarray(image)
         semantic_masks = TEXTON(image)
+        if function == 'see/texton_ilp':
+            ilp_pred = CLASSIFY_FUN['see/classify/indoor'](imfeat.resize_image_max_side(image, 320))
+            try:
+                bin_index = [x for x, y in enumerate(ILP_WEIGHTS['bins']) if y >= ilp_pred][0]
+            except IndexError:
+                bin_index = ILP_WEIGHTS['ilp_tables'].shape[1]
+            if bin_index != 0:
+                bin_index -= 1
+            ilp_weights = ILP_WEIGHTS['ilp_tables'][:, bin_index]
+            print('ILP Pred[%s] Weights[%s]' % (ilp_pred, ilp_weights))
+            semantic_masks *= ilp_weights
+        #min_probability = float(params.get('min_probability', 0.5))
+        #semantic_masks = np.dstack([semantic_masks, np.ones_like(semantic_masks[:, :, 0]) * min_probability])
         texton_argmax2 = np.argmax(semantic_masks, 2)
         image_string = imfeat.image_tostring(COLORS_BGR[texton_argmax2], 'png')
         out = {'argmax_pngb64': base64.b64encode(image_string)}
