@@ -141,7 +141,7 @@ class NBNNClassifier(MultiClassClassifier):
     def feature(self, image):
         points = self._feature.compute_dense(imfeat.resize_image_max_side(image, self.max_side))
         if self.num_points is not None:
-            return np.asfarray(random.sample(points, min(self.num_points, len(points))))
+            return np.ascontiguousarray(random.sample(points, min(self.num_points, len(points))))
 
     def train(self, class_images):
         self.classes = []
@@ -153,8 +153,8 @@ class NBNNClassifier(MultiClassClassifier):
                 class_to_num[cur_class] = len(class_to_num)
                 self.classes.append(cur_class)
             cur_class = class_to_num[cur_class]
-            cur_features = self.feature(image)
-            self.db.setdefault(cur_class, []).append(cur_features)
+            features = self.feature(image)
+            self.db.setdefault(cur_class, []).append(features)
         for cur_class, features in self.db.items():
             self.db[cur_class] = np.vstack(self.db[cur_class])
 
