@@ -146,7 +146,7 @@ class NBNNClassifier(MultiClassClassifier):
         for y in range(feature_mask.shape[0]):
             for x in range(feature_mask.shape[1]):
                 yx = np.array([y, x]) / norm * scale
-                features.hstack([feature_mask[y, x, :], yx])
+                features.append(np.hstack([feature_mask[y, x, :], yx]))
                 print(features[-1])
         return np.asfarray(features)
 
