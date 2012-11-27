@@ -134,7 +134,7 @@ class NBNNClassifier(MultiClassClassifier):
         self.max_side = max_side
         self._feature = imfeat.HOGLatent(sbin)
         self.db = None
-        self.num_points = None
+        self.num_points = num_points
         self.classes = None
         self.dist = distpy.L2Sqr()
 
@@ -142,6 +142,7 @@ class NBNNClassifier(MultiClassClassifier):
         points = self._feature.compute_dense(imfeat.resize_image_max_side(image, self.max_side))
         if self.num_points is not None:
             return np.ascontiguousarray(random.sample(points, min(self.num_points, len(points))))
+        return points
 
     def train(self, class_images):
         self.classes = []
@@ -181,7 +182,7 @@ if __name__ == '__main__':
     c = NBNNClassifier()
     images = [cv2.imread('/home/brandyn/projects/imfeat/tests/test_images/lena.ppm'),
               cv2.imread('/home/brandyn/projects/imfeat/tests/test_images/opp_color_circle.png')]
-    c.train(images, ['lena', 'opp'])
+    c.train(zip(['lena', 'opp'], images))
     print c.db[0].shape
     print c.db[1].shape
     print(c.db)
