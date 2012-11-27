@@ -132,12 +132,23 @@ class NBNNClassifier(MultiClassClassifier):
     def __init__(self, sbin=32, max_side=320, num_points=None, required_files=()):
         self.required_files = required_files
         self.max_side = max_side
-        self._feature = imfeat.HOGLatent(sbin).compute_dense# self._feature_hist
+        self._feature = self._feature_hog_loc  # self._feature_hist
         self.db = None
         self.num_points = num_points
         self.classes = None
         self.dist = distpy.L2Sqr()
         self.sbin = sbin
+
+    def _feature_hog_loc(self, image, scale=1):
+        feature_mask = imfeat.HOGLatent(self.sbin).compute_dense_2d(image)
+        features = []
+        norm = np.asfarray(feature_mask.shape[:2])
+        for y in range(feature_mask.shape[0]):
+            for x in range(feature_mask.shape[1]):
+                yx = np.array([y, x]) / norm * scale
+                features.hstack([feature_mask[y, x, :], yx])
+                print(features[-1])
+        return np.asfarray(features)
 
     def _feature_hist(self, image):
         out = []
