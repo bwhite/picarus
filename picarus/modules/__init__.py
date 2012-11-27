@@ -167,8 +167,6 @@ class NBNNClassifier(MultiClassClassifier):
         for cur_class in self.db:
             dist_indeces = self.dist.nns(self.db[cur_class], features)
             class_dists[cur_class] = np.sum(dist_indeces[:, 0])
-            print(dist_indeces)
-        print(class_dists)
         return [{'class': self.classes[x[0]]} for x in sorted(class_dists.items(),
                                                               key=lambda x: x[1])][:k]
 

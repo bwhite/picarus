@@ -13,8 +13,10 @@ import itertools
 import numpy as np
 import base64
 import picarus._features
+import picarus.modules
 import picarus.api
 import sklearn.svm
+import imfeat
 from confmat import save_confusion_matrix
 
 logging.basicConfig(level=logging.DEBUG)
@@ -458,7 +460,7 @@ class ImageRetrieval(object):
             for x, (_, cols) in enumerate(row_cols):
                 if x >= num_rows:
                     break
-                yield cols[self.indoor_class_column], self.image_column
+                yield cols[self.indoor_class_column], imfeat.image_fromstring(cols[self.image_column])
         c.train(inner(100, start_row='sun397train'))
         for cur_class, image in inner(100):
             print cur_class, c.analyze(image)
@@ -486,7 +488,8 @@ if __name__ == '__main__':
     #image_retrieval.image_thumbnail()
     #image_retrieval.annotation_masks_to_hbase()
     #image_retrieval.evaluate_masks(False)
-    image_retrieval.evaluate_masks_stats()
+    #image_retrieval.evaluate_masks_stats()
+    image_retrieval.evaluate_nbnn()
     quit()
     if 1:
         image_retrieval.image_to_feature()
