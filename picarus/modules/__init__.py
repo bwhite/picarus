@@ -141,7 +141,7 @@ class NBNNClassifier(MultiClassClassifier):
     def feature(self, image):
         points = self._feature.compute_dense(imfeat.resize_image_max_side(image, self.max_side))
         if self.num_points is not None:
-            return random.sample(points, min(self.num_points, len(points))
+            return random.sample(points, min(self.num_points, len(points)))
 
     def train(self, class_images):
         self.classes = []
