@@ -123,12 +123,12 @@ class HashRetrievalClassifier(MultiClassClassifier):
 class NBNNClassifier(MultiClassClassifier):
     """Multi-class classifier using Naive Bayes Nearest Neighbor
 
-
     Pros
+    - Simple, non-parametric
 
     Cons
+    - Requires NN lookup for # descriptors * # classes which can be slow
     """
-
     def __init__(self, sbin=32, max_side=320, num_points=None, scale=1, required_files=()):
         self.required_files = required_files
         self.max_side = max_side
@@ -156,6 +156,7 @@ class NBNNClassifier(MultiClassClassifier):
             out.append(imfeat.convert_image(image, {'type': 'numpy', 'dtype': 'float32', 'mode': 'lab'}).ravel())
         return np.asfarray(out)
 
+
     def feature(self, image):
         points = self._feature(imfeat.resize_image_max_side(image, self.max_side))
         if self.num_points is not None:
@@ -177,7 +178,7 @@ class NBNNClassifier(MultiClassClassifier):
         for cur_class, features in self.db.items():
             self.db[cur_class] = np.vstack(self.db[cur_class])
 
-    def analyze(self, image, k=1):
+    def analyze(self, image):
         """Image Classifier
 
         Args:
@@ -192,16 +193,76 @@ class NBNNClassifier(MultiClassClassifier):
         for cur_class in self.db:
             dist_indeces = self.dist.nns(self.db[cur_class], features)
             class_dists[cur_class] = np.sum(dist_indeces[:, 0])
-        return [{'class': self.classes[x[0]]} for x in sorted(class_dists.items(),
-                                                              key=lambda x: x[1])][:k]
+        return [{'class': self.classes[x[0]], 'distance': x[1]} for x in sorted(class_dists.items(),
+                                                                                key=lambda x: x[1])]
 
+
+class LocalNBNNClassifier(NBNNClassifier):
+    """Multi-class classifier using Local Naive Bayes Nearest Neighbor
+
+    Pros
+    - Simple, non-parametric
+    - Faster than NBNN because it only looks at K neighbors (joint space for all classes)
+
+    Cons
+    - Requires K-NN lookup for # descriptors
+    - Approximates NBNN
+    """
+    def __init__(self, k=10, *args, **kw):
+        super(LocalNBNNClassifier, self).__init__(*args, **kw)
+        self.k = k
+
+    def train(self, class_images):
+        self.classes = []
+        self.class_nums = []
+        class_to_num = {}
+        self.db = []  # features
+        # Compute features
+        for cur_class, image in class_images:
+            if cur_class not in class_to_num:
+                class_to_num[cur_class] = len(class_to_num)
+                self.classes.append(cur_class)
+            features = self.feature(image)
+            self.class_nums += [class_to_num[cur_class]] * len(features)
+            self.db.append(features)
+        self.db = np.vstack(self.db)
+        self.class_nums = np.array(self.class_nums)
+
+    def analyze(self, image):
+        """Image Classifier
+
+        Args:
+            image: numpy bgr array
+
+        Return:
+            List of {'name': name} in
+            descending confidence order.
+        """
+        features = self.feature(image)
+        class_dists = {}  # [class] = total_dist
+        for feature in features:
+            dist_indeces = self.dist.knn(self.db, feature, self.k + 1)
+            dist_b = dist_indeces[self.k, 0]
+            class_min_dists = {}
+            for dist, index in dist_indeces[:self.k, :]:
+                cur_class = self.class_nums[index]
+                class_min_dists[cur_class] = min(class_min_dists.get(cur_class, float('inf')), dist)
+            for cur_class, dist_c in class_min_dists.items():
+                try:
+                    class_dists[cur_class] += dist_c - dist_b
+                except KeyError:
+                    class_dists[cur_class] = dist_c - dist_b
+        return [{'class': self.classes[x[0]], 'distance': x[1]} for x in sorted(class_dists.items(),
+                                                                                key=lambda x: x[1])]
 
 if __name__ == '__main__':
-    c = NBNNClassifier(num_points=100)
-    images = [cv2.imread('/home/brandyn/projects/imfeat/tests/test_images/lena.ppm'),
-              cv2.imread('/home/brandyn/projects/imfeat/tests/test_images/opp_color_circle.png')]
-    c.train(zip(['lena', 'opp'], images))
-    print c.db[0].shape
-    print c.db[1].shape
-    print(c.db)
-    print c.analyze(images[0])
+    c0 = LocalNBNNClassifier(num_points=100)
+    c1 = NBNNClassifier(num_points=100)
+    for c in [c0, c1]:
+        images = [cv2.imread('/home/brandyn/projects/imfeat/tests/test_images/lena.ppm'),
+                  cv2.imread('/home/brandyn/projects/imfeat/tests/test_images/opp_color_circle.png')]
+        c.train(zip(['lena', 'opp'], images))
+        print c.db[0].shape
+        print c.db[1].shape
+        print(c.db)
+        print c.analyze(images[0])
