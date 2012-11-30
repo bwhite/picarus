@@ -17,6 +17,8 @@ import picarus.modules
 import picarus.api
 import sklearn.svm
 import imfeat
+import scipy as sp
+import scipy.cluster.vq
 from confmat import save_confusion_matrix
 
 logging.basicConfig(level=logging.DEBUG)
@@ -54,6 +56,8 @@ class ImageRetrieval(object):
         # Feature Settings
         #self.feature_dict = {'name': 'imfeat.GIST'}
         #self.feature_name = 'gist'
+        #self.feature_dict = {'name': 'imfeat.PyramidHistogram', 'args': ['lab'], 'kw': {'levels': 2, 'num_bins': [4, 11, 11]}}
+        #self.feature_name = 'lab_pyramid_histogram_2level_4_11_11'
         self.feature_dict = {'name': 'imfeat.PyramidHistogram', 'args': ['lab'], 'kw': {'levels': 2, 'num_bins': [4, 11, 11]}}
         self.feature_name = 'lab_pyramid_histogram_2level_4_11_11'
         self.superpixel_column = 'feat:superpixel'
@@ -363,6 +367,20 @@ class ImageRetrieval(object):
             print('Storing row [%s]' % repr(row_key))
             self.hb.mutateRow(self.images_table, row_key, [hadoopy_hbase.Mutation(column=self.masks_gt_column, value=class_masks_ser)])
 
+    def cluster_points_local(self, **kw):
+        row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
+                                         columns=[self.image_column], **kw)
+        feature_func = imfeat.HOGLatent(16)
+        num_clusters = 100
+        features = []
+        for row, columns in row_cols:
+            image = imfeat.image_fromstring(columns[self.image_column])
+            features.append(feature_func.compute_dense(image))
+        features = np.vstack(features)
+        clusters = sp.cluster.vq.kmeans(features, num_clusters)[0]
+        print(clusters.shape)
+        json.dump(clusters.tolist(), open('clusters.js', 'w'))
+
     def evaluate_masks(self, cm_ilp):
         # Go through each mask and compare it to the annotation results
         row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
@@ -452,16 +470,17 @@ class ImageRetrieval(object):
         print(ilps[0])
 
     def evaluate_nbnn(self):
-        c = picarus.modules.NBNNClassifier(16, num_points=100, scale=0)
+        c = picarus.modules.LocalNBNNClassifier(10, 16, num_points=1000, scale=1)
 
         def inner(num_rows, **kw):
             row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
                                              columns=[self.image_column, self.indoor_class_column], **kw)
             for x, (_, cols) in enumerate(row_cols):
+                print(repr(x))
                 if x >= num_rows:
                     break
                 yield cols[self.indoor_class_column], imfeat.image_fromstring(cols[self.image_column])
-        c.train(inner(2000, start_row='sun397train'))
+        c.train(inner(5000, start_row='sun397train'))
         cms = {}
         for cur_class, image in inner(100):
             pred_class = c.analyze(image)[0]['class']
@@ -496,7 +515,8 @@ if __name__ == '__main__':
     #image_retrieval.annotation_masks_to_hbase()
     #image_retrieval.evaluate_masks(False)
     #image_retrieval.evaluate_masks_stats()
-    image_retrieval.evaluate_nbnn()
+    #image_retrieval.evaluate_nbnn()
+    image_retrieval.cluster_points_local(max_rows=1000)
     quit()
     if 1:
         image_retrieval.image_to_feature()
