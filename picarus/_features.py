@@ -152,6 +152,7 @@ class HOGBoVW(object):
             self._clusters = None
             self._features = None
         else:
+            clusters = np.asfarray(clusters)
             self._clusters = clusters
             self._feature = imfeat.BoVW(self._make_bow_mask,
                                         self._clusters.shape[0], self.levels)

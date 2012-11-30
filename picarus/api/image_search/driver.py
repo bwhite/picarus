@@ -58,7 +58,7 @@ class ImageRetrieval(object):
         #self.feature_name = 'gist'
         #self.feature_dict = {'name': 'imfeat.PyramidHistogram', 'args': ['lab'], 'kw': {'levels': 2, 'num_bins': [4, 11, 11]}}
         #self.feature_name = 'lab_pyramid_histogram_2level_4_11_11'
-        self.feature_dict = picarus._features.HOGBoVW(np.array(json.load(open('clusters.js'))), levels=2, sbin=16, blocks=1)
+        self.feature_dict = {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}}
         self.feature_name = 'bovw_hog_levels2_sbin16_blocks1_clusters100'
         self.superpixel_column = 'feat:superpixel'
         self.feature_column = 'feat:' + self.feature_name
