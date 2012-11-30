@@ -144,7 +144,7 @@ class HOGBoVW(object):
         return self._clusters
 
     @clusters.setter
-    def _set_clusters(self, clusters):
+    def clusters(self, clusters):
         if clusters is None:
             self._clusters = None
             self._features = None
