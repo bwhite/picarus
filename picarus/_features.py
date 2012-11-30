@@ -134,6 +134,7 @@ class TextonPredict(imfeat.TextonBase):
 class HOGBoVW(object):
 
     def __init__(self, clusters=None, levels=3, *args, **kw):
+        super(HOGBoVW, self).__init__()
         self.hog = imfeat.HOGLatent(*args, **kw)
         self.levels = levels
         self.clusters = clusters
