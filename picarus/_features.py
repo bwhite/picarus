@@ -129,3 +129,35 @@ class TextonPredict(imfeat.TextonBase):
 
     def __call__(self, *args, **kw):
         return self._predict(*args, **kw)[5]
+
+
+class HOGBoVW(object):
+
+    def __init__(self, clusters=None, levels=3, *args, **kw):
+        self.hog = imfeat.HOGLatent(*args, **kw)
+        self.levels = levels
+        self.clusters = clusters
+            
+    @property
+    def clusters(self):
+        return self._clusters
+
+    @clusters.setter
+    def _set_clusters(self, clusters):
+        if clusters is None:
+            self._clusters = None
+            self._features = None
+        else:
+            self._clusters = clusters
+            self._feature = imfeat.BoVW(lambda x: self.hog.make_bow_mask(x, self._clusters),
+                                        self._clusters.shape[0], self.levels)
+
+    def cluster(self, features, num_clusters):
+        import scipy.cluster.vq
+        self.clusters = scipy.cluster.vq.kmeans(features, num_clusters)[0]
+
+    def __call__(self, image):
+        if self._feature is None:
+            raise ValueError('Clusters not provided')
+        return self._feature(image)
+    
