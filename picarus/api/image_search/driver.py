@@ -58,8 +58,8 @@ class ImageRetrieval(object):
         #self.feature_name = 'gist'
         #self.feature_dict = {'name': 'imfeat.PyramidHistogram', 'args': ['lab'], 'kw': {'levels': 2, 'num_bins': [4, 11, 11]}}
         #self.feature_name = 'lab_pyramid_histogram_2level_4_11_11'
-        self.feature_dict = {'name': 'imfeat.PyramidHistogram', 'args': ['lab'], 'kw': {'levels': 2, 'num_bins': [4, 11, 11]}}
-        self.feature_name = 'lab_pyramid_histogram_2level_4_11_11'
+        self.feature_dict = picarus._features.HOGBoVW(np.array(json.load(open('clusters.js'))), levels=2, sbin=16, blocks=1)
+        self.feature_name = 'bovw_hog_levels2_sbin16_blocks1_clusters100'
         self.superpixel_column = 'feat:superpixel'
         self.feature_column = 'feat:' + self.feature_name
         # Feature Hasher settings
@@ -212,7 +212,13 @@ class ImageRetrieval(object):
         features_to_classifier(classifier, labels, features)
         cp = picarus.api.Classifier()
         cp.name = '%s-%s-indoor' % (self.images_table, self.feature_name)  # TODO(brandyn): Indoor specific ATM
-        cp.feature = json.dumps(self.feature_dict)
+        if isinstance(classifier, dict):
+            cp.feature = json.dumps(self.feature_dict)
+            cp.feature_format = cp.JSON_IMPORT
+        else:
+            cp.feature = pickle.dumps(self.feature_dict, -1)
+            cp.feature_format = cp.PICKLE
+            
         cp.classifier = pickle.dumps(classifier, -1)
         cp.classifier_format = cp.PICKLE
         row_dict[output_row] = cp.SerializeToString()
@@ -516,8 +522,8 @@ if __name__ == '__main__':
     #image_retrieval.evaluate_masks(False)
     #image_retrieval.evaluate_masks_stats()
     #image_retrieval.evaluate_nbnn()
-    image_retrieval.cluster_points_local(max_rows=1000)
-    quit()
+    #image_retrieval.cluster_points_local(max_rows=1000)
+    #quit()
     if 1:
         image_retrieval.image_to_feature()
         #image_retrieval.image_to_masks()

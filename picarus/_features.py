@@ -143,6 +143,9 @@ class HOGBoVW(object):
     def clusters(self):
         return self._clusters
 
+    def _make_bow_mask(self, image):
+        return self.hog.make_bow_mask(image, self._clusters)
+
     @clusters.setter
     def clusters(self, clusters):
         if clusters is None:
@@ -150,7 +153,7 @@ class HOGBoVW(object):
             self._features = None
         else:
             self._clusters = clusters
-            self._feature = imfeat.BoVW(lambda x: self.hog.make_bow_mask(x, self._clusters),
+            self._feature = imfeat.BoVW(self._make_bow_mask,
                                         self._clusters.shape[0], self.levels)
 
     def cluster(self, features, num_clusters):
