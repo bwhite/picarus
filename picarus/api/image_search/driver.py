@@ -309,7 +309,7 @@ class ImageRetrieval(object):
             tp = pickle.load(open('../tree_ser-%s-texton.pkl' % x))
             tp2 = pickle.load(open('../tree_ser-%s-integral.pkl' % x))
             forests.append({'tp': tp, 'tp2': tp2})
-        return picarus._features.TextonILPPredict(num_classes=self.texton_num_classes, ilp=self.get_feature_classifier(),
+        return picarus._features.TextonILPPredict(num_classes=self.texton_num_classes, ilp=self._get_feature_classifier(),
                                                   forests=forests, threshs=threshs)
 
     def get_feature_hasher(self):
@@ -504,6 +504,9 @@ class ImageRetrieval(object):
 
 if __name__ == '__main__':
     image_retrieval = ImageRetrieval()
+    print image_retrieval.get_feature_classifier()
+    pickle.dumps(image_retrieval._get_texton())
+    quit()
     #image_retrieval.create_tables()
     #print image_retrieval.get_hasher()
     #print type(image_retrieval.get_hasher())

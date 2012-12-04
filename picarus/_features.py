@@ -143,9 +143,13 @@ class TextonILPPredict(object):
             threshs: List of size len(forests) - 1
         """
         super(TextonILPPredict, self).__init__()
+        self._reduce_args = [num_classes, ilp, forests, threshs]
         self.forests = [imfeat.TextonBase(num_classes=num_classes, **x) for x in forests]
         self.threshs = threshs
-        self.ilp = ilp
+        self.ilp = picarus.api.feature_classifier_fromstring(ilp)
+
+    def __reduce__(self):
+        return (TextonILPPredict, self._reduce_args)
 
     def __call__(self, image):
         conf = self.ilp(image)
