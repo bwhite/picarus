@@ -212,13 +212,12 @@ class ImageRetrieval(object):
         features_to_classifier(classifier, labels, features)
         cp = picarus.api.Classifier()
         cp.name = '%s-%s-indoor' % (self.images_table, self.feature_name)  # TODO(brandyn): Indoor specific ATM
-        if isinstance(classifier, dict):
+        if isinstance(self.feature_dict, dict):
             cp.feature = json.dumps(self.feature_dict)
             cp.feature_format = cp.JSON_IMPORT
         else:
             cp.feature = pickle.dumps(self.feature_dict, -1)
             cp.feature_format = cp.PICKLE
-            
         cp.classifier = pickle.dumps(classifier, -1)
         cp.classifier_format = cp.PICKLE
         row_dict[output_row] = cp.SerializeToString()
@@ -304,9 +303,14 @@ class ImageRetrieval(object):
         row_dict[output_row] = hashes_to_index(si, index, metadata, hashes)
 
     def _get_texton(self):
-        tp = pickle.load(open('../tree_ser-texton.pkl'))
-        tp2 = pickle.load(open('../tree_ser-integral.pkl'))
-        return picarus._features.TextonPredict(tp=tp, tp2=tp2, num_classes=self.texton_num_classes)
+        forests = []
+        threshs = [0.]
+        for x in ['outdoor', 'indoor']:
+            tp = pickle.load(open('../tree_ser-%s-texton.pkl' % x))
+            tp2 = pickle.load(open('../tree_ser-%s-integral.pkl' % x))
+            forests.append({'tp': tp, 'tp2': tp2})
+        return picarus._features.TextonILPPredict(num_classes=self.texton_num_classes, ilp=self.get_feature_classifier(),
+                                                  forests=forests, threshs=threshs)
 
     def get_feature_hasher(self):
         return pickle.loads(self._get_feature_hasher())
@@ -409,7 +413,7 @@ class ImageRetrieval(object):
                     bin_index = ilp_weights['ilp_tables'].shape[1]
                 if bin_index != 0:
                     bin_index -= 1
-                print('bin_index[%d]' % bin_index)
+                print('bin_index[%d][%f]' % (bin_index, ilp_pred))
                 masks *= ilp_weights['ilp_tables'][:, bin_index]
             masks_argmax = np.argmax(masks, 2)
             gt_sums = np.sum(gt.reshape(-1, gt.shape[2]), 0).tolist()
@@ -488,7 +492,7 @@ class ImageRetrieval(object):
                 yield cols[self.indoor_class_column], imfeat.image_fromstring(cols[self.image_column])
         c.train(inner(5000, start_row='sun397train'))
         cms = {}
-        for cur_class, image in inner(100):
+        for cur_class, image in inner(40):
             pred_class = c.analyze(image)[0]['class']
             try:
                 cms.setdefault(cur_class, {})[pred_class] += 1
@@ -519,26 +523,25 @@ if __name__ == '__main__':
     #image_retrieval.image_resize()
     #image_retrieval.image_thumbnail()
     #image_retrieval.annotation_masks_to_hbase()
-    #image_retrieval.evaluate_masks(False)
-    #image_retrieval.evaluate_masks_stats()
     #image_retrieval.evaluate_nbnn()
     #image_retrieval.cluster_points_local(max_rows=1000)
-    #quit()
     if 1:
-        image_retrieval.image_to_feature()
-        #image_retrieval.image_to_masks()
-        image_retrieval.features_to_hasher(start_row='sun397train', max_rows=1000)
-        #image_retrieval.masks_to_hasher(start_row='sun397train', max_rows=1000)
-        image_retrieval.feature_to_hash()
-        #image_retrieval.masks_to_hash()
-        image_retrieval.build_feature_index()
-        #image_retrieval.build_masks_index()
-        open('sun397_feature_index.pb', 'w').write(image_retrieval._get_feature_index())
-        #open('sun397_masks_index.pb', 'w').write(image_retrieval._get_masks_index())
+        #image_retrieval.image_to_feature()
+        image_retrieval.image_to_masks()
+        #image_retrieval.features_to_hasher(start_row='sun397train', max_rows=1000)
+        image_retrieval.masks_to_hasher(start_row='sun397train', max_rows=1000)
+        #image_retrieval.feature_to_hash()
+        image_retrieval.masks_to_hash()
+        #image_retrieval.build_feature_index()
+        image_retrieval.build_masks_index()
+        #open('sun397_feature_index.pb', 'w').write(image_retrieval._get_feature_index())
+        open('sun397_masks_index.pb', 'w').write(image_retrieval._get_masks_index())
         # Classifier
-        image_retrieval.features_to_classifier(start_row='sun397train', max_per_label=5000)
-        open('sun397_indoor_classifier.pb', 'w').write(image_retrieval._get_feature_classifier())
-        image_retrieval.feature_to_prediction()
-        image_retrieval.prediction_to_conf_gt(stop_row='sun397train')
+        #image_retrieval.features_to_classifier(start_row='sun397train', max_per_label=5000)
+        #open('sun397_indoor_classifier.pb', 'w').write(image_retrieval._get_feature_classifier())
+        #image_retrieval.feature_to_prediction()
+        #image_retrieval.prediction_to_conf_gt(stop_row='sun397train')
     #image_retrieval.image_to_superpixels()
-    #image_retrieval.masks_to_ilp()
+    image_retrieval.masks_to_ilp()
+    image_retrieval.evaluate_masks()
+    image_retrieval.evaluate_masks_stats()

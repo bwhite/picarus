@@ -2,6 +2,7 @@ import imfeat
 import picarus.vision.face_feature
 import cPickle as pickle
 import numpy as np
+import bisect
 
 
 def _hist_joint():
@@ -129,6 +130,27 @@ class TextonPredict(imfeat.TextonBase):
 
     def __call__(self, *args, **kw):
         return self._predict(*args, **kw)[5]
+
+
+class TextonILPPredict(object):
+
+    def __init__(self, num_classes, ilp, forests, threshs):
+        """
+        Args:
+            num_classes:
+            ilp: Classifier used as the ILP
+            forests: List of {'tp', 'tp2'}
+            threshs: List of size len(forests) - 1
+        """
+        super(TextonILPPredict, self).__init__()
+        self.forests = [imfeat.TextonBase(num_classes=num_classes, **x) for x in forests]
+        self.threshs = threshs
+        self.ilp = ilp
+
+    def __call__(self, image):
+        conf = self.ilp(image)
+        forest = self.forests[bisect.bisect_left(self.threshs, conf)]
+        return forest._predict(image)[5]
 
 
 class HOGBoVW(object):

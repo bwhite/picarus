@@ -26,6 +26,7 @@ for num, (row, cols) in enumerate(hadoopy_hbase.scanner(a, 'images', start_row='
     print row
     cur_f = picarus.api.np_fromstring(cols['feat:gist'])
     cur_h = np.fromstring(cols['hash:gist'], dtype=np.uint8)
+    print 'HOG', picarus.api.np_fromstring(cols['feat:bovw_hog_levels2_sbin16_blocks1_clusters100'])
     print 'Hash Bits[%d]' % (cur_h.size * 8,)
     print 'Feature Dims[%d]' % (cur_f.size,)
     f = hrc.feature(image)

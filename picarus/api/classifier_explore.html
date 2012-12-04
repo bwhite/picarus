@@ -90,6 +90,7 @@
 		<div id="base" style="position:relative;top:-35px;"></div>
                 <div id="graph_confidence_scatter" style="height:200px;width:600px"></div>
                 <div id="graph_confidence_scatter_norm" style="height:200px;width:600px"></div>
+                <div id="graph_confidence_accuracy" style="height:200px;width:600px"></div>
                 <div id="graph_rps" style="height:300px;width:300px;float:left;"></div>
                 <div id="graph_roc" style="height:300px;width:300px;float:left;"></div>
                 <div style="clear:both;">
@@ -221,8 +222,7 @@
           return 0;
       }
       function confs_to_confusion_matrix(pos_confs, neg_confs) {
-          /* Takes in confs, produces Precision/Recall
-           */
+          /* Takes in confs, produces list of [tp, fp, tn, fn, thresh] */
           var cm_threshs = [];
           var fn = 0;
           var tn = 0;
@@ -262,6 +262,14 @@
               rps.push([cms[i][0] / (cms[i][0] + cms[i][3]), cms[i][0] / (cms[i][0] + cms[i][1]), cms[i][4]])
           }
           return rps;
+      }
+      function cms_to_conf_accs(cms) {
+          var conf_accs = [];
+          var i;
+          for (i = 0; i < cms.length; i++) {
+              conf_accs.push([cms[i][4], (cms[i][0] + cms[i][2]) / (cms[i][0] + cms[i][1] + cms[i][2] + cms[i][3])])
+          }
+          return conf_accs;
       }
       function cms_to_fpr_tprs(cms) {
           var fpr_tprs = [];
@@ -305,6 +313,12 @@
 
           // PR Curve
           var cms = confs_to_confusion_matrix(confs.pos_confs, confs.neg_confs);
+          // Confidence accuracy
+          var data4 = to_google_data(cms_to_conf_accs(cms), ['Confidence', 'Accuracy']);
+          options = {title: 'Classifier Confidence vs Accuracy',
+                     hAxis: {title: 'Confidence'}};
+          var chart4 = new google.visualization.LineChart(document.getElementById('graph_confidence_accuracy'));
+          chart4.draw(data4, options);
           var data2 = to_google_data(cms_to_rps(cms), ['recall', 'precision'], true);
           options = {title: 'PR Curve',
                      hAxis: {title: 'Recall', minValue: 0, maxValue: 1},
@@ -342,11 +356,14 @@
               setNearest(chart1, data1, 0, [1, 2], thresh);
               setNearest(chart2, data2, 2, [1], thresh);
               setNearest(chart3, data3, 2, [1], thresh);
+              setNearest(chart4, data4, 0, [1], thresh);
           }
-          google.visualization.events.addListener(chart0, 'select', function () {var sel = chart0.getSelection(); setSelections(data0.getValue(sel[0].row, 0))});
-          google.visualization.events.addListener(chart1, 'select', function () {var sel = chart1.getSelection(); setSelections(data1.getValue(sel[0].row, 0))});
-          google.visualization.events.addListener(chart2, 'select', function () {var sel = chart2.getSelection(); setSelections(data2.getValue(sel[0].row, 2))});
-          google.visualization.events.addListener(chart3, 'select', function () {var sel = chart3.getSelection(); setSelections(data3.getValue(sel[0].row, 2))});
+          var al = google.visualization.events.addListener;
+          al(chart0, 'select', function () {var sel = chart0.getSelection(); if (sel[0] !== undefined) setSelections(data0.getValue(sel[0].row, 0))});
+          al(chart1, 'select', function () {var sel = chart1.getSelection(); if (sel[0] !== undefined) setSelections(data1.getValue(sel[0].row, 0))});
+          al(chart2, 'select', function () {var sel = chart2.getSelection(); if (sel[0] !== undefined) setSelections(data2.getValue(sel[0].row, 2))});
+          al(chart3, 'select', function () {var sel = chart3.getSelection(); if (sel[0] !== undefined) setSelections(data3.getValue(sel[0].row, 2))});
+          al(chart4, 'select', function () {var sel = chart4.getSelection(); if (sel[0] !== undefined) setSelections(data4.getValue(sel[0].row, 0))});
       }
       $(document).ready(entry_func);
       google.load("visualization", "1", {packages:["corechart"]});
