@@ -427,8 +427,7 @@ class ImageRetrieval(object):
                 if not np.any(gt[:, :, mask_num]):
                     continue
                 print(mask_num)
-                #print (gt[:, :, mask_num] > 0).nonzero()
-                preds = masks_argmax[(gt[:, :, mask_num] > 0).nonzero()]
+                preds = masks_argmax[gt[:, :, mask_num].nonzero()]
                 h, bins = np.histogram(preds, np.arange(self.texton_num_classes + 1))
                 np.testing.assert_equal(bins, np.arange(self.texton_num_classes + 1))
                 cm[mask_num] += h
@@ -504,9 +503,6 @@ class ImageRetrieval(object):
 
 if __name__ == '__main__':
     image_retrieval = ImageRetrieval()
-    print image_retrieval.get_feature_classifier()
-    pickle.dumps(image_retrieval._get_texton())
-    quit()
     #image_retrieval.create_tables()
     #print image_retrieval.get_hasher()
     #print type(image_retrieval.get_hasher())
@@ -546,5 +542,5 @@ if __name__ == '__main__':
         #image_retrieval.prediction_to_conf_gt(stop_row='sun397train')
     #image_retrieval.image_to_superpixels()
     image_retrieval.masks_to_ilp()
-    image_retrieval.evaluate_masks()
+    image_retrieval.evaluate_masks(False)
     image_retrieval.evaluate_masks_stats()

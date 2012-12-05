@@ -22,6 +22,12 @@ function reset_bar() {
     progress_fail = 0;
 }
 
+function db_path(table, row, column) {
+    row = b64_urlsafe(base64.encode(row));
+    column = b64_urlsafe(base64.encode(column));
+    return '/db/' + table + '/' + row + '/' + column;
+}
+
 function update_bar() {
     $('#pbar-success').css('width', String(100 * progress_success / progress_total) + "%");
     $('#pbar-danger').css('width', String(100 * progress_fail / progress_total) + "%");
@@ -52,4 +58,40 @@ function picarus_api_test_demo(url, method, args) {
             args.fail(xhr)
     }
     picarus_api_test(url, method, _.extend({}, args, {success: success, fail: fail, email: $('#demouser').val(), auth: $('#demopass').val()}));
+}
+
+function setup_video(auth, table, row_prefix, column) {
+    video = document.getElementById('video');
+    canvas = document.getElementById('videocanvas');
+    var ctx = canvas.getContext('2d');
+    var localMediaStream = null;
+    var img = document.getElementById('videoimg');
+
+    function snapshot() {
+        if (localMediaStream) {
+            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth;
+            ctx.drawImage(video, 0, 0);
+            img.src = canvas.toDataURL('image/jpeg');
+            raw_data = img.src;
+            var row = row_prefix + (2147483648 - ((new Date).getTime() / 1000)).toFixed(0);
+            picarus_api(db_path(table, row, column), "PUT", _.extend({data: {data: img.src.slice(22)}}, auth));
+        }
+    }
+    global_snapshot = snapshot;
+
+    function fallback(e) {
+        video.src = 'fallbackvideo.webm';
+    }
+
+    function success(stream) {
+        video.src = window.webkitURL.createObjectURL(stream);
+        localMediaStream = stream;
+    }
+
+    if (!navigator.webkitGetUserMedia) {
+        fallback();
+    } else {
+        navigator.webkitGetUserMedia({video: true}, success, fallback);
+    }
 }

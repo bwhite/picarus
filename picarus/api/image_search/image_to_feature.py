@@ -14,9 +14,9 @@ class Mapper(picarus.api.HBaseMapper):
     def _map(self, row, image_binary):
         try:
             image = imfeat.image_fromstring(image_binary)
-            yield row, picarus.api.np_tostring(self._feat(image))
         except:
             hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
+        yield row, picarus.api.np_tostring(self._feat(image))
 
 
 if __name__ == '__main__':

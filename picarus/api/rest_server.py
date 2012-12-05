@@ -126,10 +126,10 @@ def _data(table, row, col):
     row = base64.urlsafe_b64decode(row)
     col = base64.urlsafe_b64decode(col)
     method = bottle.request.method.upper()
-    print_request()
+    #print_request()
     # TODO Check authentication per table
-    if table != 'images':
-        raise ValueError('Only images allowed for now!')
+    if table not in ('images', 'testtable'):
+        raise ValueError('Only images/testtable allowed for now!')
     if method == 'GET':
         if table and row and col:
             result = THRIFT.get(table, row, col)
@@ -319,6 +319,37 @@ def image():
     return {'jpgb64': base64.b64encode(image_string)}
 
 
+@bottle.get('/live.js')
+@mimerender(default='json',
+            html=render_html,
+            xml=render_xml,
+            json=render_json,
+            txt=render_txt)
+@USERS.auth()
+def livedata():
+    print_request()
+    row_to_time = lambda row: 2**31 - int(row[6:])
+    time_to_row = lambda t: 'camera' + str(2**31 - t)
+    out = []
+    try:
+        THRIFT_LOCK.acquire()
+        start_row = 'camera'
+        row_skip = 5
+        cur_time = 0
+        for _ in range(5):
+            for row, cols in hadoopy_hbase.scanner(THRIFT, 'testtable', start_row=start_row, stop_row='camerb', max_rows=1):
+                cur_time = row_to_time(row)
+                out.append({'row': row, 'time': cur_time, 'columns': cols})
+                cur_time -= row_skip
+                start_row = time_to_row(cur_time)
+                row_skip *= 2
+            if cur_time < 0:
+                break
+    finally:
+        THRIFT_LOCK.release()
+    return {'data': out}
+
+
 #@bottle.get('/admin/stop')
 #def stop():
 #    # TODO: Do auth
@@ -358,6 +389,21 @@ def picarus_api():  # NOTE: Temporary
 @bottle.get('/picarus_api_demo.js')
 def picarus_api_demo():  # NOTE: Temporary
     return open('picarus_api_demo.js').read()
+
+
+@bottle.get('/camera')
+def picarus_camera_demo():  # NOTE: Temporary
+    return open('demo_camera.html').read()
+
+
+@bottle.get('/live')
+def picarus_camera_live():  # NOTE: Temporary
+    return open('demo_live.html').read()
+
+
+@bottle.get('/jquery.timer.js')
+def picarus_jquery_timer():  # NOTE: Temporary
+    return open('jquery.timer.js').read()
 
 
 @bottle.post('/auth')

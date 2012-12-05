@@ -93,6 +93,7 @@ class User(object):
         return key
 
     def verify(self, key, min_time=0.):
+        print('Authkey[%s]' % key)
         out = self._user_db.zscore(self._auth_prefix + self.user, self._hash_key(key))
         print(out)
         return out is not None and float(out) >= min_time
@@ -197,7 +198,7 @@ def main():
     subparser = subparsers.add_parser('add', help='Add users')
     subparser.add_argument('users', nargs='+', help='Users')
     subparser.set_defaults(func=_add_user)
-    subparser = subparsers.add_parser('remove', help='Add users')
+    subparser = subparsers.add_parser('remove', help='Remove users')
     subparser.add_argument('users', nargs='+', help='Users')
     subparser.set_defaults(func=_remove_user)
     subparser = subparsers.add_parser('stats', help='Get user stats')

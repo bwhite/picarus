@@ -146,7 +146,7 @@ class TextonILPPredict(object):
         self._reduce_args = (num_classes, ilp, forests, threshs)
         self.forests = [imfeat.TextonBase(num_classes=num_classes, **x) for x in forests]
         self.threshs = threshs
-        self.ilp = picarus.api.feature_classifier_fromstring(ilp)
+        self.ilp = picarus.api.image_classifier_fromstring(ilp)
 
     def __reduce__(self):
         return (TextonILPPredict, self._reduce_args)
@@ -191,4 +191,3 @@ class HOGBoVW(object):
         if self._feature is None:
             raise ValueError('Clusters not provided')
         return self._feature(image)
-    
