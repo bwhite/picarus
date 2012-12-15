@@ -129,14 +129,15 @@ class NBNNClassifier(MultiClassClassifier):
     Cons
     - Requires NN lookup for # descriptors * # classes which can be slow
     """
-    def __init__(self, sbin=32, max_side=320, num_points=None, scale=1, required_files=()):
+    def __init__(self, sbin=16, max_side=128, num_points=None, scale=1, required_files=(), num_sizes=3):
         self.required_files = required_files
         self.max_side = max_side
-        self._feature = self._feature_hog_loc  # self._feature_hist
+        self._feature = self._feature_hist  # self._feature_hog_loc
         self.db = None
         self.scale = scale
         self.num_points = num_points
         self.classes = None
+        self.num_sizes = num_sizes
         self.dist = distpy.L2Sqr()
         self.sbin = sbin
 
@@ -152,13 +153,23 @@ class NBNNClassifier(MultiClassClassifier):
 
     def _feature_hist(self, image):
         out = []
-        for block in imfeat.BlockGenerator(image, imfeat.CoordGeneratorRect, output_size=(self.sbin, self.sbin), step_delta=(self.sbin, self.sbin)):
-            out.append(imfeat.convert_image(image, {'type': 'numpy', 'dtype': 'float32', 'mode': 'lab'}).ravel())
+        for block, coords in imfeat.BlockGenerator(image, imfeat.CoordGeneratorRect, output_size=(self.sbin, self.sbin), step_delta=(self.sbin, self.sbin)):
+            out.append(imfeat.convert_image(block, {'type': 'numpy', 'dtype': 'float32', 'mode': 'lab'}).ravel())
         return np.asfarray(out)
 
-
     def feature(self, image):
-        points = self._feature(imfeat.resize_image_max_side(image, self.max_side))
+        points = []
+        for x in range(self.num_sizes):
+            max_side = int((2 ** -x) * self.max_side)
+            if max_side <= 0:
+                break
+            cur_points = self._feature(imfeat.resize_image_max_side(image, max_side))
+            if cur_points.size:
+                points.append(cur_points)
+        if points:
+            points = np.vstack(points)
+        else:
+            points = np.array([])
         if self.num_points is not None:
             return np.ascontiguousarray(random.sample(points, min(self.num_points, len(points))))
         return points
@@ -174,6 +185,9 @@ class NBNNClassifier(MultiClassClassifier):
                 self.classes.append(cur_class)
             cur_class = class_to_num[cur_class]
             features = self.feature(image)
+            if features.ndim == 1:
+                print('Skipping due to no features')
+                continue
             self.db.setdefault(cur_class, []).append(features)
         for cur_class, features in self.db.items():
             self.db[cur_class] = np.vstack(self.db[cur_class])
@@ -188,7 +202,8 @@ class NBNNClassifier(MultiClassClassifier):
             List of {'name': name} in
             descending confidence order.
         """
-        features = self.feature(image)
+        scale_features = [self.feature(image, scale=2**(-x)) for x in range(self.num_sizes)]
+        features = np.vstack()
         class_dists = {}  # [class] = total_dist
         for cur_class in self.db:
             dist_indeces = self.dist.nns(self.db[cur_class], features)
@@ -223,7 +238,11 @@ class LocalNBNNClassifier(NBNNClassifier):
                 class_to_num[cur_class] = len(class_to_num)
                 self.classes.append(cur_class)
             features = self.feature(image)
+            if features.ndim == 1:
+                print('Skipping due to no features')
+                continue
             self.class_nums += [class_to_num[cur_class]] * len(features)
+            print(features.shape)
             self.db.append(features)
         self.db = np.vstack(self.db)
         self.class_nums = np.array(self.class_nums)
@@ -255,7 +274,33 @@ class LocalNBNNClassifier(NBNNClassifier):
         return [{'class': self.classes[x[0]], 'distance': x[1]} for x in sorted(class_dists.items(),
                                                                                 key=lambda x: x[1])]
 
-if __name__ == '__main__':
+
+def logo_demo():
+    c0 = LocalNBNNClassifier(num_points=100)
+
+    def get_data(path):
+        for x in glob.glob(path + '/*'):
+            entity = os.path.basename(x)
+            for y in glob.glob(x + '/*'):
+                fn = os.path.basename(y)
+                print(y)
+                try:
+                    yield entity, imfeat.image_fromstring(open(y).read()).copy()
+                except Exception, e:
+                    print(e)
+                    continue
+    c0.train(get_data('/mnt/brandyn_extra/goodlogo_entity_images'))
+    total = 0
+    good = 0
+    for entity, image in get_data('/home/brandyn/google_image_logos'):
+        out = c0.analyze(image)
+        total += 1
+        if entity in [x['class'] for x in out]:
+            good += 1
+        print(good / float(total))
+
+
+def lena_demo():
     c0 = LocalNBNNClassifier(num_points=100)
     c1 = NBNNClassifier(num_points=100)
     for c in [c0, c1]:
@@ -266,3 +311,7 @@ if __name__ == '__main__':
         print c.db[1].shape
         print(c.db)
         print c.analyze(images[0])
+
+
+if __name__ == '__main__':
+    logo_demo()

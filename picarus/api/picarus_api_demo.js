@@ -75,7 +75,7 @@ function setup_video(auth, table, row_prefix, column) {
             img.src = canvas.toDataURL('image/jpeg');
             raw_data = img.src;
             var row = row_prefix + (2147483648 - ((new Date).getTime() / 1000)).toFixed(0);
-            picarus_api(db_path(table, row, column), "PUT", _.extend({data: {data: img.src.slice(22)}}, auth));
+            picarus_api(db_path(table, row, column), "PUT", _.extend({data: {data: img.src.slice(23)}}, auth));
         }
     }
     global_snapshot = snapshot;

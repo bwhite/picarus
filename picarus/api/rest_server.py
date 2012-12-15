@@ -221,9 +221,19 @@ SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_inde
               'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_masks_index.pb').read())}
 CLASSIFY_FUN = {'see/classify/indoor': picarus.api.image_classifier_fromstring(open('image_search/sun397_indoor_classifier.pb').read())}
 
-TP = pickle.load(open('tree_ser-texton.pkl'))  # TODO: support loading tp/tp2 as strings, move to imseg
-TP2 = pickle.load(open('tree_ser-integral.pkl'))
-TEXTON = picarus._features.TextonPredict(tp=TP, tp2=TP2, num_classes=8)
+
+def _get_texton():
+    forests = []
+    threshs = [0.]
+    for x in ['outdoor', 'indoor']:
+        tp = pickle.load(open('tree_ser-%s-texton.pkl' % x))
+        tp2 = pickle.load(open('tree_ser-%s-integral.pkl' % x))
+        forests.append({'tp': tp, 'tp2': tp2})
+    return picarus._features.TextonILPPredict(num_classes=8, ilp=open('image_search/sun397_indoor_classifier.pb').read(),
+                                              forests=forests, threshs=threshs)
+
+
+TEXTON = _get_texton()
 ILP_WEIGHTS = json.load(open('image_search/ilp_weights.js'))
 ILP_WEIGHTS['ilp_tables'] = np.array(ILP_WEIGHTS['ilp_tables'])
 
@@ -325,28 +335,87 @@ def image():
             xml=render_xml,
             json=render_json,
             txt=render_txt)
-@USERS.auth()
 def livedata():
     print_request()
     row_to_time = lambda row: 2**31 - int(row[6:])
     time_to_row = lambda t: 'camera' + str(2**31 - t)
     out = []
+    num_images = 20
+    params = dict(bottle.request.params)
     try:
         THRIFT_LOCK.acquire()
-        start_row = 'camera'
-        row_skip = 5
+        if 'start_time' in params and 'stop_time' in params:
+            stop_row = time_to_row(int(params['start_time']))
+            start_row = time_to_row(int(params['stop_time']))
+            row_skip = max(1, (int(params['stop_time']) - int(params['start_time'])) / num_images)
+        else:
+            start_row = 'camera'
+            stop_row = 'camerb'
+            row_skip = 120
         cur_time = 0
-        for _ in range(5):
-            for row, cols in hadoopy_hbase.scanner(THRIFT, 'testtable', start_row=start_row, stop_row='camerb', max_rows=1):
+        for _ in range(20):
+            for row, cols in hadoopy_hbase.scanner(THRIFT, 'testtable', start_row=start_row, stop_row=stop_row, max_rows=1):
                 cur_time = row_to_time(row)
+                print(cur_time)
                 out.append({'row': row, 'time': cur_time, 'columns': cols})
                 cur_time -= row_skip
-                start_row = time_to_row(cur_time)
                 row_skip *= 2
+                start_row = time_to_row(cur_time)
             if cur_time < 0:
                 break
     finally:
         THRIFT_LOCK.release()
+    return {'data': out}
+
+
+@bottle.get('/live2.js')
+@mimerender(default='json',
+            html=render_html,
+            xml=render_xml,
+            json=render_json,
+            txt=render_txt)
+@USERS.auth()
+def motiondata():
+    print_request()
+    row_to_time = lambda row: 2**31 - int(row[6:])
+    time_to_row = lambda t: 'camera' + str(2**31 - t)
+    out = []
+    import heapq
+    heap = []
+    try:
+        THRIFT_LOCK.acquire()
+        start_row = 'camera'
+        row_skip = 1800
+        cur_time = 0
+        frames = []
+        for _ in range(10):
+            for row, cols in hadoopy_hbase.scanner(THRIFT, 'testtable', start_row=start_row, stop_row='camerb', max_rows=1):
+                cur_time = row_to_time(row)
+                image = imfeat.convert_image(imfeat.image_fromstring(base64.b64decode(cols['colfam1:jpgb64'])), {'dtype': 'uint8', 'type': 'numpy', 'mode': 'gray'}).astype(np.double)
+                frames.append(image)
+                cur_time -= row_skip
+                start_row = time_to_row(cur_time)
+            if cur_time < 0:
+                break
+        # TODO Need to fix this
+        median = np.median(frames, 0)
+        start_row = 'camera'
+        row_skip = 720
+        cur_time = 0
+
+        diff = image - median
+        diff = np.sum(diff * diff) / diff.size
+        print(diff)
+        cur = {'row': row, 'time': cur_time, 'columns': cols, 'diff': diff}
+        if len(heap) < 10:
+            heapq.heappush(heap, (diff, cur))
+        else:
+            heapq.heappushpop(heap, (diff, cur))
+
+
+    finally:
+        THRIFT_LOCK.release()
+    out = sorted([x[1] for x in heap], key=lambda x: -x['time'])
     return {'data': out}
 
 

@@ -88,7 +88,7 @@ class ImageRetrieval(object):
         self.masks_gt_column = 'feat:masks_gt'
         self.class_column = 'meta:class_2'
         self.indoor_class_column = 'meta:class_0'
-        self.num_mappers = 10
+        self.num_mappers = 6
 
     def create_tables(self):
         self.hb.createTable(self.models_table, [hadoopy_hbase.ColumnDescriptor('data:')])
