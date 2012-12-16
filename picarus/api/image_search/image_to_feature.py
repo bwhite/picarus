@@ -12,10 +12,7 @@ class Mapper(picarus.api.HBaseMapper):
         self._feat = picarus.api.model_fromfile(os.environ['FEATURE_FN'])
 
     def _map(self, row, image_binary):
-        try:
-            image = imfeat.image_fromstring(image_binary)
-        except:
-            hadoopy.counter('DATA_ERRORS', 'ImageLoadError')
+        image = imfeat.image_fromstring(image_binary)
         yield row, picarus.api.np_tostring(self._feat(image))
 
 

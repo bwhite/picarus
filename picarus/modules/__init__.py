@@ -291,13 +291,21 @@ def logo_demo():
                     continue
     c0.train(get_data('/mnt/brandyn_extra/goodlogo_entity_images'))
     total = 0
-    good = 0
+    good_10 = 0
+    good_5 = 0
+    good_1 = 0
     for entity, image in get_data('/home/brandyn/google_image_logos'):
         out = c0.analyze(image)
         total += 1
         if entity in [x['class'] for x in out]:
-            good += 1
-        print(good / float(total))
+            good_10 += 1
+        if entity in [x['class'] for x in out[:5]]:
+            good_5 += 1
+        if entity in [x['class'] for x in out[:1]]:
+            good_1 += 1
+        print 10, good_10 / float(total)
+        print 5, good_5 / float(total)
+        print 1, good_1 / float(total)
 
 
 def lena_demo():

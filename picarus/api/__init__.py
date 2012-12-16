@@ -7,6 +7,7 @@ import tempfile
 import cPickle as pickle
 import os
 import hadoopy_hbase
+import base64
 from picarus._importer import call_import
 
 
@@ -21,8 +22,8 @@ class HBaseMapper(object):
 
     def __init__(self):
         super(HBaseMapper, self).__init__()
-        self._hbase_input_column = os.environ['HBASE_INPUT_COLUMN'].split(':')
-        self._hbase = hadoopy_hbase.HBaseRowDict(os.environ['HBASE_TABLE'], os.environ['HBASE_OUTPUT_COLUMN'])
+        self._hbase_input_column = base64.b64decode(os.environ['HBASE_INPUT_COLUMN']).split(':')
+        self._hbase = hadoopy_hbase.HBaseRowDict(os.environ['HBASE_TABLE'], base64.b64decode(os.environ['HBASE_OUTPUT_COLUMN']))
 
     def map(self, row, columns):
         for row, out in self._map(row, columns[self._hbase_input_column[0]][self._hbase_input_column[1]]):

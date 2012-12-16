@@ -19,6 +19,8 @@ import sklearn.svm
 import imfeat
 import scipy as sp
 import scipy.cluster.vq
+import hashlib
+import subprocess
 from confmat import save_confusion_matrix
 
 logging.basicConfig(level=logging.DEBUG)
@@ -44,6 +46,21 @@ def features_to_classifier(classifier, labels, features):
     classifier.fit(features, np.asarray(labels))
 
 
+def get_version(module_name):
+    prev_dir = os.path.abspath('.')
+    try:
+        module_dir = __import__(module_name).__path__[0]
+    except ImportError:
+        raise ValueError('Module [%s] could not be imported!' % module_name)
+    except AttributeError:
+        raise ValueError('Module [%s] directory could not be found!' % module_name)
+    try:
+        os.chdir(module_dir)
+        return subprocess.Popen('git log -1 --pretty=format:%H'.split(), stdout=subprocess.PIPE).communicate()[0]
+    finally:
+        os.chdir(prev_dir)
+
+
 class ImageRetrieval(object):
 
     def __init__(self):
@@ -63,7 +80,7 @@ class ImageRetrieval(object):
         self.superpixel_column = 'feat:superpixel'
         self.feature_column = 'feat:' + self.feature_name
         # Feature Hasher settings
-        self.feature_hasher_row = self.images_table
+        self.feature_hasher_row = self.images_table  # TODO: Fix with model key
         self.feature_hasher_column = 'data:hasher_' + self.feature_name
         self.hb = hadoopy_hbase.connect()
         self.feature_hash_column = 'hash:' + self.feature_name
@@ -75,20 +92,38 @@ class ImageRetrieval(object):
         # Mask Hasher settings
         self.texton_num_classes = 8
         self.texton_classes = json.load(open('../class_colors.js'))
-        self.masks_hasher_row = 'masks'
-        self.masks_hasher_column = 'data:hasher_masks'
-        self.masks_hash_column = 'hash:masks'
-        self.masks_ilp_column = 'hash:masks_ilp'
+        self.masks_hasher_row = 'masks'   # TODO: Fix with model key
+        self.masks_hasher_column = 'data:hasher_masks'  # TODO: Fix with model key
+        self.masks_hash_column = 'hash:masks'  # TODO: Fix with model key
+        self.masks_ilp_column = 'hash:masks_ilp'  # TODO: Fix with model key
         # Index Settings
-        self.feature_index_row = self.images_table
+        self.feature_index_row = self.images_table  # TODO: Fix with model key
         self.feature_index_column = 'data:index_' + self.feature_name
-        self.masks_index_row = 'masks'
+        self.masks_index_row = 'masks'  # TODO: Fix with model key
         self.masks_index_column = 'data:index_masks'
         self.masks_column = 'feat:masks'
         self.masks_gt_column = 'feat:masks_gt'
         self.class_column = 'meta:class_2'
         self.indoor_class_column = 'meta:class_0'
         self.num_mappers = 6
+        self.versions = self.get_versions()
+        self.model_column = 'data:model'
+
+    def get_versions(self):
+        return {x: get_version(x) for x in ['picarus', 'imfeat', 'hadoopy', 'impoint', 'hadoopy_hbase']}
+
+    def model_to_key(self, prefix, **kw):
+        serialized_model = json.dumps(kw, sort_keys=True, separators=(',', ':'))
+        model_key = prefix + hashlib.sha1(serialized_model).digest()
+        self.hb.mutateRow(self.models_table, model_key, [hadoopy_hbase.Mutation(column=self.model_column, value=serialized_model)])
+        return model_key
+
+    def add_model_version(self, key):
+        column = 'data:version_' + str(time.time())
+        self.hb.mutateRow(self.models_table, key, [hadoopy_hbase.Mutation(column=column, value=json.dumps(self.versions))])
+
+    def key_to_model(self, key):
+        return json.loads(self.hb.get(self.models_table, key, self.model_column)[0].value)
 
     def create_tables(self):
         self.hb.createTable(self.models_table, [hadoopy_hbase.ColumnDescriptor('data:')])
@@ -111,22 +146,27 @@ class ImageRetrieval(object):
                              num_mappers=self.num_mappers, columns=[cmdenvs['HBASE_INPUT_COLUMN']],
                              cmdenvs=cmdenvs)
 
-    def image_to_feature(self):
-        self._image_to_feature(self.feature_dict, self.images_table, self.image_column, self.images_table, self.feature_column)
+    def create_feature(self, feature_dict):
+        return self.model_to_key('feat:', **feature_dict)
 
-    def image_to_masks(self):
+    def image_to_feature(self, feature_key, **kw):
+        self.add_model_version(feature_key)
+        feature_dict = self.key_to_model(feature_key)
+        self._image_to_feature(feature_dict, self.images_table, self.image_column, self.images_table, feature_key, **kw)
+
+    def image_to_masks(self):  # TODO: Fix with model key
         self._image_to_feature(self._get_texton(), self.images_table, self.image_column, self.images_table, self.masks_column)
 
-    def _image_to_feature(self, feature, input_table, input_column, output_table, output_column):
+    def _image_to_feature(self, feature, input_table, input_column, output_table, output_column, **kw):
         feature_fp = picarus.api.model_tofile(feature)
-        cmdenvs = {'HBASE_INPUT_COLUMN': input_column,
+        cmdenvs = {'HBASE_INPUT_COLUMN': base64.b64encode(input_column),
                    'HBASE_TABLE': output_table,
-                   'HBASE_OUTPUT_COLUMN': output_column,
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
                    'FEATURE_FN': os.path.basename(feature_fp.name)}
         hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'image_to_feature.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, columns=[cmdenvs['HBASE_INPUT_COLUMN']],
+                             num_mappers=self.num_mappers, columns=[input_column],
                              cmdenvs=cmdenvs, files=[feature_fp.name],
-                             jobconfs={'mapred.task.timeout': '6000000'}, dummy_fp=feature_fp)
+                             jobconfs={'mapred.task.timeout': '6000000'}, dummy_fp=feature_fp, **kw)
 
     def image_to_superpixels(self):
         self._image_to_superpixels(self.images_table, self.image_column, self.images_table, self.superpixel_column)
@@ -139,17 +179,17 @@ class ImageRetrieval(object):
                              num_mappers=self.num_mappers, columns=[cmdenvs['HBASE_INPUT_COLUMN']],
                              cmdenvs=cmdenvs, jobconfs={'mapred.task.timeout': '6000000'})
 
-    def features_to_hasher(self, **kw):
+    def features_to_hasher(self, **kw):  # TODO: Fix with model key
         hash_bits = 256
         hasher = image_search.RRMedianHasher(hash_bits, normalize_features=False)
         self._features_to_hasher(hasher, self.images_table, self.feature_column, self.models_table, self.feature_hasher_row, self.feature_hasher_column, **kw)
 
-    def masks_to_hasher(self, **kw):
+    def masks_to_hasher(self, **kw):  # TODO: Fix with model key
         hash_bits = 8
         hasher = image_search.HIKHasherGreedy(hash_bits=hash_bits)
         self._features_to_hasher(hasher, self.images_table, self.masks_column, self.models_table, self.masks_hasher_row, self.masks_hasher_column, **kw)
 
-    def _features_to_hasher(self, hasher, input_table, input_column, output_table, output_row, output_column, **kw):
+    def _features_to_hasher(self, hasher, input_table, input_column, output_table, output_row, output_column, **kw):  # TODO: Fix with model key
         row_dict = hadoopy_hbase.HBaseRowDict(output_table, output_column, db=self.hb)
         features = hadoopy_hbase.scanner_column(self.hb, input_table, input_column, **kw)
         row_dict[output_row] = features_to_hasher(hasher, features)
@@ -171,10 +211,10 @@ class ImageRetrieval(object):
         fp.flush()
         return fp
 
-    def feature_to_hash(self):
+    def feature_to_hash(self):  # TODO: Fix with model key
         self._feature_to_hash(self.get_feature_hasher(), self.images_table, self.feature_column, self.images_table, self.feature_hash_column)
 
-    def masks_to_hash(self):
+    def masks_to_hash(self):  # TODO: Fix with model key
         self._feature_to_hash(self.get_masks_hasher(), self.images_table, self.masks_column, self.images_table, self.masks_hash_column)
 
     def _feature_to_hash(self, hasher, input_table, input_column, output_table, output_column, **kw):
@@ -187,11 +227,11 @@ class ImageRetrieval(object):
                              num_mappers=self.num_mappers, columns=[cmdenvs['HBASE_INPUT_COLUMN']], files=[hasher_fp.name],
                              cmdenvs=cmdenvs, dummy_fp=hasher_fp, **kw)
 
-    def features_to_classifier(self, max_per_label, **kw):
+    def features_to_classifier(self, max_per_label, **kw):  # TODO: Fix with model key
         classifier = sklearn.svm.LinearSVC()
         self._features_to_classifier(classifier, self.feature_class_positive, self.images_table, self.feature_column, self.indoor_class_column, self.models_table, self.feature_classifier_row, self.feature_classifier_column, max_per_label, **kw)
     
-    def _features_to_classifier(self, classifier, class_positive, input_table, input_feature_column, input_class_column, output_table, output_row, output_column, max_per_label=None, **kw):
+    def _features_to_classifier(self, classifier, class_positive, input_table, input_feature_column, input_class_column, output_table, output_row, output_column, max_per_label=None, **kw):  # TODO: Fix with model key
         row_dict = hadoopy_hbase.HBaseRowDict(output_table,
                                               output_column, db=self.hb)
         row_cols = hadoopy_hbase.scanner(self.hb, input_table,
@@ -223,7 +263,7 @@ class ImageRetrieval(object):
         row_dict[output_row] = cp.SerializeToString()
         print('Train')
 
-    def feature_to_prediction(self):
+    def feature_to_prediction(self):  # TODO: Fix with model key
         classifier = self._get_feature_classifier()
         self._feature_to_prediction(classifier, self.images_table, self.feature_column, self.images_table, self.feature_prediction_column)
 
@@ -260,18 +300,18 @@ class ImageRetrieval(object):
         print(len(pos_confs))
         print(len(neg_confs))
 
-    def get_feature_classifier(self):
+    def get_feature_classifier(self):  # TODO: Fix with model key
         cp = picarus.api.Classifier()
         cp.ParseFromString(self._get_feature_classifier())
         return cp
 
-    def _get_feature_classifier(self):
+    def _get_feature_classifier(self):  # TODO: Fix with model key
         out = self.hb.get(self.models_table, self.feature_classifier_row, self.feature_classifier_column)
         if not out:
             raise ValueError('Classifier does not exist!')
         return out[0].value
 
-    def build_feature_index(self):
+    def build_feature_index(self):  # TODO: Fix with model key
         si = picarus.api.SearchIndex()
         si.name = '%s-%s' % (self.images_table, self.feature_name)
         si.feature = json.dumps(self.feature_dict)
@@ -280,7 +320,7 @@ class ImageRetrieval(object):
         index = image_search.LinearHashDB()
         self._build_index(si, index, self.images_table, self.feature_hash_column, self.class_column, self.models_table, self.feature_index_row, self.feature_index_column)
 
-    def build_masks_index(self):
+    def build_masks_index(self):  # TODO: Fix with model key
         si = picarus.api.SearchIndex()
         si.name = '%s-%s' % (self.images_table, 'masks')
         si.feature = pickle.dumps(self._get_texton())
@@ -302,7 +342,7 @@ class ImageRetrieval(object):
                                  for row, cols in row_cols])
         row_dict[output_row] = hashes_to_index(si, index, metadata, hashes)
 
-    def _get_texton(self):
+    def _get_texton(self):  # TODO: Fix with model key
         forests = []
         threshs = [0.]
         for x in ['outdoor', 'indoor']:
@@ -312,31 +352,31 @@ class ImageRetrieval(object):
         return picarus._features.TextonILPPredict(num_classes=self.texton_num_classes, ilp=self._get_feature_classifier(),
                                                   forests=forests, threshs=threshs)
 
-    def get_feature_hasher(self):
+    def get_feature_hasher(self):  # TODO: Fix with model key
         return pickle.loads(self._get_feature_hasher())
 
-    def _get_feature_hasher(self):
+    def _get_feature_hasher(self):  # TODO: Fix with model key
         out = self.hb.get(self.models_table, self.feature_hasher_row, self.feature_hasher_column)
         if not out:
             raise ValueError('Hasher does not exist!')
         return out[0].value
 
-    def get_masks_hasher(self):
+    def get_masks_hasher(self):  # TODO: Fix with model key
         return pickle.loads(self._get_mask_hasher())
 
-    def _get_mask_hasher(self):
+    def _get_mask_hasher(self):  # TODO: Fix with model key
         out = self.hb.get(self.models_table, self.masks_hasher_row, self.masks_hasher_column)
         if not out:
             raise ValueError('Hasher does not exist!')
         return out[0].value
 
-    def _get_feature_index(self):
+    def _get_feature_index(self):  # TODO: Fix with model key
         out = self.hb.get(self.models_table, self.feature_index_row, self.feature_index_column)
         if not out:
             raise ValueError('Index does not exist!')
         return out[0].value
 
-    def _get_masks_index(self):
+    def _get_masks_index(self):  # TODO: Fix with model key
         out = self.hb.get(self.models_table, self.masks_index_row, self.masks_index_column)
         if not out:
             raise ValueError('Index does not exist!')
@@ -503,6 +543,12 @@ class ImageRetrieval(object):
 
 if __name__ == '__main__':
     image_retrieval = ImageRetrieval()
+
+    def create_feature(feature_dict):
+        feature_key = image_retrieval.create_feature(feature_dict)
+        print(feature_key)
+        image_retrieval.image_to_feature(feature_key)
+    create_feature({'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
     #image_retrieval.create_tables()
     #print image_retrieval.get_hasher()
     #print type(image_retrieval.get_hasher())
@@ -524,7 +570,7 @@ if __name__ == '__main__':
     #image_retrieval.annotation_masks_to_hbase()
     #image_retrieval.evaluate_nbnn()
     #image_retrieval.cluster_points_local(max_rows=1000)
-    if 1:
+    if 0:
         #image_retrieval.image_to_feature()
         image_retrieval.image_to_masks()
         #image_retrieval.features_to_hasher(start_row='sun397train', max_rows=1000)
@@ -541,6 +587,6 @@ if __name__ == '__main__':
         #image_retrieval.feature_to_prediction()
         #image_retrieval.prediction_to_conf_gt(stop_row='sun397train')
     #image_retrieval.image_to_superpixels()
-    image_retrieval.masks_to_ilp()
-    image_retrieval.evaluate_masks(False)
-    image_retrieval.evaluate_masks_stats()
+    #image_retrieval.masks_to_ilp()
+    #image_retrieval.evaluate_masks(False)
+    #image_retrieval.evaluate_masks_stats()

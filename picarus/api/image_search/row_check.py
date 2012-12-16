@@ -18,6 +18,7 @@ hrc.load(open('sun397_feature_index.pb').read())
 for num, (row, cols) in enumerate(hadoopy_hbase.scanner(a, 'images', start_row='sun397train')):
     if num > 2:
         break
+    print(cols.keys())
     print cols['feat:superpixel'][:50]
     image = imfeat.image_fromstring(cols['data:image_320'])
     print imfeat.image_fromstring(cols['data:image']).shape
