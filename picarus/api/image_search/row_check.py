@@ -15,10 +15,16 @@ logging.basicConfig(level=logging.DEBUG)
 a = hadoopy_hbase.connect()
 hrc = picarus.modules.HashRetrievalClassifier()
 hrc.load(open('sun397_feature_index.pb').read())
-for num, (row, cols) in enumerate(hadoopy_hbase.scanner(a, 'images', start_row='sun397train')):
-    if num > 2:
+for num, (row, cols) in enumerate(hadoopy_hbase.scanner(a, 'images', start_row='sun397:train')):
+    if num > 1:
         break
+    for col in cols:
+        if col.startswith('data:'):
+            print repr(col), imfeat.image_fromstring(cols[col]).shape
+        if col.startswith('feat:'):
+            print repr(col), picarus.api.np_fromstring(cols[col]).shape
     print(cols.keys())
+    continue
     print cols['feat:superpixel'][:50]
     image = imfeat.image_fromstring(cols['data:image_320'])
     print imfeat.image_fromstring(cols['data:image']).shape

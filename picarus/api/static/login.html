@@ -3,6 +3,7 @@
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.2/jquery.cookie.js"></script>
   <script type="text/javascript" src="//stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
+  <script type="text/javascript" src="/static/picarus_api.js"></script>
 </head>
 <body>
   <script type="text/javascript">
@@ -22,8 +23,9 @@
         if (email != '' && auth != '') {
             get_secure(email, auth);
         } else {
-            var email = $.cookie("email");
-            var auth = $.cookie("auth");
+            var email_auth = load_cookie();
+            var email = email_auth.email;
+            var auth = email_auth.auth;
             if (email != null && auth != null) {
                 get_secure(email, auth);
             }
@@ -32,15 +34,15 @@
     function get_secure(email, auth) {
         function success(xhr) {
             $('#secure_div').html('Logged in email[' + email  + '] auth[' + auth + ']');
-            $.cookie("email", email, {expires : 30, secure: true});
-            $.cookie("auth", auth, {expires : 30, secure: true});
+            store_cookie(email, auth);
         }
         function fail(xhr) {
             $('#secure_div').html('Bad auth email[' + email  + '] auth[' + auth + ']');
         }
+        // TODO: Replace with picarus_api call
         var request = $.ajax({
           type: 'GET',
-          url: '/stats',
+          url: '/a0/user/stats',
           cache: false,
           contentType: false,
           processData: false,
@@ -54,7 +56,7 @@
     $(document).ready(entry_func);
   </script>
 <p>Enter email and captcha, we will email you an auth code if you have access.</p>
-<form id="form" action="/auth" method="POST">
+<form id="form" action="/a0/user/auth" method="POST">
   Email: <input type="text" name="email"><br>
   <script type="text/javascript"
           src="//www.google.com/recaptcha/api/challenge?k=6Ld4itgSAAAAAE3rpj2hMNCcir21qr68hbBRWzQz">

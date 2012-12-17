@@ -1,11 +1,26 @@
+
 """
-/db/
-/db/<table>/*/<col>?op=see/scene/indoor&input=//<in_col>
-/db/<table>/*/<col>?op=scene/indoor&input=<out_table>/*/<out_col>
-/db/<table>/<row>/<col>?vision=scene/indoor&input=<out_table>/<out_row>/<out_col>
+Changed w/ Andrew - Dec 16
+- Implement image cleanup model
+- Update camera/live demos to use the standard /data/ paths instead of custom methods
+- Update classifier_explorer confs to pull from hbase
+- Update login to use new .js library
+- Everything is verb based (e.g., /see/scene) with input specified in as parameters
+-- Single Image Input: 1.) param['image_b64'], 2.) file['image'], 3.) param['image_url'], or 4.) param['image_path']
+-- Image path: /data/images/brandyn/image_small
+
+Not sure yet
+- Preprocessing: Resize with fixed max side (preserve ratio), Resize exact (crop), Resize no larger than fixed max side (small images stay small)
+- Upload image temporarily and then resize/preprocess
+- Creation of verb on the fly for streaming tasks (online classifier, background subtraction, common operations)
+
+/data/
+/data/<table>/*/<col>?op=see/scene/indoor&input=//<in_col>
+/data/<table>/*/<col>?op=scene/indoor&input=<out_table>/*/<out_col>
+/data/<table>/<row>/<col>?vision=scene/indoor&input=<out_table>/<out_row>/<out_col>
 
 
-/db/<table>/<col>?vision=scene/indoor
+/data/<table>/<col>?vision=scene/indoor
 
 /see/
 /see/search/logo
@@ -40,6 +55,16 @@ from picarus.modules import HashRetrievalClassifier
 import picarus._features
 import boto
 
+VERSION = 'a0'
+
+
+def check_version(func):
+
+    def inner(version, *args, **kw):
+        if version != VERSION:
+            bottle.abort(400)
+        return func(*args, **kw)
+    return inner
 
 if __name__ == "__main__":
     mimerender = mimerender.BottleMimeRender()
@@ -75,7 +100,7 @@ def print_request():
         print('%s: %s' % (k, str(dict(getattr(bottle.request, k)))))
 
 
-@bottle.get('/stats')
+@bottle.get('/<version:re:[^/]*>/user/stats')
 @mimerender.map_exceptions(mapping=((ValueError, '500 Internal Server Error'),),
                            xml=render_xml_exception,
                            json=render_json_exception)
@@ -85,26 +110,15 @@ def print_request():
             json=render_json,
             txt=render_txt)
 @USERS.auth(True)
+@check_version
 def stats(auth_user):
     print(auth_user.user)
     return auth_user.stats()
 
 
-# Working
-# GET /db/t/r/c
-# GET /db/t/r/
-# PUT /db/t/r/c (data from params['data'] or files['data'])
-# PUT /db/t/r/ (columns/data from params/files)
-# DELETE /db/t/r/c
-# DELETE /db/t/r/
-
-# TODO
-# PUT /db/t/r/c (function=function to perform (e.g., see/detect/faces), input=table/row/col)
-# PUT /db/t/*/c (function=function to perform (e.g., see/detect/faces), input=table/*/col)
-
-@bottle.put('/db/<table:re:[^/]*>/<row:re:[^/]*>/<col:re:[^/]*>')
-@bottle.delete('/db/<table:re:[^/]*>/<row:re:[^/]*>/<col:re:[^/]*>')
-@bottle.get('/db/<table:re:[^/]*>/<row:re:[^/]*>/<col:re:[^/]*>')
+@bottle.put('/<version:re:[^/]*>/data/<table:re:[^/]*>/<row:re:[^/]*>/<col:re:[^/]*>')
+@bottle.delete('/<version:re:[^/]*>/data/<table:re:[^/]*>/<row:re:[^/]*>/<col:re:[^/]*>')
+@bottle.get('/<version:re:[^/]*>/data/<table:re:[^/]*>/<row:re:[^/]*>/<col:re:[^/]*>')
 @mimerender.map_exceptions(mapping=((ValueError, '500 Internal Server Error'),),
                            xml=render_xml_exception,
                            json=render_json_exception)
@@ -114,6 +128,7 @@ def stats(auth_user):
             json=render_json,
             txt=render_txt)
 @USERS.auth()
+@check_version
 def data(table, row, col):
     try:
         THRIFT_LOCK.acquire()
@@ -198,16 +213,15 @@ def _get_image():
     print('ImageData[%s]' % str(data[:25]))
     return imfeat.image_fromstring(data), params
 
-#@mimerender.map_exceptions(mapping=((ValueError, '500 Internal Server Error'),),
-#                           xml=render_xml_exception,
-#                           json=render_json_exception)
-@bottle.post('/see/<request:re:.*>')
+
+@bottle.post('/<version:re:[^/]*>/see/<request:re:.*>')
 @mimerender(default='json',
             html=render_html,
             xml=render_xml,
             json=render_json,
             txt=render_txt)
 @USERS.auth()
+@check_version
 def see(request):
     print_request()
     image, params = _get_image()
@@ -313,13 +327,14 @@ def _action_handle(function, params, image):
     return {}
 
 
-@bottle.post('/image')
+@bottle.post('/<version:re:[^/]*>/image')
 @mimerender(default='json',
             html=render_html,
             xml=render_xml,
             json=render_json,
             txt=render_txt)
 @USERS.auth()
+@check_version
 def image():
     print_request()
     # TODO(Cleanup)
@@ -329,12 +344,14 @@ def image():
     return {'jpgb64': base64.b64encode(image_string)}
 
 
-@bottle.get('/live.js')
+@bottle.get('/<version:re:[^/]*>/live.js')  # TODO: Fix this
 @mimerender(default='json',
             html=render_html,
             xml=render_xml,
             json=render_json,
             txt=render_txt)
+@USERS.auth()
+@check_version
 def livedata():
     print_request()
     row_to_time = lambda row: 2**31 - int(row[6:])
@@ -368,13 +385,14 @@ def livedata():
     return {'data': out}
 
 
-@bottle.get('/live2.js')
+@bottle.get('/<version:re:[^/]*>/live2.js')
 @mimerender(default='json',
             html=render_html,
             xml=render_xml,
             json=render_json,
             txt=render_txt)
 @USERS.auth()
+@check_version
 def motiondata():
     print_request()
     row_to_time = lambda row: 2**31 - int(row[6:])
@@ -411,8 +429,6 @@ def motiondata():
             heapq.heappush(heap, (diff, cur))
         else:
             heapq.heappushpop(heap, (diff, cur))
-
-
     finally:
         THRIFT_LOCK.release()
     out = sorted([x[1] for x in heap], key=lambda x: -x['time'])
@@ -424,58 +440,13 @@ def motiondata():
 #    # TODO: Do auth
 #    SERVER.stop()
 
-
-@bottle.get('/')
-def index():
-    return open('demo_all.html').read()
-
-
-@bottle.get('/login')
-def login():
-    return open('login.html').read()
+@bottle.get('/static/<name:re:[^/]*>')
+def static(name):
+    return bottle.static_file(name, root=os.path.join(os.getcwd(), 'static'))
 
 
-@bottle.get('/search')
-def search():
-    return open('image_search.html').read()
-
-
-@bottle.get('/classifier')
-def classifier():
-    return open('classifier_explore.html').read()
-
-
-@bottle.get('/confs.js')
-def classifier_confs():  # NOTE: Temporary
-    return open('confs.js').read()
-
-
-@bottle.get('/picarus_api.js')
-def picarus_api():  # NOTE: Temporary
-    return open('picarus_api.js').read()
-
-
-@bottle.get('/picarus_api_demo.js')
-def picarus_api_demo():  # NOTE: Temporary
-    return open('picarus_api_demo.js').read()
-
-
-@bottle.get('/camera')
-def picarus_camera_demo():  # NOTE: Temporary
-    return open('demo_camera.html').read()
-
-
-@bottle.get('/live')
-def picarus_camera_live():  # NOTE: Temporary
-    return open('demo_live.html').read()
-
-
-@bottle.get('/jquery.timer.js')
-def picarus_jquery_timer():  # NOTE: Temporary
-    return open('jquery.timer.js').read()
-
-
-@bottle.post('/auth')
+@bottle.post('/<version:re:[^/]*>/user/auth')
+@check_version
 def auth():
     print_request()
     email = dict(bottle.request.params)['email']

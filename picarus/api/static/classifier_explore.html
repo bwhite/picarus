@@ -16,8 +16,8 @@
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.2/jquery.cookie.js"></script>
     <script type="text/javascript" src="//www.google.com/jsapi"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.2/underscore-min.js"></script>
-    <script type="text/javascript" src="picarus_api.js"></script>
-    <script type="text/javascript" src="picarus_api_demo.js"></script>
+    <script type="text/javascript" src="/static/picarus_api.js"></script>
+    <script type="text/javascript" src="/static/picarus_api_demo.js"></script>
     <style>
       body {
         padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
@@ -117,14 +117,14 @@
           }
           var auth = {email: $('#demouser').val(), auth: $('#demopass').val()};
           var image = $('#demoimage')[0];
-          picarus_api("/confs.js", "GET", _.extend({success: success_confs}, auth));
+          picarus_api("/confs.js", "GET", _.extend({success: success_confs}, auth)); // TODO: Update
           if ($('#demoimage')[0].files.length == 1) {
-              picarus_api("/confs.js", "GET", _.extend({success: success_confs}, auth));
-              picarus_api_test("/see/classify/indoor", "POST", _.extend({div: $("#results_indoor"), image: image}, auth));
+              picarus_api("/confs.js", "GET", _.extend({success: success_confs}, auth));  // TODO: Update
+              picarus_api_test("/a0/see/classify/indoor", "POST", _.extend({div: $("#results_indoor"), image: image}, auth));
               function success_input_image(xhr) {
                   $('#input_image').attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['jpgb64']);
               }
-              picarus_api("/image", "POST", _.extend({success: success_input_image, image: image}, auth));
+              picarus_api("/a0/image", "POST", _.extend({success: success_input_image, image: image}, auth));
           }
       }
       function confs_to_conf_hist(pos_confs, neg_confs, bins, normalize) {
