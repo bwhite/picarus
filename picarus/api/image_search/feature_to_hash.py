@@ -17,4 +17,4 @@ class Mapper(picarus.api.HBaseMapper):
 
 
 if __name__ == '__main__':
-    hadoopy.run(Mapper, required_cmdenvs=['HBASE_INPUT_COLUMN', 'HBASE_TABLE', 'HBASE_OUTPUT_COLUMN', 'HASHER_FN'])
+    hadoopy.run(Mapper, required_cmdenvs=['HBASE_TABLE', 'HBASE_OUTPUT_COLUMN', 'HASHER_FN'])

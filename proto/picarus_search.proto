@@ -1,5 +1,5 @@
 message SearchIndex {
-  optional string name = 1;
+  optional bytes name = 1;
   enum SerFormat {
     JSON_IMPORT = 0;
     PICKLE = 1;
@@ -17,7 +17,7 @@ message SearchIndex {
 }
 
 message Classifier {
-  optional string name = 1;
+  optional bytes name = 1;
   enum SerFormat {
     JSON_IMPORT = 0;
     PICKLE = 1;

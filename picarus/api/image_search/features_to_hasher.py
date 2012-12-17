@@ -10,11 +10,10 @@ import picarus.api
 class Mapper(object):
 
     def __init__(self):
-        self._hbase_input_column = os.environ['HBASE_INPUT_COLUMN'].split(':')
         self._hbase_output_row = os.environ['HBASE_OUTPUT_ROW']
 
-    def map(self, row, columns):
-        yield self._hbase_output_row, columns[self._hbase_input_column[0]][self._hbase_input_column[1]]
+    def map(self, row, value):
+        yield self._hbase_output_row, value
 
 
 class Reducer(object):
@@ -27,4 +26,4 @@ class Reducer(object):
         self._hbase[row] = pickle.dumps(image_search.RRMedianHasher(self.hash_bits, normalize_features=False).train([picarus.api.np_fromstring(x) for x in features]), -1)
 
 if __name__ == '__main__':
-    hadoopy.run(Mapper, Reducer, required_cmdenvs=['HASH_BITS', 'HBASE_INPUT_COLUMN', 'HBASE_OUTPUT_ROW', 'HBASE_OUTPUT_TABLE', 'HBASE_OUTPUT_COLUMN'])
+    hadoopy.run(Mapper, Reducer, required_cmdenvs=['HASH_BITS', 'HBASE_OUTPUT_ROW', 'HBASE_OUTPUT_TABLE', 'HBASE_OUTPUT_COLUMN'])

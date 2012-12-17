@@ -1,6 +1,10 @@
 
 """
 Changed w/ Andrew - Dec 16
+- Add search index functionality
+- For functions like training hashers, give a model that can be trained, store the result as a new model (likely a pickle).
+-- Need to extend model from JSON to also support Pickles
+-- Need to include timestamp when making row key for trained models so that retraining gives you a new key
 - Implement image cleanup model
 - Update camera/live demos to use the standard /data/ paths instead of custom methods
 - Update classifier_explorer confs to pull from hbase
