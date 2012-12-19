@@ -120,6 +120,52 @@ class HashRetrievalClassifier(MultiClassClassifier):
         return [{'entity': x, 'file': y} for x, y in entity_files]
 
 
+class ImageBlocks(object):
+
+    def __init__(self, sbin, mode, num_sizes, num_points=20):
+        self.sbin = sbin
+        self.mode = mode
+        self.num_sizes = num_sizes
+        self.num_points = num_points
+
+    def _feature(self, image):
+        out = []
+        for block, coords in imfeat.BlockGenerator(image, imfeat.CoordGeneratorRect, output_size=(self.sbin, self.sbin), step_delta=(self.sbin, self.sbin)):
+            out.append(imfeat.convert_image(block, {'type': 'numpy', 'dtype': 'float32', 'mode': self.mode}).ravel())
+        return np.asfarray(out)
+
+    def compute_dense(self, image):
+        points = []
+        # TODO(brandyn): This last min should be removed when the preprocessor is added
+        max_side = min(320, np.max(image.shape[:2]))
+        for x in range(self.num_sizes):
+            if max_side <= 0:
+                break
+            image = imfeat.resize_image_max_side(image, max_side)
+            cur_points = self._feature(image)
+            if cur_points.size:
+                points.append(cur_points)
+            max_side = int(max_side / 2)
+        if points:
+            points = np.vstack(points)
+        else:
+            points = np.array([])
+        if self.num_points is not None:
+            points = random.sample(points, min(self.num_points, len(points)))
+        return np.ascontiguousarray(points)
+
+
+#    def _feature_hog_loc(self, image):
+#        feature_mask = imfeat.HOGLatent(self.sbin).compute_dense_2d(image)
+#        features = []
+#        norm = np.asfarray(feature_mask.shape[:2])
+#        for y in range(feature_mask.shape[0]):
+#            for x in range(feature_mask.shape[1]):
+#                yx = np.array([y, x]) / norm * self.scale
+#                features.append(np.hstack([feature_mask[y, x, :], yx]))
+#        return np.asfarray(features)
+
+
 class NBNNClassifier(MultiClassClassifier):
     """Multi-class classifier using Naive Bayes Nearest Neighbor
 
@@ -129,62 +175,21 @@ class NBNNClassifier(MultiClassClassifier):
     Cons
     - Requires NN lookup for # descriptors * # classes which can be slow
     """
-    def __init__(self, sbin=16, max_side=128, num_points=None, scale=1, required_files=(), num_sizes=3):
-        self.required_files = required_files
-        self.max_side = max_side
-        self._feature = self._feature_hist  # self._feature_hog_loc
+    def __init__(self):
         self.db = None
-        self.scale = scale
-        self.num_points = num_points
         self.classes = None
-        self.num_sizes = num_sizes
         self.dist = distpy.L2Sqr()
-        self.sbin = sbin
 
-    def _feature_hog_loc(self, image):
-        feature_mask = imfeat.HOGLatent(self.sbin).compute_dense_2d(image)
-        features = []
-        norm = np.asfarray(feature_mask.shape[:2])
-        for y in range(feature_mask.shape[0]):
-            for x in range(feature_mask.shape[1]):
-                yx = np.array([y, x]) / norm * self.scale
-                features.append(np.hstack([feature_mask[y, x, :], yx]))
-        return np.asfarray(features)
-
-    def _feature_hist(self, image):
-        out = []
-        for block, coords in imfeat.BlockGenerator(image, imfeat.CoordGeneratorRect, output_size=(self.sbin, self.sbin), step_delta=(self.sbin, self.sbin)):
-            out.append(imfeat.convert_image(block, {'type': 'numpy', 'dtype': 'float32', 'mode': 'lab'}).ravel())
-        return np.asfarray(out)
-
-    def feature(self, image):
-        points = []
-        for x in range(self.num_sizes):
-            max_side = int((2 ** -x) * self.max_side)
-            if max_side <= 0:
-                break
-            cur_points = self._feature(imfeat.resize_image_max_side(image, max_side))
-            if cur_points.size:
-                points.append(cur_points)
-        if points:
-            points = np.vstack(points)
-        else:
-            points = np.array([])
-        if self.num_points is not None:
-            return np.ascontiguousarray(random.sample(points, min(self.num_points, len(points))))
-        return points
-
-    def train(self, class_images):
+    def fit(self, featuress, labels):
         self.classes = []
         class_to_num = {}
         self.db = {}  # [class] = features
         # Compute features
-        for cur_class, image in class_images:
+        for cur_class, features in zip(labels, featuress):
             if cur_class not in class_to_num:
                 class_to_num[cur_class] = len(class_to_num)
                 self.classes.append(cur_class)
             cur_class = class_to_num[cur_class]
-            features = self.feature(image)
             if features.ndim == 1:
                 print('Skipping due to no features')
                 continue
@@ -192,18 +197,7 @@ class NBNNClassifier(MultiClassClassifier):
         for cur_class, features in self.db.items():
             self.db[cur_class] = np.vstack(self.db[cur_class])
 
-    def analyze(self, image):
-        """Image Classifier
-
-        Args:
-            image: numpy bgr array
-
-        Return:
-            List of {'name': name} in
-            descending confidence order.
-        """
-        scale_features = [self.feature(image, scale=2**(-x)) for x in range(self.num_sizes)]
-        features = np.vstack()
+    def __call__(self, features):
         class_dists = {}  # [class] = total_dist
         for cur_class in self.db:
             dist_indeces = self.dist.nns(self.db[cur_class], features)
@@ -227,37 +221,25 @@ class LocalNBNNClassifier(NBNNClassifier):
         super(LocalNBNNClassifier, self).__init__(*args, **kw)
         self.k = k
 
-    def train(self, class_images):
+    def fit(self, featuress, labels):
         self.classes = []
         self.class_nums = []
         class_to_num = {}
         self.db = []  # features
         # Compute features
-        for cur_class, image in class_images:
+        for cur_class, features in zip(labels, featuress):
             if cur_class not in class_to_num:
                 class_to_num[cur_class] = len(class_to_num)
                 self.classes.append(cur_class)
-            features = self.feature(image)
             if features.ndim == 1:
                 print('Skipping due to no features')
                 continue
             self.class_nums += [class_to_num[cur_class]] * len(features)
-            print(features.shape)
             self.db.append(features)
         self.db = np.vstack(self.db)
         self.class_nums = np.array(self.class_nums)
 
-    def analyze(self, image):
-        """Image Classifier
-
-        Args:
-            image: numpy bgr array
-
-        Return:
-            List of {'name': name} in
-            descending confidence order.
-        """
-        features = self.feature(image)
+    def __call__(self, features):
         class_dists = {}  # [class] = total_dist
         for feature in features:
             dist_indeces = self.dist.knn(self.db, feature, self.k + 1)
@@ -276,7 +258,8 @@ class LocalNBNNClassifier(NBNNClassifier):
 
 
 def logo_demo():
-    c0 = LocalNBNNClassifier(num_points=100)
+    feat = ImageBlocks(sbin=16, mode='lab', num_sizes=3)
+    c0 = LocalNBNNClassifier()
 
     def get_data(path):
         for x in glob.glob(path + '/*'):
@@ -289,13 +272,17 @@ def logo_demo():
                 except Exception, e:
                     print(e)
                     continue
-    c0.train(get_data('/mnt/brandyn_extra/goodlogo_entity_images'))
+    import itertools
+    iter0, iter1 = itertools.tee(get_data('/mnt/brandyn_extra/goodlogo_entity_images'))
+    iter0 = (x[0] for x in iter0)
+    iter1 = (feat.compute_dense(x[1]) for x in iter1)
+    c0.fit(iter1, iter0)
     total = 0
     good_10 = 0
     good_5 = 0
     good_1 = 0
     for entity, image in get_data('/home/brandyn/google_image_logos'):
-        out = c0.analyze(image)
+        out = c0(feat.compute_dense(image))
         total += 1
         if entity in [x['class'] for x in out]:
             good_10 += 1

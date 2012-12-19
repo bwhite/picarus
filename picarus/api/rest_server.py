@@ -1,11 +1,13 @@
 
 """
 Changed w/ Andrew - Dec 16
-- Add search index functionality
-- For functions like training hashers, give a model that can be trained, store the result as a new model (likely a pickle).
--- Need to extend model from JSON to also support Pickles
--- Need to include timestamp when making row key for trained models so that retraining gives you a new key
-- Implement image cleanup model
+- Update mfeat and mask column families to use compression
+- Setup new mfeat to work on logos
+- Double check that the ILP is being used properly for the masks
+- Add mask indexing
+- Add thumbnail creation for image search to Preprocessor
+- Add logo images to database
+- Add live camera images to database
 - Update camera/live demos to use the standard /data/ paths instead of custom methods
 - Update classifier_explorer confs to pull from hbase
 - Update login to use new .js library
@@ -14,7 +16,6 @@ Changed w/ Andrew - Dec 16
 -- Image path: /data/images/brandyn/image_small
 
 Not sure yet
-- Preprocessing: Resize with fixed max side (preserve ratio), Resize exact (crop), Resize no larger than fixed max side (small images stay small)
 - Upload image temporarily and then resize/preprocess
 - Creation of verb on the fly for streaming tasks (online classifier, background subtraction, common operations)
 
@@ -145,7 +146,6 @@ def _data(table, row, col):
     row = base64.urlsafe_b64decode(row)
     col = base64.urlsafe_b64decode(col)
     method = bottle.request.method.upper()
-    #print_request()
     # TODO Check authentication per table
     if table not in ('images', 'testtable'):
         raise ValueError('Only images/testtable allowed for now!')
@@ -160,29 +160,32 @@ def _data(table, row, col):
             if not result:
                 raise ValueError('Row not found!')
             return {'data': dict((x, base64.b64encode(y.value)) for x, y in result[0].columns.items())}
+        elif table and col:
+            # TODO: Need to verify limits on this scan
+            num_rows = 1
+            out = {}
+            start_row = base64.b64decode(bottle.request.params.get('startRow', ''))
+            stop_row = base64.b64decode(bottle.request.params.get('stopRow', ''))
+            print(start_row)
+            print(stop_row)
+            assert start_row.startswith('brandynlive') and stop_row.startswith('brandynlive')
+            stop_row = stop_row if stop_row else None
+            for cur_row, cur_col in hadoopy_hbase.scanner_row_column(THRIFT, table, column=col,
+                                                                     start_row=start_row, per_call=num_rows,
+                                                                     stop_row=stop_row, max_rows=num_rows):
+                if not cur_row.startswith('brandynlive'):
+                    break
+                out[base64.b64encode(cur_row)] = base64.b64encode(cur_col)
+            return {'data': out}
     elif method == 'PUT':
         mutations = []
         if col:
-            if 'function' in bottle.request.params:
-                # TODO: Handle row=*
-                input_table, input_row, input_col = bottle.request.params['input'].split()
-                result = THRIFT.get(table, row, col)
-                if not result:
-                    raise ValueError('Cell not found!')
-                image = result[0].value
-                # Remove internal parameters
-                params = dict(bottle.request.params)
-                del params['input']
-                del params['function']
-                output = _action_handle(bottle.request.params['function'], params, image)
-                mutations.append(hadoopy_hbase.Mutation(column=col, value=output))
+            if 'data' in bottle.request.files:
+                mutations.append(hadoopy_hbase.Mutation(column=col, value=bottle.request.files['data'].file.read()))
+            elif 'data' in bottle.request.params:
+                mutations.append(hadoopy_hbase.Mutation(column=col, value=bottle.request.params['data']))
             else:
-                if 'data' in bottle.request.files:
-                    mutations.append(hadoopy_hbase.Mutation(column=col, value=bottle.request.files['data'].file.read()))
-                elif 'data' in bottle.request.params:
-                    mutations.append(hadoopy_hbase.Mutation(column=col, value=bottle.request.params['data']))
-                else:
-                    raise ValueError('"data" must be specified!')
+                raise ValueError('"data" must be specified!')
         else:
             for x in bottle.request.files:
                 THRIFT.mutateRow(table, row, [hadoopy_hbase.Mutation(column=x, value=bottle.request.files[x].file.read())])
@@ -235,7 +238,7 @@ FEATURE_FUN = [imfeat.GIST, imfeat.Histogram, imfeat.Moments, imfeat.TinyImage, 
 FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
 print('search')
 SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
-              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/sun397_feature_index.pb').read()),
+              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/feature_index.pb').read()),
               'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_masks_index.pb').read())}
 CLASSIFY_FUN = {'see/classify/indoor': picarus.api.image_classifier_fromstring(open('image_search/sun397_indoor_classifier.pb').read())}
 
@@ -348,95 +351,26 @@ def image():
     return {'jpgb64': base64.b64encode(image_string)}
 
 
-@bottle.get('/<version:re:[^/]*>/live.js')  # TODO: Fix this
-@mimerender(default='json',
-            html=render_html,
-            xml=render_xml,
-            json=render_json,
-            txt=render_txt)
-@USERS.auth()
+@bottle.get('/<version:re:[^/]*>/models')
+#@USERS.auth()
 @check_version
-def livedata():
-    print_request()
-    row_to_time = lambda row: 2**31 - int(row[6:])
-    time_to_row = lambda t: 'camera' + str(2**31 - t)
-    out = []
-    num_images = 20
-    params = dict(bottle.request.params)
+def models():
+    out = {}  # [type][row_id]
+    prefix_to_name = {'feat:': 'feature',
+                      'pred:': 'classifier',
+                      'srch:': 'index',
+                      'hash:': 'hasher',
+                      'data:': 'preprocessor'}
     try:
         THRIFT_LOCK.acquire()
-        if 'start_time' in params and 'stop_time' in params:
-            stop_row = time_to_row(int(params['start_time']))
-            start_row = time_to_row(int(params['stop_time']))
-            row_skip = max(1, (int(params['stop_time']) - int(params['start_time'])) / num_images)
-        else:
-            start_row = 'camera'
-            stop_row = 'camerb'
-            row_skip = 120
-        cur_time = 0
-        for _ in range(20):
-            for row, cols in hadoopy_hbase.scanner(THRIFT, 'testtable', start_row=start_row, stop_row=stop_row, max_rows=1):
-                cur_time = row_to_time(row)
-                print(cur_time)
-                out.append({'row': row, 'time': cur_time, 'columns': cols})
-                cur_time -= row_skip
-                row_skip *= 2
-                start_row = time_to_row(cur_time)
-            if cur_time < 0:
-                break
+        for row, cols in hadoopy_hbase.scanner(THRIFT, 'picarus_models', columns=['data:input', 'data:versions', 'data:prefix', 'data:creation_time']):
+            name = prefix_to_name[cols['data:prefix']]
+            out.setdefault(name, {})[base64.b64encode(row)] = {'inputs': json.loads(cols['data:input']),
+                                                               'versions': json.loads(cols['data:versions']),
+                                                               'creationTime': float(cols['data:creation_time'])}
     finally:
         THRIFT_LOCK.release()
-    return {'data': out}
-
-
-@bottle.get('/<version:re:[^/]*>/live2.js')
-@mimerender(default='json',
-            html=render_html,
-            xml=render_xml,
-            json=render_json,
-            txt=render_txt)
-@USERS.auth()
-@check_version
-def motiondata():
-    print_request()
-    row_to_time = lambda row: 2**31 - int(row[6:])
-    time_to_row = lambda t: 'camera' + str(2**31 - t)
-    out = []
-    import heapq
-    heap = []
-    try:
-        THRIFT_LOCK.acquire()
-        start_row = 'camera'
-        row_skip = 1800
-        cur_time = 0
-        frames = []
-        for _ in range(10):
-            for row, cols in hadoopy_hbase.scanner(THRIFT, 'testtable', start_row=start_row, stop_row='camerb', max_rows=1):
-                cur_time = row_to_time(row)
-                image = imfeat.convert_image(imfeat.image_fromstring(base64.b64decode(cols['colfam1:jpgb64'])), {'dtype': 'uint8', 'type': 'numpy', 'mode': 'gray'}).astype(np.double)
-                frames.append(image)
-                cur_time -= row_skip
-                start_row = time_to_row(cur_time)
-            if cur_time < 0:
-                break
-        # TODO Need to fix this
-        median = np.median(frames, 0)
-        start_row = 'camera'
-        row_skip = 720
-        cur_time = 0
-
-        diff = image - median
-        diff = np.sum(diff * diff) / diff.size
-        print(diff)
-        cur = {'row': row, 'time': cur_time, 'columns': cols, 'diff': diff}
-        if len(heap) < 10:
-            heapq.heappush(heap, (diff, cur))
-        else:
-            heapq.heappushpop(heap, (diff, cur))
-    finally:
-        THRIFT_LOCK.release()
-    out = sorted([x[1] for x in heap], key=lambda x: -x['time'])
-    return {'data': out}
+    return out
 
 
 #@bottle.get('/admin/stop')
