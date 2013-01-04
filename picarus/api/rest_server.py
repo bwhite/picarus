@@ -237,10 +237,11 @@ def see(request):
 FEATURE_FUN = [imfeat.GIST, imfeat.Histogram, imfeat.Moments, imfeat.TinyImage, imfeat.GradientHistogram]
 FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
 print('search')
-SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
-              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/feature_index.pb').read()),
-              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_masks_index.pb').read())}
-CLASSIFY_FUN = {'see/classify/indoor': picarus.api.image_classifier_fromstring(open('image_search/sun397_indoor_classifier.pb').read())}
+# TODO Fix
+#SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
+#              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/feature_index.pb').read()),
+#              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_masks_index.pb').read())}
+#CLASSIFY_FUN = {'see/classify/indoor': picarus.api.image_classifier_fromstring(open('image_search/sun397_indoor_classifier.pb').read())}
 
 
 def _get_texton():
@@ -254,7 +255,7 @@ def _get_texton():
                                               forests=forests, threshs=threshs)
 
 
-TEXTON = _get_texton()
+#TEXTON = _get_texton()
 ILP_WEIGHTS = json.load(open('image_search/ilp_weights.js'))
 ILP_WEIGHTS['ilp_tables'] = np.array(ILP_WEIGHTS['ilp_tables'])
 
@@ -357,6 +358,8 @@ def image():
 def models():
     out = {}  # [type][row_id]
     prefix_to_name = {'feat:': 'feature',
+                      'mfeat:': 'multi-feature',
+                      'mask:': 'mask-feature',
                       'pred:': 'classifier',
                       'srch:': 'index',
                       'hash:': 'hasher',

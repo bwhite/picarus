@@ -166,11 +166,14 @@ class ImageRetrieval(object):
                              cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
 
     def image_to_feature(self, feature_key, **kw):
-        input_dict, feature, _ = self.key_to_input_model_param(feature_key)
+        input_dict, feature, params = self.key_to_input_model_param(feature_key)
         feature_fp = picarus.api.model_tofile(feature)
+        feature_type = params['feature_type']
+        assert feature_type in ('feature', 'multi_feature', 'mask_feature')
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(feature_key),
-                   'FEATURE_FN': os.path.basename(feature_fp.name)}
+                   'FEATURE_FN': os.path.basename(feature_fp.name),
+                   'FEATURE_TYPE': feature_type}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'image_to_feature.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_dict['image']], single_value=True,
                              cmdenvs=cmdenvs, files=[feature_fp.name],
@@ -193,7 +196,32 @@ class ImageRetrieval(object):
                              num_mappers=self.num_mappers, columns=[input_dict['feature']], files=[hasher_fp.name], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=hasher_fp, **kw)
 
-    def features_to_classifier(self, feature_key, metadata_column, class_positive, classifier, max_per_label=None, **kw):
+    def _classifier_feature(self, cp, feature):
+        if isinstance(feature, dict):
+            cp.feature = json.dumps(feature)
+            cp.feature_format = cp.JSON_IMPORT
+        else:
+            cp.feature = pickle.dumps(feature, -1)
+            cp.feature_format = cp.PICKLE
+
+    def features_to_classifier_class_distance_list(self, feature_key, metadata_column, classifier, **kw):
+        row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
+                                         columns=[feature_key, metadata_column], **kw)
+        label_values = ((cols[metadata_column], np.asfarray(picarus.api.np_fromstring(cols[feature_key]))) for _, cols in row_cols)
+        classifier.train(label_values)
+        cp = picarus.api.Classifier()
+        cp.name = '%s-%s' % (feature_key, metadata_column)
+        feature_input, feature, _ = self.key_to_input_model_param(feature_key)
+        self._classifier_feature(cp, feature)
+        cp.classifier = pickle.dumps(classifier, -1)
+        cp.classifier_format = cp.PICKLE
+        cp.classifier_type = cp.CLASS_DISTANCE_LIST
+        k = image_retrieval.input_model_param_to_key('pred:', input={'feature': feature_key, 'meta': metadata_column},
+                                                     model=cp.SerializeToString())
+        print(repr(k))
+        return k
+
+    def features_to_classifier_sklearn_decision_func(self, feature_key, metadata_column, class_positive, classifier, max_per_label=None, **kw):
         row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
                                          columns=[feature_key, metadata_column], **kw)
         label_features = {0: [], 1: []}
@@ -213,12 +241,7 @@ class ImageRetrieval(object):
         cp = picarus.api.Classifier()
         cp.name = '%s-%s-%s' % (feature_key, metadata_column, class_positive)
         feature_input, feature, _ = self.key_to_input_model_param(feature_key)
-        if isinstance(feature, dict):
-            cp.feature = json.dumps(feature)
-            cp.feature_format = cp.JSON_IMPORT
-        else:
-            cp.feature = pickle.dumps(feature, -1)
-            cp.feature_format = cp.PICKLE
+        self._classifier_feature(cp, feature)
         cp.classifier = pickle.dumps(classifier, -1)
         cp.classifier_format = cp.PICKLE
         k = image_retrieval.input_model_param_to_key('pred:', input={'feature': feature_key, 'meta': metadata_column},
@@ -588,45 +611,54 @@ if __name__ == '__main__':
         image_retrieval.image_to_feature(k, **kw)
 
     def create_feature(image_key, model):
-        k = image_retrieval.input_model_param_to_key('feat:', input={'image': image_key}, model=model)
+        k = image_retrieval.input_model_param_to_key('feat:', input={'image': image_key}, model=model, param={'feature_type': 'feature'})
         print(repr(k))
         return k
 
     def create_mask_feature(image_key, model):
-        k = image_retrieval.input_model_param_to_key('mask:', input={'image': image_key}, model=model)
+        k = image_retrieval.input_model_param_to_key('mask:', input={'image': image_key}, model=model, param={'feature_type': 'mask_feature'})
         print(repr(k))
         return k
 
     def create_multi_feature(image_key, model):
-        k = image_retrieval.input_model_param_to_key('mfeat:', input={'image': image_key}, model=model)
+        k = image_retrieval.input_model_param_to_key('mfeat:', input={'image': image_key}, model=model, param={'feature_type': 'multi_feature'})
         print(repr(k))
         return k
 
     def run_hasher(k, **kw):
         image_retrieval.feature_to_hash(k, **kw)
 
-    def create_hasher(feature_key, hasher):
-        k = image_retrieval.features_to_hasher(feature_key, hasher, start_row='sun397:train', max_rows=10000)
+    def create_hasher(feature_key, hasher, **kw):
+        k = image_retrieval.features_to_hasher(feature_key, hasher, max_rows=10000)
         return k
 
     def create_index(hasher_key, metadata_column, index, **kw):
         k = image_retrieval.hashes_to_index(hasher_key, metadata_column, index, **kw)
         return k
 
+    def run_classifier(k, **kw):
+        image_retrieval.feature_to_prediction(k, **kw)
+
     def create_classifier(feature_key, metadata_column, class_positive, classifier, **kw):
-        k = image_retrieval.features_to_classifier(feature_key, metadata_column, class_positive, classifier, max_per_label=5000, **kw)
-        image_retrieval.feature_to_prediction(k)
+        k = image_retrieval.features_to_classifier_sklearn_decision_func(feature_key, metadata_column, class_positive, classifier, max_per_label=5000, **kw)
         return k
 
-    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'force_max_side', 'size': 320, 'compression': 'jpg'}})
-    #feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
-    #hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False))
-    #create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB())
-    #classifier_key = create_classifier(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC())
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
+    #run_preprocessor(image_key)
 
+    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 4, 'num_points': 100}})
+    run_feature(feature_key, start_row='logos:good', stop_row='logos:gooe')
+
+    #feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
+    #run_feature(feature_key, start_row='sun397:', stop_row='sun398:')
+    #hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row='sun397:train', stop_row='sun397:traio')
+    #run_hasher(hasher_key, start_row='sun397:', stop_row='sun398:')
+    #create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row='sun397:train', stop_row='sun397:traio')
+    #classifier_key = create_classifier(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row='sun397:train', stop_row='sun397:traio')
+    #run_classifier(classifier_key, start_row='sun397:', stop_row='sun398:')
     # Masks
-    feature_key = create_feature(image_key, image_retrieval._get_texton(base64.b64decode('cHJlZDrO19q5IArbsVLjJZrMlxQ0ONCoxQ==')))
-    run_feature(feature_key, start_row='sun397:', stop_row='sun398:')
+    #feature_key = create_mask_feature(image_key, image_retrieval._get_texton(base64.b64decode('cHJlZDqOWGdqIgoVV27QmARQoqxb15Y+9A==')))
+    #run_feature(feature_key, start_row='sun397:', stop_row='sun398:')
 
 
 if 0:

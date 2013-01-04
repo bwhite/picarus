@@ -180,12 +180,12 @@ class NBNNClassifier(MultiClassClassifier):
         self.classes = None
         self.dist = distpy.L2Sqr()
 
-    def fit(self, featuress, labels):
+    def train(self, label_values):
         self.classes = []
         class_to_num = {}
         self.db = {}  # [class] = features
         # Compute features
-        for cur_class, features in zip(labels, featuress):
+        for cur_class, features in label_values:
             if cur_class not in class_to_num:
                 class_to_num[cur_class] = len(class_to_num)
                 self.classes.append(cur_class)
@@ -197,10 +197,10 @@ class NBNNClassifier(MultiClassClassifier):
         for cur_class, features in self.db.items():
             self.db[cur_class] = np.vstack(self.db[cur_class])
 
-    def __call__(self, features):
+    def __call__(self, value):
         class_dists = {}  # [class] = total_dist
         for cur_class in self.db:
-            dist_indeces = self.dist.nns(self.db[cur_class], features)
+            dist_indeces = self.dist.nns(self.db[cur_class], value)
             class_dists[cur_class] = np.sum(dist_indeces[:, 0])
         return [{'class': self.classes[x[0]], 'distance': x[1]} for x in sorted(class_dists.items(),
                                                                                 key=lambda x: x[1])]
@@ -221,13 +221,13 @@ class LocalNBNNClassifier(NBNNClassifier):
         super(LocalNBNNClassifier, self).__init__(*args, **kw)
         self.k = k
 
-    def fit(self, featuress, labels):
+    def train(self, label_values):
         self.classes = []
         self.class_nums = []
         class_to_num = {}
         self.db = []  # features
         # Compute features
-        for cur_class, features in zip(labels, featuress):
+        for cur_class, features in label_values:
             if cur_class not in class_to_num:
                 class_to_num[cur_class] = len(class_to_num)
                 self.classes.append(cur_class)
@@ -239,9 +239,9 @@ class LocalNBNNClassifier(NBNNClassifier):
         self.db = np.vstack(self.db)
         self.class_nums = np.array(self.class_nums)
 
-    def __call__(self, features):
+    def __call__(self, value):
         class_dists = {}  # [class] = total_dist
-        for feature in features:
+        for feature in value:
             dist_indeces = self.dist.knn(self.db, feature, self.k + 1)
             dist_b = dist_indeces[self.k, 0]
             class_min_dists = {}
@@ -272,11 +272,8 @@ def logo_demo():
                 except Exception, e:
                     print(e)
                     continue
-    import itertools
-    iter0, iter1 = itertools.tee(get_data('/mnt/brandyn_extra/goodlogo_entity_images'))
-    iter0 = (x[0] for x in iter0)
-    iter1 = (feat.compute_dense(x[1]) for x in iter1)
-    c0.fit(iter1, iter0)
+    label_values = ((x, feat.compute_dense(y)) for x, y in get_data('/mnt/brandyn_extra/goodlogo_entity_images'))
+    c0.train(label_values)
     total = 0
     good_10 = 0
     good_5 = 0
