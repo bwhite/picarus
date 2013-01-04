@@ -57,15 +57,15 @@ def get_version(module_name):
         os.chdir(prev_dir)
 
 
-class ImageRetrieval(object):
+class PicarusManager(object):
 
-    def __init__(self):
+    def __init__(self, thrift=None):
         self.image_orig_column = 'data:image'
         self.image_column = 'data:image_320'
         self.thumbnails_column = 'data:image_75sq'
         self.images_table = 'images'
         self.models_table = 'picarus_models'
-        self.hb = hadoopy_hbase.connect()
+        self.hb = thrift if thrift is not None else hadoopy_hbase.connect()
         # Feature Settings
         #self.feature_dict = {'name': 'imfeat.GIST'}
         #self.feature_name = 'gist'
@@ -87,7 +87,7 @@ class ImageRetrieval(object):
         self.feature_class_positive = 'indoor'
         # Mask Hasher settings
         self.texton_num_classes = 8
-        self.texton_classes = json.load(open('../class_colors.js'))
+        self.texton_classes = json.load(open('class_colors.js'))
         self.masks_hasher_row = 'masks'   # TODO: Fix with model key
         self.masks_hasher_column = 'data:hasher_masks'  # TODO: Fix with model key
         self.masks_hash_column = 'hash:masks'  # TODO: Fix with model key
@@ -161,7 +161,7 @@ class ImageRetrieval(object):
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(model_key),
                    'MODEL_FN': os.path.basename(model_fp.name)}
-        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'image_preprocess.py', libjars=['hadoopy_hbase.jar'],
+        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_preprocess.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_dict['image']], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
 
@@ -174,7 +174,7 @@ class ImageRetrieval(object):
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(feature_key),
                    'FEATURE_FN': os.path.basename(feature_fp.name),
                    'FEATURE_TYPE': feature_type}
-        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'image_to_feature.py', libjars=['hadoopy_hbase.jar'],
+        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_to_feature.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_dict['image']], single_value=True,
                              cmdenvs=cmdenvs, files=[feature_fp.name],
                              jobconfs={'mapred.task.timeout': '6000000'}, dummy_fp=feature_fp, **kw)
@@ -192,7 +192,7 @@ class ImageRetrieval(object):
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(model_key),
                    'HASHER_FN': os.path.basename(hasher_fp.name)}
-        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'feature_to_hash.py', libjars=['hadoopy_hbase.jar'],
+        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/feature_to_hash.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_dict['feature']], files=[hasher_fp.name], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=hasher_fp, **kw)
 
@@ -257,7 +257,7 @@ class ImageRetrieval(object):
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(model_key),
                    'CLASSIFIER_FN': os.path.basename(classifier_fp.name)}
-        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
+        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_dict['feature']], files=[classifier_fp.name], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=classifier_fp, **kw)
 
@@ -292,7 +292,7 @@ class ImageRetrieval(object):
     def _image_to_superpixels(self, input_table, input_column, output_table, output_column):  # Merge with above
         cmdenvs = {'HBASE_TABLE': output_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column)}
-        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'image_to_superpixels.py', libjars=['hadoopy_hbase.jar'],
+        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'hadoop/image_to_superpixels.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_column], single_value=True,
                              cmdenvs=cmdenvs, jobconfs={'mapred.task.timeout': '6000000'})
 
@@ -307,7 +307,7 @@ class ImageRetrieval(object):
     def _masks_to_ilp(self, input_table, input_column, output_column, **kw):
         cmdenvs = {'HBASE_TABLE': input_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column)}
-        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'masks_to_ilp.py', libjars=['hadoopy_hbase.jar'],
+        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'hadoop/masks_to_ilp.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_column], single_value=True,
                              cmdenvs=cmdenvs, **kw)
 
@@ -325,7 +325,7 @@ class ImageRetrieval(object):
         cmdenvs = {'HBASE_TABLE': input_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
                    'HASHER_FN': os.path.basename(hasher_fp.name)}
-        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'feature_to_hash.py', libjars=['hadoopy_hbase.jar'],
+        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'hadoop/feature_to_hash.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_column], files=[hasher_fp.name], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=hasher_fp, **kw)
 
@@ -336,7 +336,7 @@ class ImageRetrieval(object):
         cmdenvs = {'HBASE_TABLE': input_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
                    'CLASSIFIER_FN': os.path.basename(classifier_fp.name)}
-        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
+        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'hadoop/feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_column], files=[classifier_fp.name], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=classifier_fp, **kw)
 
@@ -400,8 +400,8 @@ class ImageRetrieval(object):
         # TODO: Have a way to verify that the input columns match for things that use this
         ilp_input, ilp = self.key_to_input_model_param(classifier_key)[:2]
         for x in ['outdoor', 'indoor']:
-            tp = pickle.load(open('../tree_ser-%s-texton.pkl' % x))
-            tp2 = pickle.load(open('../tree_ser-%s-integral.pkl' % x))
+            tp = pickle.load(open('tree_ser-%s-texton.pkl' % x))
+            tp2 = pickle.load(open('tree_ser-%s-integral.pkl' % x))
             forests.append({'tp': tp, 'tp2': tp2})
         return picarus._features.TextonILPPredict(num_classes=self.texton_num_classes, ilp=ilp,
                                                   forests=forests, threshs=threshs)
@@ -596,7 +596,7 @@ class ImageRetrieval(object):
 
 
 if __name__ == '__main__':
-    image_retrieval = ImageRetrieval()
+    image_retrieval = PicarusManager()
     #image_retrieval.create_tables()
 
     def run_preprocessor(k, **kw):
@@ -639,15 +639,21 @@ if __name__ == '__main__':
     def run_classifier(k, **kw):
         image_retrieval.feature_to_prediction(k, **kw)
 
-    def create_classifier(feature_key, metadata_column, class_positive, classifier, **kw):
+    def create_classifier_sklearn_decision_func(feature_key, metadata_column, class_positive, classifier, **kw):
         k = image_retrieval.features_to_classifier_sklearn_decision_func(feature_key, metadata_column, class_positive, classifier, max_per_label=5000, **kw)
         return k
+
+    def create_classifier_class_distance_list(feature_key, metadata_column, classifier, **kw):
+        k = image_retrieval.features_to_classifier_class_distance_list(feature_key, metadata_column, classifier, **kw)
+        return k
+
 
     image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
     #run_preprocessor(image_key)
 
     feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 4, 'num_points': 100}})
-    run_feature(feature_key, start_row='logos:good', stop_row='logos:gooe')
+    #run_feature(feature_key, start_row='logos:good', stop_row='logos:gooe')
+    create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row='logos:good', stop_row='logos:gooe', max_rows=100)
 
     #feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
     #run_feature(feature_key, start_row='sun397:', stop_row='sun398:')

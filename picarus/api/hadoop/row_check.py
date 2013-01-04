@@ -13,9 +13,10 @@ import picarus.api
 logging.basicConfig(level=logging.DEBUG)
 
 a = hadoopy_hbase.connect()
-hrc = picarus.modules.HashRetrievalClassifier()
-hrc.load(open('sun397_feature_index.pb').read())
+#hrc = picarus.modules.HashRetrievalClassifier()
+#hrc.load(open('sun397_feature_index.pb').read())
 for num, (row, cols) in enumerate(hadoopy_hbase.scanner(a, 'images', start_row='sun397:train')):
+    print(repr(row))
     if num > 1:
         break
     for col in cols:

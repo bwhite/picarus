@@ -132,7 +132,7 @@
           var auth = {email: $('#demouser').val(), auth: $('#demopass').val()};
           var image = $('#demoimage')[0];
           picarus_api_test_demo("/a0/see/feature/GIST", "POST", {div: $("#results_gist"), image: image});
-          picarus_api_test_demo("/a0/see/search/logos", "POST", {div: $("#results_logos"), image: image});
+          picarus_api_test_demo("/a0/see/classify/logos", "POST", {div: $("#results_logos"), image: image});
           picarus_api_test_demo("/a0/see/search/scenes", "POST", {div: $("#results_scenes"), image: image});
           function success_texton_argmax(xhr) {
               mask_response = JSON.parse(xhr.responseText)

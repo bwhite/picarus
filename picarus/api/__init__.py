@@ -45,7 +45,10 @@ def image_classifier_fromstring(classifier_ser):
     loader = lambda x, y: pickle.loads(y) if x == cp.PICKLE else call_import(json.loads(y))
     feature = loader(cp.feature_format, cp.feature)
     classifier = loader(cp.classifier_format, cp.classifier)
-    return lambda image: float(classifier.decision_function(feature(image)).flat[0])
+    if cp.classifier_type == cp.CLASS_DISTANCE_LIST:
+        return lambda image: classifier(feature(image))
+    else:
+        return lambda image: float(classifier.decision_function(feature(image)).flat[0])
 
 
 def feature_classifier_fromstring(classifier_ser):
@@ -53,7 +56,10 @@ def feature_classifier_fromstring(classifier_ser):
     cp.ParseFromString(classifier_ser)
     loader = lambda x, y: pickle.loads(y) if x == cp.PICKLE else call_import(json.loads(y))
     classifier = loader(cp.classifier_format, cp.classifier)
-    return lambda feature: float(classifier.decision_function(feature).flat[0])
+    if cp.classifier_type == cp.CLASS_DISTANCE_LIST:
+        return lambda feature: classifier(feature)
+    else:
+        return lambda feature: float(classifier.decision_function(feature).flat[0])
 
 
 def model_tofile(model):

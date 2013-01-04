@@ -59,6 +59,8 @@ from users import Users, UnknownUser
 from picarus.modules import HashRetrievalClassifier
 import picarus._features
 import boto
+from picarus._importer import call_import
+from driver import PicarusManager
 
 VERSION = 'a0'
 
@@ -91,6 +93,7 @@ if __name__ == "__main__":
     THRIFT = hadoopy_hbase.connect(ARGS.thrift_server, ARGS.thrift_port)
     THRIFT_LOCK = gevent.coros.RLock()
     USERS = Users(ARGS.redis_host, ARGS.redis_port, ARGS.redis_db)
+    MANAGER = PicarusManager(thrift=THRIFT)
 
 
 def print_request():
@@ -238,6 +241,26 @@ FEATURE_FUN = [imfeat.GIST, imfeat.Histogram, imfeat.Moments, imfeat.TinyImage, 
 FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
 print('search')
 # TODO Fix
+CLASSIFY_FUN = {}
+
+
+def _classifier_from_key(key):
+    input, classifier, param = MANAGER.key_to_input_model_param(key)
+    classifier = picarus.api.feature_classifier_fromstring(classifier)
+    input, feature, param = MANAGER.key_to_input_model_param(input['feature'])
+    loader = lambda x: call_import(x) if isinstance(x, dict) else x
+    feature = loader(feature)
+    if param['feature_type'] == 'multi_feature':
+        real_feature = lambda x: feature.compute_dense(x)
+    else:
+        real_feature = feature
+    # TODO: Use preprocessor too
+    input, preprocessor, param = MANAGER.key_to_input_model_param(input['image'])
+    return lambda x: classifier(real_feature(x))
+
+
+CLASSIFY_FUN['see/classify/logos'] = _classifier_from_key('pred:R\x1eA\x15\xab\xd4\x07\x11C\xb61\xc0M\xf7)}j1\x0e\x02')
+SEARCH_FUN = {}
 #SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
 #              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/feature_index.pb').read()),
 #              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_masks_index.pb').read())}
@@ -251,12 +274,12 @@ def _get_texton():
         tp = pickle.load(open('tree_ser-%s-texton.pkl' % x))
         tp2 = pickle.load(open('tree_ser-%s-integral.pkl' % x))
         forests.append({'tp': tp, 'tp2': tp2})
-    return picarus._features.TextonILPPredict(num_classes=8, ilp=open('image_search/sun397_indoor_classifier.pb').read(),
+    return picarus._features.TextonILPPredict(num_classes=8, ilp=open('sun397_indoor_classifier.pb').read(),
                                               forests=forests, threshs=threshs)
 
 
 #TEXTON = _get_texton()
-ILP_WEIGHTS = json.load(open('image_search/ilp_weights.js'))
+ILP_WEIGHTS = json.load(open('ilp_weights.js'))
 ILP_WEIGHTS['ilp_tables'] = np.array(ILP_WEIGHTS['ilp_tables'])
 
 #TEXTON = pickle.loads(pickle.dumps(TEXTON, -1))
