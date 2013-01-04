@@ -122,7 +122,7 @@ class HashRetrievalClassifier(MultiClassClassifier):
 
 class ImageBlocks(object):
 
-    def __init__(self, sbin, mode, num_sizes, num_points=20):
+    def __init__(self, sbin, mode, num_sizes, num_points=None):
         self.sbin = sbin
         self.mode = mode
         self.num_sizes = num_sizes
@@ -136,8 +136,7 @@ class ImageBlocks(object):
 
     def compute_dense(self, image):
         points = []
-        # TODO(brandyn): This last min should be removed when the preprocessor is added
-        max_side = min(320, np.max(image.shape[:2]))
+        max_side = np.max(image.shape[:2])
         for x in range(self.num_sizes):
             if max_side <= 0:
                 break
@@ -152,7 +151,9 @@ class ImageBlocks(object):
             points = np.array([])
         if self.num_points is not None:
             points = random.sample(points, min(self.num_points, len(points)))
-        return np.ascontiguousarray(points)
+        points = np.ascontiguousarray(points)
+        print(points.shape)
+        return points
 
 
 #    def _feature_hog_loc(self, image):
@@ -258,8 +259,9 @@ class LocalNBNNClassifier(NBNNClassifier):
 
 
 def logo_demo():
-    feat = ImageBlocks(sbin=16, mode='lab', num_sizes=3)
+    feat = ImageBlocks(sbin=16, mode='lab', num_sizes=3, num_points=None)
     c0 = LocalNBNNClassifier()
+    preprocessor = imfeat.ImagePreprocessor(method='max_side', size=80, compression='jpg')
 
     def get_data(path):
         for x in glob.glob(path + '/*'):
@@ -268,7 +270,7 @@ def logo_demo():
                 fn = os.path.basename(y)
                 print(y)
                 try:
-                    yield entity, imfeat.image_fromstring(open(y).read()).copy()
+                    yield entity, preprocessor.asarray(open(y).read()).copy()
                 except Exception, e:
                     print(e)
                     continue

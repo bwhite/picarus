@@ -66,6 +66,7 @@ class PicarusManager(object):
         self.images_table = 'images'
         self.models_table = 'picarus_models'
         self.hb = thrift if thrift is not None else hadoopy_hbase.connect()
+        self.max_cell_size = 10 * 1024 * 1024  # 10MB
         # Feature Settings
         #self.feature_dict = {'name': 'imfeat.GIST'}
         #self.feature_name = 'gist'
@@ -103,6 +104,7 @@ class PicarusManager(object):
         self.indoor_class_column = 'meta:class_0'
         self.num_mappers = 6
         self.versions = self.get_versions()
+        self.model_chunks_column = 'data:model_chunks'
         self.model_column = 'data:model'
         self.input_column = 'data:input'
         self.param_column = 'data:param'
@@ -132,20 +134,31 @@ class PicarusManager(object):
         model_key = prefix + hashlib.sha1(input_model_param_str).digest()
         # Only write if the row doesn't exist
         if not self.hb.get(self.models_table, model_key, self.prefix_column):
-            self.hb.mutateRow(self.models_table, model_key, [hadoopy_hbase.Mutation(column=self.model_column, value=model_str),
-                                                             hadoopy_hbase.Mutation(column=self.model_type_column, value=model_type),
-                                                             hadoopy_hbase.Mutation(column=self.input_column, value=input_str),
-                                                             hadoopy_hbase.Mutation(column=self.param_column, value=param_str),
-                                                             hadoopy_hbase.Mutation(column=self.versions_column, value=json.dumps(self.versions)),
-                                                             hadoopy_hbase.Mutation(column=self.prefix_column, value=prefix),
-                                                             hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time()))])
+            cols = [hadoopy_hbase.Mutation(column=self.model_type_column, value=model_type),
+                    hadoopy_hbase.Mutation(column=self.input_column, value=input_str),
+                    hadoopy_hbase.Mutation(column=self.param_column, value=param_str),
+                    hadoopy_hbase.Mutation(column=self.versions_column, value=json.dumps(self.versions)),
+                    hadoopy_hbase.Mutation(column=self.prefix_column, value=prefix),
+                    hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time()))]
+            chunk_count = 0
+            while model_str:
+                cols.append(hadoopy_hbase.Mutation(column=self.model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size]))
+                model_str = model_str[self.max_cell_size:]
+                print(chunk_count)
+                chunk_count += 1
+            cols.append(hadoopy_hbase.Mutation(column=self.model_chunks_column, value=np.array(chunk_count, dtype=np.uint32).tostring()))
+            self.hb.mutateRow(self.models_table, model_key, cols)
         else:
             print('Model exists!')
         return model_key
 
     def key_to_input_model_param(self, key):
-        columns = self.hb.getRowWithColumns(self.models_table, key, [self.input_column, self.model_column, self.param_column])[0].columns
-        input, model, param = json.loads(columns[self.input_column].value), json.loads(columns[self.model_column].value), json.loads(columns[self.param_column].value)
+        columns = self.hb.getRowWithColumns(self.models_table, key, [self.input_column, self.model_chunks_column, self.param_column])[0].columns
+        input, param = json.loads(columns[self.input_column].value), json.loads(columns[self.param_column].value)
+        model_chunks = np.fromstring(columns[self.model_chunks_column].value, dtype=np.uint32)
+        columns = self.hb.getRowWithColumns(self.models_table, key, [self.model_column + '-%d' % x for x in range(model_chunks)])[0].columns
+        model = ''.join(columns[self.model_column + '-%d' % x].value for x in range(model_chunks))
+        model = json.loads(model)
         input = {k: base64.b64decode(v) for k, v in input.items()}
         param = {k: base64.b64decode(v) for k, v in param.items()}
         if not isinstance(model, dict):
@@ -213,11 +226,13 @@ class PicarusManager(object):
         cp.name = '%s-%s' % (feature_key, metadata_column)
         feature_input, feature, _ = self.key_to_input_model_param(feature_key)
         self._classifier_feature(cp, feature)
-        cp.classifier = pickle.dumps(classifier, -1)
         cp.classifier_format = cp.PICKLE
         cp.classifier_type = cp.CLASS_DISTANCE_LIST
+        # TODO: Store metadata such as classifier_type
+        classifier_ser = pickle.dumps(classifier, -1)
+        print(len(classifier_ser))
         k = image_retrieval.input_model_param_to_key('pred:', input={'feature': feature_key, 'meta': metadata_column},
-                                                     model=cp.SerializeToString())
+                                                     model=classifier)
         print(repr(k))
         return k
 
@@ -647,13 +662,11 @@ if __name__ == '__main__':
         k = image_retrieval.features_to_classifier_class_distance_list(feature_key, metadata_column, classifier, **kw)
         return k
 
-
-    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
-    #run_preprocessor(image_key)
-
-    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 4, 'num_points': 100}})
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 80, 'compression': 'jpg'}})
+    #run_preprocessor(image_key, start_row='logos:good', stop_row='logos:gooe')
+    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
     #run_feature(feature_key, start_row='logos:good', stop_row='logos:gooe')
-    create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row='logos:good', stop_row='logos:gooe', max_rows=100)
+    create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row='logos:good', stop_row='logos:gooe')
 
     #feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
     #run_feature(feature_key, start_row='sun397:', stop_row='sun398:')

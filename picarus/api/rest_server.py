@@ -220,8 +220,7 @@ def _get_image():
             data = bottle.request.files['image'].file.read()
         except KeyError:
             raise ValueError('Missing image')
-    print('ImageData[%s]' % str(data[:25]))
-    return imfeat.image_fromstring(data), params
+    return data, imfeat.image_fromstring(data), params
 
 
 @bottle.post('/<version:re:[^/]*>/see/<request:re:.*>')
@@ -234,8 +233,8 @@ def _get_image():
 @check_version
 def see(request):
     print_request()
-    image, params = _get_image()
-    return _action_handle('see/%s' % request, params, image)
+    data, image, params = _get_image()
+    return _action_handle('see/%s' % request, params, image, data)
 
 FEATURE_FUN = [imfeat.GIST, imfeat.Histogram, imfeat.Moments, imfeat.TinyImage, imfeat.GradientHistogram]
 FEATURE_FUN = dict((('see/feature/%s' % (c.__name__)), c) for c in FEATURE_FUN)
@@ -246,7 +245,6 @@ CLASSIFY_FUN = {}
 
 def _classifier_from_key(key):
     input, classifier, param = MANAGER.key_to_input_model_param(key)
-    classifier = picarus.api.feature_classifier_fromstring(classifier)
     input, feature, param = MANAGER.key_to_input_model_param(input['feature'])
     loader = lambda x: call_import(x) if isinstance(x, dict) else x
     feature = loader(feature)
@@ -254,12 +252,12 @@ def _classifier_from_key(key):
         real_feature = lambda x: feature.compute_dense(x)
     else:
         real_feature = feature
-    # TODO: Use preprocessor too
     input, preprocessor, param = MANAGER.key_to_input_model_param(input['image'])
-    return lambda x: classifier(real_feature(x))
+    preprocessor = loader(preprocessor)
+    return lambda x: classifier(real_feature(preprocessor.asarray(x)))
 
 
-CLASSIFY_FUN['see/classify/logos'] = _classifier_from_key('pred:R\x1eA\x15\xab\xd4\x07\x11C\xb61\xc0M\xf7)}j1\x0e\x02')
+CLASSIFY_FUN['see/classify/logos'] = _classifier_from_key('pred:\xf1F!\xce\x1e\xbe\xb7\x13\x9b\xc2\xcb\xe3m\xe2"\x86\x02\xd3la')
 SEARCH_FUN = {}
 #SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
 #              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/feature_index.pb').read()),
@@ -298,7 +296,7 @@ FACES = imfeat.Faces()
 COLOR_NAMING = imfeat.ColorNaming()
 
 
-def _action_handle(function, params, image):
+def _action_handle(function, params, image, data):
     print('Action[%s]' % function)
     try:
         ff = FEATURE_FUN[function]
@@ -318,8 +316,7 @@ def _action_handle(function, params, image):
         pass
     try:
         cf = CLASSIFY_FUN[function]
-        image = imfeat.resize_image_max_side(image, 320)  # TODO: Expose this
-        return {'results': cf(image)}
+        return {'results': cf(data)}
     except KeyError:
         pass
     if function == 'see/texton' or function == 'see/texton_ilp':
@@ -369,7 +366,7 @@ def _action_handle(function, params, image):
 def image():
     print_request()
     # TODO(Cleanup)
-    image, params = _get_image()
+    data, image, params = _get_image()
     image = imfeat.resize_image_max_side(image, 320)
     image_string = imfeat.image_tostring(image, 'jpg')
     return {'jpgb64': base64.b64encode(image_string)}
