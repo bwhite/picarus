@@ -128,6 +128,38 @@ class PicarusManager(object):
             model = pickle.loads(zlib.decompress(base64.b64decode(model)))
         return input, model, param
 
+    def _model_to_pb(self, pb, model, name):
+        if isinstance(model, dict):
+            setattr(pb, name, json.dumps(dict, separators=(',', ':')))
+            setattr(pb, name + '_type', pb.JSON_IMPORT)
+        else:
+            setattr(pb, name, pickle.dumps(dict, -1))
+            setattr(pb, name + '_type', pb.PICKLE)
+
+    def key_to_classifier_pb(self, key):
+        c = picarus.api.Classifier()
+        input, classifier, param = self.key_to_input_model_param(key)
+        if param['classifier_type'] == 'sklearn_decision_func':
+            c.classifier_type = c.SKLEARN_DECISION_FUNC
+        elif param['classifier_type'] == 'class_distance_list':
+            c.classifier_type = c.CLASS_DISTANCE_LIST
+        else:
+            raise ValueError('Unknown classifier type: %s' % param['classifier_type'])
+        self._model_to_pb(c, classifier, 'classifier')
+        input, feature, param = self.key_to_input_model_param(input['feature'])
+        self._model_to_pb(c, feature, 'feature')
+        if param['feature_type'] == 'feature':
+            self.feature_type = c.FEATURE
+        elif param['feature_type'] == 'multi_feature':
+            self.feature_type = c.MULTI_FEATURE
+        elif param['feature_type'] == 'mask_feature':
+            self.feature_type = c.MASK_FEATURE
+        else:
+            raise ValueError('Unknown feature type: %s' % param['feature_type'])
+        input, preprocessor, param = self.key_to_input_model_param(input['image'])
+        self._model_to_pb(c, preprocessor, 'preprocessor')
+        return c
+
     def create_tables(self):
         self.hb.createTable(self.models_table, [hadoopy_hbase.ColumnDescriptor('data:')])
 

@@ -19,23 +19,27 @@ message SearchIndex {
 }
 
 message Classifier {
-  optional bytes name = 1;
   enum SerFormat {
     JSON_IMPORT = 0;
     PICKLE = 1;
+  }
+  enum FeatureType {
+    FEATURE = 0;
+    MULTI_FEATURE = 1;
+    MASK_FEATURE = 2;
   }
   enum ClassifierType {
     SKLEARN_DECISION_FUNC = 0;
     CLASS_DISTANCE_LIST = 1;
   }
-  optional SerFormat preprocessor_format = 2 [default = JSON_IMPORT];
-  optional SerFormat feature_format = 3 [default = JSON_IMPORT];
-  optional SerFormat classifier_format = 4 [default = JSON_IMPORT];
-  optional double creation_time = 5;
-  optional bytes feature = 6;
-  optional bytes classifier = 7;
-  optional bytes preprocessor = 8;
-  optional ClassifierType classifier_type = 9;
+  optional SerFormat preprocessor_format = 1 [default = JSON_IMPORT];
+  optional SerFormat feature_format = 2 [default = JSON_IMPORT];
+  optional SerFormat classifier_format = 3 [default = JSON_IMPORT];
+  optional bytes feature = 4;
+  optional bytes classifier = 5;
+  optional bytes preprocessor = 6;
+  optional FeatureType feature_type = 7;
+  optional ClassifierType classifier_type = 8;
 }
 
 message NDArray {
