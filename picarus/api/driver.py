@@ -130,11 +130,11 @@ class PicarusManager(object):
 
     def _model_to_pb(self, pb, model, name):
         if isinstance(model, dict):
-            setattr(pb, name, json.dumps(dict, separators=(',', ':')))
-            setattr(pb, name + '_type', pb.JSON_IMPORT)
+            setattr(pb, name, json.dumps(model, separators=(',', ':')))
+            setattr(pb, name + '_format', pb.JSON_IMPORT)
         else:
-            setattr(pb, name, pickle.dumps(dict, -1))
-            setattr(pb, name + '_type', pb.PICKLE)
+            setattr(pb, name, pickle.dumps(model, -1))
+            setattr(pb, name + '_format', pb.PICKLE)
 
     def key_to_classifier_pb(self, key):
         c = picarus.api.Classifier()
@@ -330,6 +330,8 @@ class PicarusManager(object):
 
 if __name__ == '__main__':
     image_retrieval = PicarusManager()
+    print image_retrieval.key_to_classifier_pb('pred:h\x90\xf57\\\x8az\x0f\xd0K\xb6\xbc\xd7\taG\xa61l\x9b')
+    quit()
     #image_retrieval.create_tables()
 
     def run_preprocessor(k, **kw):

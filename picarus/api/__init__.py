@@ -39,27 +39,45 @@ def model_fromfile(path):
         raise ValueError('Unknown model type[%s]' % path)
 
 
-def image_classifier_fromstring(classifier_ser):
-    cp = Classifier()
-    cp.ParseFromString(classifier_ser)
-    loader = lambda x, y: pickle.loads(y) if x == cp.PICKLE else call_import(json.loads(y))
-    feature = loader(cp.feature_format, cp.feature)
-    classifier = loader(cp.classifier_format, cp.classifier)
-    if cp.classifier_type == cp.CLASS_DISTANCE_LIST:
-        return lambda image: classifier(feature(image))
+def _classifier_frompb(c, feature_input=False):
+    loader = lambda x, y: pickle.loads(y) if x == c.PICKLE else call_import(json.loads(y))
+    preprocessor = loader(c.preprocessor_format, c.preprocessor)
+    feature = loader(c.feature_format, c.feature)
+    classifier = loader(c.classifier_format, c.classifier)
+    if c.classifier_type == c.CLASS_DISTANCE_LIST:
+        classifier_func = lambda feature: classifier(feature)
     else:
-        return lambda image: float(classifier.decision_function(feature(image)).flat[0])
+        classifier_func = lambda feature: float(classifier.decision_function(feature).flat[0])
+    if c.feature_type == c.FEATURE:
+        feature_func = lambda image: feature(image)
+    elif c.feature_type == c.MULTI_FEATURE:
+        feature_func = lambda image: feature.compute_dense(image)
+    else:
+        raise ValueError('Unknown feature type')
+    if feature_input:
+        return classifier_func
+    else:
+        return lambda image: classifier_func(feature_func(preprocessor.asarray(image)))
 
 
-def feature_classifier_fromstring(classifier_ser):
-    cp = Classifier()
-    cp.ParseFromString(classifier_ser)
-    loader = lambda x, y: pickle.loads(y) if x == cp.PICKLE else call_import(json.loads(y))
-    classifier = loader(cp.classifier_format, cp.classifier)
-    if cp.classifier_type == cp.CLASS_DISTANCE_LIST:
-        return lambda feature: classifier(feature)
-    else:
-        return lambda feature: float(classifier.decision_function(feature).flat[0])
+def image_classifier_frompb(c):
+    return _classifier_frompb(c)
+
+
+def feature_classifier_frompb(c):
+    return _classifier_frompb(c, feature_input=True)
+
+
+def image_classifier_fromstring(c_ser):
+    c = Classifier()
+    c.ParseFromString(c_ser)
+    return image_classifier_frompb(c)
+
+
+def feature_classifier_fromstring(c_ser):
+    c = Classifier()
+    c.ParseFromString(c_ser)
+    return feature_classifier_frompb(c)
 
 
 def model_tofile(model):
