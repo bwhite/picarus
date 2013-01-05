@@ -245,6 +245,10 @@ CLASSIFY_FUN = {}
 
 def _classifier_from_key(key):
     input, classifier, param = MANAGER.key_to_input_model_param(key)
+    if param['classifier_type'] == 'sklearn_decision_func':
+        real_classifier = lambda x: float(classifier.decision_function(x).flat[0])
+    else:
+        real_classifier = classifier
     input, feature, param = MANAGER.key_to_input_model_param(input['feature'])
     loader = lambda x: call_import(x) if isinstance(x, dict) else x
     feature = loader(feature)
@@ -254,15 +258,15 @@ def _classifier_from_key(key):
         real_feature = feature
     input, preprocessor, param = MANAGER.key_to_input_model_param(input['image'])
     preprocessor = loader(preprocessor)
-    return lambda x: classifier(real_feature(preprocessor.asarray(x)))
+    return lambda x: real_classifier(real_feature(preprocessor.asarray(x)))
 
 
-CLASSIFY_FUN['see/classify/logos'] = _classifier_from_key('pred:\xf1F!\xce\x1e\xbe\xb7\x13\x9b\xc2\xcb\xe3m\xe2"\x86\x02\xd3la')
+CLASSIFY_FUN['see/classify/logos'] = _classifier_from_key('pred:3aA\x980L\xdf\xbb\xf4\xc7K\xca7\xc7\xd2\x84\x8d\xf4\x98"')
 SEARCH_FUN = {}
 #SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
 #              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/feature_index.pb').read()),
 #              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_masks_index.pb').read())}
-#CLASSIFY_FUN = {'see/classify/indoor': picarus.api.image_classifier_fromstring(open('image_search/sun397_indoor_classifier.pb').read())}
+CLASSIFY_FUN = {'see/classify/indoor': _classifier_from_key('pred:h\x90\xf57\\\x8az\x0f\xd0K\xb6\xbc\xd7\taG\xa61l\x9b')}
 
 
 def _get_texton():

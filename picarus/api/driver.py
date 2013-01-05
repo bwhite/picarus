@@ -28,20 +28,6 @@ logging.basicConfig(level=logging.DEBUG)
 output_hdfs = 'picarus_temp/%f/' % time.time()
 
 
-def hashes_to_index(si, index, metadata, hashes):
-    hashes = np.ascontiguousarray(np.asfarray([np.fromstring(h, dtype=np.uint8) for h in hashes]))
-    si.metadata.extend(metadata)
-    index = index.store_hashes(hashes, np.arange(len(metadata), dtype=np.uint64))
-    si.index = pickle.dumps(index, -1)
-    si.index_format = si.PICKLE
-    return si.SerializeToString()
-
-
-def features_to_classifier(classifier, labels, features):
-    features = np.asfarray([picarus.api.np_fromstring(x) for x in features])
-    classifier.fit(features, np.asarray(labels))
-
-
 def get_version(module_name):
     prev_dir = os.path.abspath('.')
     try:
@@ -186,30 +172,16 @@ class PicarusManager(object):
                              num_mappers=self.num_mappers, columns=[input_dict['feature']], files=[hasher_fp.name], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=hasher_fp, **kw)
 
-    def _classifier_feature(self, cp, feature):
-        if isinstance(feature, dict):
-            cp.feature = json.dumps(feature)
-            cp.feature_format = cp.JSON_IMPORT
-        else:
-            cp.feature = pickle.dumps(feature, -1)
-            cp.feature_format = cp.PICKLE
-
     def features_to_classifier_class_distance_list(self, feature_key, metadata_column, classifier, **kw):
         row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
                                          columns=[feature_key, metadata_column], **kw)
         label_values = ((cols[metadata_column], np.asfarray(picarus.api.np_fromstring(cols[feature_key]))) for _, cols in row_cols)
         classifier.train(label_values)
-        cp = picarus.api.Classifier()
-        cp.name = '%s-%s' % (feature_key, metadata_column)
         feature_input, feature, _ = self.key_to_input_model_param(feature_key)
-        self._classifier_feature(cp, feature)
-        cp.classifier_format = cp.PICKLE
-        cp.classifier_type = cp.CLASS_DISTANCE_LIST
-        # TODO: Store metadata such as classifier_type
         classifier_ser = pickle.dumps(classifier, -1)
         print(len(classifier_ser))
         k = image_retrieval.input_model_param_to_key('pred:', input={'feature': feature_key, 'meta': metadata_column},
-                                                     model=classifier)
+                                                     model=classifier, param={'classifier_type': 'class_distance_list'})
         print(repr(k))
         return k
 
@@ -230,106 +202,37 @@ class PicarusManager(object):
         features = label_features[0] + label_features[1]
         features = np.asfarray([picarus.api.np_fromstring(x) for x in features])
         classifier.fit(features, np.asarray(labels))
-        cp = picarus.api.Classifier()
-        cp.name = '%s-%s-%s' % (feature_key, metadata_column, class_positive)
-        feature_input, feature, _ = self.key_to_input_model_param(feature_key)
-        self._classifier_feature(cp, feature)
-        cp.classifier = pickle.dumps(classifier, -1)
-        cp.classifier_format = cp.PICKLE
         k = image_retrieval.input_model_param_to_key('pred:', input={'feature': feature_key, 'meta': metadata_column},
-                                                     model=cp.SerializeToString(), param={'class_positive': class_positive})
+                                                     model=classifier, param={'class_positive': class_positive,
+                                                                              'classifier_type': 'sklearn_decision_func'})
         print(repr(k))
         return k
 
     def feature_to_prediction(self, model_key, **kw):
-        input_dict, classifier, _ = self.key_to_input_model_param(model_key)
-        classifier_fp = tempfile.NamedTemporaryFile()
-        classifier_fp.write(classifier)
-        classifier_fp.flush()
+        input_dict, classifier, param = self.key_to_input_model_param(model_key)
+        classifier_fp = picarus.api.model_tofile(classifier)
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(model_key),
-                   'CLASSIFIER_FN': os.path.basename(classifier_fp.name)}
+                   'CLASSIFIER_FN': os.path.basename(classifier_fp.name),
+                   'CLASSIFIER_TYPE': param['classifier_type']}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_dict['feature']], files=[classifier_fp.name], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=classifier_fp, **kw)
 
     def hashes_to_index(self, hasher_key, metadata_column, index, **kw):
-        si = picarus.api.SearchIndex()
-        si.name = hasher_key
         hasher_input, hasher, _ = self.key_to_input_model_param(hasher_key)
         feature_input, feature, _ = self.key_to_input_model_param(hasher_input['feature'])
-        si.feature = json.dumps(feature)
-        si.hash = pickle.dumps(hasher, -1)
-        si.hash_format = si.PICKLE
         row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
                                          columns=[hasher_key, metadata_column], **kw)
         metadata, hashes = zip(*[(json.dumps([cols[metadata_column], base64.b64encode(row)]), cols[hasher_key])
                                  for row, cols in row_cols])
         hashes = np.ascontiguousarray(np.asfarray([np.fromstring(h, dtype=np.uint8) for h in hashes]))
-        si.metadata.extend(metadata)
         index = index.store_hashes(hashes, np.arange(len(metadata), dtype=np.uint64))
-        si.index = pickle.dumps(index, -1)
-        si.index_format = si.PICKLE
-        k = image_retrieval.input_model_param_to_key('srch:', input={'hash': hasher_key, 'meta': metadata_column}, model=si.SerializeToString())
-        open('feature_index.pb', 'w').write(si.SerializeToString())
+        index.metadata = metadata
+        k = image_retrieval.input_model_param_to_key('srch:', input={'hash': hasher_key, 'meta': metadata_column}, model=index)
         print(repr(k))
         return k
 
-    def _tempfile(self, data, suffix=''):
-        fp = tempfile.NamedTemporaryFile(suffix=suffix)
-        fp.write(data)
-        fp.flush()
-        return fp
-
-    def _feature_to_hash(self, hasher, input_table, input_column, output_table, output_column, **kw):
-        hasher_fp = picarus.api.model_tofile(hasher)
-        cmdenvs = {'HBASE_TABLE': input_table,
-                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
-                   'HASHER_FN': os.path.basename(hasher_fp.name)}
-        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'hadoop/feature_to_hash.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, columns=[input_column], files=[hasher_fp.name], single_value=True,
-                             cmdenvs=cmdenvs, dummy_fp=hasher_fp, **kw)
-
-    def _feature_to_prediction(self, classifier, input_table, input_column, output_table, output_column, **kw):
-        classifier_fp = tempfile.NamedTemporaryFile()
-        classifier_fp.write(classifier)
-        classifier_fp.flush()
-        cmdenvs = {'HBASE_TABLE': input_table,
-                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
-                   'CLASSIFIER_FN': os.path.basename(classifier_fp.name)}
-        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'hadoop/feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, columns=[input_column], files=[classifier_fp.name], single_value=True,
-                             cmdenvs=cmdenvs, dummy_fp=classifier_fp, **kw)
-
-    def prediction_to_conf_gt(self, **kw):
-        self._prediction_to_conf_gt(self.feature_class_positive, self.images_table, self.feature_prediction_column, self.indoor_class_column, **kw)
-
-    def _prediction_to_conf_gt(self, class_positive, input_table, input_prediction_column, input_class_column, **kw):
-        row_cols = hadoopy_hbase.scanner(self.hb, input_table,
-                                         columns=[input_prediction_column, input_class_column], **kw)
-        pos_confs = []
-        neg_confs = []
-        for row, cols in row_cols:
-            pred = float(np.fromstring(cols[input_prediction_column], dtype=np.double)[0])
-            print(repr(row))
-            if cols[input_class_column] == class_positive:
-                pos_confs.append(pred)
-            else:
-                neg_confs.append(pred)
-        pos_confs.sort()
-        neg_confs.sort()
-        open('confs.js', 'w').write(json.dumps({'pos_confs': pos_confs, 'neg_confs': neg_confs}))
-        print(len(pos_confs))
-        print(len(neg_confs))
-
-    def _build_index(self, si, index, input_table, input_hash_column, input_class_column, output_table, output_row, output_column, **kw):
-        row_dict = hadoopy_hbase.HBaseRowDict(output_table,
-                                              output_column, db=self.hb)
-        row_cols = hadoopy_hbase.scanner(self.hb, input_table,
-                                         columns=[input_hash_column, input_class_column], **kw)
-        metadata, hashes = zip(*[(json.dumps([cols[input_class_column], base64.b64encode(row)]), cols[input_hash_column])
-                                 for row, cols in row_cols])
-        row_dict[output_row] = hashes_to_index(si, index, metadata, hashes)
 
     def _get_texton(self, classifier_key):
         forests = []
@@ -445,19 +348,24 @@ if __name__ == '__main__':
         k = image_retrieval.features_to_classifier_class_distance_list(feature_key, metadata_column, classifier, **kw)
         return k
 
-    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 80, 'compression': 'jpg'}})
+    # Logo
+    #image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 80, 'compression': 'jpg'}})
     #run_preprocessor(image_key, start_row='logos:good', stop_row='logos:gooe')
-    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
+    #feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
     #run_feature(feature_key, start_row='logos:good', stop_row='logos:gooe')
-    create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row='logos:good', stop_row='logos:gooe')
+    #create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row='logos:good', stop_row='logos:gooe')
 
-    #feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
+    # SUN397 Feature/Classifier/Hasher/Index
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
+    feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
     #run_feature(feature_key, start_row='sun397:', stop_row='sun398:')
-    #hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row='sun397:train', stop_row='sun397:traio')
-    #run_hasher(hasher_key, start_row='sun397:', stop_row='sun398:')
-    #create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row='sun397:train', stop_row='sun397:traio')
-    #classifier_key = create_classifier(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row='sun397:train', stop_row='sun397:traio')
-    #run_classifier(classifier_key, start_row='sun397:', stop_row='sun398:')
+    hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row='sun397:train', stop_row='sun397:traio')
+    run_hasher(hasher_key, start_row='sun397:', stop_row='sun398:')
+    create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row='sun397:train', stop_row='sun397:traio')
+    classifier_key = create_classifier_sklearn_decision_func(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row='sun397:train', stop_row='sun397:traio')
+    print(repr(classifier_key))
+    run_classifier(classifier_key, start_row='sun397:', stop_row='sun398:')
+
     # Masks
     #feature_key = create_mask_feature(image_key, image_retrieval._get_texton(base64.b64decode('cHJlZDqOWGdqIgoVV27QmARQoqxb15Y+9A==')))
     #run_feature(feature_key, start_row='sun397:', stop_row='sun398:')

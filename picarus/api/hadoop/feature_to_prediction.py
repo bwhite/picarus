@@ -2,6 +2,7 @@
 import hadoopy
 import os
 import numpy as np
+import json
 import picarus.api
 
 
@@ -9,11 +10,17 @@ class Mapper(picarus.api.HBaseMapper):
 
     def __init__(self):
         super(Mapper, self).__init__()
-        self._classifier = picarus.api.feature_classifier_fromstring(open(os.environ['CLASSIFIER_FN']).read())
+        classifier = picarus.api.model_fromfile(os.environ['CLASSIFIER_FN'])
+        if os.environ['CLASSIFIER_TYPE'] == 'sklearn_decision_func':
+            self._classifier = lambda x: np.double(classifier.decision_function(x).flat[0]).tostring()
+        elif os.environ['CLASSIFIER_TYPE'] == 'class_distance_list':
+            self._classifier = lambda x: json.dumps(classifier(x))
+        else:
+            raise ValueError('Unknown CLASSIFIER_TYPE=%s' % os.environ['CLASSIFIER_TYPE'])
 
     def _map(self, row, feature_binary):
         feature = picarus.api.np_fromstring(feature_binary)
-        yield row, np.double(self._classifier(feature)).tostring()
+        yield row, self._classifier(feature)
 
 
 if __name__ == '__main__':

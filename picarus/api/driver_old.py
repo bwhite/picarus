@@ -1,3 +1,88 @@
+
+    def _classifier_feature(self, cp, feature):
+        if isinstance(feature, dict):
+            cp.feature = json.dumps(feature)
+            cp.feature_format = cp.JSON_IMPORT
+        else:
+            cp.feature = pickle.dumps(feature, -1)
+            cp.feature_format = cp.PICKLE
+
+
+    def prediction_to_conf_gt(self, **kw):
+        self._prediction_to_conf_gt(self.feature_class_positive, self.images_table, self.feature_prediction_column, self.indoor_class_column, **kw)
+
+    def _prediction_to_conf_gt(self, class_positive, input_table, input_prediction_column, input_class_column, **kw):
+        row_cols = hadoopy_hbase.scanner(self.hb, input_table,
+                                         columns=[input_prediction_column, input_class_column], **kw)
+        pos_confs = []
+        neg_confs = []
+        for row, cols in row_cols:
+            pred = float(np.fromstring(cols[input_prediction_column], dtype=np.double)[0])
+            print(repr(row))
+            if cols[input_class_column] == class_positive:
+                pos_confs.append(pred)
+            else:
+                neg_confs.append(pred)
+        pos_confs.sort()
+        neg_confs.sort()
+        open('confs.js', 'w').write(json.dumps({'pos_confs': pos_confs, 'neg_confs': neg_confs}))
+        print(len(pos_confs))
+        print(len(neg_confs))
+
+
+    def _feature_to_prediction(self, classifier, input_table, input_column, output_table, output_column, **kw):
+        classifier_fp = tempfile.NamedTemporaryFile()
+        classifier_fp.write(classifier)
+        classifier_fp.flush()
+        cmdenvs = {'HBASE_TABLE': input_table,
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
+                   'CLASSIFIER_FN': os.path.basename(classifier_fp.name)}
+        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'hadoop/feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, columns=[input_column], files=[classifier_fp.name], single_value=True,
+                             cmdenvs=cmdenvs, dummy_fp=classifier_fp, **kw)
+
+
+    def _feature_to_hash(self, hasher, input_table, input_column, output_table, output_column, **kw):
+        hasher_fp = picarus.api.model_tofile(hasher)
+        cmdenvs = {'HBASE_TABLE': input_table,
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
+                   'HASHER_FN': os.path.basename(hasher_fp.name)}
+        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'hadoop/feature_to_hash.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, columns=[input_column], files=[hasher_fp.name], single_value=True,
+                             cmdenvs=cmdenvs, dummy_fp=hasher_fp, **kw)
+
+
+    def _tempfile(self, data, suffix=''):
+        fp = tempfile.NamedTemporaryFile(suffix=suffix)
+        fp.write(data)
+        fp.flush()
+        return fp
+
+
+def features_to_classifier(classifier, labels, features):
+    features = np.asfarray([picarus.api.np_fromstring(x) for x in features])
+    classifier.fit(features, np.asarray(labels))
+
+
+def hashes_to_index(si, index, metadata, hashes):
+    hashes = np.ascontiguousarray(np.asfarray([np.fromstring(h, dtype=np.uint8) for h in hashes]))
+    si.metadata.extend(metadata)
+    index = index.store_hashes(hashes, np.arange(len(metadata), dtype=np.uint64))
+    si.index = pickle.dumps(index, -1)
+    si.index_format = si.PICKLE
+    return si.SerializeToString()
+
+
+    def _build_index(self, si, index, input_table, input_hash_column, input_class_column, output_table, output_row, output_column, **kw):
+        row_dict = hadoopy_hbase.HBaseRowDict(output_table,
+                                              output_column, db=self.hb)
+        row_cols = hadoopy_hbase.scanner(self.hb, input_table,
+                                         columns=[input_hash_column, input_class_column], **kw)
+        metadata, hashes = zip(*[(json.dumps([cols[input_class_column], base64.b64encode(row)]), cols[input_hash_column])
+                                 for row, cols in row_cols])
+        row_dict[output_row] = hashes_to_index(si, index, metadata, hashes)
+
+
     def get_feature_hasher(self):  # TODO: Fix with model key
         return pickle.loads(self._get_feature_hasher())
 
