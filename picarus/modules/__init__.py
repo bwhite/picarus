@@ -159,12 +159,20 @@ class ImageBlocks(object):
 
 class SURF(object):
 
-    def __init__(self, max_points=1000):
-        self.max_points = max_points
+    def __init__(self, num_points=1000, max_points=10000):
+        super(SURF, self).__init__()
+        self.max_points = max_points  # max points computed internally
+        self.num_points = num_points  # max points returned (randomly sampled from internal)
+        self._args = (num_points, max_points)
         self._surf = impoint.SURF(max_points=max_points)
 
+    def __reduce__(self):
+        return (SURF, self._args)
+
     def compute_dense(self, image):
-        return np.ascontiguousarray([x['descriptor'] for x in self._surf(image)])
+        points = [x['descriptor'] for x in self._surf(image)]
+        points = random.sample(points, min(len(points), self.num_points))
+        return np.ascontiguousarray(points)
 
 
 class NBNNClassifier(MultiClassClassifier):
