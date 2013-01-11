@@ -172,7 +172,7 @@ class SURF(object):
     def compute_dense(self, image):
         points = [x['descriptor'] for x in self._surf(image)]
         points = random.sample(points, min(len(points), self.num_points))
-        return np.ascontiguousarray(points)
+        return np.ascontiguousarray(points, dtype=np.double)
 
 
 class NBNNClassifier(MultiClassClassifier):

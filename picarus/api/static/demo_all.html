@@ -99,8 +99,10 @@
 		<div id="base" style="position:relative;top:-35px;"></div>
 		<h2>PUT /see/feature/GIST</h2>
 		<div id="results_gist" class="result_box"></div>
-		<h2>PUT /see/search/logos</h2>
+		<h2>PUT /see/classify/logos</h2>
 		<div id="results_logos" class="result_box"></div>
+		<h2>PUT /see/classify/landmarks</h2>
+		<div id="results_landmarks" class="result_box"></div>
 		<h2>PUT /see/search/scenes</h2>
 		<div id="results_scenes" class="result_box"></div>
 		<h2>PUT /see/texton</h2>
@@ -137,6 +139,7 @@
           var image = $('#demoimage')[0];
           picarus_api_test_demo("/a0/see/feature/GIST", "POST", {div: $("#results_gist"), image: image});
           picarus_api_test_demo("/a0/see/classify/logos", "POST", {div: $("#results_logos"), image: image});
+          picarus_api_test_demo("/a0/see/classify/landmarks", "POST", {div: $("#results_landmarks"), image: image});
           picarus_api_test_demo("/a0/see/search/scenes", "POST", {div: $("#results_scenes"), image: image});
           function success_texton_argmax(xhr) {
               mask_response = JSON.parse(xhr.responseText)

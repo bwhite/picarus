@@ -268,7 +268,9 @@ def _classifier_from_key(key):
 CLASSIFY_FUN = {'see/classify/indoor': picarus.api.image_classifier_frompb(MANAGER.key_to_classifier_pb('pred:h\x90\xf57\\\x8az\x0f\xd0K\xb6\xbc\xd7\taG\xa61l\x9b'))}
 LOGO_KEY = 'pred:3aA\x980L\xdf\xbb\xf4\xc7K\xca7\xc7\xd2\x84\x8d\xf4\x98"'  # good logo
 LOGO_KEY = 'pred:\x1b_q\x7f\xc6\x05:\x18hS\xd6\xdb\xf2\x88\xa0Z\xec\xd5\x14\xee'  # google
+LANDMARKS_KEY = 'pred:\x9f\x94i,^\x83i+\xa2\x9c`\xb6\x17\xd7S\x8a#\xb2\xe5\xb8'  # flickr
 CLASSIFY_FUN['see/classify/logos'] = picarus.api.image_classifier_frompb(MANAGER.key_to_classifier_pb(LOGO_KEY))
+CLASSIFY_FUN['see/classify/landmarks'] = picarus.api.image_classifier_frompb(MANAGER.key_to_classifier_pb(LANDMARKS_KEY))
 
 SEARCH_FUN = {}
 #SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),

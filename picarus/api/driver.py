@@ -341,8 +341,6 @@ class PicarusManager(object):
 if __name__ == '__main__':
     image_retrieval = PicarusManager()
 
-    image_retrieval.filter_annotations_to_hbase()
-    quit()
 
     #image_retrieval.create_tables()
 
@@ -399,10 +397,10 @@ if __name__ == '__main__':
     stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
     image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
     run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
-    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.SURF', 'kw': {'sbin': 16, 'num_sizes': 3}})
+    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.SURF'})
     run_feature(feature_key, start_row=start_row, stop_row=stop_row)
     create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
-
+    quit()
     # Logo
     start_row = 'logos:google'
     stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
