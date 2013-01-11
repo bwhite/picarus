@@ -149,11 +149,11 @@ class PicarusManager(object):
         input, feature, param = self.key_to_input_model_param(input['feature'])
         self._model_to_pb(c, feature, 'feature')
         if param['feature_type'] == 'feature':
-            self.feature_type = c.FEATURE
+            c.feature_type = c.FEATURE
         elif param['feature_type'] == 'multi_feature':
-            self.feature_type = c.MULTI_FEATURE
+            c.feature_type = c.MULTI_FEATURE
         elif param['feature_type'] == 'mask_feature':
-            self.feature_type = c.MASK_FEATURE
+            c.feature_type = c.MASK_FEATURE
         else:
             raise ValueError('Unknown feature type: %s' % param['feature_type'])
         input, preprocessor, param = self.key_to_input_model_param(input['image'])
@@ -278,6 +278,16 @@ class PicarusManager(object):
         return picarus._features.TextonILPPredict(num_classes=self.texton_num_classes, ilp=ilp,
                                                   forests=forests, threshs=threshs)
 
+    def filter_annotations_to_hbase(self):
+        import redis
+        r = redis.StrictRedis(port=6382, db=6)
+        for x in r.keys():
+            data = r.hgetall(x)
+            print(data)
+            user_data = data.get('user_data', 'true') == 'true'
+            if not user_data:
+                self.hb.deleteAllRow('images', data['image'])
+
     def annotation_masks_to_hbase(self):
         import redis
         import ast
@@ -330,8 +340,10 @@ class PicarusManager(object):
 
 if __name__ == '__main__':
     image_retrieval = PicarusManager()
-    print image_retrieval.key_to_classifier_pb('pred:h\x90\xf57\\\x8az\x0f\xd0K\xb6\xbc\xd7\taG\xa61l\x9b')
+
+    image_retrieval.filter_annotations_to_hbase()
     quit()
+
     #image_retrieval.create_tables()
 
     def run_preprocessor(k, **kw):
@@ -382,23 +394,37 @@ if __name__ == '__main__':
         k = image_retrieval.features_to_classifier_class_distance_list(feature_key, metadata_column, classifier, **kw)
         return k
 
+    # Landmarks
+    start_row = 'landmarks:flickr'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
+    run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
+    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.SURF', 'kw': {'sbin': 16, 'num_sizes': 3}})
+    run_feature(feature_key, start_row=start_row, stop_row=stop_row)
+    create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
+
     # Logo
-    #image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 80, 'compression': 'jpg'}})
-    #run_preprocessor(image_key, start_row='logos:good', stop_row='logos:gooe')
-    #feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
-    #run_feature(feature_key, start_row='logos:good', stop_row='logos:gooe')
-    #create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row='logos:good', stop_row='logos:gooe')
+    start_row = 'logos:google'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 80, 'compression': 'jpg'}})
+    run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
+    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
+    run_feature(feature_key, start_row=start_row, stop_row=stop_row)
+    create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
+    quit()
 
     # SUN397 Feature/Classifier/Hasher/Index
+    start_row = 'sun397:'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
     image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
     feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
-    #run_feature(feature_key, start_row='sun397:', stop_row='sun398:')
-    hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row='sun397:train', stop_row='sun397:traio')
+    run_feature(feature_key, start_row=start_row, stop_row=stop_row)
+    hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row=start_row, stop_row=stop_row)
     run_hasher(hasher_key, start_row='sun397:', stop_row='sun398:')
-    create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row='sun397:train', stop_row='sun397:traio')
-    classifier_key = create_classifier_sklearn_decision_func(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row='sun397:train', stop_row='sun397:traio')
+    create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row=start_row, stop_row=stop_row)
+    classifier_key = create_classifier_sklearn_decision_func(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row=start_row, stop_row=stop_row)
     print(repr(classifier_key))
-    run_classifier(classifier_key, start_row='sun397:', stop_row='sun398:')
+    run_classifier(classifier_key, start_row=start_row, stop_row=stop_row)
 
     # Masks
     #feature_key = create_mask_feature(image_key, image_retrieval._get_texton(base64.b64decode('cHJlZDqOWGdqIgoVV27QmARQoqxb15Y+9A==')))

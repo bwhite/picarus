@@ -17,6 +17,8 @@
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.2/underscore-min.js"></script>
     <script type="text/javascript" src="/static/picarus_api.js"></script>
     <script type="text/javascript" src="/static/picarus_api_demo.js"></script>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBsKtzgLTIsaoxAFUvSNoJ8n3j4w9VZs0&sensor=false">></script>
+    
     <style>
       body {
         padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
@@ -111,6 +113,8 @@
 		<div id="results_indoor" class="result_box"></div>
 		<h2>GET /stats</h2>
 		<div id="results_stats" class="result_box"></div>
+                <h2>Landmarks Map</h2>
+                <div id="map_canvas" style="width:100%; height:500px"></div>
               </div>
 	      </div>
 	    </div>
@@ -158,6 +162,24 @@
           picarus_api_test_demo("/a0/see/faces", "POST", {div: $("#results_faces"), image: image});
           picarus_api_test_demo("/a0/see/classify/indoor", "POST", {div: $("#results_indoor"), image: image});
           picarus_api_test_demo("/a0/user/stats", "GET", {div: $("#results_stats")});
+          function maps_success(xhr) {
+              maps_response = JSON.parse(xhr.responseText);
+              var lat_long = _.map(maps_response.data, function (value, key) {
+                 return [Number(base64.decode(value['bWV0YTpsYXRpdHVkZQ=='])), Number(base64.decode(value['bWV0YTpsb25naXR1ZGU=']))];
+              });
+              var mapOptions = {
+                  zoom: 14,
+                  center: new google.maps.LatLng(lat_long[0][0], lat_long[0][1]),
+                  mapTypeId: google.maps.MapTypeId.HYBRID
+              };
+              map = new google.maps.Map(document.getElementById("map_canvas"),
+                  mapOptions);
+              _.map(lat_long, function (value) {
+                  new google.maps.Marker({position: new google.maps.LatLng(value[0], value[1]), map: map});
+              });
+
+          }
+          picarus_api("/a0/data/images//?startRow=bGFuZG1hcmtzOg==&stopRow=bGFuZG1hcmt0Og==&maxRows=101&column=bWV0YTpsYXRpdHVkZQ==&column=bWV0YTpsb25naXR1ZGU=", "GET", _.extend({success: maps_success}, auth));
       }
       $(document).ready(entry_func)
     </script>

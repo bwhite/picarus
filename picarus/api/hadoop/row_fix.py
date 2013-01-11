@@ -14,11 +14,11 @@ import time
 logging.basicConfig(level=logging.DEBUG)
 
 a = hadoopy_hbase.connect()
-hrc = picarus.modules.HashRetrievalClassifier()
-hrc.load(open('sun397_index.pb').read())
-classes = set()
-cnt = 0
-for row, cols in hadoopy_hbase.scanner(a, 'sun397', start_row='['):
+for row, cols in hadoopy_hbase.scanner(a, 'images', start_row='landmarks:flickr', stop_row='landmarks:flicks', columns=['meta:']):
+    if cols['meta:class'] in ['food:flickr', 'white house']:
+        a.deleteAllRow('images', row)
+        print(cols)
+    continue
     print(row)
     print(cols.keys())
     print('Fixing')

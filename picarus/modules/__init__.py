@@ -15,6 +15,7 @@ import sklearn.svm
 import picarus.api
 import json
 import distpy
+import impoint
 from picarus._importer import call_import
 
 
@@ -156,15 +157,14 @@ class ImageBlocks(object):
         return points
 
 
-#    def _feature_hog_loc(self, image):
-#        feature_mask = imfeat.HOGLatent(self.sbin).compute_dense_2d(image)
-#        features = []
-#        norm = np.asfarray(feature_mask.shape[:2])
-#        for y in range(feature_mask.shape[0]):
-#            for x in range(feature_mask.shape[1]):
-#                yx = np.array([y, x]) / norm * self.scale
-#                features.append(np.hstack([feature_mask[y, x, :], yx]))
-#        return np.asfarray(features)
+class SURF(object):
+
+    def __init__(self, max_points=1000):
+        self.max_points = max_points
+        self._surf = impoint.SURF(max_points=max_points)
+
+    def compute_dense(self, image):
+        return np.ascontiguousarray([x['descriptor'] for x in self._surf(image)])
 
 
 class NBNNClassifier(MultiClassClassifier):

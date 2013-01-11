@@ -54,6 +54,8 @@ import cPickle as pickle
 import numpy as np
 import cv2
 import gevent
+import crawlers
+import multiprocessing
 import distpy
 from users import Users, UnknownUser
 from picarus.modules import HashRetrievalClassifier
@@ -163,22 +165,24 @@ def _data(table, row, col):
             if not result:
                 raise ValueError('Row not found!')
             return {'data': dict((x, base64.b64encode(y.value)) for x, y in result[0].columns.items())}
-        elif table and col:
-            # TODO: Need to verify limits on this scan
-            num_rows = 1
+        elif table:
+            # TODO: Need to verify limits on this scan and check auth
+            num_rows = min(101, int(bottle.request.params.get('maxRows', 1)))
             out = {}
             start_row = base64.b64decode(bottle.request.params.get('startRow', ''))
             stop_row = base64.b64decode(bottle.request.params.get('stopRow', ''))
-            print(start_row)
-            print(stop_row)
-            assert start_row.startswith('brandynlive') and stop_row.startswith('brandynlive')
             stop_row = stop_row if stop_row else None
-            for cur_row, cur_col in hadoopy_hbase.scanner_row_column(THRIFT, table, column=col,
-                                                                     start_row=start_row, per_call=num_rows,
-                                                                     stop_row=stop_row, max_rows=num_rows):
-                if not cur_row.startswith('brandynlive'):
-                    break
-                out[base64.b64encode(cur_row)] = base64.b64encode(cur_col)
+            if col:
+                for cur_row, cur_col in hadoopy_hbase.scanner_row_column(THRIFT, table, column=col,
+                                                                         start_row=start_row, per_call=num_rows,
+                                                                         stop_row=stop_row, max_rows=num_rows):
+                    out[base64.b64encode(cur_row)] = base64.b64encode(cur_col)
+            else:
+                columns = map(base64.b64decode, bottle.request.params.getall('column'))
+                for cur_row, cur_columns in hadoopy_hbase.scanner(THRIFT, table, columns=columns,
+                                                                  start_row=start_row, per_call=num_rows,
+                                                                  stop_row=stop_row, max_rows=num_rows):
+                    out[base64.b64encode(cur_row)] = {base64.b64encode(k): base64.b64encode(v) for k, v in cur_columns.items()}
             return {'data': out}
     elif method == 'PUT':
         mutations = []
@@ -261,12 +265,15 @@ def _classifier_from_key(key):
     return lambda x: real_classifier(real_feature(preprocessor.asarray(x)))
 
 
-CLASSIFY_FUN['see/classify/logos'] = _classifier_from_key('pred:3aA\x980L\xdf\xbb\xf4\xc7K\xca7\xc7\xd2\x84\x8d\xf4\x98"')
+CLASSIFY_FUN = {'see/classify/indoor': picarus.api.image_classifier_frompb(MANAGER.key_to_classifier_pb('pred:h\x90\xf57\\\x8az\x0f\xd0K\xb6\xbc\xd7\taG\xa61l\x9b'))}
+LOGO_KEY = 'pred:3aA\x980L\xdf\xbb\xf4\xc7K\xca7\xc7\xd2\x84\x8d\xf4\x98"'  # good logo
+LOGO_KEY = 'pred:\x1b_q\x7f\xc6\x05:\x18hS\xd6\xdb\xf2\x88\xa0Z\xec\xd5\x14\xee'  # google
+CLASSIFY_FUN['see/classify/logos'] = picarus.api.image_classifier_frompb(MANAGER.key_to_classifier_pb(LOGO_KEY))
+
 SEARCH_FUN = {}
 #SEARCH_FUN = {'see/search/logos': HashRetrievalClassifier().load(open('logo_index.pb').read()),
 #              'see/search/scenes': HashRetrievalClassifier().load(open('image_search/feature_index.pb').read()),
 #              'see/search/masks': HashRetrievalClassifier().load(open('image_search/sun397_masks_index.pb').read())}
-CLASSIFY_FUN = {'see/classify/indoor': _classifier_from_key('pred:h\x90\xf57\\\x8az\x0f\xd0K\xb6\xbc\xd7\taG\xa61l\x9b')}
 
 
 def _get_texton():
@@ -276,11 +283,11 @@ def _get_texton():
         tp = pickle.load(open('tree_ser-%s-texton.pkl' % x))
         tp2 = pickle.load(open('tree_ser-%s-integral.pkl' % x))
         forests.append({'tp': tp, 'tp2': tp2})
-    return picarus._features.TextonILPPredict(num_classes=8, ilp=open('sun397_indoor_classifier.pb').read(),
+    return picarus._features.TextonILPPredict(num_classes=8, ilp=MANAGER.key_to_classifier_pb('pred:h\x90\xf57\\\x8az\x0f\xd0K\xb6\xbc\xd7\taG\xa61l\x9b').SerializeToString(),
                                               forests=forests, threshs=threshs)
 
 
-#TEXTON = _get_texton()
+TEXTON = _get_texton()
 ILP_WEIGHTS = json.load(open('ilp_weights.js'))
 ILP_WEIGHTS['ilp_tables'] = np.array(ILP_WEIGHTS['ilp_tables'])
 
@@ -377,7 +384,7 @@ def image():
 
 
 @bottle.get('/<version:re:[^/]*>/models')
-#@USERS.auth()
+@USERS.auth()
 @check_version
 def models():
     out = {}  # [type][row_id]
@@ -421,6 +428,79 @@ def auth():
         bottle.abort(401)
     return 'Emailing auth code'
 
+
+@bottle.post('/<version:re:[^/]*>/crawl/<crawler:re:[^/]*>')
+@check_version
+@USERS.auth()
+def crawl(crawler):
+    print_request()
+    row_prefix = bottle.request.params['row_prefix']
+    assert row_prefix.find(':') != -1
+    class_name = bottle.request.params['class_name']
+    query = bottle.request.params.get('query')
+    query = class_name if query is None else query
+    if crawler == 'flickr':
+        p = {}
+        p['api_key'] = bottle.request.params['api_key']
+        p['api_secret'] = bottle.request.params['api_secret']
+        if 'has_geo' in bottle.request.params:
+            p['has_geo'] = True
+        try:
+            p['min_upload_date'] = int(bottle.request.params['min_upload_date'])
+        except KeyError:
+            pass
+        try:
+            p['max_upload_date'] = int(bottle.request.params['max_upload_date'])
+        except KeyError:
+            pass
+        try:
+            p['page'] = int(bottle.request.params['page'])
+        except KeyError:
+            pass
+        return {'data': {'num_rows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(row_prefix), class_name, query, **p)}}
+    elif crawler == 'google':
+        pass
+    else:
+        bottle.abort(400)
+
+
+MTURK_SERVER = None
+
+
+def _mturk_wrapper(*args, **kw):
+    import mturk_vision
+    out = mturk_vision.server(*args, **kw)
+    print('Filtering based on annotations')
+    MANAGER.filter_annotations_to_hbase()
+    return out
+
+
+@bottle.post('/<version:re:[^/]*>/human/<server_type:re:[^/]*>')
+@check_version
+@USERS.auth()
+def human(server_type):
+    global MTURK_SERVER
+    assert server_type == 'image_entity'
+    assert MTURK_SERVER is None
+    start_row = bottle.request.params['start_row']
+    stop_row = bottle.request.params['stop_row']
+    entity_column = bottle.request.params['entity_column']
+    image_column = bottle.request.params['image_column']
+    p = {}
+    p['data'] = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (start_row, stop_row, entity_column, image_column)
+    p['redis_address'] = 'localhost'
+    p['redis_port'] = 6382
+    p['type'] = 'image_entity'
+    p['port'] = 16000
+    p['num_tasks'] = 100
+    p['mode'] = 'single'
+    p['setup'] = True
+    p['reset'] = True
+    print(p)
+    MTURK_SERVER = multiprocessing.Process(target=_mturk_wrapper, kwargs=p)
+    MTURK_SERVER.start()
+    return {'url': 'http://api0.picar.us:%d' % p['port']}
+    
 if __name__ == '__main__':
     import gevent.pywsgi
     SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app())

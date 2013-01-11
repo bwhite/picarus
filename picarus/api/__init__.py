@@ -45,11 +45,11 @@ def _classifier_frompb(c, feature_input=False):
     feature = loader(c.feature_format, c.feature)
     classifier = loader(c.classifier_format, c.classifier)
     if c.classifier_type == c.CLASS_DISTANCE_LIST:
-        classifier_func = lambda feature: classifier(feature)
+        classifier_func = classifier
     else:
         classifier_func = lambda feature: float(classifier.decision_function(feature).flat[0])
     if c.feature_type == c.FEATURE:
-        feature_func = lambda image: feature(image)
+        feature_func = feature
     elif c.feature_type == c.MULTI_FEATURE:
         feature_func = lambda image: feature.compute_dense(image)
     else:
