@@ -10,4 +10,4 @@ def delete_rows(prefix):
         print(repr(x))
         c.deleteAllRow('images', x)
     #c.majorCompact('images')
-delete_rows('landmarks:flickr')
+delete_rows('restaurant:flickr')

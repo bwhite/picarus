@@ -3,6 +3,7 @@ import picarus.vision.face_feature
 import cPickle as pickle
 import numpy as np
 import bisect
+import logging
 
 
 def _hist_joint():
@@ -153,6 +154,7 @@ class TextonILPPredict(object):
 
     def __call__(self, image):
         conf = self.ilp(image)
+        logging.debug('TextonILP[%f]' % conf)
         forest = self.forests[bisect.bisect_left(self.threshs, conf)]
         return forest._predict(image)[5]
 

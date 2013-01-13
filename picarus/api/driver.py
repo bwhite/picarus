@@ -337,6 +337,38 @@ class PicarusManager(object):
         print(clusters.shape)
         json.dump(clusters.tolist(), open('clusters.js', 'w'))
 
+    def evaluate_classifier_class_distance_list(self, classifier_key, **kw):
+        classifier = picarus.api.feature_classifier_frompb(self.key_to_classifier_pb(classifier_key))
+        input_dict = self.key_to_input_model_param(classifier_key)[0]
+        feature_key = input_dict['feature']
+        metadata_key = input_dict['meta']
+        row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
+                                         columns=[feature_key, metadata_key], **kw)
+        cm = {}  # [true][pred]
+        total = 0
+        correct = 0
+        for row, columns in row_cols:
+            feature = picarus.api.np_fromstring(columns[feature_key])
+            print(feature.shape)
+            c = classifier(feature)
+            print(c)
+            total += 1
+            try:
+                pred_class = c[0]['class']
+            except IndexError:
+                pred_class = ''
+            true_class = columns[metadata_key]
+            if pred_class == true_class:
+                correct += 1
+            try:
+                cm.setdefault(true_class, {})[pred_class] += 1
+            except KeyError:
+                cm.setdefault(true_class, {})[pred_class] = 1
+            print(cm)
+            print(correct / float(total))
+        print(correct / float(total))
+        return {'cm': cm, 'total': total, 'correct': correct}
+
 
 if __name__ == '__main__':
     image_retrieval = PicarusManager()
@@ -395,12 +427,25 @@ if __name__ == '__main__':
     # Landmarks
     start_row = 'landmarks:flickr'
     stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
-    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 500, 'compression': 'jpg'}})
+    #image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
     run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
-    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.SURF'})
+    feature_key = create_multi_feature(image_key, {'name': 'imfeat.HOGLatent', 'kw': {'sbin': 16}})
+    #feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.SURF'})
+    #feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
     run_feature(feature_key, start_row=start_row, stop_row=stop_row)
-    create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
+
+    stop_row = start_row + chr(204)
+    classifier_key = create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
+
+    # Evaluate landmarks
+    start_row = 'landmarks:flickr'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    start_row = 'landmarks:flickr' + chr(204)
+    image_retrieval.evaluate_classifier_class_distance_list(classifier_key, start_row=start_row, stop_row=stop_row)
     quit()
+
+
     # Logo
     start_row = 'logos:google'
     stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
@@ -408,9 +453,20 @@ if __name__ == '__main__':
     run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
     feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
     run_feature(feature_key, start_row=start_row, stop_row=stop_row)
-    create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
+
+    stop_row = start_row + chr(204)
+    classifier_key = create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
+
+    # Evaluate Logos
+    start_row = 'logos:google'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    start_row = 'logos:google' + chr(204)
+    image_retrieval.evaluate_classifier_class_distance_list(classifier_key, start_row=start_row, stop_row=stop_row)
     quit()
 
+
+
+    
     # SUN397 Feature/Classifier/Hasher/Index
     start_row = 'sun397:'
     stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)

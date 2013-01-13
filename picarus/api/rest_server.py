@@ -268,7 +268,8 @@ def _classifier_from_key(key):
 CLASSIFY_FUN = {'see/classify/indoor': picarus.api.image_classifier_frompb(MANAGER.key_to_classifier_pb('pred:h\x90\xf57\\\x8az\x0f\xd0K\xb6\xbc\xd7\taG\xa61l\x9b'))}
 LOGO_KEY = 'pred:3aA\x980L\xdf\xbb\xf4\xc7K\xca7\xc7\xd2\x84\x8d\xf4\x98"'  # good logo
 LOGO_KEY = 'pred:\x1b_q\x7f\xc6\x05:\x18hS\xd6\xdb\xf2\x88\xa0Z\xec\xd5\x14\xee'  # google
-LANDMARKS_KEY = 'pred:\x9f\x94i,^\x83i+\xa2\x9c`\xb6\x17\xd7S\x8a#\xb2\xe5\xb8'  # flickr
+LANDMARKS_KEY = "pred:e\x03\xd1\x9f\xd1\xd4m\xb6'k\x17#\x06\x0c\xacW\xfa\x93z\x1d"  # flickr surf
+#LANDMARKS_KEY = 'pred:\x89\xd31\x1e\x85\x8f\xac\xbf\xab\x9eNQ4\x81\xca\xb5\xb0\xf9\xb4h'  # flickr color
 CLASSIFY_FUN['see/classify/logos'] = picarus.api.image_classifier_frompb(MANAGER.key_to_classifier_pb(LOGO_KEY))
 CLASSIFY_FUN['see/classify/landmarks'] = picarus.api.image_classifier_frompb(MANAGER.key_to_classifier_pb(LANDMARKS_KEY))
 
@@ -290,8 +291,8 @@ def _get_texton():
 
 
 TEXTON = _get_texton()
-ILP_WEIGHTS = json.load(open('ilp_weights.js'))
-ILP_WEIGHTS['ilp_tables'] = np.array(ILP_WEIGHTS['ilp_tables'])
+#ILP_WEIGHTS = json.load(open('ilp_weights.js'))
+#ILP_WEIGHTS['ilp_tables'] = np.array(ILP_WEIGHTS['ilp_tables'])
 
 #TEXTON = pickle.loads(pickle.dumps(TEXTON, -1))
 #SEARCH_FUN['see/search/masks'].feature = lambda x: [TEXTON._predict(imfeat.resize_image_max_side(x, 320))[5]]
@@ -332,7 +333,7 @@ def _action_handle(function, params, image, data):
         return {'results': cf(data)}
     except KeyError:
         pass
-    if function == 'see/texton' or function == 'see/texton_ilp':
+    if function == 'see/texton':  #  or function == 'see/texton_ilp'
         image = cv2.resize(image, (320, int(image.shape[0] * 320. / image.shape[1])))
         image = np.ascontiguousarray(image)
         semantic_masks = TEXTON(image)
