@@ -63,6 +63,8 @@ import picarus._features
 import boto
 from picarus._importer import call_import
 from driver import PicarusManager
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 VERSION = 'a0'
 
@@ -169,8 +171,8 @@ def _data(table, row, col):
             # TODO: Need to verify limits on this scan and check auth
             num_rows = min(101, int(bottle.request.params.get('maxRows', 1)))
             out = {}
-            start_row = base64.b64decode(bottle.request.params.get('startRow', ''))
-            stop_row = base64.b64decode(bottle.request.params.get('stopRow', ''))
+            start_row = base64.urlsafe_b64decode(bottle.request.params.get('startRow', ''))
+            stop_row = base64.urlsafe_b64decode(bottle.request.params.get('stopRow', ''))
             stop_row = stop_row if stop_row else None
             if col:
                 for cur_row, cur_col in hadoopy_hbase.scanner_row_column(THRIFT, table, column=col,
@@ -333,7 +335,7 @@ def _action_handle(function, params, image, data):
         return {'results': cf(data)}
     except KeyError:
         pass
-    if function == 'see/texton':  #  or function == 'see/texton_ilp'
+    if function == 'see/texton':  # or function == 'see/texton_ilp'
         image = cv2.resize(image, (320, int(image.shape[0] * 320. / image.shape[1])))
         image = np.ascontiguousarray(image)
         semantic_masks = TEXTON(image)

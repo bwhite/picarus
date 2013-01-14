@@ -21,6 +21,7 @@ import scipy as sp
 import scipy.cluster.vq
 import hashlib
 import subprocess
+import cv2
 from confmat import save_confusion_matrix
 
 logging.basicConfig(level=logging.DEBUG)
@@ -288,7 +289,57 @@ class PicarusManager(object):
             if not user_data:
                 self.hb.deleteAllRow('images', data['image'])
 
-    def annotation_masks_to_hbase(self):
+    def _mask_annotation_render(self, row_key, class_segments, image_key, image_superpixel_key):
+        # TODO: Add various voting options: 1, MAJORITY, ALL
+        columns = dict((x, y.value) for x, y in self.hb.getRowWithColumns(self.images_table, row_key, [image_key, image_superpixel_key])[0].columns.items())
+        image = imfeat.image_fromstring(columns[image_key])
+        segments = json.loads(columns[image_superpixel_key])
+        class_masks = {}
+        class_masks = np.zeros((image.shape[0], image.shape[1], self.texton_num_classes))
+        for name, user_segment_groups in class_segments.items():
+            cur_mask = np.zeros(image.shape[:2], dtype=np.uint8)
+            for user_segment_group in user_segment_groups:
+                for user_segment in user_segment_group:
+                    hull = segments[user_segment]
+                    hull = np.asarray(hull).astype(np.int32).reshape(1, -1, 2)
+                    mask_color = 255
+                    cv2.drawContours(cur_mask, hull, -1, mask_color, -1)
+                    cv2.drawContours(cur_mask, hull, -1, mask_color, 2)
+            class_masks[:, :, self.texton_classes[name]['mask_num']] = cur_mask / 255.
+        return class_masks, image
+
+    def annotation_masks_to_disk(self, image_key, image_superpixel_key):
+        import redis
+        import ast
+        import imfeat
+        import cv2
+        u = redis.StrictRedis(port=6381, db=0)
+        r = redis.StrictRedis(port=6381, db=6)
+        responses = [r.hgetall(x) for x in r.keys()]
+        print('Total Responses[%d]' % len(responses))
+        class_num_to_name = {y['mask_num']: x for x, y in self.texton_classes.items()}
+        for x in responses:
+            if 'user_data' in x:
+                user = u.hgetall(x['user_id'])
+                worker_id = user.get('workerId', '00NOID')
+                print(user)
+                x['user_data'] = ast.literal_eval(x['user_data'])
+                if x['user_data']['segments']:
+                    row_key = x['image']
+                    class_masks, image = self._mask_annotation_render(row_key, {x['user_data']['name']: [x['user_data']['segments']]}, image_key, image_superpixel_key)
+                    class_masks = (class_masks * 255).astype(np.uint8)
+                    print(x)
+                    print('Storing row [%s]' % repr(row_key))
+                    for x in np.sum(class_masks.reshape((-1, class_masks.shape[-1])), 0).nonzero()[0]:
+                        fn = 'images/%s_%s_%s' % (worker_id, base64.b64encode(row_key), class_num_to_name[x])
+                        print(fn)
+                        cur_mask = np.ascontiguousarray(class_masks[:, :, x])
+                        cv2.imwrite(fn + '_0.png', cur_mask)
+                        cv2.imwrite(fn + '_1.jpg', image)
+                    #class_masks_ser = picarus.api.np_tostring(class_masks)
+                    #self.hb.mutateRow(self.images_table, row_key, [hadoopy_hbase.Mutation(column=self.masks_gt_column, value=class_masks_ser)])
+
+    def annotation_masks_to_hbase(self, image_key, image_superpixel_key):
         import redis
         import ast
         import imfeat
@@ -301,27 +352,12 @@ class PicarusManager(object):
             if 'user_data' in x:
                 x['user_data'] = ast.literal_eval(x['user_data'])
                 if x['user_data']['segments']:
-                    row_key = x['image']
-                    image_class_segments.setdefault(row_key, {}).setdefault(x['user_data']['name'], []).append(x['user_data']['segments'])
+                    image_class_segments.setdefault(x['image'], {}).setdefault(x['user_data']['name'], []).append(x['user_data']['segments'])
         for row_key, class_segments in image_class_segments.items():
-            columns = dict((x, y.value) for x, y in self.hb.getRowWithColumns(self.images_table, row_key, [self.image_column, self.superpixel_column])[0].columns.items())
-            image = imfeat.image_fromstring(columns[self.image_column])
-            segments = json.loads(columns[self.superpixel_column])
-            class_masks = {}
-            class_masks = np.zeros((image.shape[0], image.shape[1], self.texton_num_classes))
-            for name, user_segment_groups in class_segments.items():
-                cur_mask = np.zeros(image.shape[:2], dtype=np.uint8)
-                for user_segment_group in user_segment_groups:
-                    for user_segment in user_segment_group:
-                        hull = segments[user_segment]
-                        hull = np.asarray(hull).astype(np.int32).reshape(1, -1, 2)
-                        mask_color = 255
-                        cv2.drawContours(cur_mask, hull, -1, mask_color, -1)
-                        cv2.drawContours(cur_mask, hull, -1, mask_color, 2)
-                class_masks[:, :, self.texton_classes[name]['mask_num']] = cur_mask / 255.
-            class_masks_ser = picarus.api.np_tostring(class_masks)
+            class_masks, _ = self._mask_annotation_render(row_key, class_segments, image_key, image_superpixel_key)
             print('Storing row [%s]' % repr(row_key))
-            self.hb.mutateRow(self.images_table, row_key, [hadoopy_hbase.Mutation(column=self.masks_gt_column, value=class_masks_ser)])
+            #class_masks_ser = picarus.api.np_tostring(class_masks)
+            #self.hb.mutateRow(self.images_table, row_key, [hadoopy_hbase.Mutation(column=self.masks_gt_column, value=class_masks_ser)])
 
     def cluster_points_local(self, **kw):
         row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
@@ -368,6 +404,13 @@ class PicarusManager(object):
             print(correct / float(total))
         print(correct / float(total))
         return {'cm': cm, 'total': total, 'correct': correct}
+
+    def image_to_superpixels(self, input_table, input_column, output_column, **kw):
+        cmdenvs = {'HBASE_TABLE': input_table,
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column)}
+        hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'hadoop/image_to_superpixels.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, columns=[input_column], single_value=True,
+                             cmdenvs=cmdenvs, jobconfs={'mapred.task.timeout': '6000000'}, **kw)
 
 
 if __name__ == '__main__':
@@ -424,6 +467,39 @@ if __name__ == '__main__':
         k = image_retrieval.features_to_classifier_class_distance_list(feature_key, metadata_column, classifier, **kw)
         return k
 
+
+
+    # SUN397 Feature/Classifier/Hasher/Index
+    start_row = 'sun397:'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
+    feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
+    run_feature(feature_key, start_row=start_row, stop_row=stop_row)
+    hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row=start_row, stop_row=stop_row)
+    run_hasher(hasher_key, start_row='sun397:', stop_row='sun398:')
+    create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row=start_row, stop_row=stop_row)
+    classifier_key = create_classifier_sklearn_decision_func(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row=start_row, stop_row=stop_row)
+    print(repr(classifier_key))
+    run_classifier(classifier_key, start_row=start_row, stop_row=stop_row)
+    quit()
+
+
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'force_max_side', 'size': 320, 'compression': 'jpg'}})
+    image_retrieval.annotation_masks_to_disk(image_key, 'feat:superpixel')
+    quit()
+    start_row = 'sun397:'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    print(image_key)
+    #run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
+    #image_retrieval.image_to_superpixels('images', image_key, 'feat:superpixel', start_row=start_row, stop_row=stop_row)
+    quit()
+    if 0:
+        # TODO: 1.) Run superpixel segmentation, 2.) Write annotation masks to hbase, 3.) Put data on hbase (imseg), 4.) Run tree-level (imseg)
+        image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'force_max_side', 'size': 320, 'compression': 'jpg'}})
+        image_retrieval.annotation_masks_to_hbase(image_key, 'sdfsdfs')
+        quit()
+
+
     # Landmarks
     start_row = 'landmarks:flickr'
     stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
@@ -463,22 +539,6 @@ if __name__ == '__main__':
     start_row = 'logos:google' + chr(204)
     image_retrieval.evaluate_classifier_class_distance_list(classifier_key, start_row=start_row, stop_row=stop_row)
     quit()
-
-
-
-    
-    # SUN397 Feature/Classifier/Hasher/Index
-    start_row = 'sun397:'
-    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
-    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
-    feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
-    run_feature(feature_key, start_row=start_row, stop_row=stop_row)
-    hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row=start_row, stop_row=stop_row)
-    run_hasher(hasher_key, start_row='sun397:', stop_row='sun398:')
-    create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row=start_row, stop_row=stop_row)
-    classifier_key = create_classifier_sklearn_decision_func(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row=start_row, stop_row=stop_row)
-    print(repr(classifier_key))
-    run_classifier(classifier_key, start_row=start_row, stop_row=stop_row)
 
     # Masks
     #feature_key = create_mask_feature(image_key, image_retrieval._get_texton(base64.b64decode('cHJlZDqOWGdqIgoVV27QmARQoqxb15Y+9A==')))

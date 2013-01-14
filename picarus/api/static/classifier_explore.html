@@ -117,6 +117,12 @@
           }
           var auth = {email: $('#demouser').val(), auth: $('#demopass').val()};
           var image = $('#demoimage')[0];
+          var 
+          function success(row, value) {
+
+          }
+          picarus_api_data_map(auth, "images", "logos:google", "logos:googlf", "meta:class", success)
+
           picarus_api("/confs.js", "GET", _.extend({success: success_confs}, auth)); // TODO: Update
           if ($('#demoimage')[0].files.length == 1) {
               picarus_api("/confs.js", "GET", _.extend({success: success_confs}, auth));  // TODO: Update
