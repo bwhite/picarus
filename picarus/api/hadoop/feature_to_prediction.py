@@ -12,7 +12,7 @@ class Mapper(picarus.api.HBaseMapper):
         super(Mapper, self).__init__()
         classifier = picarus.api.model_fromfile(os.environ['CLASSIFIER_FN'])
         if os.environ['CLASSIFIER_TYPE'] == 'sklearn_decision_func':
-            self._classifier = lambda x: np.double(classifier.decision_function(x).flat[0]).tostring()
+            self._classifier = lambda x: repr(float(classifier.decision_function(x).flat[0]))
         elif os.environ['CLASSIFIER_TYPE'] == 'class_distance_list':
             self._classifier = lambda x: json.dumps(classifier(x))
         else:

@@ -111,21 +111,27 @@
           if ($('#demosave').is(':checked')) {
               store_cookie();
           }
-          function success_confs(xhr) {
-              confs = JSON.parse(xhr.responseText);
-              plot_confs(confs);
-          }
           var auth = {email: $('#demouser').val(), auth: $('#demopass').val()};
           var image = $('#demoimage')[0];
-          var 
-          function success(row, value) {
-
+          confs = {pos_confs: [], neg_confs: []};
+          var gt_column = 'meta:class_0';
+          conf_column = 'pred:J[\xbb\x18y\x01k\xc5}\x8f\xb3\xb3\xcf\x0f!8\x97\xc0G\xf9';
+          function success(row, columns) {
+              debug_columns = columns;
+              if (columns[gt_column] == 'indoor') {
+                  confs.pos_confs.push(Number(columns[conf_column]));
+              } else {
+                  confs.neg_confs.push(Number(columns[conf_column]));
+              }
           }
-          picarus_api_data_map(auth, "images", "logos:google", "logos:googlf", "meta:class", success)
+          function success_confs() {
+              confs.neg_confs.sort(function(a, b) {return a - b});
+              confs.pos_confs.sort(function(a, b) {return a - b});
+              plot_confs(confs);
+          }
+          picarus_api_data_map(auth, "images", "sun397:test", "sun397:tesu", [gt_column, conf_column], success, success_confs);
 
-          picarus_api("/confs.js", "GET", _.extend({success: success_confs}, auth)); // TODO: Update
           if ($('#demoimage')[0].files.length == 1) {
-              picarus_api("/confs.js", "GET", _.extend({success: success_confs}, auth));  // TODO: Update
               picarus_api_test("/a0/see/classify/indoor", "POST", _.extend({div: $("#results_indoor"), image: image}, auth));
               function success_input_image(xhr) {
                   $('#input_image').attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['jpgb64']);

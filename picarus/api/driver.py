@@ -61,8 +61,8 @@ class PicarusManager(object):
         # Feature Classifier settings
         self.feature_classifier_row = self.images_table
         # Mask Hasher settings
-        self.texton_num_classes = 8
         self.texton_classes = json.load(open('class_colors.js'))
+        self.texton_num_classes = len(self.texton_classes)
         # Index Settings
         self.class_column = 'meta:class_2'
         self.indoor_class_column = 'meta:class_0'
@@ -289,8 +289,7 @@ class PicarusManager(object):
             if not user_data:
                 self.hb.deleteAllRow('images', data['image'])
 
-    def _mask_annotation_render(self, row_key, class_segments, image_key, image_superpixel_key):
-        # TODO: Add various voting options: 1, MAJORITY, ALL
+    def _mask_annotation_render(self, row_key, class_segments, image_key, image_superpixel_key, min_votes=1):
         columns = dict((x, y.value) for x, y in self.hb.getRowWithColumns(self.images_table, row_key, [image_key, image_superpixel_key])[0].columns.items())
         image = imfeat.image_fromstring(columns[image_key])
         segments = json.loads(columns[image_superpixel_key])
@@ -298,15 +297,31 @@ class PicarusManager(object):
         class_masks = np.zeros((image.shape[0], image.shape[1], self.texton_num_classes))
         for name, user_segment_groups in class_segments.items():
             cur_mask = np.zeros(image.shape[:2], dtype=np.uint8)
-            for user_segment_group in user_segment_groups:
-                for user_segment in user_segment_group:
-                    hull = segments[user_segment]
-                    hull = np.asarray(hull).astype(np.int32).reshape(1, -1, 2)
-                    mask_color = 255
-                    cv2.drawContours(cur_mask, hull, -1, mask_color, -1)
-                    cv2.drawContours(cur_mask, hull, -1, mask_color, 2)
+            segment_counts = {}
+            for x in sum(user_segment_groups, []):
+                try:
+                    segment_counts[x] += 1
+                except KeyError:
+                    segment_counts[x] = 1
+            valid_segments = [x for x, y in segment_counts.items() if y >= min_votes]
+            for user_segment in valid_segments:
+                hull = segments[user_segment]
+                hull = np.asarray(hull).astype(np.int32).reshape(1, -1, 2)
+                mask_color = 255
+                cv2.drawContours(cur_mask, hull, -1, mask_color, -1)
+                cv2.drawContours(cur_mask, hull, -1, mask_color, 2)
             class_masks[:, :, self.texton_classes[name]['mask_num']] = cur_mask / 255.
         return class_masks, image
+
+    def _filter_mask_annotations(self, response, min_annotation_time=10.):
+        try:
+            annotation_time = float(response['end_time']) - float(response['start_time'])
+        except KeyError:
+            return True
+        else:
+            if annotation_time < min_annotation_time:
+                return True
+        return False
 
     def annotation_masks_to_disk(self, image_key, image_superpixel_key):
         import redis
@@ -322,8 +337,11 @@ class PicarusManager(object):
             if 'user_data' in x:
                 user = u.hgetall(x['user_id'])
                 worker_id = user.get('workerId', '00NOID')
-                print(user)
+                print((x['user_id'], user))
                 x['user_data'] = ast.literal_eval(x['user_data'])
+                if self._filter_mask_annotations(x):
+                    print('Filtering annotation')
+                    continue
                 if x['user_data']['segments']:
                     row_key = x['image']
                     class_masks, image = self._mask_annotation_render(row_key, {x['user_data']['name']: [x['user_data']['segments']]}, image_key, image_superpixel_key)
@@ -331,7 +349,7 @@ class PicarusManager(object):
                     print(x)
                     print('Storing row [%s]' % repr(row_key))
                     for x in np.sum(class_masks.reshape((-1, class_masks.shape[-1])), 0).nonzero()[0]:
-                        fn = 'images/%s_%s_%s' % (worker_id, base64.b64encode(row_key), class_num_to_name[x])
+                        fn = 'images/%s_%s_%s' % (class_num_to_name[x], base64.b64encode(row_key), worker_id)
                         print(fn)
                         cur_mask = np.ascontiguousarray(class_masks[:, :, x])
                         cv2.imwrite(fn + '_0.png', cur_mask)
@@ -339,7 +357,7 @@ class PicarusManager(object):
                     #class_masks_ser = picarus.api.np_tostring(class_masks)
                     #self.hb.mutateRow(self.images_table, row_key, [hadoopy_hbase.Mutation(column=self.masks_gt_column, value=class_masks_ser)])
 
-    def annotation_masks_to_hbase(self, image_key, image_superpixel_key):
+    def annotation_masks_to_hbase(self, image_key, image_superpixel_key, masks_gt_column='feat:masks_gt', min_votes=2):
         import redis
         import ast
         import imfeat
@@ -348,16 +366,26 @@ class PicarusManager(object):
         responses = [r.hgetall(x) for x in r.keys()]
         print('Total Responses[%d]' % len(responses))
         image_class_segments = {}  # [row][class_name] = segments
+        class_num_to_name = {y['mask_num']: x for x, y in self.texton_classes.items()}
         for x in responses:
             if 'user_data' in x:
                 x['user_data'] = ast.literal_eval(x['user_data'])
+                if self._filter_mask_annotations(x):
+                    continue
                 if x['user_data']['segments']:
                     image_class_segments.setdefault(x['image'], {}).setdefault(x['user_data']['name'], []).append(x['user_data']['segments'])
         for row_key, class_segments in image_class_segments.items():
-            class_masks, _ = self._mask_annotation_render(row_key, class_segments, image_key, image_superpixel_key)
+            class_masks, image = self._mask_annotation_render(row_key, class_segments, image_key, image_superpixel_key, min_votes=min_votes)
+            class_masks_ser = picarus.api.np_tostring(class_masks)
+            class_masks = (class_masks * 255).astype(np.uint8)
+            for x in np.sum(class_masks.reshape((-1, class_masks.shape[-1])), 0).nonzero()[0]:
+                fn = 'images/%s_%s' % (class_num_to_name[x], base64.b64encode(row_key))
+                print(fn)
+                cur_mask = np.ascontiguousarray(class_masks[:, :, x])
+                cv2.imwrite(fn + '_0.png', cur_mask)
+                cv2.imwrite(fn + '_1.jpg', image)
             print('Storing row [%s]' % repr(row_key))
-            #class_masks_ser = picarus.api.np_tostring(class_masks)
-            #self.hb.mutateRow(self.images_table, row_key, [hadoopy_hbase.Mutation(column=self.masks_gt_column, value=class_masks_ser)])
+            self.hb.mutateRow(self.images_table, row_key, [hadoopy_hbase.Mutation(column=masks_gt_column, value=class_masks_ser)])
 
     def cluster_points_local(self, **kw):
         row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
@@ -468,60 +496,6 @@ if __name__ == '__main__':
         return k
 
 
-
-    # SUN397 Feature/Classifier/Hasher/Index
-    start_row = 'sun397:'
-    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
-    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
-    feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
-    run_feature(feature_key, start_row=start_row, stop_row=stop_row)
-    hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row=start_row, stop_row=stop_row)
-    run_hasher(hasher_key, start_row='sun397:', stop_row='sun398:')
-    create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row=start_row, stop_row=stop_row)
-    classifier_key = create_classifier_sklearn_decision_func(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row=start_row, stop_row=stop_row)
-    print(repr(classifier_key))
-    run_classifier(classifier_key, start_row=start_row, stop_row=stop_row)
-    quit()
-
-
-    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'force_max_side', 'size': 320, 'compression': 'jpg'}})
-    image_retrieval.annotation_masks_to_disk(image_key, 'feat:superpixel')
-    quit()
-    start_row = 'sun397:'
-    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
-    print(image_key)
-    #run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
-    #image_retrieval.image_to_superpixels('images', image_key, 'feat:superpixel', start_row=start_row, stop_row=stop_row)
-    quit()
-    if 0:
-        # TODO: 1.) Run superpixel segmentation, 2.) Write annotation masks to hbase, 3.) Put data on hbase (imseg), 4.) Run tree-level (imseg)
-        image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'force_max_side', 'size': 320, 'compression': 'jpg'}})
-        image_retrieval.annotation_masks_to_hbase(image_key, 'sdfsdfs')
-        quit()
-
-
-    # Landmarks
-    start_row = 'landmarks:flickr'
-    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
-    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 500, 'compression': 'jpg'}})
-    #image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
-    run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
-    feature_key = create_multi_feature(image_key, {'name': 'imfeat.HOGLatent', 'kw': {'sbin': 16}})
-    #feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.SURF'})
-    #feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
-    run_feature(feature_key, start_row=start_row, stop_row=stop_row)
-
-    stop_row = start_row + chr(204)
-    classifier_key = create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
-
-    # Evaluate landmarks
-    start_row = 'landmarks:flickr'
-    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
-    start_row = 'landmarks:flickr' + chr(204)
-    image_retrieval.evaluate_classifier_class_distance_list(classifier_key, start_row=start_row, stop_row=stop_row)
-    quit()
-
-
     # Logo
     start_row = 'logos:google'
     stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
@@ -539,6 +513,62 @@ if __name__ == '__main__':
     start_row = 'logos:google' + chr(204)
     image_retrieval.evaluate_classifier_class_distance_list(classifier_key, start_row=start_row, stop_row=stop_row)
     quit()
+
+
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'force_max_side', 'size': 320, 'compression': 'jpg'}})
+    image_retrieval.annotation_masks_to_hbase(image_key, 'feat:superpixel')
+    quit()
+
+
+    # SUN397 Feature/Classifier/Hasher/Index
+    start_row = 'sun397:'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
+    quit()
+    feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
+    #run_feature(feature_key, start_row=start_row, stop_row=stop_row)
+    hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row=start_row, stop_row=stop_row)
+    #run_hasher(hasher_key, start_row='sun397:', stop_row='sun398:')
+    #create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row=start_row, stop_row=stop_row)
+    classifier_key = create_classifier_sklearn_decision_func(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row=start_row, stop_row=stop_row)
+    print(repr(classifier_key))
+    run_classifier(classifier_key, start_row=start_row, stop_row=stop_row)
+    quit()
+
+    # Landmarks
+    start_row = 'landmarks:flickr'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    #image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 500, 'compression': 'jpg'}})
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 80, 'compression': 'jpg'}})
+    run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
+    #feature_key = create_multi_feature(image_key, {'name': 'imfeat.HOGLatent', 'kw': {'sbin': 64}})
+    #feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.SURF'})
+    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
+    run_feature(feature_key, start_row=start_row, stop_row=stop_row)
+
+    stop_row = start_row + chr(204)
+    classifier_key = create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
+
+    # Evaluate landmarks
+    start_row = 'landmarks:flickr'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    start_row = 'landmarks:flickr' + chr(204)
+    image_retrieval.evaluate_classifier_class_distance_list(classifier_key, start_row=start_row, stop_row=stop_row)
+    quit()
+
+
+    start_row = 'sun397:'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    print(image_key)
+    #run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
+    #image_retrieval.image_to_superpixels('images', image_key, 'feat:superpixel', start_row=start_row, stop_row=stop_row)
+    quit()
+    if 0:
+        # TODO: 1.) Run superpixel segmentation, 2.) Write annotation masks to hbase, 3.) Put data on hbase (imseg), 4.) Run tree-level (imseg)
+        image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'force_max_side', 'size': 320, 'compression': 'jpg'}})
+        image_retrieval.annotation_masks_to_hbase(image_key, 'sdfsdfs')
+        quit()
+
 
     # Masks
     #feature_key = create_mask_feature(image_key, image_retrieval._get_texton(base64.b64decode('cHJlZDqOWGdqIgoVV27QmARQoqxb15Y+9A==')))

@@ -153,6 +153,7 @@ def _data(table, row, col):
     row = base64.urlsafe_b64decode(row)
     col = base64.urlsafe_b64decode(col)
     method = bottle.request.method.upper()
+    print_request()
     # TODO Check authentication per table
     if table not in ('images', 'testtable'):
         raise ValueError('Only images/testtable allowed for now!')
@@ -175,12 +176,14 @@ def _data(table, row, col):
             stop_row = base64.urlsafe_b64decode(bottle.request.params.get('stopRow', ''))
             stop_row = stop_row if stop_row else None
             if col:
+                print 'columns', [col]
                 for cur_row, cur_col in hadoopy_hbase.scanner_row_column(THRIFT, table, column=col,
                                                                          start_row=start_row, per_call=num_rows,
                                                                          stop_row=stop_row, max_rows=num_rows):
                     out[base64.b64encode(cur_row)] = base64.b64encode(cur_col)
             else:
-                columns = map(base64.b64decode, bottle.request.params.getall('column'))
+                columns = map(base64.urlsafe_b64decode, bottle.request.params.getall('column'))
+                print 'columns', columns
                 for cur_row, cur_columns in hadoopy_hbase.scanner(THRIFT, table, columns=columns,
                                                                   start_row=start_row, per_call=num_rows,
                                                                   stop_row=stop_row, max_rows=num_rows):
