@@ -1,4 +1,3 @@
-import zmq
 from _picarus_search_pb2 import SearchIndex, NDArray, Classifier
 import numpy as np
 import zlib

@@ -64,6 +64,7 @@ import boto
 from picarus._importer import call_import
 from driver import PicarusManager
 import logging
+import uuid
 logging.basicConfig(level=logging.DEBUG)
 
 VERSION = 'a0'
@@ -476,6 +477,7 @@ MTURK_SERVER = None
 
 
 def _mturk_wrapper(*args, **kw):
+    bottle.app[0] = bottle.Bottle()  # Clear previous app
     import mturk_vision
     out = mturk_vision.server(*args, **kw)
     print('Filtering based on annotations')
@@ -488,27 +490,40 @@ def _mturk_wrapper(*args, **kw):
 @USERS.auth()
 def human(server_type):
     global MTURK_SERVER
-    assert server_type == 'image_entity'
+    assert server_type in ('image_entity', 'image_query')
     assert MTURK_SERVER is None
+    secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
+    p = {}
     start_row = bottle.request.params['start_row']
     stop_row = bottle.request.params['stop_row']
-    entity_column = bottle.request.params['entity_column']
     image_column = bottle.request.params['image_column']
-    p = {}
-    p['data'] = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (start_row, stop_row, entity_column, image_column)
+    if server_type == 'image_entity':
+        entity_column = bottle.request.params['entity_column']
+        p = {}
+        p['data'] = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (start_row, stop_row, entity_column, image_column)
+        p['type'] = 'image_entity'
+    elif server_type == 'image_query':
+        query = bottle.request.params['query']
+        p['data'] = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
+        p['type'] = 'image_query'
+        p['query'] = query
+    else:
+        bottle.abort(400)
     p['redis_address'] = 'localhost'
     p['redis_port'] = 6382
-    p['type'] = 'image_entity'
     p['port'] = 16000
     p['num_tasks'] = 100
-    p['mode'] = 'single'
+    p['mode'] = 'amt'
     p['setup'] = True
     p['reset'] = True
+    p['secret'] = secret
     print(p)
+    base_url = 'http://api0.picar.us:%d' % p['port']
+    admin_prefix = '/admin/%s/' % secret
     MTURK_SERVER = multiprocessing.Process(target=_mturk_wrapper, kwargs=p)
     MTURK_SERVER.start()
-    return {'url': 'http://api0.picar.us:%d' % p['port']}
-    
+    return {'worker': base_url, 'stop': base_url + admin_prefix + 'stop', 'results': base_url + admin_prefix + 'results.js', 'users': base_url + admin_prefix + 'users.js'}
+
 if __name__ == '__main__':
     import gevent.pywsgi
     SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app())
