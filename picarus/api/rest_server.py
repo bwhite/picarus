@@ -55,6 +55,7 @@ import numpy as np
 import cv2
 import gevent
 import crawlers
+import hashlib
 import multiprocessing
 import distpy
 from users import Users, UnknownUser
@@ -523,6 +524,30 @@ def human(server_type):
     MTURK_SERVER = multiprocessing.Process(target=_mturk_wrapper, kwargs=p)
     MTURK_SERVER.start()
     return {'worker': base_url, 'stop': base_url + admin_prefix + 'stop', 'results': base_url + admin_prefix + 'results.js', 'users': base_url + admin_prefix + 'users.js'}
+
+
+@bottle.post('/<version:re:[^/]*>/dedupe/<dedupe_type:re:[^/]*>')
+@check_version
+@USERS.auth()
+def dedupe(dedupe_type):
+    # TODO: nearidentical, identical
+    # Given an image column, load it and compute the near-identical feature, for each image determine which ones are nearidentical
+    start_row = bottle.request.params.get('startRow', '')
+    stop_row = bottle.request.params.get('stopRow', '')
+    col = bottle.request.params.get('column', '')
+    table = bottle.request.params.get('table', '')
+    if dedupe_type == 'identical':
+        features = {}
+        dedupe_feature = lambda x, y: features.setdefault(base64.b64encode(hashlib.md5(y).digest()), []).append(base64.b64encode(x))
+    else:
+        bottle.abort(400)
+    
+    for cur_row, cur_col in hadoopy_hbase.scanner_row_column(THRIFT, table, column=col,
+                                                             start_row=start_row, per_call=10,
+                                                             stop_row=stop_row):
+        dedupe_feature(cur_row, cur_col)
+    return {'data': features}
+
 
 if __name__ == '__main__':
     import gevent.pywsgi
