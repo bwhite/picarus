@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>api.picar.us: API Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Le styles -->
+    <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/css/bootstrap-combined.min.css" rel="stylesheet">
+    <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.1.1/bootstrap.min.js" rel="stylesheet">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script type="text/javascript" src="//stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
+    <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.2/jquery.cookie.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.2/underscore-min.js"></script>
+    <script type="text/javascript" src="/static/picarus_api.js"></script>
+    <script type="text/javascript" src="/static/app.js"></script>
+    <script type="text/javascript" src="/static/picarus_api_demo.js"></script>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBsKtzgLTIsaoxAFUvSNoJ8n3j4w9VZs0&sensor=false"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/0.9.10/backbone-min.js"></script>
+    
+    <style>
+      body {
+        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+    </style>
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="../assets/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png">
+  </head>
+
+  <body>
+    <div id="tpls">
+    <script type="text/html" id="bpl_login">
+      <input class="input-small" type="text" placeholder="Email" id="userEmail" value="">
+      <input class="input-small" type="password" placeholder="Auth" id="userAuth" value="">
+      <input class="input-small" type="checkbox" id="userSave">
+    </script>
+
+    <script type="text/html" id="bpl_login_hidden">
+      <input type="hidden" id="userEmail" value="">
+      <input type="hidden" id="userAuth" value="">
+    </script>
+
+    <script type="text/html" id="tpl_home">
+      <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
+        <%=baseLogin%>
+      </div>
+    </script>
+
+    <script type="text/javascript">
+      function render_home() {
+          login_setup();
+      }
+    </script>
+ 
+    <script type="text/html" id="tpl_data_view">
+      Another thing
+    </script>
+
+    <script type="text/html" id="tpl_data_explore">
+    </script>
+
+    <script type="text/javascript">
+      function render_data_explore() {
+          alert('blah');
+      }
+    </script>
+
+    <script type="text/html" id="tpl_data_import">
+    </script> 
+
+    <script type="text/html" id="tpl_data_export">
+    </script> 
+   
+    <script type="text/html" id="tpl_triage_categorize">
+    </script>
+ 
+    <script type="text/html" id="tpl_triage_summarize">
+    </script>
+ 
+    <script type="text/html" id="tpl_feature_list">
+      <%=baseLoginHidden%>
+      <div id="models"></div>
+    </script>
+    
+    <script type="text/javascript">
+      function render_feature_list() {
+          login_setup();
+          // TODO: Need to get only the models for this type for this user, show names
+          if (1) {
+              function success_models(xhr) {
+                  models = JSON.parse(xhr.responseText);
+                  _.each(models, function (v0, k0) {
+                      $('#models').append($('<h2>', {text: k0}));
+                      var sel = $('<select>');
+                      _.each(v0, function (v1, k1) {
+                          sel.append($('<option>', {val: k1, text: k1}));
+                      });
+                      $('#models').append(sel);
+                  });
+              }
+              var auth = login_get();
+              picarus_api("/a0/models", "GET", _.extend({success: success_models}, auth))
+          }
+      }
+    </script>
+
+    <script type="text/html" id="tpl_feature_compute">
+    </script>
+
+    <script type="text/html" id="tpl_feature_evaluate">
+    </script>
+
+    <script type="text/html" id="tpl_feature_cluster">
+    </script>
+
+    <script type="text/html" id="tpl_classifier_list">
+    </script>
+
+    <script type="text/html" id="tpl_classifier_compute">
+    </script>
+
+    <script type="text/html" id="tpl_classifier_evaluate">
+    </script>
+
+    <script type="text/html" id="tpl_index_list">
+    </script>
+
+    <script type="text/html" id="tpl_index_compute">
+    </script>
+
+    <script type="text/html" id="tpl_index_evaluate">
+    </script>
+
+    <script type="text/html" id="tpl_locations">
+    </script>
+
+    <script type="text/html" id="tpl_times">
+    </script>
+
+    <script type="text/html" id="tpl_crawl">
+    </script>
+
+    <script type="text/html" id="tpl_human">
+    </script>
+
+    <script type="text/html" id="tpl_dedupe">
+      <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
+        <%=baseLogin%>
+        <br>
+        <input class="input-small" type="text" placeholder="Row start" id="startRow" value="">
+        <input class="input-small" type="text" placeholder="Row stop" id="stopRow" value="">
+        <input class="input-small" type="text" placeholder="Image Column" id="imageColumn" value="">
+	<button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run Demo</button>
+      </div>
+    </script>
+
+    <script type="text/javascript">
+      function render_dedupe() {
+          login_setup();
+          $('#runButton').click(function () {
+              var startRow = unescape($('#startRow').val());
+              var stopRow = unescape($('#stopRow').val());
+              var imageColumn = unescape($('#imageColumn').val());
+              if (startRow.length == 0 || stopRow.length == 0) {
+                  display_alert('Must specify rows');
+                  return;
+              }
+              var auth = login_get();
+              function success_func(xhr) {
+                  dedupe_response = JSON.parse(xhr.responseText)              
+                  // TODO: Add option to show duplicates and a button to press to remove all but one of them at random
+              }
+              picarus_api("/a0/dedupe/identical", "POST", _.extend({data: {table: "images", startRow: startRow, startRow: stopRow, column: imageColumn}, success: success_func}, auth))
+          });
+      }
+    </script>
+
+
+    <script type="text/html" id="tpl_user">
+    </script>
+    </div>
+
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="">api.picar.us</a>
+          <div class="nav-collapse collapse">
+            <!-- NAV BAR ITEM AREA -->
+            <ul id="nav-item-container" class="nav"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="container" class="container"></div>
+
+    <script type="text/javascript">
+      $(document).ready(app_main);
+    </script>
+  </body>
+</html>
