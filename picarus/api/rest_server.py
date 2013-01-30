@@ -549,6 +549,14 @@ def dedupe(dedupe_type):
     return {'data': features}
 
 
+@bottle.get('/<version:re:[^/]*>/enctest')
+@bottle.post('/<version:re:[^/]*>/enctest')
+@check_version
+@USERS.auth()
+def enctest():
+    return {'data': bottle.request.params.get('data')}
+
+
 if __name__ == '__main__':
     import gevent.pywsgi
     SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app())
