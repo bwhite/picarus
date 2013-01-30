@@ -10,7 +10,7 @@
     <!-- Le styles -->
     <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/css/bootstrap-combined.min.css" rel="stylesheet">
     <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.1.1/bootstrap.min.js" rel="stylesheet">
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
     <script type="text/javascript" src="//stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
     <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.2/jquery.cookie.js"></script>
@@ -62,11 +62,46 @@
     <script type="text/javascript">
       function render_home() {
           login_setup();
+          var auth = login_get();
+          function success_home(xhr) {
+              enctest = JSON.parse(xhr.responseText);
+              console.log(encodeURIComponent(enctest.data));
+          }
+          picarus_api("/a1/enctest?data=" + encodeURIComponent('sdfs\x01dfs'), "GET", _.extend({success: success_home}, auth))
+          picarus_api("/a1/enctest", "POST", _.extend({success: success_home, data: {'data': 'sdfs\x01dfs'}}, auth))
       }
     </script>
  
     <script type="text/html" id="tpl_data_view">
-      Another thing
+      <%=baseLogin%>
+      <br>
+      <input class="input-small" type="text" placeholder="Row start" id="startRow" value="">
+      <input class="input-small" type="text" placeholder="Row stop" id="stopRow" value="">
+      <input class="input-small" type="text" placeholder="Text Column" id="textColumn" value="">
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run Demo</button>
+      <div id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_data_view() {
+          login_setup();
+          $('#runButton').click(function () {
+              var startRow = unescape($('#startRow').val());
+              var stopRow = unescape($('#stopRow').val());
+              var textColumn = unescape($('#textColumn').val());
+              if (startRow.length == 0 || stopRow.length == 0) {
+                  display_alert('Must specify rows');
+                  return;
+              }
+              var auth = login_get();
+              $('#results').html('');
+              function success(row, columns) {
+                  $('#results').append(escape(row) + ' - ' + escape(columns[textColumn]));
+                  $('#results').append($('<br>'));
+              }
+              picarus_api_data_scanner(auth, "images", startRow, stopRow, [textColumn], success)
+          });
+      }
     </script>
 
     <script type="text/html" id="tpl_data_explore">
@@ -76,6 +111,30 @@
       function render_data_explore() {
           alert('blah');
       }
+    </script>
+
+    <script type="text/html" id="tpl_data_single">
+      <%=baseLogin%>
+      <br>
+      <input type="file" id="imagefile" class="input-small">
+      <div><img id="input_image" title="Input Image"></img></div>
+    </script> 
+
+    <script type="text/javascript">
+      function render_data_single() {
+          login_setup();
+          $('#imagefile').change(function () {
+              if ($('#imagefile')[0].files.length != 1) {
+                  return;
+              }
+              var auth = login_get();
+              function success_input_image(xhr) {
+                  $('#input_image').attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['jpgb64']);
+              }
+              var image = $('#imagefile')[0];
+              picarus_api("/a1/image", "POST", _.extend({image: image, success: success_input_image}, auth));
+          }
+      )}
     </script>
 
     <script type="text/html" id="tpl_data_import">
@@ -112,7 +171,7 @@
                   });
               }
               var auth = login_get();
-              picarus_api("/a0/models", "GET", _.extend({success: success_models}, auth))
+              picarus_api("/a1/models", "GET", _.extend({success: success_models}, auth))
           }
       }
     </script>
@@ -183,7 +242,7 @@
                   dedupe_response = JSON.parse(xhr.responseText)              
                   // TODO: Add option to show duplicates and a button to press to remove all but one of them at random
               }
-              picarus_api("/a0/dedupe/identical", "POST", _.extend({data: {table: "images", startRow: startRow, startRow: stopRow, column: imageColumn}, success: success_func}, auth))
+              picarus_api("/a1/dedupe/identical", "POST", _.extend({data: {table: "images", startRow: startRow, startRow: stopRow, column: imageColumn}, success: success_func}, auth))
           });
       }
     </script>
