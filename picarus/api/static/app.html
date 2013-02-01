@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>api.picar.us: API Demo</title>
+    <title>api.picar.us</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -14,17 +14,31 @@
     <script type="text/javascript" src="//stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
     <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.2/jquery.cookie.js"></script>
+    <script type="text/javascript" src="//www.google.com/jsapi"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.2/underscore-min.js"></script>
     <script type="text/javascript" src="/static/picarus_api.js"></script>
     <script type="text/javascript" src="/static/app.js"></script>
     <script type="text/javascript" src="/static/picarus_api_demo.js"></script>
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBsKtzgLTIsaoxAFUvSNoJ8n3j4w9VZs0&sensor=false"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/0.9.10/backbone-min.js"></script>
+    <script src="https://raw.github.com/jsvine/Backbone.Table/master/backbone.table.js"></script>
     
     <style>
       body {
         padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
       }
+      // Models Table
+      table { margin: 10px; font-family: Georgia, serif }
+      thead, tfoot { background: #D8E2EB; }
+      tr.even { background: #F2F4F5; }
+      th { font-weight: bold; }
+      th, td { padding: 5px 10px; }
+      th+th, td+td { border-left: 1px solid #FFF; }
+      td.models-inputs {font-size: 8px}
+      td.models-params {font-size: 8px}
+      td.models-row {font-size: 8px}
+
+
     </style>
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
@@ -62,19 +76,10 @@
     <script type="text/javascript">
       function render_home() {
           login_setup();
-          var auth = login_get();
-          function success_home(xhr) {
-              enctest = JSON.parse(xhr.responseText);
-              console.log(encodeURIComponent(enctest.data));
-          }
-          picarus_api("/a1/enctest?data=" + encodeURIComponent('sdfs\x01dfs'), "GET", _.extend({success: success_home}, auth))
-          picarus_api("/a1/enctest", "POST", _.extend({success: success_home, data: {'data': 'sdfs\x01dfs'}}, auth))
       }
     </script>
  
     <script type="text/html" id="tpl_data_view">
-      <%=baseLogin%>
-      <br>
       <input class="input-small" type="text" placeholder="Row start" id="startRow" value="">
       <input class="input-small" type="text" placeholder="Row stop" id="stopRow" value="">
       <input class="input-small" type="text" placeholder="Text Column" id="textColumn" value="">
@@ -84,59 +89,73 @@
 
     <script type="text/javascript">
       function render_data_view() {
-          login_setup();
           $('#runButton').click(function () {
-              var startRow = unescape($('#startRow').val());
-              var stopRow = unescape($('#stopRow').val());
-              var textColumn = unescape($('#textColumn').val());
+              var startRow = encode_id(unescape($('#startRow').val()));
+              var stopRow = encode_id(unescape($('#stopRow').val()));
+              var textColumn = encode_id($('#textColumn').val());
               if (startRow.length == 0 || stopRow.length == 0) {
                   display_alert('Must specify rows');
                   return;
               }
-              var auth = login_get();
               $('#results').html('');
               function success(row, columns) {
-                  $('#results').append(escape(row) + ' - ' + escape(columns[textColumn]));
+                  $('#results').append(escape(decode_id(row)) + ' - ' + escape(base64.decode(columns[textColumn])));
                   $('#results').append($('<br>'));
               }
-              picarus_api_data_scanner(auth, "images", startRow, stopRow, [textColumn], success)
+              picarus_api_data_scanner("images", startRow, stopRow, [textColumn], success)
           });
       }
     </script>
-
+<!--
     <script type="text/html" id="tpl_data_explore">
     </script>
 
     <script type="text/javascript">
-      function render_data_explore() {
-          alert('blah');
-      }
     </script>
-
+-->
     <script type="text/html" id="tpl_data_single">
-      <%=baseLogin%>
-      <br>
       <input type="file" id="imagefile" class="input-small">
       <div><img id="input_image" title="Input Image"></img></div>
     </script> 
 
     <script type="text/javascript">
       function render_data_single() {
-          login_setup();
           $('#imagefile').change(function () {
               if ($('#imagefile')[0].files.length != 1) {
                   return;
               }
-              var auth = login_get();
               function success_input_image(xhr) {
                   $('#input_image').attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['jpgb64']);
               }
-              var image = $('#imagefile')[0];
-              picarus_api("/a1/image", "POST", _.extend({image: image, success: success_input_image}, auth));
+              var image = $('#imagefile')[0].files[0];
+              picarus_api("/a1/image", "POST", {data: {image: image}, success: success_input_image});
           }
       )}
     </script>
 
+    <script type="text/html" id="tpl_data_uploads">
+      <div id="images"></div>
+    </script> 
+
+    <script type="text/javascript">
+      function render_data_uploads() {
+          function success_user(xhr) {
+              var response = JSON.parse(xhr.responseText);
+              var startRow = response.uploadRowPrefix;
+              var imageColumn = encode_id('data:image');
+              function success(row, columns) {
+                  $('#images').append(escape(decode_id(row)));
+                  $('#images').append($('<br>'));
+                  $('#images').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('width', '320px'));
+                  $('#images').append($('<br>'));
+              }
+              picarus_api_data_scanner("images", encode_id(startRow), encode_id(prefix_to_stop_row(startRow)), [imageColumn], success, undefined, 10);
+          }
+          picarus_api("/a1/user", "GET", {success: success_user});
+       }
+    </script>
+
+<!--
     <script type="text/html" id="tpl_data_import">
     </script> 
 
@@ -148,54 +167,396 @@
  
     <script type="text/html" id="tpl_triage_summarize">
     </script>
- 
-    <script type="text/html" id="tpl_feature_list">
+ -->
+    <script type="text/html" id="tpl_models">
       <%=baseLoginHidden%>
       <div id="models"></div>
+      <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+          <h3 id="myModalLabel" id="modal_header"></h3>
+        </div>
+        <div class="modal-body">
+          <textarea id="modal_content" style="width: 100%; height: 100%; box-sizing: border-box;  resize: none; "></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" data-dismiss="modal" aria-hidden="true" id="close_button">Close</button>
+          <button class="btn btn-primary" id="save_button">Save changes</button>
+        </div>
+      </div>
     </script>
+
     
     <script type="text/javascript">
-      function render_feature_list() {
-          login_setup();
-          // TODO: Need to get only the models for this type for this user, show names
-          if (1) {
-              function success_models(xhr) {
-                  models = JSON.parse(xhr.responseText);
-                  _.each(models, function (v0, k0) {
-                      $('#models').append($('<h2>', {text: k0}));
-                      var sel = $('<select>');
-                      _.each(v0, function (v1, k1) {
-                          sel.append($('<option>', {val: k1, text: k1}));
-                      });
-                      $('#models').append(sel);
-                  });
-              }
-              var auth = login_get();
-              picarus_api("/a1/models", "GET", _.extend({success: success_models}, auth))
-          }
+      function render_models() {
+          models = new PicarusModels();
+          var AppView = Backbone.View.extend({
+              el: $('#container'),
+              initialize: function() {
+                  _.bindAll(this, 'render');
+                  this.collection.bind('reset', this.render);
+                  this.collection.bind('change', this.render);
+              },
+              render: function() {
+                          picarus_table = new Backbone.Table({
+                          collection: this.collection,
+                          columns: [["name", "Name"], 
+                                    {header: "Notes", className: "models-notes", getFormatted: function() { return this.get('notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + this.get('row') + '">edit</a></span>'}},
+                                    {header: "Tags", className: "models-tags", getFormatted: function() { return this.get('tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + this.get('row') + '">edit</a></span>'}},
+                                    ["prefix_pretty", "Type"], ["creationTime", "Creation"],
+                                    {header: "Row", className: "models-row", getFormatted: function() { return this.get('row')}},
+                                    {header: "Parameters", className: "models-params", getFormatted: function() { return JSON.stringify(this.get('param'))}},
+                                    {header: "Inputs", className: "models-inputs", getFormatted: function() { return JSON.stringify(this.get('inputs'))}}]
+                          });
+                          $("#models").html(picarus_table.render().el);
+                          $('.modal_link_notes').click(function (data) {
+                              var row = data.target.getAttribute('row');
+                              var model = models.get(row);
+                              $('#modal_content').val(model.get('notes'));
+                              $('#save_button').unbind();
+                              $('#save_button').click(function () {
+                                  model.save({notes: $('#modal_content').val()}, {patch: true});
+                                  $('#myModal').modal('hide')
+                              });
+                              $('#myModal').modal('show')
+                          })
+                          $('.modal_link_tags').click(function (data) {
+                              var row = data.target.getAttribute('row');
+                              var model = models.get(row);
+                              $('#modal_content').val(model.get('tags'));
+                              $('#save_button').unbind();
+                              $('#save_button').click(function () {
+                                  model.save({tags: $('#modal_content').val()}, {patch: true});
+                                  $('#myModal').modal('hide')
+                              });
+                              $('#myModal').modal('show')
+                          })
+                      }
+          });
+          window.appview = new AppView({ collection: models });
+          models.fetch();
       }
     </script>
 
-    <script type="text/html" id="tpl_feature_compute">
-    </script>
-
-    <script type="text/html" id="tpl_feature_evaluate">
-    </script>
-
-    <script type="text/html" id="tpl_feature_cluster">
-    </script>
-
-    <script type="text/html" id="tpl_classifier_list">
-    </script>
-
     <script type="text/html" id="tpl_classifier_compute">
+      <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
+        <input class="input-small" type="text" placeholder="Classifier key" id="modelKey" value="">
+        <input type="file" id="imagefile" class="input-small">
+      </div>
+      <div id="results">
+      </div>
+    </script>
+
+    <script type="text/javascript">
+      function render_classifier_compute() {
+          $('#imagefile').change(function () {
+              if ($('#imagefile')[0].files.length != 1) {
+                  display_alert('You must specify an image!');
+                  return;
+              }
+              var imageColumn = encode_id('data:image');
+              var modelKey = $('#modelKey').val();
+              function success_func(xhr) {
+                  $('#results').html(xhr.responseText);
+              }
+              function upload_func(xhr) {
+                  var response = JSON.parse(xhr.responseText);
+                  picarus_api_row(table, response.row, "POST", {data: {imageColumn: imageColumn, action: 'i/classify', model: modelKey}, success: success_func})
+              }
+              var table = 'images';
+              var data = {};
+              data[imageColumn] = $('#imagefile')[0].files[0];
+              picarus_api_upload(table, {data: data, success: upload_func})
+              
+          });
+      }
     </script>
 
     <script type="text/html" id="tpl_classifier_evaluate">
+      <div>
+      <input class="input-small" type="text" placeholder="Row start" id="startRow" value="sun397:test">
+      <input class="input-small" type="text" placeholder="Row stop" id="stopRow" value="sun397:tesu">
+      <input class="input-small" type="text" placeholder="Positive Class" id="posClass" value="indoor">
+      <input class="input-small" type="text" placeholder="GT Column" id="gtColumn" value="meta:class_0">
+      <input class="input-small" type="text" placeholder="Classifier Key" id="modelKey" value="">
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run Demo</button>
+      </div>
+      <div id="base" style="position:relative;top:-35px;"></div>
+      <div id="graph_confidence_scatter" style="height:200px;width:600px"></div>
+      <div id="graph_confidence_scatter_norm" style="height:200px;width:600px"></div>
+      <div id="graph_confidence_accuracy" style="height:200px;width:600px"></div>
+      <div id="graph_rps" style="height:300px;width:300px;float:left;"></div>
+      <div id="graph_roc" style="height:300px;width:300px;float:left;"></div>
+    </script>
+    <script type="text/javascript">
+      function render_classifier_evaluate() {
+          $('#runButton').click(function () {
+          confs = {pos_confs: [], neg_confs: []};
+          var gt_column = encode_id($('#gtColumn').val());
+          var conf_column = $('#modelKey').val();
+          var startRow = encode_id($('#startRow').val());
+          var stopRow = encode_id($('#stopRow').val());
+          var posClass = $('#posClass').val();
+
+          function success(row, columns) {
+              if (columns.hasOwnProperty(conf_column)) {
+                  if (base64.decode(columns[gt_column]) == posClass) {
+                      confs.pos_confs.push(Number(base64.decode(columns[conf_column])));
+                  } else {
+                      confs.neg_confs.push(Number(base64.decode(columns[conf_column])));
+                  }
+              } else {
+                  console.log('Row without confidence');
+              }
+          }
+              function success_confs() {
+                  confs.neg_confs.sort(function(a, b) {return a - b});
+                  confs.pos_confs.sort(function(a, b) {return a - b});
+                  plot_confs(confs);
+              }
+              picarus_api_data_scanner("images", startRow, stopRow, [gt_column, conf_column], success, success_confs);
+          })
+      }
+      function confs_to_conf_hist(pos_confs, neg_confs, bins, normalize) {
+          /* Takes in confs, produces a histogram capturing both pos/neg confs in each bin
+             TODO: Check that each bin gets get an equal portion of the range
+           */
+          var min_conf = Math.min(pos_confs[0], neg_confs[0]);
+          var max_conf = Math.min(pos_confs[pos_confs.length - 1], neg_confs[neg_confs.length - 1]);
+          var shift = min_conf;
+          var scale = bins / (max_conf - min_conf);
+          var pos_buckets = [];
+          var neg_buckets = [];
+          var coords = [];
+          var i, cur_bucket;
+          for (i = 0; i < bins; i++) {
+              pos_buckets[i] = 0;
+              neg_buckets[i] = 0;
+          }
+          for (i = 0; i < pos_confs.length; i++) {
+              pos_buckets[Math.min(bins - 1, Math.max(0, Math.floor((pos_confs[i] - shift) * scale)))] += 1;
+          }
+          for (i = 0; i < neg_confs.length; i++) {
+              neg_buckets[Math.min(bins - 1, Math.max(0, Math.floor((neg_confs[i] - shift) * scale)))] += 1;
+          }
+          for (i = 0; i < bins; i++) {
+              coords[i] = [(i + .5) / scale + shift, pos_buckets[i], neg_buckets[i]];
+              if (normalize) {
+                  coords[i][1] /= pos_confs.length;
+                  coords[i][2] /= neg_confs.length;
+              }
+          }
+          return coords;
+      }
+      function test_confs_to_confusion_matrix() {
+          //var cms;
+          cms = confs_to_confusion_matrix([], []);
+          if (!_.isEqual(cms, []))
+              return 1;
+
+          cms = confs_to_confusion_matrix([0], []);
+          if (!_.isEqual(cms, [[1, 0, 0, 0, 0]]))
+              return 2;
+
+          cms = confs_to_confusion_matrix([], [0]);
+          if (!_.isEqual(cms, [[0, 0, 1, 0, Infinity]]))
+              return 3;
+
+          cms = confs_to_confusion_matrix([0], [0]);
+          if (!_.isEqual(cms, [[1, 1, 0, 0, 0], [0, 0, 1, 1, Infinity]]))
+              return 4;
+
+          cms = confs_to_confusion_matrix([1], [0]);
+          if (!_.isEqual(cms, [[1, 0, 1, 0, 1]]))
+              return 5;
+
+          cms = confs_to_confusion_matrix([0], [1]);
+          if (!_.isEqual(cms, [[1, 1, 0, 0, 0], [0, 0, 1, 1, Infinity]]))
+              return 6;
+
+          cms = confs_to_confusion_matrix([0, 0], [0]);
+          if (!_.isEqual(cms, [[2, 1, 0, 0, 0], [0, 0, 1, 2, Infinity]]))
+              return 7;
+
+          cms = confs_to_confusion_matrix([0, 1], [0]);
+          if (!_.isEqual(cms, [[2, 1, 0, 0, 0], [1, 0, 1, 1, 1]]))
+              return 8;
+
+          cms = confs_to_confusion_matrix([0, 0], [1]);
+          if (!_.isEqual(cms, [[2, 1, 0, 0, 0], [0, 0, 1, 2, Infinity]]))
+              return 9;
+
+          cms = confs_to_confusion_matrix([1, 2], [0]);
+          if (!_.isEqual(cms, [[2, 0, 1, 0, 1]]))
+              return 10;
+
+          cms = confs_to_confusion_matrix([0, 2], [1]);
+          if (!_.isEqual(cms, [[2, 1, 0, 0, 0], [1, 0, 1, 1, 2]]))
+              return 11;
+
+          cms = confs_to_confusion_matrix([0, 1], [2]);
+          if (!_.isEqual(cms, [[2, 1, 0, 0, 0], [0, 0, 1, 2, Infinity]]))
+              return 12;
+
+          cms = confs_to_confusion_matrix([1, 2], [0, 3]);
+          if (!_.isEqual(cms, [[2, 1, 1, 0, 1], [0, 0, 2, 2, Infinity]]))
+              return 13;
+
+          cms = confs_to_confusion_matrix([1, 2, 3], [0, 3]);
+          if (!_.isEqual(cms, [[3, 1, 1, 0, 1], [0, 0, 2, 3, Infinity]]))
+              return 14;
+
+          cms = confs_to_confusion_matrix([1, 2, 3, 3], [0, 3]);
+          if (!_.isEqual(cms, [[4, 1, 1, 0, 1], [0, 0, 2, 4, Infinity]]))
+              return 15;
+          return 0;
+      }
+      function confs_to_confusion_matrix(pos_confs, neg_confs) {
+          /* Takes in confs, produces list of [tp, fp, tn, fn, thresh] */
+          var cm_threshs = [];
+          var fn = 0;
+          var tn = 0;
+          var i;
+          var cur_thresh;
+          while (pos_confs.length || neg_confs.length) {
+              // Skip Negatives
+              for (i = 0; i < neg_confs.length; i++) {
+                  if (neg_confs[i] >= pos_confs[0]) {
+                      break;
+                  }
+              }
+              neg_confs = neg_confs.slice(i, neg_confs.length);
+              tn += i;
+              // Add PR point (cur_thresh = pos_confs[0])
+              if (pos_confs.length) {
+                  cur_thresh = pos_confs[0];
+              } else {
+                  cur_thresh = Infinity;
+              }
+              cm_threshs.push([pos_confs.length, neg_confs.length, tn, fn, cur_thresh]);
+              // Skip Positives
+              for (i = 0; i < pos_confs.length; i++) {
+                  if (pos_confs[i] > neg_confs[0]) {
+                      break;
+                  }
+              }
+              pos_confs = pos_confs.slice(i, pos_confs.length);
+              fn += i;
+          }
+          return cm_threshs;
+      }
+      function cms_to_rps(cms) {
+          var rps = [];
+          var i;
+          for (i = 0; i < cms.length; i++) {
+              rps.push([cms[i][0] / (cms[i][0] + cms[i][3]), cms[i][0] / (cms[i][0] + cms[i][1]), cms[i][4]])
+          }
+          return rps;
+      }
+      function cms_to_conf_accs(cms) {
+          var conf_accs = [];
+          var i;
+          for (i = 0; i < cms.length; i++) {
+              conf_accs.push([cms[i][4], (cms[i][0] + cms[i][2]) / (cms[i][0] + cms[i][1] + cms[i][2] + cms[i][3])])
+          }
+          return conf_accs;
+      }
+      function cms_to_fpr_tprs(cms) {
+          var fpr_tprs = [];
+          var i, fpr, tpr;
+          var p = confs.pos_confs.length;
+          var n = confs.neg_confs.length;
+          for (i = 0; i < cms.length; i++) {
+              fpr = cms[i][1] / n; // FP / N
+              tpr = cms[i][0] / p; // TP / P
+              fpr_tprs.push([fpr, tpr, cms[i][4]]);
+          }
+          return fpr_tprs;
+      }
+      function to_google_data(pts, labels, tooltip) {
+          var i;
+          var data = new google.visualization.DataTable();
+          for (i = 0; i < labels.length; i++) {
+              data.addColumn('number', labels[i]);
+          }
+          if (tooltip) {
+              data.addColumn({type: 'number', role: 'tooltip'});
+          }
+          data.addRows(pts);
+          return data;
+      }
+      function plot_confs(confs) {
+          var test_out = test_confs_to_confusion_matrix();
+          if (test_out)
+              alert(test_out);
+          var data0 = to_google_data(confs_to_conf_hist(confs.pos_confs, confs.neg_confs, 100), ['Confidence', '+', '-']);
+          var options = {title: 'Classifier Confidence',
+                         hAxis: {title: 'Confidence'}};
+          var chart0 = new google.visualization.LineChart(document.getElementById('graph_confidence_scatter'));
+          chart0.draw(data0, options);
+
+          var data1 = to_google_data(confs_to_conf_hist(confs.pos_confs, confs.neg_confs, 100, true), ['Confidence', '+', '-']);
+          options = {title: 'Classifier Confidence (normalized)',
+                     hAxis: {title: 'Confidence'}};
+          var chart1 = new google.visualization.LineChart(document.getElementById('graph_confidence_scatter_norm'));
+          chart1.draw(data1, options);
+
+          // PR Curve
+          var cms = confs_to_confusion_matrix(confs.pos_confs, confs.neg_confs);
+          // Confidence accuracy
+          var data4 = to_google_data(cms_to_conf_accs(cms), ['Confidence', 'Accuracy']);
+          options = {title: 'Classifier Confidence vs Accuracy',
+                     hAxis: {title: 'Confidence'}};
+          var chart4 = new google.visualization.LineChart(document.getElementById('graph_confidence_accuracy'));
+          chart4.draw(data4, options);
+          var data2 = to_google_data(cms_to_rps(cms), ['recall', 'precision'], true);
+          options = {title: 'PR Curve',
+                     hAxis: {title: 'Recall', minValue: 0, maxValue: 1},
+                     vAxis: {title: 'Precision', minValue: 0, maxValue: 1},
+                     chartArea: {width: 200, height: 200},
+                     legend: {position: 'none'}};
+          var chart2 = new google.visualization.LineChart(document.getElementById('graph_rps'));
+          chart2.draw(data2, options);
+
+          var data3 = to_google_data(cms_to_fpr_tprs(cms), ['fpr', 'tpr'], true);
+          options = {title: 'ROC Curve',
+                     hAxis: {title: 'FPR', minValue: 0, maxValue: 1},
+                     vAxis: {title: 'TPR', minValue: 0, maxValue: 1},
+                     chartArea: {width: 200, height: 200},
+                     legend: {position: 'none'}};
+          var chart3 = new google.visualization.LineChart(document.getElementById('graph_roc'));
+          chart3.draw(data3, options);
+
+          
+          // This connects all the charts together
+          function setNearest(chart, data, column, select_columns, val) {
+              var i, minVal = Infinity, minIndex, curVal;
+              for (i = 0; i < data.getNumberOfRows(); i++) {
+                  curVal = Math.abs(val - data.getValue(i, column));
+                  if (curVal < minVal) {
+                      minVal = curVal;
+                      minIndex = i;
+                  }
+              }
+                              
+              chart.setSelection(_.map(select_columns, function (col) {return {row: minIndex, column: col}}));
+          }
+          function setSelections(thresh) {
+              setNearest(chart0, data0, 0, [1, 2], thresh);
+              setNearest(chart1, data1, 0, [1, 2], thresh);
+              setNearest(chart2, data2, 2, [1], thresh);
+              setNearest(chart3, data3, 2, [1], thresh);
+              setNearest(chart4, data4, 0, [1], thresh);
+          }
+          var al = google.visualization.events.addListener;
+          al(chart0, 'select', function () {var sel = chart0.getSelection(); if (sel[0] !== undefined) setSelections(data0.getValue(sel[0].row, 0))});
+          al(chart1, 'select', function () {var sel = chart1.getSelection(); if (sel[0] !== undefined) setSelections(data1.getValue(sel[0].row, 0))});
+          al(chart2, 'select', function () {var sel = chart2.getSelection(); if (sel[0] !== undefined) setSelections(data2.getValue(sel[0].row, 2))});
+          al(chart3, 'select', function () {var sel = chart3.getSelection(); if (sel[0] !== undefined) setSelections(data3.getValue(sel[0].row, 2))});
+          al(chart4, 'select', function () {var sel = chart4.getSelection(); if (sel[0] !== undefined) setSelections(data4.getValue(sel[0].row, 0))});
+      }
     </script>
 
-    <script type="text/html" id="tpl_index_list">
-    </script>
 
     <script type="text/html" id="tpl_index_compute">
     </script>
@@ -217,32 +578,27 @@
 
     <script type="text/html" id="tpl_dedupe">
       <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
-        <%=baseLogin%>
-        <br>
         <input class="input-small" type="text" placeholder="Row start" id="startRow" value="">
         <input class="input-small" type="text" placeholder="Row stop" id="stopRow" value="">
-        <input class="input-small" type="text" placeholder="Image Column" id="imageColumn" value="">
 	<button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run Demo</button>
       </div>
     </script>
 
     <script type="text/javascript">
       function render_dedupe() {
-          login_setup();
           $('#runButton').click(function () {
               var startRow = unescape($('#startRow').val());
               var stopRow = unescape($('#stopRow').val());
-              var imageColumn = unescape($('#imageColumn').val());
+              var imageColumn = encode_id('image:data')
               if (startRow.length == 0 || stopRow.length == 0) {
                   display_alert('Must specify rows');
                   return;
               }
-              var auth = login_get();
               function success_func(xhr) {
                   dedupe_response = JSON.parse(xhr.responseText)              
                   // TODO: Add option to show duplicates and a button to press to remove all but one of them at random
               }
-              picarus_api("/a1/dedupe/identical", "POST", _.extend({data: {table: "images", startRow: startRow, startRow: stopRow, column: imageColumn}, success: success_func}, auth))
+              picarus_api("/a1/dedupe/identical", "POST", {data: {table: "images", startRow: startRow, startRow: stopRow, column: imageColumn}, success: success_func})
           });
       }
     </script>
@@ -250,6 +606,11 @@
 
     <script type="text/html" id="tpl_user">
     </script>
+
+    <script type="text/html" id="tpl_api_docs">
+      
+    </script>
+
     </div>
 
 
@@ -274,6 +635,7 @@
 
     <script type="text/javascript">
       $(document).ready(app_main);
+      google.load("visualization", "1", {packages:["corechart"]});
     </script>
   </body>
 </html>

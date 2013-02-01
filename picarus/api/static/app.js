@@ -7,6 +7,31 @@ function login_get() {
 }
 
 function app_main() {
+    // Setup models
+    PicarusModel = Backbone.Model.extend({
+        idAttribute: "row",
+        defaults : {
+            name : null,
+        },
+ 
+        url : function() {
+    // Important! It's got to know where to send its REST calls. 
+    // In this case, POST to '/donuts' and PUT to '/donuts/:id'
+            return this.id ? '/a1/models/' + this.id : '/a1/models'; 
+        } 
+ 
+    });
+    PicarusModels = Backbone.Collection.extend({
+        model : PicarusModel,
+        url : "/a1/models"
+    });
+    $.ajaxSetup({
+        'beforeSend': function (xhr) {
+            var args = load_cookie();
+            xhr.setRequestHeader("Authorization", "Basic " + base64.encode(args.email + ":" + args.auth));
+        }
+    });
+
     // Based on: https://gist.github.com/2711454
     var all_view = _.map($('#tpls [id*=tpl]'), function (v) {
         if (v.id === 'tpl_home')
@@ -116,7 +141,7 @@ function app_main() {
     new (Backbone.Router.extend({
         routes: _.object(_.map(all_view, function (val) {
             return [val, val];
-        }))
+        }).concat([['*path', '']]))
     }));
     
     //Attach Backbone Views to existing HTML elements

@@ -76,11 +76,14 @@ class PicarusManager(object):
         self.prefix_column = 'data:prefix'
         self.model_type_column = 'data:model_type'
         self.creation_time_column = 'data:creation_time'
+        self.notes_column = 'data:notes'
+        self.name_column = 'data:name'
+        self.tags_column = 'data:tags'
 
     def get_versions(self):
         return {x: get_version(x) for x in ['picarus', 'imfeat', 'imseg', 'hadoopy', 'impoint', 'hadoopy_hbase']}
 
-    def input_model_param_to_key(self, prefix, input, model, param={}):
+    def input_model_param_to_key(self, prefix, input, model, param={}, notes='', name='', tags=''):
         assert isinstance(input, dict)
         assert isinstance(param, dict)
         dumps = lambda x: json.dumps(x, sort_keys=True, separators=(',', ':'))
@@ -103,7 +106,10 @@ class PicarusManager(object):
                     hadoopy_hbase.Mutation(column=self.param_column, value=param_str),
                     hadoopy_hbase.Mutation(column=self.versions_column, value=json.dumps(self.versions)),
                     hadoopy_hbase.Mutation(column=self.prefix_column, value=prefix),
-                    hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time()))]
+                    hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time())),
+                    hadoopy_hbase.Mutation(column=self.notes_column, value=notes),
+                    hadoopy_hbase.Mutation(column=self.name_column, value=name),
+                    hadoopy_hbase.Mutation(column=self.tags_column, value=tags)]
             chunk_count = 0
             while model_str:
                 cols.append(hadoopy_hbase.Mutation(column=self.model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size]))
@@ -443,15 +449,22 @@ class PicarusManager(object):
 
 if __name__ == '__main__':
     image_retrieval = PicarusManager()
-
-
     #image_retrieval.create_tables()
+
+    def _model_to_name(model):
+        args = list(model.get('args', []))
+        for x, y in sorted(model.get('kw', {}).items()):
+            y = repr(y)
+            if len(y) > 15:
+                y = 'sha1:' + repr(hashlib.sha1(y).hexdigest())
+            args.append('%s=%s' % (x, y))
+        return model['name'] + '(%s)' % ', '.join(args)
 
     def run_preprocessor(k, **kw):
         image_retrieval.image_preprocessor(k, **kw)
 
     def create_preprocessor(model):
-        k = image_retrieval.input_model_param_to_key('data:', input={'image': 'data:image'}, model=model)
+        k = image_retrieval.input_model_param_to_key('data:', input={'image': 'data:image'}, model=model, name=_model_to_name(model))
         print(repr(k))
         return k
 
@@ -459,17 +472,19 @@ if __name__ == '__main__':
         image_retrieval.image_to_feature(k, **kw)
 
     def create_feature(image_key, model):
-        k = image_retrieval.input_model_param_to_key('feat:', input={'image': image_key}, model=model, param={'feature_type': 'feature'})
+        print(_model_to_name(model))
+        k = image_retrieval.input_model_param_to_key('feat:', input={'image': image_key}, model=model, param={'feature_type': 'feature'}, name=_model_to_name(model))
         print(repr(k))
         return k
 
-    def create_mask_feature(image_key, model):
+    def create_mask_feature(image_key, model, **kw):
         k = image_retrieval.input_model_param_to_key('mask:', input={'image': image_key}, model=model, param={'feature_type': 'mask_feature'})
         print(repr(k))
         return k
 
     def create_multi_feature(image_key, model):
-        k = image_retrieval.input_model_param_to_key('mfeat:', input={'image': image_key}, model=model, param={'feature_type': 'multi_feature'})
+        print(_model_to_name(model))
+        k = image_retrieval.input_model_param_to_key('mfeat:', input={'image': image_key}, model=model, param={'feature_type': 'multi_feature'}, name=_model_to_name(model))
         print(repr(k))
         return k
 
@@ -477,7 +492,7 @@ if __name__ == '__main__':
         image_retrieval.feature_to_hash(k, **kw)
 
     def create_hasher(feature_key, hasher, **kw):
-        k = image_retrieval.features_to_hasher(feature_key, hasher, max_rows=10000)
+        k = image_retrieval.features_to_hasher(feature_key, hasher, **kw)
         return k
 
     def create_index(hasher_key, metadata_column, index, **kw):
@@ -494,6 +509,56 @@ if __name__ == '__main__':
     def create_classifier_class_distance_list(feature_key, metadata_column, classifier, **kw):
         k = image_retrieval.features_to_classifier_class_distance_list(feature_key, metadata_column, classifier, **kw)
         return k
+
+
+    # SUN397 Feature/Classifier/Hasher/Index
+    start_row = 'sun397:'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
+    #run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
+    feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
+    #run_feature(feature_key, start_row=start_row, stop_row=stop_row)
+
+    start_row = 'sun397:train'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row=start_row, stop_row=stop_row)
+
+    start_row = 'sun397:'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    run_hasher(hasher_key, start_row=start_row, stop_row=stop_row)
+
+    start_row = 'sun397:train'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row=start_row, stop_row=stop_row)
+    classifier_key = create_classifier_sklearn_decision_func(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row=start_row, stop_row=stop_row)
+    print(repr(classifier_key))
+
+    start_row = 'sun397:'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    run_classifier(classifier_key, start_row=start_row, stop_row=stop_row)
+    quit()
+
+
+    # Landmarks
+    start_row = 'landmarks:flickr'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    #image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 500, 'compression': 'jpg'}})
+    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 80, 'compression': 'jpg'}})
+    run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
+    #feature_key = create_multi_feature(image_key, {'name': 'imfeat.HOGLatent', 'kw': {'sbin': 64}})
+    #feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.SURF'})
+    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
+    run_feature(feature_key, start_row=start_row, stop_row=stop_row)
+
+    stop_row = start_row + chr(204)
+    classifier_key = create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
+
+    # Evaluate landmarks
+    start_row = 'landmarks:flickr'
+    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
+    start_row = 'landmarks:flickr' + chr(204)
+    image_retrieval.evaluate_classifier_class_distance_list(classifier_key, start_row=start_row, stop_row=stop_row)
+    quit()
 
 
     # Logo
@@ -517,43 +582,6 @@ if __name__ == '__main__':
 
     image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'force_max_side', 'size': 320, 'compression': 'jpg'}})
     image_retrieval.annotation_masks_to_hbase(image_key, 'feat:superpixel')
-    quit()
-
-
-    # SUN397 Feature/Classifier/Hasher/Index
-    start_row = 'sun397:'
-    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
-    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 320, 'compression': 'jpg'}})
-    quit()
-    feature_key = create_feature(image_key, {'name': 'picarus._features.HOGBoVW', 'kw': {'clusters': json.load(open('clusters.js')), 'levels': 2, 'sbin': 16, 'blocks': 1}})
-    #run_feature(feature_key, start_row=start_row, stop_row=stop_row)
-    hasher_key = create_hasher(feature_key, image_search.RRMedianHasher(hash_bits=256, normalize_features=False), start_row=start_row, stop_row=stop_row)
-    #run_hasher(hasher_key, start_row='sun397:', stop_row='sun398:')
-    #create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row=start_row, stop_row=stop_row)
-    classifier_key = create_classifier_sklearn_decision_func(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row=start_row, stop_row=stop_row)
-    print(repr(classifier_key))
-    run_classifier(classifier_key, start_row=start_row, stop_row=stop_row)
-    quit()
-
-    # Landmarks
-    start_row = 'landmarks:flickr'
-    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
-    #image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 500, 'compression': 'jpg'}})
-    image_key = create_preprocessor({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'max_side', 'size': 80, 'compression': 'jpg'}})
-    run_preprocessor(image_key, start_row=start_row, stop_row=stop_row)
-    #feature_key = create_multi_feature(image_key, {'name': 'imfeat.HOGLatent', 'kw': {'sbin': 64}})
-    #feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.SURF'})
-    feature_key = create_multi_feature(image_key, {'name': 'picarus.modules.ImageBlocks', 'kw': {'sbin': 16, 'mode': 'lab', 'num_sizes': 3}})
-    run_feature(feature_key, start_row=start_row, stop_row=stop_row)
-
-    stop_row = start_row + chr(204)
-    classifier_key = create_classifier_class_distance_list(feature_key, 'meta:class', picarus.modules.LocalNBNNClassifier(), start_row=start_row, stop_row=stop_row)
-
-    # Evaluate landmarks
-    start_row = 'landmarks:flickr'
-    stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
-    start_row = 'landmarks:flickr' + chr(204)
-    image_retrieval.evaluate_classifier_class_distance_list(classifier_key, start_row=start_row, stop_row=stop_row)
     quit()
 
 

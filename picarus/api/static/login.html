@@ -42,7 +42,7 @@
         // TODO: Replace with picarus_api call
         var request = $.ajax({
           type: 'GET',
-          url: '/a0/user/stats',
+          url: '/a1/user',
           cache: false,
           contentType: false,
           processData: false,
@@ -56,7 +56,7 @@
     $(document).ready(entry_func);
   </script>
 <p>Enter email and captcha, we will email you an auth code if you have access.</p>
-<form id="form" action="/a0/user/auth" method="POST">
+<form id="form" action="/a1/user/auth" method="POST">
   Email: <input type="text" name="email"><br>
   <script type="text/javascript"
           src="//www.google.com/recaptcha/api/challenge?k=6Ld4itgSAAAAAE3rpj2hMNCcir21qr68hbBRWzQz">

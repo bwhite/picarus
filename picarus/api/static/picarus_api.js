@@ -1,11 +1,16 @@
+function prefix_to_stop_row(prefix) {
+    // TODO: need to fix wrap around if last char is "255"
+    return prefix.slice(0, -1) + String.fromCharCode(prefix.slice(-1).charCodeAt(0) + 1);
+}
+
 function picarus_api(url, method, args) {
-    /* args: data, image, email, auth, success, fail, before_send */
+    /* args: data, email, auth, success, fail */
     if (typeof args == 'undefined' ) args = {};
     var success;
     if (args.hasOwnProperty('success')) success = function(msg, text_status, xhr) {args.success(xhr)};
 
     var data = new FormData();
-    if (method == 'GET') {
+    if (method === 'GET') {
         data = undefined;
         if (args.hasOwnProperty('data')) {
             data = data;
@@ -16,30 +21,44 @@ function picarus_api(url, method, args) {
                 data.append(k, v);
             });
         }
-        if (args.hasOwnProperty('image')) {
-            jQuery.each(args.image.files, function(i, file) {
-                data.append('image', file);
-            });
-        }
     }
-    var request = $.ajax({
+    var options = {
         type: method,
         url: url,
         contentType: false,
         processData: false, // needed for POSTing of binary data
-        beforeSend: function(xhr) {
-            if (args.hasOwnProperty('email') && args.hasOwnProperty('auth'))
-                xhr.setRequestHeader("Authorization", "Basic " + base64.encode(args.email + ":" + args.auth));
-            if (args.hasOwnProperty('before_send')) args.before_send(xhr);
-        },
         data: data,
         success: success
-    });
+    }
+        
+    if (args.hasOwnProperty('email') && args.hasOwnProperty('auth')) {
+        options.beforeSend = function(xhr) {
+            xhr.setRequestHeader("Authorization", "Basic " + base64.encode(args.email + ":" + args.auth));
+        };
+    }
+    var request = $.ajax(options);
     if (args.hasOwnProperty('fail')) request.fail(function(xhr, text_status) {args.fail(xhr)});
 }
 
+function encode_id(data) {
+    return base64.encode(data).replace(/\+/g , '-').replace(/\//g , '_');
+}
+
+function decode_id(data) {
+    return base64.decode(data.replace(/\-/g , '+').replace(/\_/g , '/'));
+}
+
+function picarus_api_row(table, row, method, args) {
+    picarus_api("/a1/data/" + table + "/" + row, method, args);
+}
+
+
+function picarus_api_upload(table, args) {
+    picarus_api("/a1/data/" + table, "POST", args);
+}
+
 function picarus_api_test(url, method, args) {
-    /* args: data, image, email, auth, div, success, fail */
+    /* args: data, email, auth, div, success, fail */
     if (typeof args == 'undefined' ) args = {};
     function clear_error() {
     }
@@ -105,7 +124,7 @@ function load_cookie(email_input, auth_input) {
 }
 
 
-function picarus_api_data_scanner(auth, table, startRow, stopRow, columns, success, done, max_rows, max_rows_iter) {
+function picarus_api_data_scanner(table, startRow, stopRow, columns, success, done, max_rows, max_rows_iter) {
     if (typeof max_rows == "undefined") {
         max_rows = Infinity;
     }
@@ -117,25 +136,20 @@ function picarus_api_data_scanner(auth, table, startRow, stopRow, columns, succe
             return v.join('=');
         }).join('&');
     }
-    function b64_urlsafe(data) {
-        return base64.encode(data).replace(/\+/g , '-').replace(/\//g , '_');
-    }
-    var column_suffix = _.map(columns, function (value) {return ['column', encodeURIComponent(value)]});
+    var column_suffix = _.map(columns, function (value) {return ['column', value]});
     var lastRow = undefined;
     var successRows = 0;
     function map_success(xhr) {
-        response = JSON.parse(xhr.responseText);  // {data: {row_key_b64: col_val_b64}}
+        response = JSON.parse(xhr.responseText);
         var data = _.map(response.data, function (value) {
-            return [base64.decode(value[0]), _.object(_.map(value[1], function (v, k) {return [base64.decode(k), base64.decode(v)]}))];
+            return [value[0], _.object(_.map(value[1], function (v, k) {return [k, v]}))];
         });
         var isdone = true;
         max_rows -= data.length;
         if (response.hasOwnProperty("cursor") && max_rows > 0) {
-            console.log('next');
             var dd = _.pairs({maxRows: String(Math.min(max_rows, max_rows_iter)), excludeStart: "1", cursor: response.cursor}).concat(column_suffix);
-            var url = "/a1/rows/" + b64_urlsafe(table) + "/" + b64_urlsafe(_.last(data)[0]) + "/" + b64_urlsafe(stopRow) + "?" + param_encode(dd);
-            console.log(url);
-            picarus_api(url, "GET", _.extend({success: map_success}, auth));
+            var url = "/a1/slice/" + table + "/" + _.last(data)[0] + "/" + stopRow + '?' + param_encode(dd);
+            picarus_api(url, "GET", {success: map_success});
             isdone = false;
         } else if (max_rows < 0) {
             // Truncates any excess rows we may have gotten
@@ -149,12 +163,9 @@ function picarus_api_data_scanner(auth, table, startRow, stopRow, columns, succe
         console.log(successRows);
         console.log(max_rows);
         if (isdone && typeof done != "undefined") {
-            console.log('Done');
             done(lastRow, successRows);
         }
     }
     var dd = _.pairs({maxRows: String(Math.min(max_rows, max_rows_iter))}).concat(column_suffix);
-    //picarus_api("/a1/rows/" + b64_urlsafe(table) +  "/" + b64_urlsafe(startRow) + "/" + b64_urlsafe(stopRow) + "?" + param_encode(dd), "GET", _.extend({success: map_success}, auth));
-    var dd = _.object(_.pairs({maxRows: String(Math.min(max_rows, max_rows_iter))}).concat(column_suffix));
-    picarus_api("/a1/rows/" + b64_urlsafe(table) +  "/" + b64_urlsafe(startRow) + "/" + b64_urlsafe(stopRow), "GET", _.extend({success: map_success, data: dd}, auth));
+    picarus_api("/a1/slice/" + table +  "/" + startRow + "/" + stopRow + '?' + param_encode(dd), "GET", {success: map_success});
 }

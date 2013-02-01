@@ -48,6 +48,7 @@ class User(object):
     def __init__(self, user_db, user, setup=False):
         self._user_db = user_db
         self.user = user
+        self.upload_row_prefix = 'userupload%s:' % base64.b64encode(hashlib.sha1(user).digest())[:-1]
         self._stat_keys = ('start', 'finish', 'total_time')
         self._user_prefix = 'user:'
         self._stat_prefix = 'stat:'
