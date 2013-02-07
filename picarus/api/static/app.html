@@ -8,7 +8,10 @@
     <meta name="author" content="">
 
     <!-- Le styles -->
-    <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/css/bootstrap-combined.min.css" rel="stylesheet">
+    <!--<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/css/bootstrap-combined.min.css" rel="stylesheet">-->
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/bootstrap-responsive.min.css" rel="stylesheet">
+    <link href="/static/hint.min.css" rel="stylesheet">
     <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.1.1/bootstrap.min.js" rel="stylesheet">
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
     <script type="text/javascript" src="//stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
@@ -21,6 +24,7 @@
     <script type="text/javascript" src="/static/picarus_api_demo.js"></script>
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBsKtzgLTIsaoxAFUvSNoJ8n3j4w9VZs0&sensor=false"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/0.9.10/backbone-min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mustache.js/0.7.0/mustache.min.js"></script>
     <script src="https://raw.github.com/jsvine/Backbone.Table/master/backbone.table.js"></script>
     
     <style>
@@ -67,45 +71,28 @@
       <input type="hidden" id="userAuth" value="">
     </script>
 
+    <script type="text/html" id="bpl_row_select">
+          <select id="rowPrefixDrop"></select>
+          <span class="hint hint--bottom" data-hint="Start row (inclusive, percent encode binary)"><input class="input-small" type="text" placeholder="Row start" id="startRow"></span>
+          <span class="hint hint--bottom" data-hint="Stop row (exclusive, percent encode binary)"><input class="input-small" type="text" placeholder="Row stop" id="stopRow"></span>
+    </script>
+
+    <script type="text/html" id="bpl_prefix_select">
+          <select id="rowPrefixDrop"></select>
+    </script>
+
     <script type="text/html" id="tpl_home">
       <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
         <%=baseLogin%>
       </div>
     </script>
 
-    <script type="text/javascript">
+    <script type="text/javascript">      
       function render_home() {
           login_setup();
       }
-    </script>
- 
-    <script type="text/html" id="tpl_data_view">
-      <input class="input-small" type="text" placeholder="Row start" id="startRow" value="">
-      <input class="input-small" type="text" placeholder="Row stop" id="stopRow" value="">
-      <input class="input-small" type="text" placeholder="Text Column" id="textColumn" value="">
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run Demo</button>
-      <div id="results"></div>
-    </script>
+    </script> 
 
-    <script type="text/javascript">
-      function render_data_view() {
-          $('#runButton').click(function () {
-              var startRow = encode_id(unescape($('#startRow').val()));
-              var stopRow = encode_id(unescape($('#stopRow').val()));
-              var textColumn = encode_id($('#textColumn').val());
-              if (startRow.length == 0 || stopRow.length == 0) {
-                  display_alert('Must specify rows');
-                  return;
-              }
-              $('#results').html('');
-              function success(row, columns) {
-                  $('#results').append(escape(decode_id(row)) + ' - ' + escape(base64.decode(columns[textColumn])));
-                  $('#results').append($('<br>'));
-              }
-              picarus_api_data_scanner("images", startRow, stopRow, [textColumn], success)
-          });
-      }
-    </script>
 <!--
     <script type="text/html" id="tpl_data_explore">
     </script>
@@ -113,25 +100,6 @@
     <script type="text/javascript">
     </script>
 -->
-    <script type="text/html" id="tpl_data_single">
-      <input type="file" id="imagefile" class="input-small">
-      <div><img id="input_image" title="Input Image"></img></div>
-    </script> 
-
-    <script type="text/javascript">
-      function render_data_single() {
-          $('#imagefile').change(function () {
-              if ($('#imagefile')[0].files.length != 1) {
-                  return;
-              }
-              function success_input_image(xhr) {
-                  $('#input_image').attr('src', 'data:image/jpeg;base64,' + JSON.parse(xhr.responseText)['jpgb64']);
-              }
-              var image = $('#imagefile')[0].files[0];
-              picarus_api("/a1/image", "POST", {data: {image: image}, success: success_input_image});
-          }
-      )}
-    </script>
 
     <script type="text/html" id="tpl_data_uploads">
       <div id="images"></div>
@@ -142,14 +110,14 @@
           function success_user(xhr) {
               var response = JSON.parse(xhr.responseText);
               var startRow = response.uploadRowPrefix;
-              var imageColumn = encode_id('data:image');
+              var imageColumn = encode_id('thum:image_150sq');
               function success(row, columns) {
                   $('#images').append(escape(decode_id(row)));
                   $('#images').append($('<br>'));
-                  $('#images').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('width', '320px'));
+                  $('#images').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('width', '150px'));
                   $('#images').append($('<br>'));
               }
-              picarus_api_data_scanner("images", encode_id(startRow), encode_id(prefix_to_stop_row(startRow)), [imageColumn], success, undefined, 10);
+              picarus_api_data_scanner("images", encode_id(startRow), encode_id(prefix_to_stop_row(startRow)), [imageColumn], {success: success, maxRows: 100});
           }
           picarus_api("/a1/user", "GET", {success: success_user});
        }
@@ -168,8 +136,65 @@
     <script type="text/html" id="tpl_triage_summarize">
     </script>
  -->
+
+    <script type="text/html" id="tpl_crawl_flickr">
+      <%=prefixSelect%>
+      <input class="input-small" type="text" placeholder="Iterations" id="demoiters" value="1">
+      <input class="input-large" type="text" placeholder="Class Name" id="democlass" value="">
+      <input class="input-large" type="text" placeholder="Query" id="demoquery" value="">
+      <input class="input-small" type="checkbox" id="demogeo" checked> Geotagged
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="progress progress-striped active" id="progress_bar">
+        <div class="bar" style="width: 0%;"  id="progress"></div>
+      </div>
+    </script>
+
+    <script type="text/javascript">
+      function render_crawl_flickr() {
+      row_selector();
+      $('#runButton').click(function () {
+          var demo_class = $('#democlass').val();
+          var row_prefix = $('#rowPrefixDrop').val();
+          if (demo_class.length == 0 && row_prefix.length == 0) {
+              display_alert('Must specify class and prefix');
+              return;
+          }
+          var iters = parseInt($('#demoiters').val())
+          var iters_orig = iters;
+          if (isNaN(iters) || iters < 1 || iters > 1000) {
+              display_alert('Iters must be 0 < x <= 1000');
+              return;
+          }
+          /* Check input */
+          reset_state();
+          if ($('#demosave').is(':checked')) {
+              store_cookie();
+          }
+          var min_time = 1232170610;
+          var min_upload_date = parseInt((new Date().getTime() / 1000 - min_time) * Math.random() + min_time);
+          var max_upload_date = parseInt((new Date().getTime() / 1000 - min_upload_date) * Math.random() + min_upload_date);
+          var auth = {email: $('#demouser').val(), auth: $('#demopass').val()};
+          function call_api() {
+              $('#progress').css('width', ((100. * (iters_orig - iters)) / iters_orig) + '%');
+              picarus_api("/a1/slice/images/" + encode_id(row_prefix) + '/' + encode_id(prefix_to_stop_row(row_prefix)), "POST", {success: success, data: {hasGeo: Number($('#demogeo').is(':checked')), className: demo_class, minUploadDate: min_upload_date, maxUploadDate: max_upload_date, action: 'o/crawl/flickr'}});
+          }
+          function success() {
+              console.log('Calling iter')
+              if (iters > 0) {
+                  iters -= 1;
+                  call_api(1);
+              } else {
+                  alert('Done crawling');
+              }
+          }
+          call_api(1);
+      });
+
+
+      }
+    </script>
+
     <script type="text/html" id="tpl_models">
-      <%=baseLoginHidden%>
       <div id="models"></div>
       <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         <div class="modal-header">
@@ -184,8 +209,8 @@
           <button class="btn btn-primary" id="save_button">Save changes</button>
         </div>
       </div>
+    <div id="container" class="container"></div>
     </script>
-
     
     <script type="text/javascript">
       function render_models() {
@@ -233,10 +258,48 @@
                           })
                       }
           });
-          window.appview = new AppView({ collection: models });
+          new AppView({ collection: models });
           models.fetch();
       }
     </script>
+
+    <script type="text/html" id="tpl_process_thumbnail">
+      <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function alert_running() {
+          $('#results').html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
+      }
+      function alert_done() {
+          $('#results').html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
+      }
+      function render_process_thumbnail() {
+          row_selector();
+          $('#runButton').click(function () {
+              alert_running();
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              function success() {
+                  alert_done();
+              }
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/thumbnail'}});
+          });
+      }
+    </script>
+
+    <script type="text/html" id="tpl_annotate_human">
+      <%=rowSelect%>
+    </script>
+
+    <script type="text/javascript">
+      function render_annotate_human() {
+          row_selector();
+      }
+    </script>
+
 
     <script type="text/html" id="tpl_classifier_compute">
       <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
@@ -274,12 +337,15 @@
 
     <script type="text/html" id="tpl_classifier_evaluate">
       <div>
-      <input class="input-small" type="text" placeholder="Row start" id="startRow" value="sun397:test">
-      <input class="input-small" type="text" placeholder="Row stop" id="stopRow" value="sun397:tesu">
-      <input class="input-small" type="text" placeholder="Positive Class" id="posClass" value="indoor">
-      <input class="input-small" type="text" placeholder="GT Column" id="gtColumn" value="meta:class_0">
-      <input class="input-small" type="text" placeholder="Classifier Key" id="modelKey" value="">
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run Demo</button>
+        <select id="model_select"></select>
+      <%=rowSelect%>
+      <input class="input-small" type="text" placeholder="Positive Class" id="posClass" value="" readonly="readonly">
+      <input class="input-small" type="text" placeholder="GT Column" id="gtColumn" readonly="readonly" value="" >
+      <input class="input-small" type="text" placeholder="Classifier Key" id="modelKey" value="" readonly="readonly">
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      </div>
+      <div class="progress progress-striped active" id="progress_bar">
+        <div class="bar" style="width: 0%;"  id="progress"></div>
       </div>
       <div id="base" style="position:relative;top:-35px;"></div>
       <div id="graph_confidence_scatter" style="height:200px;width:600px"></div>
@@ -290,6 +356,15 @@
     </script>
     <script type="text/javascript">
       function render_classifier_evaluate() {
+          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'pred:' && x.get('param').classifier_type === "c2tsZWFybl9kZWNpc2lvbl9mdW5j"},
+                          change: function() {
+                              var row = this.$el.find(":selected").val();
+                              m = models.get(row);
+                              $('#gtColumn').val(base64.decode(m.get('inputs').meta));
+                              $('#posClass').val(base64.decode(m.get('param').class_positive));
+                              $('#modelKey').val(row);
+                          }});
+          row_selector();
           $('#runButton').click(function () {
           confs = {pos_confs: [], neg_confs: []};
           var gt_column = encode_id($('#gtColumn').val());
@@ -297,8 +372,9 @@
           var startRow = encode_id($('#startRow').val());
           var stopRow = encode_id($('#stopRow').val());
           var posClass = $('#posClass').val();
-
+          $('#progress_bar').show()
           function success(row, columns) {
+              $('#progress').css('width', (100 * (confs.pos_confs.length + confs.neg_confs.length) / 19850.) + '%')
               if (columns.hasOwnProperty(conf_column)) {
                   if (base64.decode(columns[gt_column]) == posClass) {
                       confs.pos_confs.push(Number(base64.decode(columns[conf_column])));
@@ -310,11 +386,12 @@
               }
           }
               function success_confs() {
+                  $('#progress_bar').hide()
                   confs.neg_confs.sort(function(a, b) {return a - b});
                   confs.pos_confs.sort(function(a, b) {return a - b});
                   plot_confs(confs);
               }
-              picarus_api_data_scanner("images", startRow, stopRow, [gt_column, conf_column], success, success_confs);
+              picarus_api_data_scanner("images", startRow, stopRow, [gt_column, conf_column], {success: success, done: success_confs});
           })
       }
       function confs_to_conf_hist(pos_confs, neg_confs, bins, normalize) {
@@ -559,56 +636,405 @@
 
 
     <script type="text/html" id="tpl_index_compute">
+      <div>
+        <select id="model_select"></select>
+      <input class="input-small" type="text" placeholder="Index Key" id="modelKey" value="" readonly="readonly">
+        <input type="file" id="imagefile" class="input-small">
+      </div>
+      <div id="results"></div>
     </script>
+    
+    <script type="text/javascript">
+      function load_image(table, row, imageColumn, id) {
+          function success_img_func(xhr) {
+              var response = JSON.parse(xhr.responseText);
+              $('#' + id).attr('src', 'data:image/jpeg;base64,' + response[imageColumn]);
+          }
+          picarus_api_row(table, row, "GET", {data: {column: imageColumn}, success: success_img_func});
+      }
+      function render_index_compute() {
+          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'srch:'},
+                          change: function() {
+                              var row = this.$el.find(":selected").val();
+                              m = models.get(row);
+                              $('#modelKey').val(row);
+                          }});
+          $('#imagefile').change(function () {
+              if ($('#imagefile')[0].files.length != 1) {
+                  display_alert('You must specify an image!');
+                  return;
+              }
+              var imageColumn = encode_id('data:image')
+              var thumbColumn = encode_id('thum:image_150sq')
+              var modelKey = $('#modelKey').val();
+              function success_func(xhr) {
+                  resp = JSON.parse(xhr.responseText);
+                  $.each(resp, function (x, y) {
+                      var cur_id = 'result_' + x;
+                      $('#results').append($('<img>').attr('id', cur_id));
+                      $('#results').append(y[0]);
+                      $('#results').append($('<br>'));
+                      load_image(table, y[1], thumbColumn, cur_id)
+                      /*function success_img_func(xhr) {
+                          var response = JSON.parse(xhr.responseText);
+                          $('#' + cur_id).attr('width', '150px').attr('src', 'data:image/jpeg;base64,' + response[thumbColumn]);
+                      }
+                      picarus_api_row(table, y[1], "GET", {data: {imageColumn: thumbColumn}, success: success_img_func}); */
+                  });
+              }
+              function upload_func(xhr) {
+                  var response = JSON.parse(xhr.responseText);
+                  picarus_api_row(table, response.row, "POST", {data: {imageColumn: imageColumn, action: 'i/search', model: modelKey}, success: success_func})
+              }
+              var table = 'images';
+              var data = {};
+              data[imageColumn] = $('#imagefile')[0].files[0];
+              picarus_api_upload(table, {data: data, success: upload_func})
+          })
+      }
+    </script>
+
 
     <script type="text/html" id="tpl_index_evaluate">
-    </script>
-
-    <script type="text/html" id="tpl_locations">
-    </script>
-
-    <script type="text/html" id="tpl_times">
-    </script>
-
-    <script type="text/html" id="tpl_crawl">
-    </script>
-
-    <script type="text/html" id="tpl_human">
-    </script>
-
-    <script type="text/html" id="tpl_dedupe">
-      <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
-        <input class="input-small" type="text" placeholder="Row start" id="startRow" value="">
-        <input class="input-small" type="text" placeholder="Row stop" id="stopRow" value="">
-	<button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run Demo</button>
-      </div>
+      <%=rowSelect%>
     </script>
 
     <script type="text/javascript">
-      function render_dedupe() {
+      function render_index_evaluate() {
+          row_selector();
+      }
+    </script>
+
+    <script type="text/html" id="tpl_visualize_thumbnails">
+      <%=rowSelect%>
+      <input class="input-small" type="text" placeholder="Filter" id="filter" value="">
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_visualize_thumbnails() {
+          row_selector();
           $('#runButton').click(function () {
-              var startRow = unescape($('#startRow').val());
-              var stopRow = unescape($('#stopRow').val());
-              var imageColumn = encode_id('image:data')
+              var startRow = encode_id(unescape($('#startRow').val()));
+              var stopRow = encode_id(unescape($('#stopRow').val()));
+              var imageColumn = encode_id('thum:image_150sq');
+              var metaCF = encode_id('meta:');
               if (startRow.length == 0 || stopRow.length == 0) {
                   display_alert('Must specify rows');
                   return;
               }
-              function success_func(xhr) {
-                  dedupe_response = JSON.parse(xhr.responseText)              
-                  // TODO: Add option to show duplicates and a button to press to remove all but one of them at random
+              $('#results').html('');
+              function success(row, columns) {
+                  $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]))
+                  //$('#results').append($('<br>'));
               }
-              picarus_api("/a1/dedupe/identical", "POST", {data: {table: "images", startRow: startRow, startRow: stopRow, column: imageColumn}, success: success_func})
+              var params = {success: success, maxRows: 100};
+              var filter = unescape($('#filter').val());
+              if (filter.length > 0) {
+                  params.filter = filter;
+              }
+              picarus_api_data_scanner("images", startRow, stopRow, [imageColumn, metaCF], params)
           });
       }
     </script>
 
 
-    <script type="text/html" id="tpl_user">
+    <script type="text/html" id="tpl_visualize_metadata">
+      <%=rowSelect%>
+      <input class="input-large" type="text" placeholder="Filter" id="filter" value="">
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+      <div id="results"></div>
     </script>
 
-    <script type="text/html" id="tpl_api_docs">
-      
+    <script type="text/javascript">
+      function render_visualize_metadata() {
+          row_selector();
+          $('#runButton').click(function () {
+              var startRow = encode_id(unescape($('#startRow').val()));
+              var stopRow = encode_id(unescape($('#stopRow').val()));
+              var metaCF = encode_id('meta:');
+              if (startRow.length == 0 || stopRow.length == 0) {
+                  display_alert('Must specify rows');
+                  return;
+              }
+              button_confirm_click_reset($('#removeButton'));
+              // Setup table
+              images = new PicarusImages();
+              function remove_rows() {
+                 // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
+                 var rows = _.map(images.models, function (x) {return x.id})
+                 picarus_api_delete_rows(rows, {done: function () {alert('Done removing rows')}});
+              }
+              function done() {
+                  $('#results').html('');
+                  var AppView = Backbone.View.extend({
+                      initialize: function() {
+                          _.bindAll(this, 'render');
+                          this.collection.bind('reset', this.render);
+                          this.collection.bind('change', this.render);
+                          this.collection.bind('add', this.render);
+                      },
+                      render: function() {
+                                  picarus_table = new Backbone.Table({
+                                  collection: this.collection,
+                                  columns: _.map(_.keys(this.collection.at(0).attributes), function (v) {
+                                          if (v === "row")
+                                              return [v, v];
+                                          return {header: base64.decode(v), getFormatted: function() { return base64.decode(this.get(v))}};
+                                      })
+                                  });
+                                  this.$el.html(picarus_table.render().el);
+                              }
+                  });
+                  av = new AppView({collection: images, el: $('#results')});
+                  av.render();
+                  $('#removeButton').removeAttr('disabled');
+                  button_confirm_click($('#removeButton'), remove_rows);
+              }
+              function success(row, columns) {
+                  c=columns;
+                  columns.row = row;
+                  images.add(columns);
+              }
+              var params = {success: success, maxRows: 1000, done: done};
+              var filter = unescape($('#filter').val());
+              if (filter.length > 0) {
+                  params.filter = filter;
+              }
+              picarus_api_data_scanner("images", startRow, stopRow, [metaCF], params)
+          });
+      }
+    </script>
+
+
+    <script type="text/html" id="tpl_visualize_duplicates">
+      <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <button class="btn" type="submit" id="nextButton" style="margin-bottom: 9px" disabled>Next</button>
+      <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+      <div id="results"></div>
+      <div id="clusters"></div>
+    </script>
+
+    <script type="text/javascript">
+      function button_confirm_click(button, fun) {
+          button.unbind();
+          button.click(function () {
+              button.unbind();
+              button.addClass('btn-danger');
+              button.click(fun);
+          });
+      }
+      function button_confirm_click_reset(button) {
+          button.removeClass('btn-danger');
+      }
+      function render_visualize_duplicates() {
+          row_selector();
+          $('#runButton').click(function () {
+              var startRow = encode_id(unescape($('#startRow').val()));
+              var stopRow = encode_id(unescape($('#stopRow').val()));
+              var imageColumn = encode_id('data:image');
+              var thumbColumn = encode_id('thum:image_150sq');
+              if (startRow.length == 0 || stopRow.length == 0) {
+                  display_alert('Must specify rows');
+                  return;
+              }
+              button_confirm_click_reset($('#removeButton'));
+              alert_running();
+              function display_clusters (clusters) {
+                  var num = 30;
+                  var next_clusters = clusters.slice(num);
+                  var cur_clusters = clusters.slice(0, num);
+                  var el = $('#clusters');
+                  el.empty();
+                  $('#nextButton').unbind();
+                  if (next_clusters.length) {
+                      $('#nextButton').removeAttr('disabled');
+                      $('#nextButton').click(function () {display_clusters(next_clusters)});
+                  } else {
+                      $('#nextButton').attr('disabled', '');
+                  }
+                  _.each(cur_clusters, function (x) {
+                      _.each(x.rows, function (y) {
+                          var cur_id = _.uniqueId('image_');
+                          el.append($('<img>').attr('id', cur_id));
+                          load_image('images', y, thumbColumn, cur_id);
+                      })
+                      el.append($('<br>'));
+                  });
+              }
+              function remove_dupes(clusters) {
+                 var rows = [];
+                 _.each(clusters, function (x) {rows = rows.concat(_.shuffle(x.rows).slice(1));console.log(rows.length)});
+                 picarus_api_delete_rows(rows, {done: function () {alert('Done removing duplicates')}});
+              }
+              function success_func(xhr) {
+                  alert_done();
+                  var dedupe_response = JSON.parse(xhr.responseText);
+                  $('#removeButton').removeAttr('disabled');
+                  button_confirm_click($('#removeButton'), function () {remove_dupes(dedupe_response)})
+                  display_clusters(dedupe_response);
+                  /*
+                  PicarusImageCluster = Backbone.Model.extend({});
+                  PicarusImageClusters = Backbone.Collection.extend({model: PicarusImageCluster});
+                  clusters = new PicarusImageClusters();
+                  var AppView = Backbone.View.extend({
+                      initialize: function() {
+                          _.bindAll(this, 'render');
+                          this.collection.bind('reset', this.render);
+                          this.collection.bind('change', this.render);
+                      },
+                      render: function() {
+                                  this.$el.empty();
+
+                              }
+                  });
+                  new AppView({collection: clusters, el: $('#clusters')});
+                  clusters.reset(dedupe_response);
+                 */
+              }
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success_func, data: {action: 'i/dedupe/identical', column: imageColumn}});
+          });
+      }
+    </script>
+
+    <script type="text/html" id="tpl_visualize_locations">
+      <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="map_canvas" style="width:100%; height:500px"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_visualize_locations() {
+          row_selector();
+          $('#runButton').click(function () {
+              var latitude = encode_id('meta:latitude');
+              var longitude = encode_id('meta:longitude');
+              var map = undefined;
+              function maps_first(row, columns) {
+                  var curLat = base64.decode(columns[latitude]);
+                  var curLong = base64.decode(columns[longitude]);
+                  var mapOptions = {
+                      zoom: 14,
+                      center: new google.maps.LatLng(curLat, curLong),
+                      mapTypeId: google.maps.MapTypeId.HYBRID
+                  };
+                  map = new google.maps.Map(document.getElementById("map_canvas"),
+                      mapOptions);
+              }
+              function maps_success(row, columns) {
+                  var curLat = base64.decode(columns[latitude]);
+                  var curLong = base64.decode(columns[longitude]);
+                  new google.maps.Marker({position: new google.maps.LatLng(curLat, curLong), map: map});
+              }
+              picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [latitude, longitude], {success: maps_success, first: maps_first});
+          })
+      }
+    </script>
+
+    <script type="text/html" id="tpl_visualize_times">
+      <%=rowSelect%>
+    </script>
+
+    <script type="text/javascript">
+      function render_visualize_times() {
+          row_selector();
+      }
+    </script>
+
+
+    <script type="text/html" id="tpl_user">
+      <div id="users"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_user() {
+          users = new PicarusUsers();
+          var AppView = Backbone.View.extend({
+              initialize: function() {
+                  _.bindAll(this, 'render');
+                  this.collection.bind('reset', this.render);
+                  this.collection.bind('change', this.render);
+              },
+              render: function() {
+                          picarus_table = new Backbone.Table({
+                          collection: this.collection,
+                          columns: [["email", "Email"],
+                                    ["uploadRowPrefix", "Row Prefix"],
+                                    {header: "Prefixes", getFormatted: function() { return JSON.stringify(this.get('imagePrefixes'))}}]
+                          });
+                          this.$el.html(picarus_table.render().el);
+                      }
+          });
+          new AppView({collection: users, el: $('#users')});
+          // TODO: Create standard way to get login, not using cookie
+          var auth = load_cookie();
+          user = new PicarusUser({email: auth.email});
+          users.add(user);
+          user.fetch();
+      }
+    </script>
+
+
+    <script type="text/html" id="tpl_admin_users">
+      <div id="users"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_admin_users() {
+          users = new PicarusUsers();
+          var AppView = Backbone.View.extend({
+              initialize: function() {
+                  _.bindAll(this, 'render');
+                  this.collection.bind('reset', this.render);
+                  this.collection.bind('change', this.render);
+              },
+              render: function() {
+                          picarus_table = new Backbone.Table({
+                          collection: this.collection,
+                          columns: [["email", "Email"],
+                                    ["uploadRowPrefix", "Row Prefix"],
+                                    {header: "Prefixes", getFormatted: function() { return JSON.stringify(this.get('imagePrefixes'))}}]
+                          });
+                          this.$el.html(picarus_table.render().el);
+                      }
+          });
+          new AppView({collection: users, el: $('#users')});
+          users.fetch();
+      }
+    </script>
+
+    <script type="text/html" id="tpl_docs_filters">
+      <h3>Only output rows where column meta:class is exactly equal to 'dinner'</h3>
+      <pre>SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner')</pre>
+    </script>
+
+    <script type="text/html" id="tpl_docs_api">
+      <h2>REST /:version/data/ calls</h2>
+      <pre>
+        Supported
+        create → POST /:table
+        read → GET /:table
+        read → GET /data/:table/:row
+        update → PATCH /:table/:row
+        delete → DELETE /:table/row
+        delete → DELETE /:table/:row/:column
+
+        Planned
+        update → PUT /:row (common semantics suggest this includes ALL data, which may be very large for images)
+      </pre>
+
+      <h2>REST /:version/slice/ calls</h2>
+      <pre>
+        Supported
+        read → GET /:startRow/:stopRow
+
+        Planned
+        delete → GET /:startRow/:stopRow
+        delete → GET /:startRow/:stopRow/:column
+      </pre>
     </script>
 
     </div>
@@ -630,9 +1056,7 @@
         </div>
       </div>
     </div>
-
     <div id="container" class="container"></div>
-
     <script type="text/javascript">
       $(document).ready(app_main);
       google.load("visualization", "1", {packages:["corechart"]});

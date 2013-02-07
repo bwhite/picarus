@@ -6,17 +6,70 @@ function login_get() {
     return {email: $('#userEmail').val(), auth: $('#userAuth').val()};
 }
 
+function model_dropdown(args) {
+    models = new PicarusModels();
+    var AppView = Backbone.View.extend({
+        el: $('#container'),
+        initialize: function() {
+            _.bindAll(this, 'render');
+            _.bindAll(this, 'renderDrop');
+            this.$el.bind('reset', this.renderDrop);
+            this.$el.bind('change', this.renderDrop);
+            this.collection.bind('reset', this.render);
+            this.collection.bind('change', this.render);
+        },
+        renderDrop: args.change,
+        modelFilter: args.modelFilter,
+        render: function() {
+            n = this.$el;
+            this.$el.empty();
+            var select_template = "{{#models}}<option value='{{row}}'>{{text}}</option>{{/models}};"
+            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.get('row'), text: data.get('tags')}});
+            this.$el.append(Mustache.render(select_template, {models: models_filt}));
+            this.renderDrop();
+        }
+    });
+    av = new AppView({collection: models, el: document.getElementById('model_select')});
+    models.fetch();
+}
+
+function row_selector() {
+    var AppView = Backbone.View.extend({
+        initialize: function() {
+            _.bindAll(this, 'render');
+            this.model.bind('reset', this.render);
+            this.model.bind('change', this.render);
+        },
+        events: {'change': 'renderDrop'},
+        renderDrop: function () {
+            var prefix = $('#rowPrefixDrop option:selected').val();
+            $('#startRow').val(prefix);
+            // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
+            $('#stopRow').val(prefix_to_stop_row(prefix));
+        },
+        render: function() {
+            this.$el.empty();
+            var prefixes = _.keys(this.model.get('imagePrefixes')); // TODO: Check permissions and accept perissions as argument
+            var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
+            this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
+            this.renderDrop();
+        }
+    });
+    // TODO: Create standard way to get login, not using cookie
+    var auth = load_cookie();
+    user = new PicarusUser({email: auth.email});
+    new AppView({model: user, el: $('#rowPrefixDrop')});
+    user.fetch();
+}
+
 function app_main() {
     // Setup models
     PicarusModel = Backbone.Model.extend({
         idAttribute: "row",
         defaults : {
-            name : null,
         },
  
         url : function() {
-    // Important! It's got to know where to send its REST calls. 
-    // In this case, POST to '/donuts' and PUT to '/donuts/:id'
             return this.id ? '/a1/models/' + this.id : '/a1/models'; 
         } 
  
@@ -25,6 +78,32 @@ function app_main() {
         model : PicarusModel,
         url : "/a1/models"
     });
+
+    PicarusUser = Backbone.Model.extend({
+        idAttribute: "email",
+        defaults : {
+        },
+ 
+        url : function() {
+            return this.id ? '/a1/users/' + this.id : '/a1/users'; 
+        } 
+ 
+    });
+    PicarusUsers = Backbone.Collection.extend({
+        model : PicarusUser,
+        url : "/a1/users"
+    });
+
+    PicarusImage = Backbone.Model.extend({
+        idAttribute: "row",
+        defaults : {
+        },
+    });
+    // TODO: We may want to add a few REST calls, not sure yet
+    PicarusImages = Backbone.Collection.extend({
+        model : PicarusImage
+    });
+
     $.ajaxSetup({
         'beforeSend': function (xhr) {
             var args = load_cookie();
@@ -60,7 +139,8 @@ function app_main() {
                 selector_id = val.split('/').join('_');
             }
             return [val, _.template(document.getElementById(prefix + selector_id).innerHTML, {baseLogin: document.getElementById('bpl_login').innerHTML,
-                                                                                              baseLoginHidden: document.getElementById('bpl_login_hidden').innerHTML})];
+                                                                                              rowSelect: document.getElementById('bpl_row_select').innerHTML,
+                                                                                              prefixSelect: document.getElementById('bpl_prefix_select').innerHTML})];
         })),
         render:function(route){
             //Simply sets the content as appropriate

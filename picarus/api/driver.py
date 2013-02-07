@@ -49,7 +49,6 @@ class PicarusManager(object):
     def __init__(self, thrift=None):
         self.image_orig_column = 'data:image'
         self.image_column = 'data:image_320'
-        self.thumbnails_column = 'data:image_75sq'
         self.images_table = 'images'
         self.models_table = 'picarus_models'
         self.hb = thrift if thrift is not None else hadoopy_hbase.connect()
@@ -170,6 +169,16 @@ class PicarusManager(object):
     def create_tables(self):
         self.hb.createTable(self.models_table, [hadoopy_hbase.ColumnDescriptor('data:')])
 
+    def image_thumbnail(self, **kw):
+        # Makes 150x150 thumbnails from the data:image column
+        model_fp = picarus.api.model_tofile({'name': 'imfeat.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}})
+        cmdenvs = {'HBASE_TABLE': self.images_table,
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode('thum:image_150sq'),
+                   'MODEL_FN': os.path.basename(model_fp.name)}
+        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_preprocess.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, files=[model_fp.name], columns=['data:image'], single_value=True,
+                             cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
+
     def image_preprocessor(self, model_key, **kw):
         input_dict, model_dict, _ = self.key_to_input_model_param(model_key)
         model_fp = picarus.api.model_tofile(model_dict)
@@ -263,7 +272,7 @@ class PicarusManager(object):
         feature_input, feature, _ = self.key_to_input_model_param(hasher_input['feature'])
         row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
                                          columns=[hasher_key, metadata_column], **kw)
-        metadata, hashes = zip(*[(json.dumps([cols[metadata_column], base64.b64encode(row)]), cols[hasher_key])
+        metadata, hashes = zip(*[(json.dumps([cols[metadata_column], base64.urlsafe_b64encode(row)]), cols[hasher_key])
                                  for row, cols in row_cols])
         hashes = np.ascontiguousarray(np.asfarray([np.fromstring(h, dtype=np.uint8) for h in hashes]))
         index = index.store_hashes(hashes, np.arange(len(metadata), dtype=np.uint64))
@@ -530,8 +539,10 @@ if __name__ == '__main__':
     start_row = 'sun397:train'
     stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)
     create_index(hasher_key, 'meta:class_2', image_search.LinearHashDB(), start_row=start_row, stop_row=stop_row)
+    quit()
     classifier_key = create_classifier_sklearn_decision_func(feature_key, 'meta:class_0', 'indoor', sklearn.svm.LinearSVC(), start_row=start_row, stop_row=stop_row)
     print(repr(classifier_key))
+
 
     start_row = 'sun397:'
     stop_row = start_row[:-1] + chr(ord(start_row[-1]) + 1)

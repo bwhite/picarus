@@ -124,48 +124,92 @@ function load_cookie(email_input, auth_input) {
 }
 
 
-function picarus_api_data_scanner(table, startRow, stopRow, columns, success, done, max_rows, max_rows_iter) {
-    if (typeof max_rows == "undefined") {
-        max_rows = Infinity;
+function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
+    // params: success, done, maxRows, maxRowsIter, first, filter, resume
+    if (typeof params.maxRows == "undefined") {
+        params.maxRows = Infinity;
     }
-    if (typeof max_rows_iter == "undefined") {
-        max_rows_iter = 101;
+    if (typeof params.maxRowsIter == "undefined") {
+        params.maxRowsIter = Math.min(101, params.maxRows);
     }
     function param_encode(dd) {
         return _.map(dd, function (v) {
             return v.join('=');
         }).join('&');
     }
+    function uuid() {
+        // From: http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+            return v.toString(16);
+        });
+    }
     var column_suffix = _.map(columns, function (value) {return ['column', value]});
     var lastRow = undefined;
-    var successRows = 0;
+    var numRows = 0;
+    var cacheKey = uuid();
+    if (typeof params.filter != "undefined") {
+        column_suffix = column_suffix.concat([['filter', escape(params.filter)]]);
+    }
     function map_success(xhr) {
-        response = JSON.parse(xhr.responseText);
-        var data = _.map(response.data, function (value) {
-            return [value[0], _.object(_.map(value[1], function (v, k) {return [k, v]}))];
-        });
+        var data = JSON.parse(xhr.responseText);
         var isdone = true;
-        max_rows -= data.length;
-        if (response.hasOwnProperty("cursor") && max_rows > 0) {
-            var dd = _.pairs({maxRows: String(Math.min(max_rows, max_rows_iter)), excludeStart: "1", cursor: response.cursor}).concat(column_suffix);
-            var url = "/a1/slice/" + table + "/" + _.last(data)[0] + "/" + stopRow + '?' + param_encode(dd);
-            picarus_api(url, "GET", {success: map_success});
-            isdone = false;
-        } else if (max_rows < 0) {
+        params.maxRows -= data.length;
+        if (params.maxRows < 0) {
             // Truncates any excess rows we may have gotten
-            data = data.slice(0, max_rows);
+            data = data.slice(0, params.maxRows);
         }
-        _.each(data, function (v) {
-            lastRow = v[0];
-            success(v[0], v[1]);
-        });
-        successRows += data.length;
-        console.log(successRows);
-        console.log(max_rows);
-        if (isdone && typeof done != "undefined") {
-            done(lastRow, successRows);
+        if (numRows == 0 && data.length && typeof params.first != "undefined") {
+            var firstRow = _.first(data);
+            params.first(firstRow.row, _.omit(firstRow, 'row'));
+        }
+        if (typeof params.success != "undefined") {
+            _.each(data, function (v) {
+                lastRow = v.row;
+                params.success(v.row, _.omit(v, 'row'));
+            });
+        }
+        numRows += data.length;
+        if (data.length >= params.maxRowsIter && params.maxRows > 0) {
+            isdone = false;
+            function next_call() {
+                var dd = _.pairs({maxRows: String(params.maxRowsIter), excludeStart: "1", cacheKey: cacheKey}).concat(column_suffix);
+                var url = "/a1/slice/" + table + "/" + _.last(data).row + "/" + stopRow + '?' + param_encode(dd);
+                picarus_api(url, "GET", {success: map_success});
+            }
+            // This allows for pagination instead of immediately requesting the next chunk
+            if (typeof params.resume == "undefined") {
+                next_call();
+            } else {
+                params.resume(next_call);
+            }
+        }
+        if (isdone && typeof params.done != "undefined") {
+            params.done({lastRow: lastRow, numRows: numRows});
         }
     }
-    var dd = _.pairs({maxRows: String(Math.min(max_rows, max_rows_iter))}).concat(column_suffix);
+    var dd = _.pairs({maxRows: String(params.maxRowsIter), cacheKey: cacheKey}).concat(column_suffix);
     picarus_api("/a1/slice/" + table +  "/" + startRow + "/" + stopRow + '?' + param_encode(dd), "GET", {success: map_success});
+}
+
+
+function picarus_api_delete_rows(rows, params) {
+    var maxRowsIter = 1;
+    // TODO: Can't increase maxRowsIter until done is called after the very last element returns
+    if (typeof params.maxRowsIter != "undefined") {
+        maxRowsIter = params.maxRowsIter;
+    }
+    if (!rows.length) {
+        if (typeof params.done != "undefined") {
+            params.done();
+        }
+        return;
+    }
+    _.each(rows.slice(0, maxRowsIter), function (row, n) {
+        var del_params = {};
+        if (n == 0) {
+            del_params.success = function () {picarus_api_delete_rows(rows.slice(maxRowsIter), params)};
+        }
+        picarus_api_row('images', row, "DELETE", del_params);
+    });
 }

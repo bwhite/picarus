@@ -1,4 +1,3 @@
-
 """
 Changed w/ Andrew - Dec 16
 - Update mfeat and mask column families to use compression
@@ -18,25 +17,6 @@ Changed w/ Andrew - Dec 16
 Not sure yet
 - Upload image temporarily and then resize/preprocess
 - Creation of verb on the fly for streaming tasks (online classifier, background subtraction, common operations)
-
-/data/
-/data/<table>/*/<col>?op=see/scene/indoor&input=//<in_col>
-/data/<table>/*/<col>?op=scene/indoor&input=<out_table>/*/<out_col>
-/data/<table>/<row>/<col>?vision=scene/indoor&input=<out_table>/<out_row>/<out_col>
-
-
-/data/<table>/<col>?vision=scene/indoor
-
-/see/
-/see/search/logo
-/see/detect/
-/see/classify/scene
-/see/segment/texton
-/see/segment/texton/argmax
-/see/feature/gist
-/see/points/surf
-/learn/cluster/kmeans
-/learn/classifier/svm
 """
 from gevent import monkey
 monkey.patch_all()
@@ -68,6 +48,7 @@ from driver import PicarusManager
 import logging
 import uuid
 import contextlib
+from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
 logging.basicConfig(level=logging.DEBUG)
 bottle.debug(True)
 
@@ -81,6 +62,37 @@ def check_version(func):
             bottle.abort(400)
         return func(*args, **kw)
     return inner
+
+
+def verify_slice_permissions(prefixes, permissions, start_row, stop_row):
+    permissions = set(permissions)
+    prefixes = [x for x, y in prefixes.items() if set(y).issuperset(permissions)]
+    for prefix in prefixes:
+        if prefix == '':
+            return
+        # NOTE: Prevents rollover, minor limitation on prefix is that it must not end in \xff
+        assert prefix[-1] != '\xff'
+        prefix_start_row = prefix
+        prefix_stop_row = prefix[:-1] + chr(ord(prefix[-1]) + 1)
+        if start_row and prefix_start_row <= start_row < prefix_stop_row and stop_row and prefix_start_row <= stop_row <= prefix_stop_row:
+            return
+    bottle.abort(401)
+
+
+def verify_row_permissions(prefixes, permissions, row):
+    permissions = set(permissions)
+    prefixes = [x for x, y in prefixes.items() if set(y).issuperset(permissions)]
+    for prefix in prefixes:
+        if prefix == '':
+            return
+        # NOTE: Prevents rollover, minor limitation on prefix is that it must not end in \xff
+        assert prefix[-1] != '\xff'
+        prefix_start_row = prefix
+        prefix_stop_row = prefix[:-1] + chr(ord(prefix[-1]) + 1)
+        if row and prefix_start_row <= row < prefix_stop_row:
+            return
+    bottle.abort(401)
+
 
 if __name__ == "__main__":
     mimerender = mimerender.BottleMimeRender()
@@ -141,24 +153,50 @@ def data_row_upload(auth_user, table):
     with thrift_lock() as thrift:
         prefix = auth_user.upload_row_prefix
         row = prefix + '%.10d%s' % (2147483648 - int(time.time()), uuid.uuid4().bytes)
+        verify_row_permissions(auth_user.image_prefixes, 'w', row)
         mutations = []
         # TODO: Reuse PATCH code which also does this
         for x in bottle.request.files:
             thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=bottle.request.files[x].file.read())])
         for x in set(bottle.request.params) - set(bottle.request.files):
+            print('ParmLen[%d]' % len(bottle.request.params[x]))
+            print('md5[%s]' % hashlib.md5(bottle.request.params[x]).hexdigest())
             mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=bottle.request.params[x]))
         if mutations:
             thrift.mutateRow(table, row, mutations)
         return {'row': base64.urlsafe_b64encode(row)}
 
 
+def _user_to_dict(user):
+    return {'stats': user.stats(), 'uploadRowPrefix': user.upload_row_prefix, 'email': user.user, 'imagePrefixes': user.image_prefixes}
+
+
+@bottle.get('/<version:re:[^/]*>/users')
+@USERS.auth(True)  # TODO: Make admin decorator
+@check_version
+def users(auth_user):
+    if auth_user.user != 'bwhite@dappervision.com':  # Only me for now
+        bottle.abort(401)
+    bottle.response.headers["Content-type"] = "application/json"
+    return json.dumps([_user_to_dict(USERS.get_user(u)) for u in USERS.list_users()])
+
+
+@bottle.get('/<version:re:[^/]*>/users/<user:re:[^/]+>')
+@USERS.auth(True)
+@check_version
+def data_row(auth_user, user):
+    if auth_user.user != user:
+        bottle.abort(401)
+    bottle.response.headers["Content-type"] = "application/json"
+    return _user_to_dict(auth_user)
+
 @bottle.route('/<version:re:[^/]*>/data/<table:re:[^/]+>/<row:re:[^/]+>', 'PATCH')
 @bottle.post('/<version:re:[^/]*>/data/<table:re:[^/]+>/<row:re:[^/]+>')
 @bottle.delete('/<version:re:[^/]*>/data/<table:re:[^/]+>/<row:re:[^/]+>')
 @bottle.get('/<version:re:[^/]*>/data/<table:re:[^/]+>/<row:re:[^/]+>')
-@USERS.auth()
+@USERS.auth(True)
 @check_version
-def data_row(table, row):
+def data_row(auth_user, table, row):
     with thrift_lock() as thrift:
         row = base64.urlsafe_b64decode(row)
         method = bottle.request.method.upper()
@@ -168,6 +206,7 @@ def data_row(table, row):
         if table not in ('images'):
             bottle.abort(400)
         if method == 'GET':
+            verify_row_permissions(auth_user.image_prefixes, 'r', row)
             columns = sorted(bottle.request.params.getall('column'))
             if columns:
                 result = thrift.getRowWithColumns(table, row, columns)
@@ -178,6 +217,7 @@ def data_row(table, row):
             return {base64.urlsafe_b64encode(x): base64.b64encode(y.value)
                     for x, y in result[0].columns.items()}
         elif method == 'PATCH':
+            verify_row_permissions(auth_user.image_prefixes, 'w', row)
             mutations = []
             for x in bottle.request.files:
                 thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=x, value=bottle.request.files[x].file.read())])
@@ -188,17 +228,30 @@ def data_row(table, row):
             return {}
         elif method == 'POST':
             action = bottle.request.params['action']
+            image_column = base64.urlsafe_b64decode(bottle.request.params['imageColumn'])
+            results = thrift.get(table, row, image_column)
+            if not results:
+                print((table, row, image_column))
+                bottle.abort(404)
             if action == 'i/classify':
-                image_column = base64.urlsafe_b64decode(bottle.request.params['imageColumn'])
-                results = thrift.get(table, row, image_column)
-                if not results:
-                    print((table, row, image_column))
-                    bottle.abort(404)
+                verify_row_permissions(auth_user.image_prefixes, 'r', row)
                 classifier = _classifier_from_key(base64.urlsafe_b64decode(bottle.request.params['model']))
+                bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps(classifier(results[0].value))
+            elif action == 'i/search':
+                verify_row_permissions(auth_user.image_prefixes, 'r', row)
+                index = _index_from_key(base64.urlsafe_b64decode(bottle.request.params['model']))
+                bottle.response.headers["Content-type"] = "application/json"
+                return json.dumps(index(results[0].value))
+            elif action == 'io/thumbnail':
+                # TODO
+                verify_row_permissions(auth_user.image_prefixes, 'rw', row)
+                raise ValueError('not implemented')
+                return json.dumps({})
             else:
                 bottle.abort(400)
         elif method == 'DELETE':
+            verify_row_permissions(auth_user.image_prefixes, 'w', row)
             thrift.deleteAllRow(table, row)
             return {}
         else:
@@ -206,9 +259,12 @@ def data_row(table, row):
 
 
 @bottle.delete('/<version:re:[^/]*>/data/<table:re:[^/]+>/<row:re:[^/]+>/<col:re:[^/]+>')
-def data_row_col(table, row, col):
+@USERS.auth(True)
+@check_version
+def data_row_col(auth_user, table, row, col):
     with thrift_lock() as thrift:
         row = base64.urlsafe_b64decode(row)
+        verify_row_permissions(auth_user.image_prefixes, 'w', row)
         col = base64.urlsafe_b64decode(col)
         if table not in ('images'):
             bottle.abort(400)
@@ -219,22 +275,13 @@ def data_row_col(table, row, col):
 SCANNER_CACHE = {}  # [(start_row, end_row, col, max_rows, cursor)]
 
 
-def _get_cached_scanner(start_row, stop_row, cols, max_rows, exclude_start):
-    cols = tuple(cols)
-    if not exclude_start:
-        raise KeyError
-    cursor = bottle.request.params['cursor']
-    scanner_key = (start_row, stop_row, cols, max_rows, cursor)
-    scanner = SCANNER_CACHE[scanner_key]
-    print('Reusing cached scanner [%s]' % str(scanner_key))
-    del SCANNER_CACHE[scanner_key]
-    return scanner
-
-
+@bottle.post('/<version:re:[^/]*>/slice/<table:re:[^/]+>/<start_row:re:[^/]+>/<stop_row:re:[^/]+>')
 @bottle.get('/<version:re:[^/]*>/slice/<table:re:[^/]+>/<start_row:re:[^/]+>/<stop_row:re:[^/]+>')
-@USERS.auth()
+@USERS.auth(True)
 @check_version
-def data_rows(table, start_row, stop_row):
+def data_rows(auth_user, table, start_row, stop_row):
+    print_request()
+    # TODO: Namespace cursors for each user
     with thrift_lock() as thrift:
         start_row = base64.urlsafe_b64decode(start_row)
         stop_row = base64.urlsafe_b64decode(stop_row)
@@ -244,30 +291,90 @@ def data_rows(table, start_row, stop_row):
         if table not in ('images',):
             raise ValueError('Only images allowed for now!')
         if method == 'GET':
+            verify_slice_permissions(auth_user.image_prefixes, 'r', start_row, stop_row)
             # TODO: Need to verify limits on this scan and check auth
             max_rows = min(101, int(bottle.request.params.get('maxRows', 1)))
+            filter_string = bottle.request.params.get('filter')
+            print('filter string[%s]' % filter_string)
             exclude_start = bool(int(bottle.request.params.get('excludeStart', 0)))
+            cursor = bottle.request.params.get('cacheKey', '')
+            # TODO: Allow user to specify cursor, then we can output just the rows
             try:
-                scanner = _get_cached_scanner(start_row, stop_row, columns, max_rows, exclude_start)
+                if not exclude_start or not cursor:
+                    raise KeyError
+                scanner_key = (start_row, stop_row, tuple(columns), max_rows, cursor, filter_string, auth_user.user)
+                scanner = SCANNER_CACHE[scanner_key]
+                print('Reusing cached scanner [%s]' % str(scanner_key))
+                del SCANNER_CACHE[scanner_key]
                 exclude_start = False
             except KeyError:
                 scanner = hadoopy_hbase.scanner(thrift, table, columns=columns,
                                                 start_row=start_row, per_call=max_rows,
-                                                stop_row=stop_row)
+                                                stop_row=stop_row, filter=filter_string)
             stopped_early = False
             out = []
             for row_num, (cur_row, cur_columns) in enumerate(scanner, 1):
                 if exclude_start and row_num == 1:
                     continue
-                out.append((base64.urlsafe_b64encode(cur_row), {base64.urlsafe_b64encode(k): base64.b64encode(v) for k, v in cur_columns.items()}))
+                cur_out = {base64.urlsafe_b64encode(k): base64.b64encode(v) for k, v in cur_columns.items()}
+                cur_out['row'] = base64.urlsafe_b64encode(cur_row)
+                out.append(cur_out)
                 if row_num >= max_rows:
                     stopped_early = True
                     break
-            result_out = {'data': out}
-            if stopped_early:
-                result_out['cursor'] = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
-                SCANNER_CACHE[(cur_row, stop_row, tuple(columns), max_rows, result_out['cursor'])] = scanner
-            return result_out
+            if stopped_early and cursor:
+                SCANNER_CACHE[(cur_row, stop_row, tuple(columns), max_rows, cursor)] = scanner
+            bottle.response.headers["Content-type"] = "application/json"
+            return json.dumps(out)
+        elif method == 'POST':
+            action = bottle.request.params['action']
+            if action == 'io/thumbnail':
+                verify_slice_permissions(auth_user.image_prefixes, 'rw', start_row, stop_row)
+                print('Running thumb')
+                MANAGER.image_thumbnail(start_row=start_row, stop_row=stop_row)
+                return json.dumps({})
+            elif action == 'i/dedupe/identical':
+                col = base64.urlsafe_b64decode(bottle.request.params['column'])
+                features = {}
+                dedupe_feature = lambda x, y: features.setdefault(base64.b64encode(hashlib.md5(y).digest()), []).append(base64.urlsafe_b64encode(x))
+                print('Running dedupe')
+                for cur_row, cur_col in hadoopy_hbase.scanner_row_column(THRIFT, table, column=col,
+                                                                         start_row=start_row, per_call=10,
+                                                                         stop_row=stop_row):
+                    dedupe_feature(cur_row, cur_col)
+                bottle.response.headers["Content-type"] = "application/json"
+                return json.dumps([{'rows': y} for x, y in features.items() if len(y) > 1])
+            elif action == 'o/crawl/flickr':
+                verify_slice_permissions(auth_user.image_prefixes, 'w', start_row, stop_row)
+                # Only slices where the start_row can be used as a prefix may be used
+                assert start_row and ord(start_row[-1]) != 255 and start_row[:-1] + chr(ord(start_row[-1]) + 1) == stop_row
+                print('Running flickr')
+                p = {}
+                row_prefix = start_row
+                assert row_prefix.find(':') != -1
+                class_name = bottle.request.params['className']
+                query = bottle.request.params.get('query')
+                query = class_name if query is None else query
+                p['api_key'] = bottle.request.params.get('apiKey', FLICKR_API_KEY)
+                p['api_secret'] = bottle.request.params.get('apiSecret', FLICKR_API_SECRET)
+                if 'hasGeo' in bottle.request.params:
+                    p['has_geo'] = True
+                try:
+                    p['min_upload_date'] = int(bottle.request.params['minUploadDate'])
+                except KeyError:
+                    pass
+                try:
+                    p['max_upload_date'] = int(bottle.request.params['maxUploadDate'])
+                except KeyError:
+                    pass
+                try:
+                    p['page'] = int(bottle.request.params['page'])
+                except KeyError:
+                    pass
+                return {'data': {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(row_prefix), class_name, query, **p)}}
+
+            else:
+                bottle.abort(400)
         else:
             bottle.abort(400)
 
@@ -290,6 +397,18 @@ def _classifier_from_key(key):
     return lambda x: real_classifier(real_feature(preprocessor.asarray(x)))
 
 
+def _index_from_key(key):
+    loader = lambda x: call_import(x) if isinstance(x, dict) else x
+    input, index, param = MANAGER.key_to_input_model_param(key)
+    input, hasher, param = MANAGER.key_to_input_model_param(input['hash'])
+    hasher = loader(hasher)
+    input, feature, param = MANAGER.key_to_input_model_param(input['feature'])
+    feature = loader(feature)
+    input, preprocessor, param = MANAGER.key_to_input_model_param(input['image'])
+    preprocessor = loader(preprocessor)
+    return lambda x: [json.loads(index.metadata[y]) for y in index.search_hash_knn(hasher(feature(preprocessor.asarray(x))).ravel(), 10)]
+
+
 def _get_texton():
     forests = []
     threshs = [0.]
@@ -299,16 +418,6 @@ def _get_texton():
         forests.append({'tp': tp, 'tp2': tp2})
     return picarus._features.TextonILPPredict(num_classes=8, ilp=MANAGER.key_to_classifier_pb('pred:h\x90\xf57\\\x8az\x0f\xd0K\xb6\xbc\xd7\taG\xa61l\x9b').SerializeToString(),
                                               forests=forests, threshs=threshs)
-
-
-@bottle.post('/<version:re:[^/]*>/image')
-@USERS.auth()
-@check_version
-def image():
-    image = imfeat.image_fromstring(bottle.request.files['image'].file.read())
-    image = imfeat.resize_image_max_side(image, 320)
-    image_string = imfeat.image_tostring(image, 'jpg')
-    return {'jpgb64': base64.b64encode(image_string)}
 
 
 @bottle.route('/<version:re:[^/]*>/models/<row:re:[^/]+>', 'PATCH')
@@ -370,10 +479,11 @@ def models():
                         'row': base64.urlsafe_b64encode(row)})
     finally:
         THRIFT_LOCK.release()
+    bottle.response.headers["Content-type"] = "application/json"
     return json.dumps(out)
 
 
-@bottle.get('/static/<name:re:[^/]*>')
+@bottle.get('/static/<name:re:[^/]+>')
 def static(name):
     return bottle.static_file(name, root=os.path.join(os.getcwd(), 'static'))
 
@@ -388,41 +498,6 @@ def auth():
     except UnknownUser:
         bottle.abort(401)
     return 'Emailing auth code'
-
-
-@bottle.post('/<version:re:[^/]*>/crawl/<crawler:re:[^/]*>')
-@check_version
-@USERS.auth()
-def crawl(crawler):
-    print_request()
-    row_prefix = bottle.request.params['row_prefix']
-    assert row_prefix.find(':') != -1
-    class_name = bottle.request.params['class_name']
-    query = bottle.request.params.get('query')
-    query = class_name if query is None else query
-    if crawler == 'flickr':
-        p = {}
-        p['api_key'] = bottle.request.params['api_key']
-        p['api_secret'] = bottle.request.params['api_secret']
-        if 'has_geo' in bottle.request.params:
-            p['has_geo'] = True
-        try:
-            p['min_upload_date'] = int(bottle.request.params['min_upload_date'])
-        except KeyError:
-            pass
-        try:
-            p['max_upload_date'] = int(bottle.request.params['max_upload_date'])
-        except KeyError:
-            pass
-        try:
-            p['page'] = int(bottle.request.params['page'])
-        except KeyError:
-            pass
-        return {'data': {'num_rows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(row_prefix), class_name, query, **p)}}
-    elif crawler == 'google':
-        pass
-    else:
-        bottle.abort(400)
 
 
 MTURK_SERVER = None
@@ -475,29 +550,6 @@ def human(server_type):
     MTURK_SERVER = multiprocessing.Process(target=_mturk_wrapper, kwargs=p)
     MTURK_SERVER.start()
     return {'worker': base_url, 'stop': base_url + admin_prefix + 'stop', 'results': base_url + admin_prefix + 'results.js', 'users': base_url + admin_prefix + 'users.js'}
-
-
-@bottle.post('/<version:re:[^/]*>/dedupe/<dedupe_type:re:[^/]*>')
-@check_version
-@USERS.auth()
-def dedupe(dedupe_type):
-    # TODO: nearidentical, identical
-    # Given an image column, load it and compute the near-identical feature, for each image determine which ones are nearidentical
-    start_row = bottle.request.params.get('startRow', '')
-    stop_row = bottle.request.params.get('stopRow', '')
-    col = bottle.request.params.get('column', '')
-    table = bottle.request.params.get('table', '')
-    if dedupe_type == 'identical':
-        features = {}
-        dedupe_feature = lambda x, y: features.setdefault(base64.b64encode(hashlib.md5(y).digest()), []).append(base64.b64encode(x))
-    else:
-        bottle.abort(400)
-    
-    for cur_row, cur_col in hadoopy_hbase.scanner_row_column(THRIFT, table, column=col,
-                                                             start_row=start_row, per_call=10,
-                                                             stop_row=stop_row):
-        dedupe_feature(cur_row, cur_col)
-    return {'data': features}
 
 
 if __name__ == '__main__':

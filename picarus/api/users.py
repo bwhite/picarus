@@ -53,6 +53,7 @@ class User(object):
         self._user_prefix = 'user:'
         self._stat_prefix = 'stat:'
         self._auth_prefix = 'auth:'
+        self._image_row_prefix = 'image_prefix:'
         self._enabled_col = 'enabled'
         self.key_length = 15
         assert self.key_length % 3 == 0
@@ -81,9 +82,9 @@ class User(object):
         return self._user_db.hget(self._user_prefix + self.user, key)
 
     def delete(self):
-        self.user_db.delete(self._user_prefix + self.user,
-                            self._stat_prefix + self.user,
-                            self._auth_prefix + self.user)
+        self._user_db.delete(self._user_prefix + self.user,
+                             self._stat_prefix + self.user,
+                             self._auth_prefix + self.user)
 
     def hset(self, key, val):
         return self._user_db.hset(self._user_prefix + self.user, key, val)
@@ -92,6 +93,16 @@ class User(object):
         key = self._key_gen()
         self._user_db.zadd(self._auth_prefix + self.user, str(time.time()), self._hash_key(key))
         return key
+
+    def add_image_prefix(self, prefix, permissions):
+        self._user_db.hset(self._image_row_prefix + self.user, prefix, permissions)
+
+    def remove_image_prefix(self, prefix):
+        self._user_db.hdel(self._image_row_prefix + self.user, prefix)
+
+    @property
+    def image_prefixes(self):
+        return self._user_db.hgetall(self._image_row_prefix + self.user)
 
     def verify(self, key, min_time=0.):
         print('Authkey[%s]' % key)
@@ -184,6 +195,18 @@ def main():
             print('Adding user [%s]' % x)
             users.add_user(x)
 
+    def _add_user_image_prefix(args, users):
+        user = users.get_user(args.user)
+        user.add_image_prefix(args.prefix, args.permissions)
+
+    def _remove_user_image_prefix(args, users):
+        user = users.get_user(args.user)
+        user.remove_image_prefix(args.prefix)
+
+    def _list_user_image_prefix(args, users):
+        user = users.get_user(args.user)
+        print user.image_prefixes
+
     def _stats(args, users):
         print(json.dumps(dict((x, users.get_user(x).stats()) for x in users.list_users())))
 
@@ -196,12 +219,30 @@ def main():
     parser.add_argument('--redis_port', type=int, help='Redis Port', default=6380)
     parser.add_argument('--redis_db', type=int, help='Redis DB', default=0)
     subparsers = parser.add_subparsers(help='Commands')
+
+    subparser = subparsers.add_parser('add_image_prefix', help='Add prefix')
+    subparser.add_argument('user', help='User')
+    subparser.add_argument('prefix', help='Prefix')
+    subparser.add_argument('permissions', help='Permissions')
+    subparser.set_defaults(func=_add_user_image_prefix)
+
+    subparser = subparsers.add_parser('remove_image_prefix', help='Remove prefix')
+    subparser.add_argument('user', help='User')
+    subparser.add_argument('prefix', help='Prefix')
+    subparser.set_defaults(func=_remove_user_image_prefix)
+
+    subparser = subparsers.add_parser('list_image_prefix', help='List prefix')
+    subparser.add_argument('user', help='User')
+    subparser.set_defaults(func=_list_user_image_prefix)
+    
     subparser = subparsers.add_parser('add', help='Add users')
     subparser.add_argument('users', nargs='+', help='Users')
     subparser.set_defaults(func=_add_user)
+
     subparser = subparsers.add_parser('remove', help='Remove users')
     subparser.add_argument('users', nargs='+', help='Users')
     subparser.set_defaults(func=_remove_user)
+
     subparser = subparsers.add_parser('stats', help='Get user stats')
     subparser.set_defaults(func=_stats)
     args = parser.parse_args()
