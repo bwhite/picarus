@@ -162,7 +162,7 @@ class PicarusManager(object):
             c.feature_type = c.MASK_FEATURE
         else:
             raise ValueError('Unknown feature type: %s' % param['feature_type'])
-        input, preprocessor, param = self.key_to_input_model_param(input['image'])
+        input, preprocessor, param = self.key_to_input_model_param(input['processed_image'])
         self._model_to_pb(c, preprocessor, 'preprocessor')
         return c
 
@@ -186,7 +186,7 @@ class PicarusManager(object):
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(model_key),
                    'MODEL_FN': os.path.basename(model_fp.name)}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_preprocess.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_dict['image']], single_value=True,
+                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_dict['raw_image']], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
 
     def image_to_feature(self, feature_key, **kw):
@@ -199,7 +199,7 @@ class PicarusManager(object):
                    'FEATURE_FN': os.path.basename(feature_fp.name),
                    'FEATURE_TYPE': feature_type}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_to_feature.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, columns=[input_dict['image']], single_value=True,
+                             num_mappers=self.num_mappers, columns=[input_dict['processed_image']], single_value=True,
                              cmdenvs=cmdenvs, files=[feature_fp.name],
                              jobconfs={'mapred.task.timeout': '6000000'}, dummy_fp=feature_fp, **kw)
 
@@ -455,19 +455,22 @@ class PicarusManager(object):
                              num_mappers=self.num_mappers, columns=[input_column], single_value=True,
                              cmdenvs=cmdenvs, jobconfs={'mapred.task.timeout': '6000000'}, **kw)
 
+    def model_to_name(self, model):
+        args = list(model.get('args', []))
+        for x, y in sorted(model.get('kw', {}).items()):
+            y = repr(y)
+            if len(y) > 20:
+                y = 'sha1:' + repr(hashlib.sha1(y).hexdigest())
+            args.append('%s=%s' % (x, y))
+        return model['name'] + '(%s)' % ', '.join(args)
+
 
 if __name__ == '__main__':
     image_retrieval = PicarusManager()
     #image_retrieval.create_tables()
 
     def _model_to_name(model):
-        args = list(model.get('args', []))
-        for x, y in sorted(model.get('kw', {}).items()):
-            y = repr(y)
-            if len(y) > 15:
-                y = 'sha1:' + repr(hashlib.sha1(y).hexdigest())
-            args.append('%s=%s' % (x, y))
-        return model['name'] + '(%s)' % ', '.join(args)
+        return image_retrieval.model_to_name(model)
 
     def run_preprocessor(k, **kw):
         image_retrieval.image_preprocessor(k, **kw)

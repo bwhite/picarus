@@ -50,7 +50,6 @@ import uuid
 import contextlib
 from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
 logging.basicConfig(level=logging.DEBUG)
-bottle.debug(True)
 
 VERSION = 'a1'
 
@@ -272,7 +271,7 @@ def data_row_col(auth_user, table, row, col):
         return {}
 
 
-SCANNER_CACHE = {}  # [(start_row, end_row, col, max_rows, cursor)]
+SCANNER_CACHE = {}  # [(start_row, end_row, col, max_rows, cursor, user)]
 
 
 @bottle.post('/<version:re:[^/]*>/slice/<table:re:[^/]+>/<start_row:re:[^/]+>/<stop_row:re:[^/]+>')
@@ -293,7 +292,7 @@ def data_rows(auth_user, table, start_row, stop_row):
         if method == 'GET':
             verify_slice_permissions(auth_user.image_prefixes, 'r', start_row, stop_row)
             # TODO: Need to verify limits on this scan and check auth
-            max_rows = min(101, int(bottle.request.params.get('maxRows', 1)))
+            max_rows = min(100, int(bottle.request.params.get('maxRows', 1)))
             filter_string = bottle.request.params.get('filter')
             print('filter string[%s]' % filter_string)
             exclude_start = bool(int(bottle.request.params.get('excludeStart', 0)))
@@ -319,7 +318,7 @@ def data_rows(auth_user, table, start_row, stop_row):
                 cur_out = {base64.urlsafe_b64encode(k): base64.b64encode(v) for k, v in cur_columns.items()}
                 cur_out['row'] = base64.urlsafe_b64encode(cur_row)
                 out.append(cur_out)
-                if row_num >= max_rows:
+                if len(out) >= max_rows:
                     stopped_early = True
                     break
             if stopped_early and cursor:
@@ -332,7 +331,22 @@ def data_rows(auth_user, table, start_row, stop_row):
                 verify_slice_permissions(auth_user.image_prefixes, 'rw', start_row, stop_row)
                 print('Running thumb')
                 MANAGER.image_thumbnail(start_row=start_row, stop_row=stop_row)
-                return json.dumps({})
+                return {}
+            elif action == 'io/preprocess':
+                verify_slice_permissions(auth_user.image_prefixes, 'rw', start_row, stop_row)
+                print('Running preprocessor')
+                MANAGER.image_preprocessor(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
+                return {}
+            elif action == 'io/classify':
+                verify_slice_permissions(auth_user.image_prefixes, 'rw', start_row, stop_row)
+                print('Running classifier')
+                MANAGER.feature_to_prediction(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
+                return {}
+            elif action == 'io/feature':
+                verify_slice_permissions(auth_user.image_prefixes, 'rw', start_row, stop_row)
+                print('Running feature')
+                MANAGER.image_to_feature(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
+                return {}
             elif action == 'i/dedupe/identical':
                 col = base64.urlsafe_b64decode(bottle.request.params['column'])
                 features = {}
@@ -372,7 +386,62 @@ def data_rows(auth_user, table, start_row, stop_row):
                 except KeyError:
                     pass
                 return {'data': {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(row_prefix), class_name, query, **p)}}
+            elif action in ('io/annotate/image/query', 'io/annotate/image/entity'):
+                global MTURK_SERVER
+                if MTURK_SERVER is not None:
+                    bottle.abort(500)  # Need to garbage collect these
+                secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
+                p = {}
+                image_column = base64.urlsafe_b64decode(bottle.request.params['imageColumn'])
+                if action == 'io/annotate/image/entity':
+                    entity_column = base64.urlsafe_b64decode(bottle.request.params['entityColumn'])
+                    p['data'] = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (start_row, stop_row, entity_column, image_column)
+                    p['type'] = 'image_entity'
+                elif action == 'io/annotate/image/query':
+                    query = bottle.request.params['query']
+                    p['data'] = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
+                    p['type'] = 'image_query'
+                    p['query'] = query
+                else:
+                    bottle.abort(400)
+                p['redis_address'] = 'localhost'
+                p['redis_port'] = 6382
+                p['port'] = 16000
+                p['num_tasks'] = 100
+                p['mode'] = 'amt'
+                p['setup'] = True
+                p['reset'] = True
+                p['secret'] = secret
+                print(p)
+                base_url = 'http://api0.picar.us:%d' % p['port']
+                admin_prefix = '/admin/%s/' % secret
+                MTURK_SERVER = multiprocessing.Process(target=_mturk_wrapper, kwargs=p)
+                MTURK_SERVER.start()
+                return {'worker': base_url, 'stop': base_url + admin_prefix + 'stop', 'results': base_url + admin_prefix + 'results.js', 'users': base_url + admin_prefix + 'users.js'}
+            elif action.startswith('i/train/'):
+                path = action[8:]
 
+                def classifier_sklearn(model_dict, model_param, inputs):
+                    print(inputs)
+                    print(model_param)
+                    row_cols = hadoopy_hbase.scanner(THRIFT, table,
+                                                     columns=[inputs['feature'], inputs['meta']], start_row=start_row, stop_row=stop_row)
+                    label_features = {0: [], 1: []}
+                    for row, cols in row_cols:
+                        print(repr(row))
+                        label = int(cols[inputs['meta']] == model_param['class_positive'])
+                        label_features[label].append(cols[inputs['feature']])
+                    labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
+                    features = label_features[0] + label_features[1]
+                    features = np.asfarray([picarus.api.np_fromstring(x) for x in features])
+                    classifier = call_import(model_dict)
+                    classifier.fit(features, np.asarray(labels))
+                    return classifier
+                print(path)
+                if path == 'classifier/svmlinear':
+                    return _create_model_from_params(path, classifier_sklearn)
+                else:
+                    bottle.abort(400)
             else:
                 bottle.abort(400)
         else:
@@ -451,6 +520,114 @@ def model_delete():
     print_request()
 
 
+# [name]: {module, params}  where params is dict with "name" as key with value {'required': bool, type: (int or float), min, max} with [min, max) or {'required': bool, type: 'bool'} or {'required': enum, vals: [val0, val1, ...]}
+PARAM_SCHEMAS = []
+PARAM_SCHEMAS.append({'name': 'preprocessor',
+                      'type': 'preprocessor',
+                      'module': 'imfeat.ImagePreprocessor',
+                      'data': 'none',   # none, row, slice
+                      'inputs': ['raw_image'],  # abstract columns to be used for input
+                      'modelParams': {},
+                      'moduleParams': {'compression': {'type': 'enum', 'values': ['jpg']},
+                                       'size': {'type': 'int', 'min': 32, 'max': 1025},
+                                       'method': {'type': 'enum', 'values': ['force_max_side', 'max_side', 'force_square']}}})
+
+PARAM_SCHEMAS.append({'name': 'histogram',
+                      'type': 'feature',
+                      'data': 'none',
+                      'inputs': ['processed_image'],
+                      'module': 'imfeat.Histogram',
+                      'modelParams': {'feature_type': {'type': 'const', 'value': 'feature'}},
+                      'moduleParams': {'mode': {'type': 'enum', 'values': ['bgr', 'rgb', 'xyz', 'ycrcb',
+                                                                           'hsv', 'luv', 'hls', 'lab', 'gray']},
+                                       'num_bins': {'type': 'int', 'min': 1, 'max': 17},
+                                       'style': {'type': 'enum', 'values': ['joint', 'planar']}}})
+
+PARAM_SCHEMAS.append({'name': 'svmlinear',
+                      'type': 'classifier',
+                      'data': 'slice',
+                      'inputs': ['feature', 'meta'],
+                      'module': 'sklearn.svm.LinearSVC',
+                      'modelParams': {'class_positive': {'type': 'str'}, 'classifier_type': {'type': 'const', 'value': 'sklearn_decision_func'}},
+                      'moduleParams': {}})
+
+for x in PARAM_SCHEMAS:
+    x['path'] = '/'.join([x['type'], x['name']])
+
+PARAM_SCHEMAS_SERVE = {}
+for schema in PARAM_SCHEMAS:
+    PARAM_SCHEMAS_SERVE[schema['path']] = dict(schema)
+
+
+# TODO: Replace this, it is temporary
+@bottle.get('/<version:re:[^/]*>/params')
+@USERS.auth()
+@check_version
+def features():
+    bottle.response.headers["Content-type"] = "application/json"
+    return json.dumps(PARAM_SCHEMAS)
+
+
+def _parse_params(schema, prefix):
+    kw = {}
+    params = schema[prefix + 'Params']
+    get_param = lambda x: bottle.request.params[prefix + '-' + x]
+    print(params)
+    for param_name, param in params.items():
+        print((param_name, param))
+        if param['type'] == 'enum':
+            param_value = get_param(param_name)
+            if param_value not in param['values']:
+                print(3)
+                bottle.abort(400)
+            kw[param_name] = param_value
+        elif param['type'] == 'int':
+            param_value = int(get_param(param_name))
+            if not (param['min'] <= param_value < param['max']):
+                print(2)
+                bottle.abort(400)
+            kw[param_name] = param_value
+        elif param['type'] == 'const':
+            kw[param_name] = param['value']
+        elif param['type'] == 'str':
+            kw[param_name] = get_param(param_name)
+        else:
+            print(1)
+            bottle.abort(400)
+    return kw
+
+
+def _create_model_from_params(path, create_model):
+    try:
+        schema = PARAM_SCHEMAS_SERVE[path]
+        model_params = _parse_params(schema, 'model')
+        module_params = _parse_params(schema, 'module')
+        print(model_params)
+        print(module_params)
+        model_dict = {'name': schema['module'], 'kw': module_params}
+        get_key = lambda x: base64.urlsafe_b64decode(bottle.request.params['key-' + x])   # TODO: Verify that model keys exist
+        prefix = {'feature': 'feat:', 'preprocessor': 'data:', 'classifier': 'pred:'}[schema['type']]
+        inputs = {x: get_key(x) for x in schema['inputs']}
+        model = create_model(model_dict, model_params, inputs)
+        row = MANAGER.input_model_param_to_key(prefix, input=inputs, model=model, name=MANAGER.model_to_name(model_dict), param=model_params)
+        return {'row': base64.urlsafe_b64encode(row)}
+    except ValueError:
+        print(0)
+        bottle.abort(400)
+
+
+@bottle.post('/<version:re:[^/]*>/models/<path:re:.*>')
+@USERS.auth()
+@check_version
+def models_create(path):
+    print_request()
+    try:
+        #model = call_import(model_dict)
+        return _create_model_from_params(path, lambda model_dict, model_params, inputs: model_dict)
+    except KeyError:
+        bottle.abort(400)
+
+
 @bottle.get('/<version:re:[^/]*>/models')
 @USERS.auth()
 @check_version
@@ -510,47 +687,6 @@ def _mturk_wrapper(*args, **kw):
     print('Filtering based on annotations')
     MANAGER.filter_annotations_to_hbase()
     return out
-
-
-@bottle.post('/<version:re:[^/]*>/human/<server_type:re:[^/]*>')
-@check_version
-@USERS.auth()
-def human(server_type):
-    global MTURK_SERVER
-    assert server_type in ('image_entity', 'image_query')
-    assert MTURK_SERVER is None
-    secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
-    p = {}
-    start_row = bottle.request.params['start_row']
-    stop_row = bottle.request.params['stop_row']
-    image_column = bottle.request.params['image_column']
-    if server_type == 'image_entity':
-        entity_column = bottle.request.params['entity_column']
-        p = {}
-        p['data'] = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (start_row, stop_row, entity_column, image_column)
-        p['type'] = 'image_entity'
-    elif server_type == 'image_query':
-        query = bottle.request.params['query']
-        p['data'] = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
-        p['type'] = 'image_query'
-        p['query'] = query
-    else:
-        bottle.abort(400)
-    p['redis_address'] = 'localhost'
-    p['redis_port'] = 6382
-    p['port'] = 16000
-    p['num_tasks'] = 100
-    p['mode'] = 'amt'
-    p['setup'] = True
-    p['reset'] = True
-    p['secret'] = secret
-    print(p)
-    base_url = 'http://api0.picar.us:%d' % p['port']
-    admin_prefix = '/admin/%s/' % secret
-    MTURK_SERVER = multiprocessing.Process(target=_mturk_wrapper, kwargs=p)
-    MTURK_SERVER.start()
-    return {'worker': base_url, 'stop': base_url + admin_prefix + 'stop', 'results': base_url + admin_prefix + 'results.js', 'users': base_url + admin_prefix + 'users.js'}
-
 
 if __name__ == '__main__':
     import gevent.pywsgi

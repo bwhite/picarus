@@ -77,6 +77,10 @@
           <span class="hint hint--bottom" data-hint="Stop row (exclusive, percent encode binary)"><input class="input-small" type="text" placeholder="Row stop" id="stopRow"></span>
     </script>
 
+    <script type="text/html" id="bpl_filter">
+      <span class="hint hint--bottom" data-hint="Filter (see Docs/Filters)"><input class="input-large" type="text" placeholder="Filter" id="filter" value=""></span>
+    </script>
+
     <script type="text/html" id="bpl_prefix_select">
           <select id="rowPrefixDrop"></select>
     </script>
@@ -194,7 +198,7 @@
       }
     </script>
 
-    <script type="text/html" id="tpl_models">
+    <script type="text/html" id="tpl_models_list">
       <div id="models"></div>
       <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         <div class="modal-header">
@@ -213,7 +217,7 @@
     </script>
     
     <script type="text/javascript">
-      function render_models() {
+      function render_models_list() {
           models = new PicarusModels();
           var AppView = Backbone.View.extend({
               el: $('#container'),
@@ -263,6 +267,136 @@
       }
     </script>
 
+    <script type="text/html" id="tpl_models_create">
+        <div id="selects">
+            <select id="type_select"></select>
+            <select id="name_select"></select>
+            <div id="params"></div>
+            <div id="row_select"></div>
+        </div>
+        <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        <div id="results"></div>
+    </script>
+    <script type="text/javascript">
+      function add_hint(el, text) {
+          el.wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', text));
+      }
+      function render_models_create() {
+          PicarusParamModel = Backbone.Model.extend({
+              idAttribute: "path",
+          });
+          PicarusParamModels = Backbone.Collection.extend({
+              model : PicarusParamModel,
+              url : "/a1/params"
+          });
+          models = new PicarusParamModels();
+          var AppView = Backbone.View.extend({
+              initialize: function() {
+                  _.bindAll(this, 'renderType');
+                  _.bindAll(this, 'renderName');
+                  this.collection.bind('reset', this.renderType);
+                  this.collection.bind('change', this.renderType);
+                  this.collection.bind('add', this.renderType);
+              },
+              events: {'change #type_select': 'renderName',
+                       'change #name_select': 'renderParam'},
+              renderParam: function () {
+                  $('#params').html('');
+                  $('#row_select').html('');
+                  var model_type = $('#type_select option:selected').val();
+                  var name = $('#name_select option:selected').val();
+                  model = this.collection.where({type: model_type, name: name})[0];
+                  //params = _.extend(params, model.get('moduleParams'));
+
+                  function add_param_selections(params, param_prefix) {
+                      _.each(params, function (value, key) {
+                          var cur_el;
+                          if (value.type == 'enum') {
+                              var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
+                              cur_el = $('<select>').attr('name', param_prefix + key).html(Mustache.render(select_template, {models: value.values}));
+                          } else if (value.type == 'int') {
+                              // TODO: Client-side data validation
+                              cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text');
+                          } else if (value.type == 'str') {
+                              // TODO: Client-side data validation
+                              cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text');
+                          }
+                          if (typeof cur_el !== 'undefined') {
+                              $('#params').append(cur_el);
+                              add_hint(cur_el, key);
+                          }
+                      });
+                  }
+                  add_param_selections(model.get('modelParams'), 'model-');
+                  add_param_selections(model.get('moduleParams'), 'module-');
+                  if (model.get('data') === 'slice') {
+                      $('#row_select').append(document.getElementById('bpl_row_select').innerHTML);
+                      row_selector();
+                  }
+                  _.each(model.get('inputs'), function (value) {
+                      var cur_el;
+                      // TODO: Finish model inputs, figure out how to take the values from here and integrate them in the response
+                      if (value === 'processed_image') {
+                          var cur_id = _.uniqueId('model_select_');
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
+                          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'data:'},
+                                          change: function() {},
+                                          el: $('#' + cur_id)});
+                      } else if (value === 'feature') {
+                          var cur_id = _.uniqueId('model_select_');
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
+                          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'feat:'},
+                                          change: function() {},
+                                          el: $('#' + cur_id)});
+                      } else if (value === 'raw_image') {
+                          $('#params').append($('<input>').attr('name', 'key-' + value).attr('type', 'hidden').val(encode_id('data:image')));
+                      } else if (value === 'meta') {
+                          // TODO: Add another way to do input
+                          $('#params').append($('<input>').attr('name', 'key-' + value).attr('type', 'hidden').val(encode_id('meta:class_0')));
+                      }
+
+                  });
+              },
+              renderName: function () {
+                  var model_type = $('#type_select option:selected').val();
+                  var cur_models = this.collection.where({type: model_type});
+                  var select_template = "{{#models}}<option value='{{type}}'>{{type}}</option>{{/models}};"
+                  var models_filt = _.map(cur_models, function (data) {return {type: data.get('name')}});
+                  $('#name_select').html(Mustache.render(select_template, {models: models_filt}));
+                  this.renderParam();
+              },
+              renderType: function() {
+                  var select_template = "{{#models}}<option value='{{type}}'>{{type}}</option>{{/models}};"
+                  var models_filt = _.uniq(_.map(this.collection.models, function (data) {return {type: data.get('type')}}));
+                  $('#type_select').html(Mustache.render(select_template, {models: models_filt}));
+                  this.renderName();
+              }
+         });
+         av = new AppView({collection: models, el: $('#selects')});
+         models.fetch();
+         $('#runButton').click(function () {
+             var params = _.object($('#params :input').map(function () {return [[$(this).attr('name'), $(this).val()]]}));
+             function success(xhr) {
+                 response = JSON.parse(xhr.responseText);
+                 $('#results').html(response.row);
+             }
+             var model_type = $('#type_select option:selected').val();
+             var name = $('#name_select option:selected').val();
+             var model = models.where({type: model_type, name: name})[0];
+             var path = model.get('path');
+             if (model.get('data') === 'slice') {
+                 var startRow = encode_id($('#startRow').val());
+                 var stopRow = encode_id($('#stopRow').val());
+                 params.action = 'i/train/' + path
+                 picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: params});
+             } else {
+                 picarus_api("/a1/models/" + path, "POST", {success: success, data: params});
+             }
+         });
+      }
+    </script>
+
+
     <script type="text/html" id="tpl_process_thumbnail">
       <%=rowSelect%>
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
@@ -290,13 +424,114 @@
       }
     </script>
 
-    <script type="text/html" id="tpl_annotate_human">
+    <script type="text/html" id="tpl_process_preprocess">
+      <select id="model_select"></select>
       <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="results"></div>
     </script>
 
     <script type="text/javascript">
-      function render_annotate_human() {
+      function alert_running() {
+          $('#results').html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
+      }
+      function alert_done() {
+          $('#results').html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
+      }
+      function render_process_preprocess() {
+          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'data:'},
+                          el: $('#model_select')});
           row_selector();
+          $('#runButton').click(function () {
+              alert_running();
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              function success() {
+                  alert_done();
+              }
+              var data = {action: 'io/preprocess', model: $('#model_select').find(":selected").val()};
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: data});
+          });
+      }
+    </script>
+
+    <script type="text/html" id="tpl_process_feature">
+      <select id="model_select"></select>
+      <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_process_feature() {
+          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'feat:'},
+                          el: $('#model_select')});
+          row_selector();
+          $('#runButton').click(function () {
+              alert_running();
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              function success() {
+                  alert_done();
+              }
+              var data = {action: 'io/feature', model: $('#model_select').find(":selected").val()};
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: data});
+          });
+      }
+    </script>
+
+    <script type="text/html" id="tpl_process_classifier">
+      <select id="model_select"></select>
+      <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_process_classifier() {
+          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'pred:'},
+                          el: $('#model_select')});
+          row_selector();
+          $('#runButton').click(function () {
+              alert_running();
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              function success() {
+                  alert_done();
+              }
+              var data = {action: 'io/classify', model: $('#model_select').find(":selected").val()};
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: data});
+          });
+      }
+    </script>
+
+    <script type="text/html" id="tpl_annotate_entity">
+      <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="response"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_annotate_entity() {
+          row_selector();
+          $('#runButton').click(function () {
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              var imageColumn = encode_id('thum:image_150sq');
+              var entityColumn = encode_id('meta:class');
+              function success(xhr) {
+                  response = JSON.parse(xhr.responseText);
+                  $('#response').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+                  $('#response').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+                  $('#response').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+                  $('#response').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+              }
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/entity', imageColumn: imageColumn, entityColumn: entityColumn}});
+          });
       }
     </script>
 
@@ -359,11 +594,12 @@
           model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'pred:' && x.get('param').classifier_type === "c2tsZWFybl9kZWNpc2lvbl9mdW5j"},
                           change: function() {
                               var row = this.$el.find(":selected").val();
-                              m = models.get(row);
+                              m = this.collection.get(row);
                               $('#gtColumn').val(base64.decode(m.get('inputs').meta));
                               $('#posClass').val(base64.decode(m.get('param').class_positive));
                               $('#modelKey').val(row);
-                          }});
+                          },
+                          el: $('#model_select')});
           row_selector();
           $('#runButton').click(function () {
           confs = {pos_confs: [], neg_confs: []};
@@ -656,9 +892,10 @@
           model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'srch:'},
                           change: function() {
                               var row = this.$el.find(":selected").val();
-                              m = models.get(row);
+                              m = this.collection.get(row);
                               $('#modelKey').val(row);
-                          }});
+                          },
+                          el: $('#model_select')});
           $('#imagefile').change(function () {
               if ($('#imagefile')[0].files.length != 1) {
                   display_alert('You must specify an image!');
@@ -707,7 +944,7 @@
 
     <script type="text/html" id="tpl_visualize_thumbnails">
       <%=rowSelect%>
-      <input class="input-small" type="text" placeholder="Filter" id="filter" value="">
+      <%=filter%>
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
       <div id="results"></div>
     </script>
@@ -742,7 +979,7 @@
 
     <script type="text/html" id="tpl_visualize_metadata">
       <%=rowSelect%>
-      <input class="input-large" type="text" placeholder="Filter" id="filter" value="">
+      <%=filter%>
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
       <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
       <div id="results"></div>
@@ -761,7 +998,7 @@
               }
               button_confirm_click_reset($('#removeButton'));
               // Setup table
-              images = new PicarusImages();
+              var images = new PicarusImages();
               function remove_rows() {
                  // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
                  var rows = _.map(images.models, function (x) {return x.id})
@@ -769,6 +1006,8 @@
               }
               function done() {
                   $('#results').html('');
+                  if (!images.length)
+                      return;
                   var AppView = Backbone.View.extend({
                       initialize: function() {
                           _.bindAll(this, 'render');
@@ -902,34 +1141,85 @@
 
     <script type="text/html" id="tpl_visualize_locations">
       <%=rowSelect%>
+      <%=filter%>
+      <input class="input-small" type="text" placeholder="Target Latitude" id="demolat" value="38.8811">
+      <input class="input-small" type="text" placeholder="Target Longitude" id="demolong" value="-77.0369">
+      <input class="input-small" type="text" placeholder="Max Distance" id="demodist" value="5">
+      <input class="input-small" type="checkbox" id="filterInvert">
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
       <div id="map_canvas" style="width:100%; height:500px"></div>
     </script>
 
     <script type="text/javascript">
+      function deg2rad(deg) {
+          return deg * (Math.PI/180)
+      }
+      function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
+         // From: http://stackoverflow.com/questions/27928/how-do-i-calculate-distance-between-two-latitude-longitude-points
+         var R = 6371; // Radius of the earth in km
+         var dLat = deg2rad(lat2-lat1);
+         var dLon = deg2rad(lon2-lon1); 
+         var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
+         var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+         var d = R * c; // Distance in km
+         return d;
+      }
+      function filter_lat_long(lat, long) {
+          var targetLat = Number($('#demolat').val());
+          var targetLong = Number($('#demolong').val());
+          var targetDist = Number($('#demodist').val());
+          var checked = $('#filterInvert').is(':checked');
+          if (getDistanceFromLatLonInKm(targetLat, targetLong, lat, long) > targetDist)
+              return !checked;
+          return checked;
+      }
       function render_visualize_locations() {
           row_selector();
           $('#runButton').click(function () {
               var latitude = encode_id('meta:latitude');
               var longitude = encode_id('meta:longitude');
-              var map = undefined;
-              function maps_first(row, columns) {
+              button_confirm_click_reset($('#removeButton'));
+              images = new PicarusImages();
+              function maps_success(row, columns) {
+                  columns.row = row;
                   var curLat = base64.decode(columns[latitude]);
                   var curLong = base64.decode(columns[longitude]);
+                  if (filter_lat_long(Number(curLat), Number(curLong))) {
+                      return;
+                  }
+                  images.add(new PicarusImage(columns));
+              }
+              function maps_done() {
+                  var centerLat = Number($('#demolat').val());
+                  var centerLong = Number($('#demolong').val());
+                  button_confirm_click($('#removeButton'), function () {
+                      var rows = _.map(images.models, function (x) {return x.get('row')});
+                      picarus_api_delete_rows(rows, {done: function () {alert('Done removing rows')}});
+                  });
+                  $('#removeButton').removeAttr('disabled');
+                  if (!centerLat || !centerLat) {
+                      centerLat = base64.decode(images.at(0).get(latitude));
+                      centerLong = base64.decode(images.at(0).get(longitude));
+                  }
                   var mapOptions = {
                       zoom: 14,
-                      center: new google.maps.LatLng(curLat, curLong),
+                      center: new google.maps.LatLng(centerLat, centerLong),
                       mapTypeId: google.maps.MapTypeId.HYBRID
                   };
-                  map = new google.maps.Map(document.getElementById("map_canvas"),
+                   map = new google.maps.Map(document.getElementById("map_canvas"),
                       mapOptions);
+                  google.maps.event.addListener(map, 'rightclick', function(event){
+                      $('#demolat').val(event.latLng.lat());
+                      $('#demolong').val(event.latLng.lng());
+                  });
+                  images.each(function (x) {
+                      var lat = base64.decode(x.get(latitude))
+                      var long = base64.decode(x.get(longitude))
+                      new google.maps.Marker({position: new google.maps.LatLng(lat, long), map: map});
+                  });
               }
-              function maps_success(row, columns) {
-                  var curLat = base64.decode(columns[latitude]);
-                  var curLong = base64.decode(columns[longitude]);
-                  new google.maps.Marker({position: new google.maps.LatLng(curLat, curLong), map: map});
-              }
-              picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [latitude, longitude], {success: maps_success, first: maps_first});
+              picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [latitude, longitude], {success: maps_success, done: maps_done});
           })
       }
     </script>

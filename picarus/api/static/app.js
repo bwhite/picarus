@@ -7,7 +7,10 @@ function login_get() {
 }
 
 function model_dropdown(args) {
-    models = new PicarusModels();
+    var models = new PicarusModels();
+    if (typeof args.change === 'undefined') {
+        args.change = function () {};
+    }
     var AppView = Backbone.View.extend({
         el: $('#container'),
         initialize: function() {
@@ -29,7 +32,7 @@ function model_dropdown(args) {
             this.renderDrop();
         }
     });
-    av = new AppView({collection: models, el: document.getElementById('model_select')});
+    av = new AppView({collection: models, el: args.el});
     models.fetch();
 }
 
@@ -101,7 +104,8 @@ function app_main() {
     });
     // TODO: We may want to add a few REST calls, not sure yet
     PicarusImages = Backbone.Collection.extend({
-        model : PicarusImage
+        model : PicarusImage,
+        url : "/a1/users/images"
     });
 
     $.ajaxSetup({
@@ -140,6 +144,7 @@ function app_main() {
             }
             return [val, _.template(document.getElementById(prefix + selector_id).innerHTML, {baseLogin: document.getElementById('bpl_login').innerHTML,
                                                                                               rowSelect: document.getElementById('bpl_row_select').innerHTML,
+                                                                                              filter: document.getElementById('bpl_filter').innerHTML,
                                                                                               prefixSelect: document.getElementById('bpl_prefix_select').innerHTML})];
         })),
         render:function(route){

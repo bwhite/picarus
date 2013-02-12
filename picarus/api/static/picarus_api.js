@@ -130,7 +130,7 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
         params.maxRows = Infinity;
     }
     if (typeof params.maxRowsIter == "undefined") {
-        params.maxRowsIter = Math.min(101, params.maxRows);
+        params.maxRowsIter = Math.min(100, params.maxRows);
     }
     function param_encode(dd) {
         return _.map(dd, function (v) {
@@ -170,6 +170,7 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
             });
         }
         numRows += data.length;
+        console.log(numRows);
         if (data.length >= params.maxRowsIter && params.maxRows > 0) {
             isdone = false;
             function next_call() {
