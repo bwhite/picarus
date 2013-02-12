@@ -347,6 +347,11 @@ def data_rows(auth_user, table, start_row, stop_row):
                 print('Running feature')
                 MANAGER.image_to_feature(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
+            elif action == 'io/hash':
+                verify_slice_permissions(auth_user.image_prefixes, 'rw', start_row, stop_row)
+                print('Running hash')
+                MANAGER.feature_to_hash(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
+                return {}
             elif action == 'i/dedupe/identical':
                 col = base64.urlsafe_b64decode(bottle.request.params['column'])
                 features = {}
@@ -437,9 +442,31 @@ def data_rows(auth_user, table, start_row, stop_row):
                     classifier = call_import(model_dict)
                     classifier.fit(features, np.asarray(labels))
                     return classifier
+
+                def hasher_train(model_dict, model_param, inputs):
+                    hasher = call_import(model_dict)
+                    features = hadoopy_hbase.scanner_column(THRIFT, table, inputs['feature'],
+                                                            start_row=start_row, stop_row=stop_row)
+                    return hasher.train(picarus.api.np_fromstring(x) for x in features)
+
+                def index_train(model_dict, model_param, inputs):
+                    index = call_import(model_dict)
+                    row_cols = hadoopy_hbase.scanner(THRIFT, table,
+                                                     columns=[inputs['hash'], inputs['meta']], start_row=start_row, stop_row=stop_row)
+                    metadata, hashes = zip(*[(json.dumps([cols[inputs['meta']], base64.urlsafe_b64encode(row)]), cols[inputs['hash']])
+                                             for row, cols in row_cols])
+                    hashes = np.ascontiguousarray(np.asfarray([np.fromstring(h, dtype=np.uint8) for h in hashes]))
+                    index = index.store_hashes(hashes, np.arange(len(metadata), dtype=np.uint64))
+                    index.metadata = metadata
+                    return index
+
                 print(path)
                 if path == 'classifier/svmlinear':
                     return _create_model_from_params(path, classifier_sklearn)
+                elif path == 'hasher/rrmedian':
+                    return _create_model_from_params(path, hasher_train)
+                elif path == 'index/linear':
+                    return _create_model_from_params(path, index_train)
                 else:
                     bottle.abort(400)
             else:
@@ -461,7 +488,7 @@ def _classifier_from_key(key):
         real_feature = lambda x: feature.compute_dense(x)
     else:
         real_feature = feature
-    input, preprocessor, param = MANAGER.key_to_input_model_param(input['image'])
+    input, preprocessor, param = MANAGER.key_to_input_model_param(input['processed_image'])
     preprocessor = loader(preprocessor)
     return lambda x: real_classifier(real_feature(preprocessor.asarray(x)))
 
@@ -473,7 +500,7 @@ def _index_from_key(key):
     hasher = loader(hasher)
     input, feature, param = MANAGER.key_to_input_model_param(input['feature'])
     feature = loader(feature)
-    input, preprocessor, param = MANAGER.key_to_input_model_param(input['image'])
+    input, preprocessor, param = MANAGER.key_to_input_model_param(input['processed_image'])
     preprocessor = loader(preprocessor)
     return lambda x: [json.loads(index.metadata[y]) for y in index.search_hash_knn(hasher(feature(preprocessor.asarray(x))).ravel(), 10)]
 
@@ -551,6 +578,24 @@ PARAM_SCHEMAS.append({'name': 'svmlinear',
                       'modelParams': {'class_positive': {'type': 'str'}, 'classifier_type': {'type': 'const', 'value': 'sklearn_decision_func'}},
                       'moduleParams': {}})
 
+PARAM_SCHEMAS.append({'name': 'rrmedian',
+                      'type': 'hasher',
+                      'data': 'slice',
+                      'inputs': ['feature'],
+                      'module': 'image_search.RRMedianHasher',
+                      'modelParams': {},
+                      'moduleParams': {'hash_bits': {'type': 'int', 'min': 1, 'max': 513}, 'normalize_features': {'type': 'const', 'value': False}}})
+
+
+PARAM_SCHEMAS.append({'name': 'linear',
+                      'type': 'index',
+                      'data': 'slice',
+                      'inputs': ['hash', 'meta'],
+                      'module': 'image_search.LinearHashDB',
+                      'modelParams': {},
+                      'moduleParams': {}})
+
+
 for x in PARAM_SCHEMAS:
     x['path'] = '/'.join([x['type'], x['name']])
 
@@ -578,13 +623,11 @@ def _parse_params(schema, prefix):
         if param['type'] == 'enum':
             param_value = get_param(param_name)
             if param_value not in param['values']:
-                print(3)
                 bottle.abort(400)
             kw[param_name] = param_value
         elif param['type'] == 'int':
             param_value = int(get_param(param_name))
             if not (param['min'] <= param_value < param['max']):
-                print(2)
                 bottle.abort(400)
             kw[param_name] = param_value
         elif param['type'] == 'const':
@@ -592,7 +635,6 @@ def _parse_params(schema, prefix):
         elif param['type'] == 'str':
             kw[param_name] = get_param(param_name)
         else:
-            print(1)
             bottle.abort(400)
     return kw
 
@@ -606,13 +648,12 @@ def _create_model_from_params(path, create_model):
         print(module_params)
         model_dict = {'name': schema['module'], 'kw': module_params}
         get_key = lambda x: base64.urlsafe_b64decode(bottle.request.params['key-' + x])   # TODO: Verify that model keys exist
-        prefix = {'feature': 'feat:', 'preprocessor': 'data:', 'classifier': 'pred:'}[schema['type']]
+        prefix = {'feature': 'feat:', 'preprocessor': 'data:', 'classifier': 'pred:', 'hasher': 'hash:', 'index': 'srch:'}[schema['type']]
         inputs = {x: get_key(x) for x in schema['inputs']}
         model = create_model(model_dict, model_params, inputs)
         row = MANAGER.input_model_param_to_key(prefix, input=inputs, model=model, name=MANAGER.model_to_name(model_dict), param=model_params)
         return {'row': base64.urlsafe_b64encode(row)}
     except ValueError:
-        print(0)
         bottle.abort(400)
 
 

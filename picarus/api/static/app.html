@@ -348,6 +348,12 @@
                           model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'feat:'},
                                           change: function() {},
                                           el: $('#' + cur_id)});
+                      } else if (value === 'hash') {
+                          var cur_id = _.uniqueId('model_select_');
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
+                          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'hash:'},
+                                          change: function() {},
+                                          el: $('#' + cur_id)});
                       } else if (value === 'raw_image') {
                           $('#params').append($('<input>').attr('name', 'key-' + value).attr('type', 'hidden').val(encode_id('data:image')));
                       } else if (value === 'meta') {
@@ -505,6 +511,31 @@
       }
     </script>
 
+    <script type="text/html" id="tpl_process_hash">
+      <select id="model_select"></select>
+      <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_process_hash() {
+          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'hash:'},
+                          el: $('#model_select')});
+          row_selector();
+          $('#runButton').click(function () {
+              alert_running();
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              function success() {
+                  alert_done();
+              }
+              var data = {action: 'io/hash', model: $('#model_select').find(":selected").val()};
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: data});
+          });
+      }
+    </script>
+
     <script type="text/html" id="tpl_annotate_entity">
       <%=rowSelect%>
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
@@ -538,7 +569,7 @@
 
     <script type="text/html" id="tpl_classifier_compute">
       <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
-        <input class="input-small" type="text" placeholder="Classifier key" id="modelKey" value="">
+        <select id="model_select"></select>
         <input type="file" id="imagefile" class="input-small">
       </div>
       <div id="results">
@@ -547,13 +578,17 @@
 
     <script type="text/javascript">
       function render_classifier_compute() {
+          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'pred:'},
+                          change: function() {},
+                          el: $('#model_select')});
+
           $('#imagefile').change(function () {
               if ($('#imagefile')[0].files.length != 1) {
                   display_alert('You must specify an image!');
                   return;
               }
               var imageColumn = encode_id('data:image');
-              var modelKey = $('#modelKey').val();
+              var modelKey = $('#model_select').find(":selected").val();
               function success_func(xhr) {
                   $('#results').html(xhr.responseText);
               }
