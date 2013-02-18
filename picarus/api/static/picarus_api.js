@@ -104,26 +104,6 @@ function class_key(classes, div) {
     })
 }
 
-
-/* Handle email/auth cookies */
-function store_cookie(email, auth) {
-    $.cookie("email", email, {secure: true});
-    $.cookie("auth", auth, {secure: true});
-}
-
-function load_cookie(email_input, auth_input) {
-    /* Return {email, auth} object, if provided set email/auth inputs (e.g., textboxes) */
-    var email_auth = {email: $.cookie("email"), auth: $.cookie("auth")};
-    if (typeof email_input != 'undefined' ) {
-        email_input.val(email_auth.email);
-    }
-    if (typeof auth_input != 'undefined' ) {
-        auth_input.val(email_auth.auth);
-    }
-    return email_auth;
-}
-
-
 function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
     // params: success, done, maxRows, maxRowsIter, first, filter, resume
     if (typeof params.maxRows == "undefined") {

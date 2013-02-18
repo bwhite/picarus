@@ -179,6 +179,13 @@ class PicarusManager(object):
                              num_mappers=self.num_mappers, files=[model_fp.name], columns=['data:image'], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
 
+    def image_exif(self, **kw):
+        cmdenvs = {'HBASE_TABLE': self.images_table,
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode('meta:exif')}
+        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_exif.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, columns=['data:image'], single_value=True,
+                             cmdenvs=cmdenvs, **kw)
+
     def image_preprocessor(self, model_key, **kw):
         input_dict, model_dict, _ = self.key_to_input_model_param(model_key)
         model_fp = picarus.api.model_tofile(model_dict)
@@ -303,6 +310,27 @@ class PicarusManager(object):
             user_data = data.get('user_data', 'true') == 'true'
             if not user_data:
                 self.hb.deleteAllRow('images', data['image'])
+
+    def filter_batch_annotations_to_hbase(self):
+        import redis
+        import ast
+        r = redis.StrictRedis(port=6382, db=6)
+        for x in r.keys():
+            v = r.hgetall(x)
+            images = map(base64.b64decode, json.loads(v['images']))
+            if 'user_data' not in v:
+                continue
+            user_data = ast.literal_eval(v['user_data'])
+            if user_data['polarity'] == 'true':
+                # Filter all that are unselected
+                for x in user_data['notSelected']:
+                    print(repr(images[int(x)]))
+                    self.hb.deleteAllRow('images', images[int(x)])
+            else:
+                # Filter all that are selected
+                for x in user_data['selected']:
+                    print(repr(images[int(x)]))
+                    self.hb.deleteAllRow('images', images[int(x)])
 
     def _mask_annotation_render(self, row_key, class_segments, image_key, image_superpixel_key, min_votes=1):
         columns = dict((x, y.value) for x, y in self.hb.getRowWithColumns(self.images_table, row_key, [image_key, image_superpixel_key])[0].columns.items())

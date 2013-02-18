@@ -1,9 +1,77 @@
-function login_setup() {
-    load_cookie($('#userEmail'), $('#userAuth'));
-}
-
-function login_get() {
-    return {email: $('#userEmail').val(), auth: $('#userAuth').val()};
+function login_get(func) {
+    var otp = $('#otp');
+    var apiKey = $('#apiKey');
+    var modal = $('#authModal');
+    var emailKeys = $('#emailKeys');
+    emailKeys.click(function () {
+        var email = $('#email').val();
+        var loginKey = $('#loginKey').val();
+        picarus_api("/a1/auth/email", "POST", {email: email, auth: loginKey});
+    });
+    if (typeof EMAIL_AUTH === 'undefined') {
+        function get_auth() {
+            function success(xhr) {
+                use_api(JSON.parse(xhr.responseText).apiKey);
+            }
+            function fail() {
+                $('#secondFactorAuth').addClass('error');
+            }
+            var otp_val = otp.val();
+            var email = $('#email').val();
+            var loginKey = $('#loginKey').val();
+            picarus_api("/a1/auth/yubikey", "POST", {data: {otp: otp_val}, success: success, email: email, auth: loginKey, fail: fail});
+        }
+        function get_api() {
+            var email = $('#email').val();
+            var apiKey = $('#apiKey').val();
+            function success(xhr) {
+                use_api(apiKey);
+            }
+            function fail() {
+                $('#secondFactorAuth').addClass('error');
+            }
+            $('#secondFactorAuth').addClass('info');
+            $('#secondFactorAuth').removeClass('error');
+            picarus_api("/a1/users/" + encodeURIComponent(email), "GET", {success: success, email: email, auth: apiKey, fail: fail});
+        }
+        function use_api(apiKey) {
+            var email = $('#email').val();
+            var loginKey = $('#loginKey').val();
+            $('#secondFactorAuth').removeClass('error');
+            $.cookie('email', email, {secure: true});
+            $.cookie('loginKey', loginKey, {secure: true});
+            EMAIL_AUTH = {auth: apiKey, email: email};
+            $('#otp').unbind();
+            $('#apiKey').unbind('keypress');
+            func(EMAIL_AUTH);
+            modal.modal('hide');
+        }
+        function enable_inputs() {
+            var email = $('#email').val();
+            var loginKey = $('#loginKey').val();
+            if (email.length && loginKey.length) {
+                otp.removeAttr("disabled");
+                apiKey.removeAttr("disabled");
+                emailKeys.removeAttr("disabled");
+            }
+        }
+        $('#email').val($.cookie('email'));
+        $('#loginKey').val($.cookie('loginKey'));
+        enable_inputs();
+        $('#email').keypress(enable_inputs);
+        $('#email').on('paste', function () {_.defer(enable_inputs)});
+        $('#loginKey').keypress(enable_inputs);
+        $('#loginKey').on('paste', function () {_.defer(enable_inputs)});
+        otp.keypress(_.debounce(get_auth, 100));
+        otp.on('paste', function () {_.defer(get_auth)});
+        apiKey.keypress(_.debounce(get_api, 100));
+        apiKey.on('paste', function () {_.defer(get_api)});
+        modal.modal('show');
+        modal.off('shown');
+        modal.on('shown', function () {otp.focus()});
+    } else {
+        func(EMAIL_AUTH);
+    }
 }
 
 function model_dropdown(args) {
@@ -58,11 +126,11 @@ function row_selector() {
             this.renderDrop();
         }
     });
-    // TODO: Create standard way to get login, not using cookie
-    var auth = load_cookie();
-    user = new PicarusUser({email: auth.email});
-    new AppView({model: user, el: $('#rowPrefixDrop')});
-    user.fetch();
+    var auth = login_get(function (email_auth) {
+        user = new PicarusUser({email: email_auth.email});
+        new AppView({model: user, el: $('#rowPrefixDrop')});
+        user.fetch();
+    });
 }
 
 function app_main() {
@@ -110,8 +178,9 @@ function app_main() {
 
     $.ajaxSetup({
         'beforeSend': function (xhr) {
-            var args = load_cookie();
-            xhr.setRequestHeader("Authorization", "Basic " + base64.encode(args.email + ":" + args.auth));
+            login_get(function (email_auth) {
+                xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email_auth.email + ":" + email_auth.auth));
+            });
         }
     });
 
@@ -155,7 +224,7 @@ function app_main() {
                 route = 'home';
             var func_name = 'render_' + route.split('/').join('_');
             if (window.hasOwnProperty(func_name))
-                window[func_name]();
+                login_get(window[func_name]);
         }
     });
     
@@ -236,4 +305,5 @@ function app_main() {
     //Start the app by setting kicking off the history behaviour.
     //We will get a routing event with the initial URL fragment
     Backbone.history.start();
+    window.onbeforeunload = function() {return "Leaving Picarus..."};
 }

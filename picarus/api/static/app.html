@@ -8,20 +8,17 @@
     <meta name="author" content="">
 
     <!-- Le styles -->
-    <!--<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/css/bootstrap-combined.min.css" rel="stylesheet">-->
     <link href="/static/bootstrap.min.css" rel="stylesheet">
     <link href="/static/bootstrap-responsive.min.css" rel="stylesheet">
     <link href="/static/hint.min.css" rel="stylesheet">
-    <link href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.1.1/bootstrap.min.js" rel="stylesheet">
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <script type="text/javascript" src="//stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
-    <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.2/jquery.cookie.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.2.2/bootstrap.min.js"></script>
     <script type="text/javascript" src="//www.google.com/jsapi"></script>
-    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.2/underscore-min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.3.1/jquery.cookie.min.js"></script>
     <script type="text/javascript" src="/static/picarus_api.js"></script>
     <script type="text/javascript" src="/static/app.js"></script>
-    <script type="text/javascript" src="/static/picarus_api_demo.js"></script>
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBsKtzgLTIsaoxAFUvSNoJ8n3j4w9VZs0&sensor=false"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/0.9.10/backbone-min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mustache.js/0.7.0/mustache.min.js"></script>
@@ -85,17 +82,38 @@
           <select id="rowPrefixDrop"></select>
     </script>
 
+
     <script type="text/html" id="tpl_home">
-      <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
-        <%=baseLogin%>
-      </div>
+      <div id="users"></div>
     </script>
 
-    <script type="text/javascript">      
+    <script type="text/javascript">
       function render_home() {
-          login_setup();
+          users = new PicarusUsers();
+          var AppView = Backbone.View.extend({
+              initialize: function() {
+                  _.bindAll(this, 'render');
+                  this.collection.bind('reset', this.render);
+                  this.collection.bind('change', this.render);
+              },
+              render: function() {
+                          picarus_table = new Backbone.Table({
+                          collection: this.collection,
+                          columns: [["email", "Email"],
+                                    ["uploadRowPrefix", "Row Prefix"],
+                                    {header: "Prefixes", getFormatted: function() { return _.escape(JSON.stringify(this.get('imagePrefixes')))}}]
+                          });
+                          this.$el.html(picarus_table.render().el);
+                      }
+          });
+          new AppView({collection: users, el: $('#users')});
+          login_get(function (email_auth) {
+              var user = new PicarusUser({email: email_auth.email});
+              users.add(user);
+              user.fetch();
+          });
       }
-    </script> 
+    </script>
 
 <!--
     <script type="text/html" id="tpl_data_explore">
@@ -170,10 +188,7 @@
               return;
           }
           /* Check input */
-          reset_state();
-          if ($('#demosave').is(':checked')) {
-              store_cookie();
-          }
+          //reset_state();
           var min_time = 1232170610;
           var min_upload_date = parseInt((new Date().getTime() / 1000 - min_time) * Math.random() + min_time);
           var max_upload_date = parseInt((new Date().getTime() / 1000 - min_upload_date) * Math.random() + min_upload_date);
@@ -230,18 +245,18 @@
                           picarus_table = new Backbone.Table({
                           collection: this.collection,
                           columns: [["name", "Name"], 
-                                    {header: "Notes", className: "models-notes", getFormatted: function() { return this.get('notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + this.get('row') + '">edit</a></span>'}},
-                                    {header: "Tags", className: "models-tags", getFormatted: function() { return this.get('tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + this.get('row') + '">edit</a></span>'}},
+                                    {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + this.escape('row') + '">edit</a></span>'}},
+                                    {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + this.escape('row') + '">edit</a></span>'}},
                                     ["prefix_pretty", "Type"], ["creationTime", "Creation"],
-                                    {header: "Row", className: "models-row", getFormatted: function() { return this.get('row')}},
-                                    {header: "Parameters", className: "models-params", getFormatted: function() { return JSON.stringify(this.get('param'))}},
-                                    {header: "Inputs", className: "models-inputs", getFormatted: function() { return JSON.stringify(this.get('inputs'))}}]
+                                    {header: "Row", className: "models-row", getFormatted: function() { return this.escape('row')}},
+                                    {header: "Parameters", className: "models-params", getFormatted: function() { return _.escape(JSON.stringify(this.get('param')))}},
+                                    {header: "Inputs", className: "models-inputs", getFormatted: function() { return _.escape(JSON.stringify(this.get('inputs')))}}]
                           });
                           $("#models").html(picarus_table.render().el);
                           $('.modal_link_notes').click(function (data) {
                               var row = data.target.getAttribute('row');
                               var model = models.get(row);
-                              $('#modal_content').val(model.get('notes'));
+                              $('#modal_content').val(model.escape('notes'));
                               $('#save_button').unbind();
                               $('#save_button').click(function () {
                                   model.save({notes: $('#modal_content').val()}, {patch: true});
@@ -252,7 +267,7 @@
                           $('.modal_link_tags').click(function (data) {
                               var row = data.target.getAttribute('row');
                               var model = models.get(row);
-                              $('#modal_content').val(model.get('tags'));
+                              $('#modal_content').val(model.escape('tags'));
                               $('#save_button').unbind();
                               $('#save_button').click(function () {
                                   model.save({tags: $('#modal_content').val()}, {patch: true});
@@ -306,7 +321,6 @@
                   var model_type = $('#type_select option:selected').val();
                   var name = $('#name_select option:selected').val();
                   model = this.collection.where({type: model_type, name: name})[0];
-                  //params = _.extend(params, model.get('moduleParams'));
 
                   function add_param_selections(params, param_prefix) {
                       _.each(params, function (value, key) {
@@ -348,6 +362,12 @@
                           model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'feat:'},
                                           change: function() {},
                                           el: $('#' + cur_id)});
+                      } else if (value === 'multi_feature') {
+                          var cur_id = _.uniqueId('model_select_');
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
+                          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'mfeat:'},
+                                          change: function() {},
+                                          el: $('#' + cur_id)});
                       } else if (value === 'hash') {
                           var cur_id = _.uniqueId('model_select_');
                           $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
@@ -357,8 +377,13 @@
                       } else if (value === 'raw_image') {
                           $('#params').append($('<input>').attr('name', 'key-' + value).attr('type', 'hidden').val(encode_id('data:image')));
                       } else if (value === 'meta') {
-                          // TODO: Add another way to do input
-                          $('#params').append($('<input>').attr('name', 'key-' + value).attr('type', 'hidden').val(encode_id('meta:class_0')));
+                          var cur_id = _.uniqueId('model_select_');
+                          //
+                          var el = $('<select>').attr('id', cur_id).attr('name', 'key-' + value);
+                          _.each(['meta:class', 'meta:class_0', 'meta:class_1', 'meta:class_2'], function (x) {
+                              el.append($('<option>').attr('value', encode_id(x)).text(x))
+                          });
+                          $('#params').append(el);
                       }
 
                   });
@@ -402,7 +427,6 @@
       }
     </script>
 
-
     <script type="text/html" id="tpl_process_thumbnail">
       <%=rowSelect%>
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
@@ -426,6 +450,80 @@
                   alert_done();
               }
               picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/thumbnail'}});
+          });
+      }
+    </script>
+
+    <script type="text/html" id="tpl_process_exif">
+      <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_process_exif() {
+          row_selector();
+          $('#runButton').click(function () {
+              alert_running();
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              function success() {
+                  alert_done();
+              }
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/exif'}});
+          });
+      }
+    </script>
+
+    <script type="text/html" id="tpl_process_modify">
+      <%=rowSelect%>
+      <input class="input-small" type="text" placeholder="Column" id="columnName" value="">
+      <input class="input-small" type="text" placeholder="Value" id="columnValue" value="">
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_process_modify() {
+          row_selector();
+          $('#runButton').click(function () {
+              alert_running();
+              var columnName = encode_id($('#columnName').val());
+              var columnValue = $('#columnValue').val();
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              function success() {
+                  alert_done();
+              }
+              var data = {};
+              data[columnName] = columnValue
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "PATCH", {success: success, data: data});
+          });
+      }
+    </script>
+
+    <script type="text/html" id="tpl_process_copy">
+      <%=rowSelect%>
+      <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</div>
+      <button id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_process_copy() {
+          row_selector();
+          $('#runButton').click(function () {
+              alert_running();
+              var columnName = encode_id($('#columnName').val());
+              var columnValue = $('#columnValue').val();
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              function success() {
+                  alert_done();
+              }
+              var data = {};
+              data[columnName] = columnValue
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "PATCH", {success: success, data: data});
           });
       }
     </script>
@@ -470,7 +568,7 @@
 
     <script type="text/javascript">
       function render_process_feature() {
-          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'feat:'},
+          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'feat:' || x.get('prefix') === 'mfeat:'},
                           el: $('#model_select')});
           row_selector();
           $('#runButton').click(function () {
@@ -566,6 +664,69 @@
       }
     </script>
 
+    <script type="text/html" id="tpl_annotate_query">
+      <%=rowSelect%>
+      <input class="input-small" type="text" placeholder="Query" id="query" value="">
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="response"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_annotate_query() {
+          row_selector();
+          $('#runButton').click(function () {
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              var imageColumn = encode_id('thum:image_150sq');
+              var entityColumn = encode_id('meta:class');
+              var query = $('#query').val();
+              function success(xhr) {
+                  response = JSON.parse(xhr.responseText);
+                  $('#response').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+                  $('#response').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+                  $('#response').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+                  $('#response').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+              }
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query', imageColumn: imageColumn, entityColumn: entityColumn, query: query}});
+          });
+      }
+    </script>
+
+    <script type="text/html" id="tpl_annotate_batch">
+      <%=rowSelect%>
+      <input class="input-small" type="text" placeholder="Query" id="query" value="">
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="response"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_annotate_batch() {
+          row_selector();
+          $('#runButton').click(function () {
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              var imageColumn = encode_id('thum:image_150sq');
+              var entityColumn = encode_id('meta:class');
+              var query = $('#query').val();
+              function success(xhr) {
+                  response = JSON.parse(xhr.responseText);
+                  $('#response').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+                  $('#response').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+                  $('#response').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+                  $('#response').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
+                  $('#response').append($('<br>'));
+              }
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query_batch', imageColumn: imageColumn, entityColumn: entityColumn, query: query}});
+          });
+      }
+    </script>
 
     <script type="text/html" id="tpl_classifier_compute">
       <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
@@ -1015,6 +1176,7 @@
     <script type="text/html" id="tpl_visualize_metadata">
       <%=rowSelect%>
       <%=filter%>
+      <input class="input-small" type="text" placeholder="Max Size" id="maxSize" value="128">
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
       <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
       <div id="results"></div>
@@ -1026,6 +1188,7 @@
           $('#runButton').click(function () {
               var startRow = encode_id(unescape($('#startRow').val()));
               var stopRow = encode_id(unescape($('#stopRow').val()));
+              var max_size = Number($('#maxSize').val());
               var metaCF = encode_id('meta:');
               if (startRow.length == 0 || stopRow.length == 0) {
                   display_alert('Must specify rows');
@@ -1033,7 +1196,7 @@
               }
               button_confirm_click_reset($('#removeButton'));
               // Setup table
-              var images = new PicarusImages();
+              images = new PicarusImages();
               function remove_rows() {
                  // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
                  var rows = _.map(images.models, function (x) {return x.id})
@@ -1051,12 +1214,24 @@
                           this.collection.bind('add', this.render);
                       },
                       render: function() {
+                          var columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
+                              return _.keys(x.attributes);
+                          })));
                                   picarus_table = new Backbone.Table({
                                   collection: this.collection,
-                                  columns: _.map(_.keys(this.collection.at(0).attributes), function (v) {
+                                  columns: _.map(columns, function (v) {
                                           if (v === "row")
                                               return [v, v];
-                                          return {header: base64.decode(v), getFormatted: function() { return base64.decode(this.get(v))}};
+                                          return {header: base64.decode(v), getFormatted: function() {
+                                              var out = this.get(v);
+                                              if (typeof out !== 'undefined') {
+                                                  out = base64.decode(out);
+                                                  if (out.length <= max_size)
+                                                      return out;
+                                                  else
+                                                      return '<span style="color:red">' + out.slice(0, max_size) + '</span>'
+                                              }
+                                          }};
                                       })
                                   });
                                   this.$el.html(picarus_table.render().el);
@@ -1082,6 +1257,96 @@
       }
     </script>
 
+    <script type="text/html" id="tpl_visualize_exif">
+      <%=rowSelect%>
+      <%=filter%>
+      <input class="input-small" type="text" placeholder="Max Size" id="maxSize" value="128">
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+      <div id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_visualize_exif() {
+          row_selector();
+          // TODO: Fix for exif
+          $('#runButton').click(function () {
+              var startRow = encode_id(unescape($('#startRow').val()));
+              var stopRow = encode_id(unescape($('#stopRow').val()));
+              var max_size = Number($('#maxSize').val());
+              var metaCF = encode_id('meta:');
+              if (startRow.length == 0 || stopRow.length == 0) {
+                  display_alert('Must specify rows');
+                  return;
+              }
+              button_confirm_click_reset($('#removeButton'));
+              // Setup table
+              images = new PicarusImages();
+              var exif_column = base64.encode('meta:exif');
+              function remove_rows() {
+                 // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
+                 var rows = _.map(images.models, function (x) {return x.id})
+                 picarus_api_delete_rows(rows, {done: function () {alert('Done removing rows')}});
+              }
+              function done() {
+                  $('#results').html('');
+                  if (!images.length)
+                      return;
+                  var AppView = Backbone.View.extend({
+                      initialize: function() {
+                          _.bindAll(this, 'render');
+                          this.collection.bind('reset', this.render);
+                          this.collection.bind('change', this.render);
+                          this.collection.bind('add', this.render);
+                      },
+                      render: function() {
+                          var cur_images = this.collection.filter(function (x) {return x.get(exif_column) != 'e30='});
+                          columns = _.uniq(_.flatten(_.map(cur_images, function (x) {
+                              return _.keys(JSON.parse(base64.decode(x.get(exif_column))));
+                          }))).concat(['row']);
+                                  picarus_table = new Backbone.Table({
+                                  collection: this.collection,
+                                  columns: _.map(columns, function (v) {
+                                          if (v === "row")
+                                              return [v, v];
+                                          return {header: v, getFormatted: function() {
+                                              var cur_exif = JSON.parse(base64.decode(this.get(exif_column)));
+                                              var out = cur_exif[v];
+                                              if (typeof out !== 'undefined') {
+                                                  if (!_.isString(out))
+                                                      return _.escape(JSON.stringify(out));
+                                                  out = base64.decode(out);
+                                                  if (typeof out.length <= max_size)
+                                                      return _.escape(out);
+                                                  else
+                                                      return '<span style="color:red">' + _.escape(out.slice(0, max_size)) + '</span>'
+                                              }
+                                          }};
+                                      })
+                                  });
+                                  this.$el.html(picarus_table.render().el);
+                              }
+                  });
+                  av = new AppView({collection: images, el: $('#results')});
+                  av.render();
+                  $('#removeButton').removeAttr('disabled');
+                  button_confirm_click($('#removeButton'), remove_rows);
+              }
+              function success(row, columns) {
+                  c=columns;
+                  columns.row = row;
+                  if (columns[exif_column] != 'e30=')
+                      images.add(columns);
+              }
+              var params = {success: success, maxRows: 1000, done: done};
+              var filter = unescape($('#filter').val());
+              if (filter.length > 0) {
+                  params.filter = filter;
+              }
+              picarus_api_data_scanner("images", startRow, stopRow, [metaCF], params)
+          });
+      }
+    </script>
 
     <script type="text/html" id="tpl_visualize_duplicates">
       <%=rowSelect%>
@@ -1234,8 +1499,8 @@
                   });
                   $('#removeButton').removeAttr('disabled');
                   if (!centerLat || !centerLat) {
-                      centerLat = base64.decode(images.at(0).get(latitude));
-                      centerLong = base64.decode(images.at(0).get(longitude));
+                      centerLat = Number(base64.decode(images.at(0).get(latitude)));
+                      centerLong = Number(base64.decode(images.at(0).get(longitude)));
                   }
                   var mapOptions = {
                       zoom: 14,
@@ -1249,8 +1514,8 @@
                       $('#demolong').val(event.latLng.lng());
                   });
                   images.each(function (x) {
-                      var lat = base64.decode(x.get(latitude))
-                      var long = base64.decode(x.get(longitude))
+                      var lat = Number(base64.decode(x.get(latitude)));
+                      var long = Number(base64.decode(x.get(longitude)));
                       new google.maps.Marker({position: new google.maps.LatLng(lat, long), map: map});
                   });
               }
@@ -1261,47 +1526,77 @@
 
     <script type="text/html" id="tpl_visualize_times">
       <%=rowSelect%>
+      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div id="histYear"></div>
+      <div id="histMonth"></div>
+      <div id="histHour"></div>
+      <div id="histDay"></div>
     </script>
 
     <script type="text/javascript">
       function render_visualize_times() {
           row_selector();
-      }
-    </script>
-
-
-    <script type="text/html" id="tpl_user">
-      <div id="users"></div>
-    </script>
-
-    <script type="text/javascript">
-      function render_user() {
-          users = new PicarusUsers();
-          var AppView = Backbone.View.extend({
-              initialize: function() {
-                  _.bindAll(this, 'render');
-                  this.collection.bind('reset', this.render);
-                  this.collection.bind('change', this.render);
-              },
-              render: function() {
-                          picarus_table = new Backbone.Table({
-                          collection: this.collection,
-                          columns: [["email", "Email"],
-                                    ["uploadRowPrefix", "Row Prefix"],
-                                    {header: "Prefixes", getFormatted: function() { return JSON.stringify(this.get('imagePrefixes'))}}]
-                          });
-                          this.$el.html(picarus_table.render().el);
-                      }
+          function drawYears(hist) {
+              var data = google.visualization.arrayToDataTable([['Year', 'Count']].concat(hist));
+              new google.visualization.ColumnChart(document.getElementById('histYear')).draw(data, {title:"Histogram (Year)", width:600, height:400, vAxis: {title: "Count"}, hAxis: {title: "Year"}});
+          }
+          function drawMonths(hist) {
+              var data = google.visualization.arrayToDataTable([['Month', 'Count']].concat(hist));
+              new google.visualization.ColumnChart(document.getElementById('histMonth')).draw(data, {title:"Histogram (Month)", width:600, height:400, vAxis: {title: "Count"}, hAxis: {title: "Month"}});
+          }
+          function drawHours(hist) {
+              var data = google.visualization.arrayToDataTable([['Hour', 'Count']].concat(hist));
+              new google.visualization.ColumnChart(document.getElementById('histHour')).draw(data, {title:"Histogram (Hour)", width:600, height:400, vAxis: {title: "Count"}, hAxis: {title: "Hour"}});
+          }
+          function drawDays(hist) {
+              var data = google.visualization.arrayToDataTable([['Day', 'Count']].concat(hist));
+              new google.visualization.ColumnChart(document.getElementById('histDay')).draw(data, {title:"Histogram (Day)", width:600, height:400, vAxis: {title: "Count"}, hAxis: {title: "Day"}});
+          }
+      function dataToHist(data) {
+          var hist = {};
+          _.each(data, function (x) {
+              var y = 0;
+              if (_.has(hist, x)) {
+                  y = hist[x];
+              }
+              hist[x] = y + 1;
           });
-          new AppView({collection: users, el: $('#users')});
-          // TODO: Create standard way to get login, not using cookie
-          var auth = load_cookie();
-          user = new PicarusUser({email: auth.email});
-          users.add(user);
-          user.fetch();
+          return hist;
+      }
+      function dataToListHist(data) {
+          return _.pairs(dataToHist(data)).sort();
+      }
+          $('#runButton').click(function () {
+          var timeColumn = encode_id('meta:dateupload');
+              images = new PicarusImages();
+              function time_success(row, columns) {
+                  columns.row = row;
+                  images.add(new PicarusImage(columns));
+              }
+              function time_done() {
+                  years = [];
+                  months = [];
+                  hours = [];
+                  days = [];
+                  // TODO: FInish visual
+                  images.each(function (x) {
+                      var curTime = Number(base64.decode(x.get(timeColumn)));
+                      var curDate = new Date(0);
+                      curDate.setUTCSeconds(curTime);
+                      years.push(curDate.getFullYear());
+                      months.push(curDate.getMonth());
+                      hours.push(curDate.getHours());
+                      days.push(curDate.getDay());
+                  });
+                  drawYears(dataToListHist(years));
+                  drawMonths(dataToListHist(months));
+                  drawHours(dataToListHist(hours));
+                  drawDays(dataToListHist(days));
+              }
+          picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [timeColumn], {success: time_success, done: time_done});
+      })
       }
     </script>
-
 
     <script type="text/html" id="tpl_admin_users">
       <div id="users"></div>
@@ -1321,7 +1616,7 @@
                           collection: this.collection,
                           columns: [["email", "Email"],
                                     ["uploadRowPrefix", "Row Prefix"],
-                                    {header: "Prefixes", getFormatted: function() { return JSON.stringify(this.get('imagePrefixes'))}}]
+                                    {header: "Prefixes", getFormatted: function() { return _.escape(JSON.stringify(this.get('imagePrefixes')))}}]
                           });
                           this.$el.html(picarus_table.render().el);
                       }
@@ -1378,6 +1673,23 @@
             <!-- NAV BAR ITEM AREA -->
             <ul id="nav-item-container" class="nav"></ul>
           </div>
+        </div>
+      </div>
+    </div>
+    <div id="authModal" class="modal hide fade" data-keyboard="false" tabindex="-1" role="dialog" aria-labelledby="authModalLabel" aria-hidden="true">
+      <div class="modal-header">
+        <h3>Authenticate</h3>
+      </div>
+      <div class="modal-body">
+        <div class="well control-group" id="secondFactorAuth">
+          <input class="input-xlarge" type="password" placeholder="Yubikey" id="otp" value="" disabled> <div style="padding-bottom: 5px">OR</div> <input class="input-large" type="password" placeholder="API Key" id="apiKey" value=""disabled><button class="btn" type="submit" id="emailKeys" style="margin-bottom: 9px" disabled>Email Key</button>
+        </div>
+        <div style="padding-bottom: 10px">
+          AND
+        </div>
+        <div  class="well">
+          <input class="input-large" type="text" placeholder="Email" id="email" value=""><span class="help-inline">Email</span>
+          <input class="input-large" type="password" placeholder="Login Key" id="loginKey" value=""><span class="help-inline">Login Key</span>
         </div>
       </div>
     </div>
