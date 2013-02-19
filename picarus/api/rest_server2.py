@@ -31,6 +31,8 @@ import logging
 import uuid
 import contextlib
 from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
+import scipy as sp
+import scipy.cluster.vq
 logging.basicConfig(level=logging.DEBUG)
 
 VERSION = 'a1'
@@ -211,9 +213,13 @@ def data_row(_auth_user, table, row):
             verify_row_permissions(_auth_user.image_prefixes, 'w', row)
             mutations = []
             for x in bottle.request.files:
-                thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=x, value=bottle.request.files[x].file.read())])
+                thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=bottle.request.files[x].file.read())])
             for x in set(bottle.request.params) - set(bottle.request.files):
-                mutations.append(hadoopy_hbase.Mutation(column=x, value=bottle.request.params[x]))
+                print(base64.urlsafe_b64encode(row))
+                print(len(bottle.request.params[x]))
+                v = base64.b64decode(bottle.request.params[x])
+                print(repr(v[:10]))
+                mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=v))
             if mutations:
                 thrift.mutateRow(table, row, mutations)
             return {}
@@ -483,6 +489,18 @@ def data_slice(_auth_user, table, start_row, stop_row):
                     index.metadata = metadata
                     return index
 
+                def kmeans_cluster_mfeat(model_dict, model_param, inputs):
+                    # TODO: This needs to be finished, determine if we want quantizer level or cluster level
+                    clusterer = call_import(model_dict)
+                    features = []
+                    row_cols = hadoopy_hbase.scanner(thrift, table,
+                                                     columns=[inputs['multi_feature']], start_row=start_row, stop_row=stop_row)
+                    # TODO: We'll want to check that we aren't clustering too much data by placing constraints
+                    for row, columns in row_cols:
+                        features.append(picarus.api.np_fromstring(columns[inputs['multi_feature']]))
+                    features = np.vstack(features)
+                    return clusterer.cluster(features)
+
                 print(path)
                 if path == 'classifier/svmlinear':
                     return _create_model_from_params(manager, path, classifier_sklearn)
@@ -566,8 +584,11 @@ def models_update(row):
 @bottle.delete('/<version:re:[^/]*>/models/<row:re:[^/]+>')
 @USERS.auth_api_key()
 @check_version
-def model_delete():
-    print_request()
+def model_delete(row):
+    # TODO: Permissions checking
+    with thrift_lock() as thrift:
+        thrift.deleteAllRow('picarus_models', base64.urlsafe_b64decode(row))
+    return {}
 
 
 # [name]: {module, params}  where params is dict with "name" as key with value {'required': bool, type: (int or float), min, max} with [min, max) or {'required': bool, type: 'bool'} or {'required': enum, vals: [val0, val1, ...]}

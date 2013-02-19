@@ -104,7 +104,7 @@ function model_dropdown(args) {
     models.fetch();
 }
 
-function row_selector() {
+function row_selector(prefixDrop, startRow, stopRow) {
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
@@ -113,10 +113,12 @@ function row_selector() {
         },
         events: {'change': 'renderDrop'},
         renderDrop: function () {
-            var prefix = $('#rowPrefixDrop option:selected').val();
-            $('#startRow').val(prefix);
+            var prefix = prefixDrop.children().filter('option:selected').val();
+            if (typeof startRow !== 'undefined')
+                startRow.val(prefix);
             // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
-            $('#stopRow').val(prefix_to_stop_row(prefix));
+            if (typeof stopRow !== 'undefined')
+                stopRow.val(prefix_to_stop_row(prefix));
         },
         render: function() {
             this.$el.empty();
@@ -128,7 +130,7 @@ function row_selector() {
     });
     var auth = login_get(function (email_auth) {
         user = new PicarusUser({email: email_auth.email});
-        new AppView({model: user, el: $('#rowPrefixDrop')});
+        new AppView({model: user, el: prefixDrop});
         user.fetch();
     });
 }

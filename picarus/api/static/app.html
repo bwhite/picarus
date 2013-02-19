@@ -173,7 +173,7 @@
 
     <script type="text/javascript">
       function render_crawl_flickr() {
-      row_selector();
+      row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
       $('#runButton').click(function () {
           var demo_class = $('#democlass').val();
           var row_prefix = $('#rowPrefixDrop').val();
@@ -240,6 +240,7 @@
                   _.bindAll(this, 'render');
                   this.collection.bind('reset', this.render);
                   this.collection.bind('change', this.render);
+                  this.collection.bind('remove', this.render);
               },
               render: function() {
                           picarus_table = new Backbone.Table({
@@ -250,7 +251,8 @@
                                     ["prefix_pretty", "Type"], ["creationTime", "Creation"],
                                     {header: "Row", className: "models-row", getFormatted: function() { return this.escape('row')}},
                                     {header: "Parameters", className: "models-params", getFormatted: function() { return _.escape(JSON.stringify(this.get('param')))}},
-                                    {header: "Inputs", className: "models-inputs", getFormatted: function() { return _.escape(JSON.stringify(this.get('inputs')))}}]
+                                    {header: "Inputs", className: "models-inputs", getFormatted: function() { return _.escape(JSON.stringify(this.get('inputs')))}},
+                                    {header: "Delete", className: "models-row", getFormatted: function() { return '<button class="btn row_delete" type="submit" row="' + this.escape('row') + '">Delete</button>'}}]
                           });
                           $("#models").html(picarus_table.render().el);
                           $('.modal_link_notes').click(function (data) {
@@ -264,6 +266,11 @@
                               });
                               $('#myModal').modal('show')
                           })
+                          function delete_row(data) {
+                              var row = data.target.getAttribute('row');
+                              models.get(row).destroy({wait: true});
+                          }
+                          button_confirm_click($('.row_delete'), delete_row);
                           $('.modal_link_tags').click(function (data) {
                               var row = data.target.getAttribute('row');
                               var model = models.get(row);
@@ -345,7 +352,7 @@
                   add_param_selections(model.get('moduleParams'), 'module-');
                   if (model.get('data') === 'slice') {
                       $('#row_select').append(document.getElementById('bpl_row_select').innerHTML);
-                      row_selector();
+                      row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
                   }
                   _.each(model.get('inputs'), function (value) {
                       var cur_el;
@@ -441,7 +448,7 @@
           $('#results').html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
       }
       function render_process_thumbnail() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               alert_running();
               var startRow = encode_id($('#startRow').val());
@@ -462,7 +469,7 @@
 
     <script type="text/javascript">
       function render_process_exif() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               alert_running();
               var startRow = encode_id($('#startRow').val());
@@ -485,7 +492,7 @@
 
     <script type="text/javascript">
       function render_process_modify() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               alert_running();
               var columnName = encode_id($('#columnName').val());
@@ -504,26 +511,44 @@
 
     <script type="text/html" id="tpl_process_copy">
       <%=rowSelect%>
-      <%=rowSelect%>
+      <select id="rowPrefixDrop2"></select>
+      <input class="input-small" type="text" placeholder="Column" id="columnName" value="">
+      <input class="input-small" type="text" placeholder="Value" id="columnValue" value="">
+      <input class="input-small" type="text" placeholder="Max Rows" id="maxRows" value="">
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</div>
-      <button id="results"></div>
     </script>
 
     <script type="text/javascript">
+      function random_bytes(num) {
+          return _.map(_.range(10), function () {
+              return String.fromCharCode(_.random(255));
+          }).join('');
+      }
       function render_process_copy() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+          row_selector($('#rowPrefixDrop2'));
           $('#runButton').click(function () {
               alert_running();
+              var imageColumn = encode_id('data:image');
               var columnName = encode_id($('#columnName').val());
               var columnValue = $('#columnValue').val();
               var startRow = encode_id($('#startRow').val());
               var stopRow = encode_id($('#stopRow').val());
-              function success() {
-                  alert_done();
+              var prefix = $('#rowPrefixDrop2 option:selected').val();
+              var maxRows = Number($('#maxRows').val());
+              function success(row, columns) {
+                  // Generate row key
+                  var cur_row = encode_id(prefix + random_bytes(10));
+                  cur_data = {};
+                  cur_data[imageColumn] = columns[imageColumn];
+                  console.log(cur_row);
+                  console.log(columns[imageColumn].length);
+                  if (columnName.length)
+                      cur_data[columnName] = base64.encode(columnValue);
+                  picarus_api_row("images", cur_row, "PATCH", {data: cur_data});
               }
-              var data = {};
-              data[columnName] = columnValue
-              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "PATCH", {success: success, data: data});
+              // Scan through rows, each one write back to the prefix
+              picarus_api_data_scanner("images", startRow, stopRow, [imageColumn], {success: success, maxRows: maxRows, maxRowsIter: 5});
           });
       }
     </script>
@@ -545,7 +570,7 @@
       function render_process_preprocess() {
           model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'data:'},
                           el: $('#model_select')});
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               alert_running();
               var startRow = encode_id($('#startRow').val());
@@ -570,7 +595,7 @@
       function render_process_feature() {
           model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'feat:' || x.get('prefix') === 'mfeat:'},
                           el: $('#model_select')});
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               alert_running();
               var startRow = encode_id($('#startRow').val());
@@ -595,7 +620,7 @@
       function render_process_classifier() {
           model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'pred:'},
                           el: $('#model_select')});
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               alert_running();
               var startRow = encode_id($('#startRow').val());
@@ -620,7 +645,7 @@
       function render_process_hash() {
           model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'hash:'},
                           el: $('#model_select')});
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               alert_running();
               var startRow = encode_id($('#startRow').val());
@@ -673,7 +698,7 @@
 
     <script type="text/javascript">
       function render_annotate_query() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               var startRow = encode_id($('#startRow').val());
               var stopRow = encode_id($('#stopRow').val());
@@ -705,7 +730,7 @@
 
     <script type="text/javascript">
       function render_annotate_batch() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               var startRow = encode_id($('#startRow').val());
               var stopRow = encode_id($('#stopRow').val());
@@ -728,7 +753,7 @@
       }
     </script>
 
-    <script type="text/html" id="tpl_classifier_compute">
+    <script type="text/html" id="tpl_classify_compute">
       <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
         <select id="model_select"></select>
         <input type="file" id="imagefile" class="input-small">
@@ -738,7 +763,7 @@
     </script>
 
     <script type="text/javascript">
-      function render_classifier_compute() {
+      function render_classify_compute() {
           model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'pred:'},
                           change: function() {},
                           el: $('#model_select')});
@@ -751,7 +776,18 @@
               var imageColumn = encode_id('data:image');
               var modelKey = $('#model_select').find(":selected").val();
               function success_func(xhr) {
-                  $('#results').html(xhr.responseText);
+                  var result = JSON.parse(xhr.responseText);
+                  if (_.isArray(result)) {
+                      _.each(result, function (x) {
+                          var c = _.escape(x.class);
+                          var d = _.escape(x.distance);
+                          var url = 'https://en.wikipedia.org/wiki/Special:Search?search=' + c.replace(' ', '_') + '&go=Go';
+                          $('#results').append($('<a>').attr('href', url).text(c).attr('target', '_blank'));
+                          $('#results').append(' ' + d + '<br>');
+                      });
+                  } else {
+                      $('#results').html(xhr.responseText);
+                  }
               }
               function upload_func(xhr) {
                   var response = JSON.parse(xhr.responseText);
@@ -761,12 +797,12 @@
               var data = {};
               data[imageColumn] = $('#imagefile')[0].files[0];
               picarus_api_upload(table, {data: data, success: upload_func})
-              
+              $('#results').html('');
           });
       }
     </script>
 
-    <script type="text/html" id="tpl_classifier_evaluate">
+    <script type="text/html" id="tpl_classify_evaluate">
       <div>
         <select id="model_select"></select>
       <%=rowSelect%>
@@ -786,7 +822,7 @@
       <div id="graph_roc" style="height:300px;width:300px;float:left;"></div>
     </script>
     <script type="text/javascript">
-      function render_classifier_evaluate() {
+      function render_classify_evaluate() {
           model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'pred:' && x.get('param').classifier_type === "c2tsZWFybl9kZWNpc2lvbl9mdW5j"},
                           change: function() {
                               var row = this.$el.find(":selected").val();
@@ -796,7 +832,7 @@
                               $('#modelKey').val(row);
                           },
                           el: $('#model_select')});
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
           confs = {pos_confs: [], neg_confs: []};
           var gt_column = encode_id($('#gtColumn').val());
@@ -1134,7 +1170,7 @@
 
     <script type="text/javascript">
       function render_index_evaluate() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
       }
     </script>
 
@@ -1147,7 +1183,7 @@
 
     <script type="text/javascript">
       function render_visualize_thumbnails() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               var startRow = encode_id(unescape($('#startRow').val()));
               var stopRow = encode_id(unescape($('#stopRow').val()));
@@ -1184,7 +1220,7 @@
 
     <script type="text/javascript">
       function render_visualize_metadata() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               var startRow = encode_id(unescape($('#startRow').val()));
               var stopRow = encode_id(unescape($('#stopRow').val()));
@@ -1268,7 +1304,7 @@
 
     <script type="text/javascript">
       function render_visualize_exif() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           // TODO: Fix for exif
           $('#runButton').click(function () {
               var startRow = encode_id(unescape($('#startRow').val()));
@@ -1360,7 +1396,8 @@
     <script type="text/javascript">
       function button_confirm_click(button, fun) {
           button.unbind();
-          button.click(function () {
+          button.click(function (data) {
+              var button = $(data.target);
               button.unbind();
               button.addClass('btn-danger');
               button.click(fun);
@@ -1370,7 +1407,7 @@
           button.removeClass('btn-danger');
       }
       function render_visualize_duplicates() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               var startRow = encode_id(unescape($('#startRow').val()));
               var stopRow = encode_id(unescape($('#stopRow').val()));
@@ -1475,7 +1512,7 @@
           return checked;
       }
       function render_visualize_locations() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               var latitude = encode_id('meta:latitude');
               var longitude = encode_id('meta:longitude');
@@ -1535,7 +1572,7 @@
 
     <script type="text/javascript">
       function render_visualize_times() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           function drawYears(hist) {
               var data = google.visualization.arrayToDataTable([['Year', 'Count']].concat(hist));
               new google.visualization.ColumnChart(document.getElementById('histYear')).draw(data, {title:"Histogram (Year)", width:600, height:400, vAxis: {title: "Count"}, hAxis: {title: "Year"}});
