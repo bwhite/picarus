@@ -261,7 +261,7 @@ function app_main() {
         render:function(route){
             this.$el.empty();
             var template = _.template("<li class='<%=active%>'><a href='<%=url%>'><%=visible%></a></li>");
-            var drop_template = _.template("<li class='dropdown <%=active%>'><a href='#' data-toggle='dropdown' class='dropdown-toggle'><%=prev_key%> <b class='caret'></b></a><ul class='dropdown-menu'><% _.each(vals, function(data) { %> <li class='<%=data[2]%>'><a href='#<%=data[0]%>' data-toggle='tab'><%=data[1]%></a></li> <% }); %></ul></li>");
+            var drop_template = _.template("<li class='dropdown <%=active%>'><a href='#' data-toggle='dropdown' class='dropdown-toggle'><%=prev_key%><b class='caret'></b></a><ul class='dropdown-menu'><% _.each(vals, function(data) { %> <li class='<%=data[2]%>'><a href='#<%=data[0]%>' data-toggle='tab'><%=data[1]%></a></li> <% }); %></ul></li>");
             var prev_els = [];
             var prev_key = undefined;
             var route_key = route.split('/', 2)[0]
