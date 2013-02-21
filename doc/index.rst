@@ -108,4 +108,23 @@ Our projects (ordered by relevance)
 
 
 API
----
+===
+
+
+Authentication
+--------------
+
+
+Row Manipulation (/data)
+---------------------------
+CREATE U+02794 POST /:table  - Create new row, generating row key using user's upload prefix
+READ U+02794 GET /:table/:row  - Get row
+UPDATE U+02794 PATCH /:table/:row  - Modify attributes on an row, row/columns need not exist before hand (can be used to create)
+DELETE U+02794 DELETE /:table/:row - Delete a row (idempotent)
+DELETE U+02794 DELETE /:table/:row/:column - Delete a column from a row (idempotent)
+EXECUTE U+02794 POST /:table/:row - ?(action)
+
+Slice Manipulation (/slice)
+---------------------------
+READ U+02794 GET /:table/:startRow/:stopRow  - Get a row slice (TODO, params)
+EXECUTE U+02794 POST /:table/:startRow/:stopRow - ?(action)
