@@ -1,5 +1,5 @@
 Picarus
-================================================
+========
 
 
 ..  toctree::
@@ -8,30 +8,48 @@ Picarus
 Visit https://github.com/bwhite/picarus/ for the source.
 
 About
----------------------------
-Picarus is a web-scale machine learning library with a focus on computer vision applications.  This is still _highly_ experimental and we are working out in the open, if you are interested in working with us or trying it out send us an email.
+--------
 
 Who
 ---
-Picarus is developed by `Dapper Vision, Inc. <http://dappervision.com>`_ (`Brandyn White <http://brandynwhite.com>`_ and `Andrew Miller <http://blog.soc1024.com/pages/about-andrew-miller>`_).  We are PhD students at UMD and UCF respectively and are interested in Computer Vision, Web-Scale Machine Learning, HCI, and Social Networks.
+Picarus is developed by `Dapper Vision, Inc. <http://dappervision.com>`_ (`Brandyn White <http://brandynwhite.com>`_ and `Andrew Miller <http://blog.soc1024.com/pages/about-andrew-miller>`_).  We are PhD students at UMD and UCF respectively and are interested in Computer Vision, Web-Scale Machine Learning, HCI, Cryptography, and Social Networks.
 
-Use Cases
----------
-Current
+Philosophy
+----------
 
-- Image classification: Determine if an image is one class or another (e.g., indoor/outdoor, person/not person).  Includes training.
-- Image clustering: Group images based on visual similarity.
-- Face detection: Find all faces.
-- Keyframe: Find all keyframes in a set of videos (e.g., shot transitions, fast motion).
-- Image Search: Build an image search index (initial code available)
-- Video classification: Determine if a video is one class or another (e.g., dancing, skateboarding)
-- Kernel computation: Compute large classifier kernels
+Capabilities
+------------
+Data Management
 
-Private (we have the code but are working on releasing it for various reasons)
+- Crawling: Flickr
+- Annotation: Standalone or Mechanical Turk.  Several operating modes.
 
-- Real-time REST api (initial code available)
-- Object detection: Find the location of a specific object (e.g., car, person).  Faces are currently supported.
-- Segmentation/Pixel-level classification: Classify individual image pixels as belonging to a specific class.
+Visualization
+
+- Thumbnails:
+- Metadata:
+- Exif:
+- Location: 
+
+Computer Vision
+
+- Image features:
+
+Machine Learning
+
+- Classifier Learning:
+
+Image Search
+
+- Binary Hash Function Learning: 
+- Search Indexing: 
+
+Security
+--------
+
+Authentication
+
+Permissions
 
 Requirements
 ------------
@@ -87,3 +105,7 @@ Our projects (ordered by relevance)
 .. _static_server: https://github.com/bwhite/static_server
 .. _mturk_vision: https://github.com/bwhite/mturk_vision
 .. _pycassa_server: https://github.com/bwhite/pycassa_server
+
+
+API
+---

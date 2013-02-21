@@ -176,6 +176,9 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
 
 function picarus_api_delete_rows(rows, params) {
     var maxRowsIter = 1;
+    if (typeof params == "undefined") {
+        params = {};
+    }
     // TODO: Can't increase maxRowsIter until done is called after the very last element returns
     if (typeof params.maxRowsIter != "undefined") {
         maxRowsIter = params.maxRowsIter;

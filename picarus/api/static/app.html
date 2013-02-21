@@ -1199,7 +1199,7 @@
               }
               $('#results').html('');
               function success(row, columns) {
-                  $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]))
+                  $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('title', row))
                   //$('#results').append($('<br>'));
               }
               var params = {success: success, maxRows: 100};
@@ -1511,6 +1511,8 @@
           var targetLong = Number($('#demolong').val());
           var targetDist = Number($('#demodist').val());
           var checked = $('#filterInvert').is(':checked');
+          if (!targetLat || !targetLong)
+              return checked;
           if (getDistanceFromLatLonInKm(targetLat, targetLong, lat, long) > targetDist)
               return !checked;
           return checked;
