@@ -114,6 +114,48 @@ API
 Authentication
 --------------
 
+All calls use HTTP Basic Authentication with an email as the user and either the Login Key (only for /auth/) or API Key (everything but /auth/) as the password.
+
+* Email: Used to send API/Login keys, used in all calls as the "user".
+* Login Key: Used only for /auth/ calls as they are used to get an API key.
+* API Key: Used for all other calls.
+
+Get an API Key (email)
+^^^^^^^^^^^^^^^^^^^^^^^
+Send user an email with an API key.
+
+RESOURCE URL
+""""""""""""
+POST https://api.picar.us/a1/auth/email
+
+PARAMETERS
+"""""""""""
+None
+
+EXAMPLE RESPONSE
+""""""""""""""""
+.. code:: javascript
+
+    {}
+
+Get an API Key (yubikey)
+^^^^^^^^^^^^^^^^^^^^^^^
+Return an API Key given a Yubikey One-Time Password (OTP).
+
+RESOURCE URL
+""""""""""""
+POST https://api.picar.us/a1/auth/yubikey
+
+PARAMETERS
+"""""""""""
+otp (string): Yubikey token
+
+EXAMPLE RESPONSE
+""""""""""""""""
+.. code:: javascript
+
+    {"apiKey": "w0tnnb7wcUbpZFp8wH57"}
+
 
 Row Manipulation (/data)
 ---------------------------
@@ -138,12 +180,29 @@ EXECUTE |arrow| POST /:table/:startRow/:stopRow - ?(action)
 
 .. |arrow| unicode:: U+2794 .. right arrow
 
-
-
-
-
-Test
------
++---------+----------------------------------+-----------+---------+
+| VERB    |  PATH                            |  Images   | Models  |
++---------+----------------------------------+-----------+---------+
+| GET     | /data/:table                     | N         | Y       |
++---------+----------------------------------+-----------+---------+
+| GET     | /slice/:table/:startRow/:stopRow | Y         | N       |
++---------+----------------------------------+-----------+---------+
+| GET     | /data/:table/:row                | Y         | Y       |
++---------+----------------------------------+-----------+---------+
+| POST    | /data/:table                     | Y         | N       |
++---------+----------------------------------+-----------+---------+
+| POST    | /data/:table/:row                | Y         | N       |
++---------+----------------------------------+-----------+---------+
+| POST    | /slice/:table/:startRow/:stopRow | Y         | N       |
++---------+----------------------------------+-----------+---------+
+| PATCH   | /data/:table/:row                | Y\*       | Y\*     |
++---------+----------------------------------+-----------+---------+
+| DELETE  | /data/:table/:row                | Y         | Y       |
++---------+----------------------------------+-----------+---------+
+| DELETE  | /data/:table/:row/:column        | Y         | Y       |
++---------+----------------------------------+-----------+---------+
+| DELETE  | /slice/:table/:startRow/:stopRow | TODO      | N       |
++---------+----------------------------------+-----------+---------+
 
 Uploading an image
 ^^^^^^^^^^^^^^^^^^
@@ -151,7 +210,7 @@ Upload an image without specifying a row.
 
 RESOURCE URL
 """"""""""""
-POST https://api.picar.us/data/:table
+POST https://api.picar.us/a1/data/:table
 
 table: (string) name of the table (e.g., images)
 
