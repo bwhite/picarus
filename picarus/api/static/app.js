@@ -143,28 +143,28 @@ function app_main() {
         },
  
         url : function() {
-            return this.id ? '/a1/models/' + this.id : '/a1/models'; 
+            return this.id ? '/a1/data/models/' + this.id : '/a1/data/models'; 
         } 
  
     });
     PicarusModels = Backbone.Collection.extend({
         model : PicarusModel,
-        url : "/a1/models"
+        url : "/a1/data/models"
     });
 
     PicarusUser = Backbone.Model.extend({
-        idAttribute: "email",
+        idAttribute: "row",
         defaults : {
         },
  
         url : function() {
-            return this.id ? '/a1/users/' + this.id : '/a1/users'; 
+            return this.id ? '/a1/data/users/' + this.id : '/a1/data/users'; 
         } 
  
     });
     PicarusUsers = Backbone.Collection.extend({
         model : PicarusUser,
-        url : "/a1/users"
+        url : "/a1/data/users"
     });
 
     PicarusImage = Backbone.Model.extend({

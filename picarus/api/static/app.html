@@ -113,9 +113,10 @@
           });
           new AppView({collection: users, el: $('#users')});
           login_get(function (email_auth) {
-              var user = new PicarusUser({email: email_auth.email});
+              var user = new PicarusUser({row: encode_id(email_auth.email)});
               users.add(user);
               user.fetch();
+              
           });
       }
     </script>
@@ -1639,34 +1640,6 @@
               }
           picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [timeColumn], {success: time_success, done: time_done});
       })
-      }
-    </script>
-
-    <script type="text/html" id="tpl_admin_users">
-      <div id="users"></div>
-    </script>
-
-    <script type="text/javascript">
-      function render_admin_users() {
-          users = new PicarusUsers();
-          var AppView = Backbone.View.extend({
-              initialize: function() {
-                  _.bindAll(this, 'render');
-                  this.collection.bind('reset', this.render);
-                  this.collection.bind('change', this.render);
-              },
-              render: function() {
-                          picarus_table = new Backbone.Table({
-                          collection: this.collection,
-                          columns: [["email", "Email"],
-                                    ["uploadRowPrefix", "Row Prefix"],
-                                    {header: "Prefixes", getFormatted: function() { return _.escape(JSON.stringify(this.get('imagePrefixes')))}}]
-                          });
-                          this.$el.html(picarus_table.render().el);
-                      }
-          });
-          new AppView({collection: users, el: $('#users')});
-          users.fetch();
       }
     </script>
 

@@ -1,7 +1,6 @@
 from gevent import monkey
 monkey.patch_all()
 import json
-import mimerender
 import bottle
 import os
 import argparse
@@ -47,7 +46,7 @@ def check_version(func):
     return inner
 
 
-def verify_slice_permissions(prefixes, permissions, start_row, stop_row):
+def verify_slice_permissions(prefixes, start_row, stop_row, permissions):
     permissions = set(permissions)
     prefixes = [x for x, y in prefixes.items() if set(y).issuperset(permissions)]
     for prefix in prefixes:
@@ -62,7 +61,7 @@ def verify_slice_permissions(prefixes, permissions, start_row, stop_row):
     bottle.abort(401)
 
 
-def verify_row_permissions(prefixes, permissions, row):
+def _verify_row_permissions(prefixes, row, permissions):
     permissions = set(permissions)
     prefixes = [x for x, y in prefixes.items() if set(y).issuperset(permissions)]
     for prefix in prefixes:
@@ -77,15 +76,44 @@ def verify_row_permissions(prefixes, permissions, row):
     bottle.abort(401)
 
 
-if __name__ == "__main__":
-    mimerender = mimerender.BottleMimeRender()
-    render_xml = lambda message: '<message>%s</message>'%message
-    render_json = lambda **args: json.dumps(args)
-    render_html = lambda message: '<html><body>%s</body></html>'%message
-    render_txt = lambda message: message
-    render_xml_exception = lambda exception: '<exception>%s</exception>' % exception.message
-    render_json_exception = lambda exception: json.dumps({'exception': exception.message})
+def _images_column_write_validate(column):
+    if column == 'data:image':
+        return
+    if column.startswith('meta:'):
+        return
+    bottle.abort(403)
 
+
+def _models_column_write_validate(column):
+    if column in ('data:notes', 'data:tags'):
+        return
+    if column.startswith('user:'):
+        return
+    bottle.abort(403)
+
+
+def _images_verify_row_permissions(thrift, _auth_user, row, permissions):
+    _verify_row_permissions(_auth_user.image_prefixes, row, permissions)
+
+
+def _models_verify_row_permissions(thrift, _auth_user, row, permissions):
+    results = thrift.get('picarus_models', row, 'user:' + _auth_user.email)
+    if not results:
+        bottle.abort(403)
+    if results[0].value != permissions:
+        bottle.abort(403)
+
+
+def _users_verify_row_permissions(thrift, _auth_user, row, permissions):
+    if permissions == 'r' and row != _auth_user.email:
+        bottle.abort(403)
+
+
+TABLES = {'images': {'hbase_table': 'images', 'column_write_validator': _images_column_write_validate, 'verify_row_permissions': _images_verify_row_permissions},
+          'models': {'hbase_table': 'picarus_models', 'column_write_validator': _models_column_write_validate, 'verify_row_permissions': _models_verify_row_permissions},
+          'users': {'hbase_table': None, 'verify_row_permissions': _users_verify_row_permissions}}
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run Picarus REST Frontend')
     parser.add_argument('--users_redis_host', help='Redis Host', default='localhost')
     parser.add_argument('--users_redis_port', type=int, help='Redis Port', default=6380)
@@ -129,57 +157,58 @@ def print_request():
         print('%s: %s' % (k, str(dict(getattr(bottle.request, k)))))
 
 
-@bottle.get('/<version:re:[^/]*>/user')
-@USERS.auth_api_key(True)
-@check_version
-def user_info(_auth_user):
-    print(_auth_user.email)
-    return {'stats': _auth_user.stats(), 'uploadRowPrefix': _auth_user.upload_row_prefix}
-
-
 @bottle.post('/<version:re:[^/]*>/data/<table:re:[^/]+>')
 @USERS.auth_api_key(True)
 @check_version
 def data_row_upload(_auth_user, table):
+    if table not in TABLES:
+        bottle.abort(400)
+    table_props = TABLES[table]
+    table = table_props['hbase_table']
     with thrift_lock() as thrift:
+        verify_row_permissions = lambda x: table_props['verify_row_permissions'](thrift, _auth_user, row, x)
         prefix = _auth_user.upload_row_prefix
         row = prefix + '%.10d%s' % (2147483648 - int(time.time()), uuid.uuid4().bytes)
-        verify_row_permissions(_auth_user.image_prefixes, 'w', row)
+        verify_row_permissions('rw')
         mutations = []
-        # TODO: Reuse PATCH code which also does this
+        # NOTE: PATCH does the same operation, look into combining their logic
         for x in bottle.request.files:
-            thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=bottle.request.files[x].file.read())])
+            cur_column = base64.urlsafe_b64decode(x)
+            table_props['column_write_validator'](cur_column)
+            thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=cur_column, value=bottle.request.files[x].file.read())])
         for x in set(bottle.request.params) - set(bottle.request.files):
-            print('ParmLen[%d]' % len(bottle.request.params[x]))
-            print('md5[%s]' % hashlib.md5(bottle.request.params[x]).hexdigest())
-            mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=bottle.request.params[x]))
+            cur_column = base64.urlsafe_b64decode(x)
+            table_props['column_write_validator'](cur_column)
+            mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=bottle.request.params[x]))
         if mutations:
             thrift.mutateRow(table, row, mutations)
         return {'row': base64.urlsafe_b64encode(row)}
 
 
 def _user_to_dict(user):
-    return {'stats': user.stats(), 'uploadRowPrefix': user.upload_row_prefix, 'email': user.email, 'imagePrefixes': user.image_prefixes}
+    cols = {'stats': json.dumps(user.stats()), 'uploadRowPrefix': user.upload_row_prefix, 'imagePrefixes': json.dumps(user.image_prefixes)}
+    cols = {base64.urlsafe_b64encode(x) : base64.b64encode(y) for x, y in cols.items()}
+    cols['row'] = user.email
+    return cols
 
 
-@bottle.get('/<version:re:[^/]*>/users')
-@USERS.auth_api_key(True)  # TODO: Make admin decorator
+@bottle.get('/<version:re:[^/]*>/data/models')
+@USERS.auth_api_key()
 @check_version
-def users(_auth_user):
-    if _auth_user.email != 'bwhite@dappervision.com':  # Only me for now
-        bottle.abort(401)
+def data_table(_auth_user):
+    table_props = TABLES['models']
+    table = table_props['hbase_table']
+    columns = sorted(map(base64.urlsafe_b64decode, sorted(bottle.request.params.getall('column'))))
+    hbase_filter = "SingleColumnValueFilter ('user', '%s', =, 'binaryprefix:r')" % _auth_user.email
+    outs = []
+    with thrift_lock() as thrift:
+        verify_row_permissions = lambda x: table_props['verify_row_permissions'](thrift, _auth_user, row, x)
+        for row, cols in hadoopy_hbase.scanner(thrift, table, columns=columns, filter=hbase_filter):
+            verify_row_permissions(row)
+            cur_out = {base64.urlsafe_b64encode(k): base64.b64encode(v) for k, v in cols.items()}
+            cur_out['row'] = base64.urlsafe_b64encode(row)
     bottle.response.headers["Content-type"] = "application/json"
-    return json.dumps([_user_to_dict(USERS.get_user(u)) for u in USERS.list_users()])
-
-
-@bottle.get('/<version:re:[^/]*>/users/<user:re:[^/]+>')
-@USERS.auth_api_key(True)
-@check_version
-def user_row(_auth_user, user):
-    if _auth_user.email != user:
-        bottle.abort(401)
-    bottle.response.headers["Content-type"] = "application/json"
-    return _user_to_dict(_auth_user)
+    return json.dumps(outs)
 
 
 @bottle.route('/<version:re:[^/]*>/data/<table:re:[^/]+>/<row:re:[^/]+>', 'PATCH')
@@ -189,17 +218,22 @@ def user_row(_auth_user, user):
 @USERS.auth_api_key(True)
 @check_version
 def data_row(_auth_user, table, row):
+    if table not in TABLES:
+        bottle.abort(400)
+    if not (table and row):
+        bottle.abort(400)
+    table_raw = table
+    table_props = TABLES[table]
+    table = table_props['hbase_table']
     with thrift_lock() as thrift:
+        verify_row_permissions = lambda x: table_props['verify_row_permissions'](thrift, _auth_user, row, x)
         manager = PicarusManager(thrift=thrift)
         row = base64.urlsafe_b64decode(row)
         method = bottle.request.method.upper()
-        # TODO Check authentication per table
-        if not (table and row):
-            bottle.abort(400)
-        if table not in ('images'):
-            bottle.abort(400)
         if method == 'GET':
-            verify_row_permissions(_auth_user.image_prefixes, 'r', row)
+            verify_row_permissions('r')
+            if table_raw == 'users':
+                return _user_to_dict(_auth_user)
             columns = sorted(map(base64.urlsafe_b64decode, sorted(bottle.request.params.getall('column'))))
             if columns:
                 result = thrift.getRowWithColumns(table, row, columns)
@@ -210,20 +244,23 @@ def data_row(_auth_user, table, row):
             return {base64.urlsafe_b64encode(x): base64.b64encode(y.value)
                     for x, y in result[0].columns.items()}
         elif method == 'PATCH':
-            verify_row_permissions(_auth_user.image_prefixes, 'w', row)
+            verify_row_permissions('rw')
             mutations = []
             for x in bottle.request.files:
-                thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=bottle.request.files[x].file.read())])
+                cur_column = base64.urlsafe_b64decode(x)
+                table_props['column_write_validator'](cur_column)
+                thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=cur_column, value=bottle.request.files[x].file.read())])
             for x in set(bottle.request.params) - set(bottle.request.files):
-                print(base64.urlsafe_b64encode(row))
-                print(len(bottle.request.params[x]))
                 v = base64.b64decode(bottle.request.params[x])
-                print(repr(v[:10]))
-                mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=v))
+                table_props['column_write_validator'](cur_column)
+                cur_column = base64.urlsafe_b64decode(x)
+                mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=v))
             if mutations:
                 thrift.mutateRow(table, row, mutations)
             return {}
         elif method == 'POST':
+            if table != 'images':
+                bottle.abort(403)
             action = bottle.request.params['action']
             image_column = base64.urlsafe_b64decode(bottle.request.params['imageColumn'])
             results = thrift.get(table, row, image_column)
@@ -231,19 +268,19 @@ def data_row(_auth_user, table, row):
                 print((table, row, image_column))
                 bottle.abort(404)
             if action == 'i/classify':
-                verify_row_permissions(_auth_user.image_prefixes, 'r', row)
+                verify_row_permissions('r')
                 classifier = _classifier_from_key(manager, base64.urlsafe_b64decode(bottle.request.params['model']))
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps(classifier(results[0].value))
             elif action == 'i/search':
-                verify_row_permissions(_auth_user.image_prefixes, 'r', row)
+                verify_row_permissions('r')
                 index = _index_from_key(manager, base64.urlsafe_b64decode(bottle.request.params['model']))
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps(index(results[0].value))
             else:
                 bottle.abort(400)
         elif method == 'DELETE':
-            verify_row_permissions(_auth_user.image_prefixes, 'w', row)
+            verify_row_permissions('rw')
             thrift.deleteAllRow(table, row)
             return {}
         else:
@@ -254,12 +291,17 @@ def data_row(_auth_user, table, row):
 @USERS.auth_api_key(True)
 @check_version
 def data_row_col(_auth_user, table, row, col):
+    if table not in TABLES:
+        bottle.abort(400)
+    if not (table and row and col):
+        bottle.abort(400)
+    table_props = TABLES[table]
+    table = table_props['hbase_table']
     with thrift_lock() as thrift:
+        verify_row_permissions = lambda x: table_props['verify_row_permissions'](thrift, _auth_user, row, x)
         row = base64.urlsafe_b64decode(row)
-        verify_row_permissions(_auth_user.image_prefixes, 'w', row)
+        verify_row_permissions('rw')
         col = base64.urlsafe_b64decode(col)
-        if table not in ('images'):
-            bottle.abort(400)
         thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=col, isDelete=True)])
         return {}
 
@@ -280,9 +322,8 @@ def data_slice(_auth_user, table, start_row, stop_row):
         stop_row = base64.urlsafe_b64decode(stop_row)
         method = bottle.request.method.upper()
         columns = sorted(map(base64.urlsafe_b64decode, sorted(bottle.request.params.getall('column'))))
-        # TODO Check authentication per table
         if table not in ('images',):
-            raise ValueError('Only images allowed for now!')
+            bottle.abort(403)
         if method == 'GET':
             verify_slice_permissions(_auth_user.image_prefixes, 'r', start_row, stop_row)
             # TODO: Need to verify limits on this scan and check auth
@@ -324,13 +365,13 @@ def data_slice(_auth_user, table, start_row, stop_row):
             return json.dumps(out)
         elif method == 'PATCH':
             verify_slice_permissions(_auth_user.image_prefixes, 'w', start_row, stop_row)
-            # NOTE: This only fetches rows that have a column in meta: (it is a significant optimization)
+            # NOTE: This only fetches rows that have a column in data: (it is a significant optimization)
             # NOTE: Only parameters allowed, no "files" due to memory restrictions
             mutations = []
             for x in bottle.request.params:
                 mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=bottle.request.params[x]))
             if mutations:
-                for row, _ in hadoopy_hbase.scanner(thrift, 'images', start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()', columns=['meta:']):
+                for row, _ in hadoopy_hbase.scanner(thrift, table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()', columns=['data:']):
                     print(repr(row))
                     thrift.mutateRow(table, row, mutations)
             return {}

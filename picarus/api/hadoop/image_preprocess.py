@@ -15,8 +15,8 @@ class Mapper(picarus.api.HBaseMapper):
         try:
             yield row, self._preprocessor.asbinary(image_binary)
         except:
+            hadoopy.counter('ERROR', 'PREPROCESSOR')
             print('Error on row[%r]' % row)
-            raise
 
 if __name__ == '__main__':
     hadoopy.run(Mapper, required_cmdenvs=['HBASE_TABLE', 'HBASE_OUTPUT_COLUMN', 'MODEL_FN'])
