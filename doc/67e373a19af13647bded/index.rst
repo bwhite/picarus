@@ -147,8 +147,7 @@ Test
 
 Uploading an image
 ^^^^^^^^^^^^^^^^^^
-
-Users can upload an image, which will be stored as a new row prefixed by the user's id. The newly created row is returned so the image can be referred to later. Both multipart/form-data and application/x-url-encoded uploads are supported.
+Upload an image without specifying a row.
 
 RESOURCE URL
 """"""""""""
@@ -158,10 +157,96 @@ table: (string) name of the table (e.g., images)
 
 PARAMETERS
 """""""""""
-* (ub64): 
-Each parameter provided 
+\*ub64 column\* (ub64): binary
 
 
 
-RETURNS
-The base64-encoded row key for the new image.
+EXAMPLE RESPONSE
+""""""""""""""""
+.. code:: javascript
+
+    {"row": ub64 row}
+
+
+HBase
+======
+
+Images Table (images)
+---------------------
+
+Row
+^^^
+Each row corresponds to an "image" along with all associated features, metadata, etc.
+
+Permissions
+^^^^^^^^^^^
+TODO
+
+Column Families
+^^^^^^^^^^^^^^^
+
+data
+"""""
+Image data.
+
+data:image is where the "source" image goes.  Preprocessors place other copies in data:
+
+thum
+""""
+Where visualization-only thumbnails exist (these are not to be used for actual analysis)
+
+image_150sq is an image with all sides equal to 150, cropping excess.
+
+feat
+""""
+Image features (picarus.api.NDArray vector, fixed size)
+
+mfeat
+"""""
+Image features (picarus.api.NDArray matrix, fixed columns, variable rows)
+
+mask
+""""
+Image masks (picarus.api.NDArray matrix, height/width matching image, fixed depth)
+
+pred
+""""
+Image predictions stored as a binary double.
+
+srch
+""""
+Search results
+
+attr
+""""
+Image attributes (basically metadata that is derived from the source data).  Similar to a prediction but generally "higher level", may come form a human and should generally be standardized.
+
+hash
+""""
+Hash codes stored as binary bytes.  Separated from feat so that it can be scanned fast.
+
+meta
+""""
+Image labels, tags, etc.
+
+misc
+""""
+Columns that don't fit into the other categories.
+
+Models Table
+------------
+
+Permissions
+^^^^^^^^^^^
+TODO
+
+Row
+^^^
+Each row corresponds to a "model" which is something derived from data, primarily from the images table.  Parameters of the model should be included, along with the source columns used to produce it.
+
+Column Families
+^^^^^^^^^^^^^^^^
+
+data
+""""
+Used for all data.
