@@ -5,33 +5,24 @@ import bottle
 import os
 import argparse
 import gevent.queue
-import random
 import base64
-import imfeat
 import time
-import redis
 import hadoopy_hbase
 import cPickle as pickle
 import numpy as np
-import cv2
 import gevent
 import crawlers
 import hashlib
 import multiprocessing
-import distpy
 from users import Users, UnknownUser
 from yubikey import Yubikey
-from picarus.modules import HashRetrievalClassifier
 import picarus._features
-import boto
 from picarus._importer import call_import
 from driver import PicarusManager
 import logging
 import uuid
 import contextlib
 from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
-import scipy as sp
-import scipy.cluster.vq
 logging.basicConfig(level=logging.DEBUG)
 
 VERSION = 'a1'
@@ -100,7 +91,7 @@ def _models_verify_row_permissions(thrift, _auth_user, row, permissions):
     results = thrift.get('picarus_models', row, 'user:' + _auth_user.email)
     if not results:
         bottle.abort(403)
-    if results[0].value != permissions:
+    if not results[0].value.startswith(permissions):
         bottle.abort(403)
 
 
@@ -111,7 +102,8 @@ def _users_verify_row_permissions(thrift, _auth_user, row, permissions):
 
 TABLES = {'images': {'hbase_table': 'images', 'column_write_validator': _images_column_write_validate, 'verify_row_permissions': _images_verify_row_permissions},
           'models': {'hbase_table': 'picarus_models', 'column_write_validator': _models_column_write_validate, 'verify_row_permissions': _models_verify_row_permissions},
-          'users': {'hbase_table': None, 'verify_row_permissions': _users_verify_row_permissions}}
+          'users': {'hbase_table': None, 'verify_row_permissions': _users_verify_row_permissions},
+          'parameters': {'hbase_table': None, 'verify_row_permissions': None}}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run Picarus REST Frontend')
@@ -156,60 +148,76 @@ def print_request():
     for k in ks:
         print('%s: %s' % (k, str(dict(getattr(bottle.request, k)))))
 
+# /data/:table
 
-@bottle.post('/<version:re:[^/]*>/data/<table:re:[^/]+>')
+
+@bottle.get('/<version:re:[^/]+>/data/<table:re:[^/]+>')
+@bottle.post('/<version:re:[^/]+>/data/<table:re:[^/]+>')
 @USERS.auth_api_key(True)
 @check_version
-def data_row_upload(_auth_user, table):
-    if table not in TABLES:
-        bottle.abort(400)
+def data_table(_auth_user, table):
+    print_request()
+    table_raw = table
     table_props = TABLES[table]
     table = table_props['hbase_table']
+    method = bottle.request.method.upper()
     with thrift_lock() as thrift:
-        verify_row_permissions = lambda x: table_props['verify_row_permissions'](thrift, _auth_user, row, x)
-        prefix = _auth_user.upload_row_prefix
-        row = prefix + '%.10d%s' % (2147483648 - int(time.time()), uuid.uuid4().bytes)
-        verify_row_permissions('rw')
-        mutations = []
-        # NOTE: PATCH does the same operation, look into combining their logic
-        for x in bottle.request.files:
-            cur_column = base64.urlsafe_b64decode(x)
-            table_props['column_write_validator'](cur_column)
-            thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=cur_column, value=bottle.request.files[x].file.read())])
-        for x in set(bottle.request.params) - set(bottle.request.files):
-            cur_column = base64.urlsafe_b64decode(x)
-            table_props['column_write_validator'](cur_column)
-            mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=bottle.request.params[x]))
-        if mutations:
-            thrift.mutateRow(table, row, mutations)
-        return {'row': base64.urlsafe_b64encode(row)}
+        if method == 'GET':
+            if table_raw == 'parameters':
+                bottle.response.headers["Content-type"] = "application/json"
+                return json.dumps(PARAM_SCHEMAS_B64)
+            elif table_raw == 'models':
+                columns = sorted(map(base64.urlsafe_b64decode, sorted(bottle.request.params.getall('column'))))
+                user_column = 'user:' + _auth_user.email
+                output_user = user_column in columns or not columns or 'user:' in columns
+                hbase_filter = "SingleColumnValueFilter ('user', '%s', =, 'binaryprefix:r', true, true)" % _auth_user.email
+                outs = []
+                verify_row_permissions = lambda x: table_props['verify_row_permissions'](thrift, _auth_user, row, x)
+                for row, cols in hadoopy_hbase.scanner(thrift, table, columns=columns + [user_column], filter=hbase_filter):
+                    verify_row_permissions('r')
+                    if not output_user:
+                        del cols[user_column]
+                    cur_out = {base64.urlsafe_b64encode(k): base64.b64encode(v) for k, v in cols.items()}
+                    cur_out['row'] = base64.urlsafe_b64encode(row)
+                    outs.append(cur_out)
+                bottle.response.headers["Content-type"] = "application/json"
+                return json.dumps(outs)
+            else:
+                bottle.abort(403)
+        elif method == 'POST':
+            if table_raw == 'images':
+                verify_row_permissions = lambda x: table_props['verify_row_permissions'](thrift, _auth_user, row, x)
+                prefix = _auth_user.upload_row_prefix
+                row = prefix + '%.10d%s' % (2147483648 - int(time.time()), uuid.uuid4().bytes)
+                verify_row_permissions('rw')
+                mutations = []
+                # NOTE: PATCH does the same operation, look into combining their logic
+                for x in bottle.request.files:
+                    cur_column = base64.urlsafe_b64decode(x)
+                    table_props['column_write_validator'](cur_column)
+                    thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=cur_column, value=bottle.request.files[x].file.read())])
+                for x in set(bottle.request.params) - set(bottle.request.files):
+                    cur_column = base64.urlsafe_b64decode(x)
+                    table_props['column_write_validator'](cur_column)
+                    mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=base64.b64decode(bottle.request.params[x])))
+                if mutations:
+                    thrift.mutateRow(table, row, mutations)
+                return {'row': base64.urlsafe_b64encode(row)}
+            elif table_raw == 'models':
+                path = bottle.request.params['path']
+                manager = PicarusManager(thrift=thrift)
+                return _create_model_from_params(manager, _auth_user, path, lambda model_dict, model_params, inputs: model_dict)
+        else:
+            bottle.abort(403)
 
 
 def _user_to_dict(user):
-    cols = {'stats': json.dumps(user.stats()), 'uploadRowPrefix': user.upload_row_prefix, 'imagePrefixes': json.dumps(user.image_prefixes)}
+    cols = {'stats': json.dumps(user.stats()), 'upload_row_prefix': user.upload_row_prefix, 'image_prefixes': json.dumps(user.image_prefixes)}
     cols = {base64.urlsafe_b64encode(x) : base64.b64encode(y) for x, y in cols.items()}
     cols['row'] = user.email
     return cols
 
-
-@bottle.get('/<version:re:[^/]*>/data/models')
-@USERS.auth_api_key()
-@check_version
-def data_table(_auth_user):
-    table_props = TABLES['models']
-    table = table_props['hbase_table']
-    columns = sorted(map(base64.urlsafe_b64decode, sorted(bottle.request.params.getall('column'))))
-    hbase_filter = "SingleColumnValueFilter ('user', '%s', =, 'binaryprefix:r')" % _auth_user.email
-    outs = []
-    with thrift_lock() as thrift:
-        verify_row_permissions = lambda x: table_props['verify_row_permissions'](thrift, _auth_user, row, x)
-        for row, cols in hadoopy_hbase.scanner(thrift, table, columns=columns, filter=hbase_filter):
-            verify_row_permissions(row)
-            cur_out = {base64.urlsafe_b64encode(k): base64.b64encode(v) for k, v in cols.items()}
-            cur_out['row'] = base64.urlsafe_b64encode(row)
-    bottle.response.headers["Content-type"] = "application/json"
-    return json.dumps(outs)
-
+# /data/:table/:row
 
 @bottle.route('/<version:re:[^/]*>/data/<table:re:[^/]+>/<row:re:[^/]+>', 'PATCH')
 @bottle.post('/<version:re:[^/]*>/data/<table:re:[^/]+>/<row:re:[^/]+>')
@@ -251,10 +259,9 @@ def data_row(_auth_user, table, row):
                 table_props['column_write_validator'](cur_column)
                 thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=cur_column, value=bottle.request.files[x].file.read())])
             for x in set(bottle.request.params) - set(bottle.request.files):
-                v = base64.b64decode(bottle.request.params[x])
                 table_props['column_write_validator'](cur_column)
                 cur_column = base64.urlsafe_b64decode(x)
-                mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=v))
+                mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=base64.b64decode(bottle.request.params[x])))
             if mutations:
                 thrift.mutateRow(table, row, mutations)
             return {}
@@ -265,7 +272,6 @@ def data_row(_auth_user, table, row):
             image_column = base64.urlsafe_b64decode(bottle.request.params['imageColumn'])
             results = thrift.get(table, row, image_column)
             if not results:
-                print((table, row, image_column))
                 bottle.abort(404)
             if action == 'i/classify':
                 verify_row_permissions('r')
@@ -286,6 +292,7 @@ def data_row(_auth_user, table, row):
         else:
             bottle.abort(400)
 
+# /data/:table/:row/:column
 
 @bottle.delete('/<version:re:[^/]*>/data/<table:re:[^/]+>/<row:re:[^/]+>/<col:re:[^/]+>')
 @USERS.auth_api_key(True)
@@ -325,7 +332,7 @@ def data_slice(_auth_user, table, start_row, stop_row):
         if table not in ('images',):
             bottle.abort(403)
         if method == 'GET':
-            verify_slice_permissions(_auth_user.image_prefixes, 'r', start_row, stop_row)
+            verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'r')
             # TODO: Need to verify limits on this scan and check auth
             max_rows = min(100, int(bottle.request.params.get('maxRows', 1)))
             filter_string = bottle.request.params.get('filter')
@@ -364,46 +371,45 @@ def data_slice(_auth_user, table, start_row, stop_row):
             bottle.response.headers["Content-type"] = "application/json"
             return json.dumps(out)
         elif method == 'PATCH':
-            verify_slice_permissions(_auth_user.image_prefixes, 'w', start_row, stop_row)
+            verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'w')
             # NOTE: This only fetches rows that have a column in data: (it is a significant optimization)
             # NOTE: Only parameters allowed, no "files" due to memory restrictions
             mutations = []
             for x in bottle.request.params:
-                mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=bottle.request.params[x]))
+                mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=base64.b64decode(bottle.request.params[x])))
             if mutations:
                 for row, _ in hadoopy_hbase.scanner(thrift, table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()', columns=['data:']):
-                    print(repr(row))
                     thrift.mutateRow(table, row, mutations)
             return {}
         elif method == 'POST':
             action = bottle.request.params['action']
             if action == 'io/thumbnail':
-                verify_slice_permissions(_auth_user.image_prefixes, 'rw', start_row, stop_row)
+                verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running thumb')
                 manager.image_thumbnail(start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/exif':
-                verify_slice_permissions(_auth_user.image_prefixes, 'rw', start_row, stop_row)
+                verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running exif')
                 manager.image_exif(start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/preprocess':
-                verify_slice_permissions(_auth_user.image_prefixes, 'rw', start_row, stop_row)
+                verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running preprocessor')
                 manager.image_preprocessor(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/classify':
-                verify_slice_permissions(_auth_user.image_prefixes, 'rw', start_row, stop_row)
+                verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running classifier')
                 manager.feature_to_prediction(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/feature':
-                verify_slice_permissions(_auth_user.image_prefixes, 'rw', start_row, stop_row)
+                verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running feature')
                 manager.image_to_feature(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/hash':
-                verify_slice_permissions(_auth_user.image_prefixes, 'rw', start_row, stop_row)
+                verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running hash')
                 manager.feature_to_hash(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
@@ -419,7 +425,7 @@ def data_slice(_auth_user, table, start_row, stop_row):
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps([{'rows': y} for x, y in features.items() if len(y) > 1])
             elif action == 'o/crawl/flickr':
-                verify_slice_permissions(_auth_user.image_prefixes, 'w', start_row, stop_row)
+                verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'w')
                 # Only slices where the start_row can be used as a prefix may be used
                 assert start_row and ord(start_row[-1]) != 255 and start_row[:-1] + chr(ord(start_row[-1]) + 1) == stop_row
                 print('Running flickr')
@@ -544,13 +550,13 @@ def data_slice(_auth_user, table, start_row, stop_row):
 
                 print(path)
                 if path == 'classifier/svmlinear':
-                    return _create_model_from_params(manager, path, classifier_sklearn)
+                    return _create_model_from_params(manager, _auth_user, path, classifier_sklearn)
                 elif path == 'classifier/nbnnlocal':
-                    return _create_model_from_params(manager, path, classifier_class_distance_list)
+                    return _create_model_from_params(manager, _auth_user, path, classifier_class_distance_list)
                 elif path == 'hasher/rrmedian':
-                    return _create_model_from_params(manager, path, hasher_train)
+                    return _create_model_from_params(manager, _auth_user, path, hasher_train)
                 elif path == 'index/linear':
-                    return _create_model_from_params(manager, path, index_train)
+                    return _create_model_from_params(manager, _auth_user, path, index_train)
                 else:
                     bottle.abort(400)
             else:
@@ -601,35 +607,6 @@ def _get_texton(manager):
                                               forests=forests, threshs=threshs)
 
 
-@bottle.route('/<version:re:[^/]*>/models/<row:re:[^/]+>', 'PATCH')
-@bottle.put('/<version:re:[^/]*>/models/<row:re:[^/]+>')
-@USERS.auth_api_key()
-@check_version
-def models_update(row):
-    with thrift_lock() as thrift:
-        data = bottle.request.json
-        kvs = {}
-        print(data)
-        try:
-            kvs['data:notes'] = data['notes']
-        except KeyError:
-            pass
-        try:
-            kvs['data:tags'] = data['tags']
-        except KeyError:
-            pass
-        thrift.mutateRow('picarus_models', base64.urlsafe_b64decode(row), [hadoopy_hbase.Mutation(column=k, value=v) for k, v in kvs.items()])
-    return {}
-
-
-@bottle.delete('/<version:re:[^/]*>/models/<row:re:[^/]+>')
-@USERS.auth_api_key()
-@check_version
-def model_delete(row):
-    # TODO: Permissions checking
-    with thrift_lock() as thrift:
-        thrift.deleteAllRow('picarus_models', base64.urlsafe_b64decode(row))
-    return {}
 
 
 # [name]: {module, params}  where params is dict with "name" as key with value {'required': bool, type: (int or float), min, max} with [min, max) or {'required': bool, type: 'bool'} or {'required': enum, vals: [val0, val1, ...]}
@@ -639,8 +616,8 @@ PARAM_SCHEMAS.append({'name': 'preprocessor',
                       'module': 'imfeat.ImagePreprocessor',
                       'data': 'none',   # none, row, slice
                       'inputs': ['raw_image'],  # abstract columns to be used for input
-                      'modelParams': {},
-                      'moduleParams': {'compression': {'type': 'enum', 'values': ['jpg']},
+                      'model_params': {},
+                      'module_params': {'compression': {'type': 'enum', 'values': ['jpg']},
                                        'size': {'type': 'int', 'min': 32, 'max': 1025},
                                        'method': {'type': 'enum', 'values': ['force_max_side', 'max_side', 'force_square']}}})
 
@@ -649,8 +626,8 @@ PARAM_SCHEMAS.append({'name': 'histogram',
                       'data': 'none',
                       'inputs': ['processed_image'],
                       'module': 'imfeat.Histogram',
-                      'modelParams': {'feature_type': {'type': 'const', 'value': 'feature'}},
-                      'moduleParams': {'mode': {'type': 'enum', 'values': ['bgr', 'rgb', 'xyz', 'ycrcb',
+                      'model_params': {'feature_type': {'type': 'const', 'value': 'feature'}},
+                      'module_params': {'mode': {'type': 'enum', 'values': ['bgr', 'rgb', 'xyz', 'ycrcb',
                                                                            'hsv', 'luv', 'hls', 'lab', 'gray']},
                                        'num_bins': {'type': 'int', 'min': 1, 'max': 17},
                                        'style': {'type': 'enum', 'values': ['joint', 'planar']}}})
@@ -660,16 +637,16 @@ PARAM_SCHEMAS.append({'name': 'svmlinear',
                       'data': 'slice',
                       'inputs': ['feature', 'meta'],
                       'module': 'sklearn.svm.LinearSVC',
-                      'modelParams': {'class_positive': {'type': 'str'}, 'classifier_type': {'type': 'const', 'value': 'sklearn_decision_func'}},
-                      'moduleParams': {}})
+                      'model_params': {'class_positive': {'type': 'str'}, 'classifier_type': {'type': 'const', 'value': 'sklearn_decision_func'}},
+                      'module_params': {}})
 
 PARAM_SCHEMAS.append({'name': 'rrmedian',
                       'type': 'hasher',
                       'data': 'slice',
                       'inputs': ['feature'],
                       'module': 'image_search.RRMedianHasher',
-                      'modelParams': {},
-                      'moduleParams': {'hash_bits': {'type': 'int', 'min': 1, 'max': 513}, 'normalize_features': {'type': 'const', 'value': False}}})
+                      'model_params': {},
+                      'module_params': {'hash_bits': {'type': 'int', 'min': 1, 'max': 513}, 'normalize_features': {'type': 'const', 'value': False}}})
 
 
 PARAM_SCHEMAS.append({'name': 'linear',
@@ -677,8 +654,8 @@ PARAM_SCHEMAS.append({'name': 'linear',
                       'data': 'slice',
                       'inputs': ['hash', 'meta'],
                       'module': 'image_search.LinearHashDB',
-                      'modelParams': {},
-                      'moduleParams': {}})
+                      'model_params': {},
+                      'module_params': {}})
 
 
 PARAM_SCHEMAS.append({'name': 'imageblocks',
@@ -686,41 +663,43 @@ PARAM_SCHEMAS.append({'name': 'imageblocks',
                       'data': 'none',
                       'inputs': ['processed_image'],
                       'module': 'picarus.modules.ImageBlocks',
-                      'modelParams': {'feature_type': {'type': 'const', 'value': 'multi_feature'}},
-                      'moduleParams': {'mode': {'type': 'enum', 'values': ['bgr', 'rgb', 'xyz', 'ycrcb',
-                                                                           'hsv', 'luv', 'hls', 'lab', 'gray']},
-                                       'num_sizes': {'type': 'int', 'min': 1, 'max': 5},
-                                       'sbin': {'type': 'int', 'min': 8, 'max': 257}}})
+                      'model_params': {'feature_type': {'type': 'const', 'value': 'multi_feature'}},
+                      'module_params': {'mode': {'type': 'enum', 'values': ['bgr', 'rgb', 'xyz', 'ycrcb',
+                                                                            'hsv', 'luv', 'hls', 'lab', 'gray']},
+                                        'num_sizes': {'type': 'int', 'min': 1, 'max': 5},
+                                        'sbin': {'type': 'int', 'min': 8, 'max': 257}}})
 
 PARAM_SCHEMAS.append({'name': 'nbnnlocal',
                       'type': 'classifier',
                       'data': 'slice',
                       'inputs': ['multi_feature', 'meta'],
                       'module': 'picarus.modules.LocalNBNNClassifier',
-                      'modelParams': {'classifier_type': {'type': 'const', 'value': 'class_distance_list'}},
-                      'moduleParams': {}})
+                      'model_params': {'classifier_type': {'type': 'const', 'value': 'class_distance_list'}},
+                      'module_params': {}})
 
 
 for x in PARAM_SCHEMAS:
     x['path'] = '/'.join([x['type'], x['name']])
+    x['prefix'] = {'feature': 'feat:', 'preprocessor': 'data:', 'classifier': 'pred:', 'hasher': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[x['type']]
+
+PARAM_SCHEMAS_B64 = []
+for schema in PARAM_SCHEMAS:
+    cur_schema = dict(schema)
+    cur_path = cur_schema['path']
+    cur_schema = {base64.urlsafe_b64encode(x) : base64.b64encode(y) if isinstance(y, str) else base64.b64encode(json.dumps(y)) for x, y in cur_schema.items() if x != 'path'}
+    cur_schema['row'] = cur_path
+    PARAM_SCHEMAS_B64.append(cur_schema)
+
+print(PARAM_SCHEMAS_B64)
 
 PARAM_SCHEMAS_SERVE = {}
 for schema in PARAM_SCHEMAS:
     PARAM_SCHEMAS_SERVE[schema['path']] = dict(schema)
 
 
-# TODO: Replace this, it is temporary
-@bottle.get('/<version:re:[^/]*>/params')
-@USERS.auth_api_key()
-@check_version
-def features():
-    bottle.response.headers["Content-type"] = "application/json"
-    return json.dumps(PARAM_SCHEMAS)
-
-
 def _parse_params(schema, prefix):
     kw = {}
-    params = schema[prefix + 'Params']
+    params = schema[prefix + '_params']
     get_param = lambda x: bottle.request.params[prefix + '-' + x]
     print(params)
     for param_name, param in params.items():
@@ -734,6 +713,8 @@ def _parse_params(schema, prefix):
         elif param['type'] == 'int':
             param_value = int(get_param(param_name))
             if not (param['min'] <= param_value < param['max']):
+                print(param)
+                print(param_value)
                 print(2)
                 bottle.abort(400)
             kw[param_name] = param_value
@@ -747,7 +728,7 @@ def _parse_params(schema, prefix):
     return kw
 
 
-def _create_model_from_params(manager, path, create_model):
+def _create_model_from_params(manager, _auth_user, path, create_model):
     try:
         schema = PARAM_SCHEMAS_SERVE[path]
         model_params = _parse_params(schema, 'model')
@@ -759,59 +740,21 @@ def _create_model_from_params(manager, path, create_model):
         prefix = {'feature': 'feat:', 'preprocessor': 'data:', 'classifier': 'pred:', 'hasher': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[schema['type']]
         inputs = {x: get_key(x) for x in schema['inputs']}
         model = create_model(model_dict, model_params, inputs)
-        row = manager.input_model_param_to_key(prefix, input=inputs, model=model, name=manager.model_to_name(model_dict), param=model_params)
+        row = manager.input_model_param_to_key(prefix, input=inputs, model=model, email=_auth_user.email, name=manager.model_to_name(model_dict), param=model_params)
         return {'row': base64.urlsafe_b64encode(row)}
     except ValueError:
-        print(0)
-        bottle.abort(400)
-
-
-@bottle.post('/<version:re:[^/]*>/models/<path:re:.*>')
-@USERS.auth_api_key()
-@check_version
-def models_create(path):
-    print_request()
-    try:
-        #model = call_import(model_dict)
-        with thrift_lock() as thrift:
-            manager = PicarusManager(thrift=thrift)
-            return _create_model_from_params(manager, path, lambda model_dict, model_params, inputs: model_dict)
-    except KeyError:
-        bottle.abort(400)
-
-
-@bottle.get('/<version:re:[^/]*>/models')
-@USERS.auth_api_key()
-@check_version
-def models():
-    out = []
-    prefix_to_name = {'feat:': 'feature',
-                      'mfeat:': 'multi_feature',
-                      'mask:': 'mask_feature',
-                      'pred:': 'classifier',
-                      'srch:': 'index',
-                      'hash:': 'hasher',
-                      'data:': 'preprocessor'}
-    with thrift_lock() as thrift:
-        for row, cols in hadoopy_hbase.scanner(thrift, 'picarus_models', columns=['data:input', 'data:versions', 'data:prefix', 'data:creation_time', 'data:param', 'data:notes', 'data:name', 'data:tags']):
-            name = prefix_to_name[cols['data:prefix']]
-            out.append({'inputs': json.loads(cols['data:input']),
-                        'versions': json.loads(cols['data:versions']),
-                        'param': json.loads(cols['data:param']),
-                        'creationTime': float(cols['data:creation_time']),
-                        'prefix_pretty': name,
-                        'notes': cols['data:notes'],
-                        'name': cols['data:name'],
-                        'tags': cols['data:tags'],
-                        'prefix': cols['data:prefix'],
-                        'row': base64.urlsafe_b64encode(row)})
-    bottle.response.headers["Content-type"] = "application/json"
-    return json.dumps(out)
+        bottle.abort(500)
 
 
 @bottle.get('/static/<name:re:[^/]+>')
 def static(name):
     return bottle.static_file(name, root=os.path.join(os.getcwd(), 'static'))
+
+
+@bottle.get('/robots.txt')
+def robots():
+    return '''User-agent: *
+Disallow: /'''
 
 
 @bottle.post('/<version:re:[^/]*>/auth/email')

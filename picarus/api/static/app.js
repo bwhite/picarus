@@ -95,7 +95,7 @@ function model_dropdown(args) {
             n = this.$el;
             this.$el.empty();
             var select_template = "{{#models}}<option value='{{row}}'>{{text}}</option>{{/models}};"
-            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.get('row'), text: data.get('tags')}});
+            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.pescape('data:tags')}});
             this.$el.append(Mustache.render(select_template, {models: models_filt}));
             this.renderDrop();
         }
@@ -122,14 +122,15 @@ function row_selector(prefixDrop, startRow, stopRow) {
         },
         render: function() {
             this.$el.empty();
-            var prefixes = _.keys(this.model.get('imagePrefixes')); // TODO: Check permissions and accept perissions as argument
+            // TODO: Check permissions and accept perissions as argument
+            var prefixes = _.keys(this.model.pescapejs('image_prefixes'));
             var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
             this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
             this.renderDrop();
         }
     });
     var auth = login_get(function (email_auth) {
-        user = new PicarusUser({email: email_auth.email});
+        user = new PicarusUser({row: encode_id(email_auth.email)});
         new AppView({model: user, el: prefixDrop});
         user.fetch();
     });
@@ -137,19 +138,50 @@ function row_selector(prefixDrop, startRow, stopRow) {
 
 function app_main() {
     // Setup models
+    function param_encode(dd) {
+        return _.map(dd, function (v) {
+            return v.join('=');
+        }).join('&');
+    }
+    var modelParams = ['data:input', 'data:versions', 'data:prefix', 'data:creation_time', 'data:param', 'data:notes', 'data:name', 'data:tags'];
+    modelParams = '?' + param_encode(_.map(modelParams, function (x) {
+        return ['column', encode_id(x)];
+    }));
     PicarusModel = Backbone.Model.extend({
         idAttribute: "row",
         defaults : {
         },
- 
         url : function() {
-            return this.id ? '/a1/data/models/' + this.id : '/a1/data/models'; 
-        } 
- 
+            return this.id ? '/a1/data/models/' + this.id + modelParams : '/a1/data/models' + modelParams; 
+        },
+        pescape: function (x) {
+            return _.escape(base64.decode(this.escape(encode_id(x))));
+        },
+        pescapejs: function (x) {
+            console.log(base64.decode(this.escape(encode_id(x))));
+            return JSON.parse(base64.decode(this.escape(encode_id(x))));
+        }
     });
     PicarusModels = Backbone.Collection.extend({
         model : PicarusModel,
-        url : "/a1/data/models"
+        url : function() {
+            return '/a1/data/models' + modelParams; 
+        }
+    });
+
+    PicarusParamModel = Backbone.Model.extend({
+        idAttribute: "row",
+        pescape: function (x) {
+            return _.escape(base64.decode(this.escape(encode_id(x))));
+        },
+        pescapejs: function (x) {
+            console.log(base64.decode(this.escape(encode_id(x))));
+            return JSON.parse(base64.decode(this.escape(encode_id(x))));
+        }
+    });
+    PicarusParamModels = Backbone.Collection.extend({
+        model : PicarusParamModel,
+        url : "/a1/data/parameters"
     });
 
     PicarusUser = Backbone.Model.extend({
@@ -158,9 +190,15 @@ function app_main() {
         },
  
         url : function() {
-            return this.id ? '/a1/data/users/' + this.id : '/a1/data/users'; 
-        } 
- 
+            return this.id ? '/a1/data/users/' + this.id  : '/a1/data/users'; 
+        },
+        pescape: function (x) {
+            return _.escape(base64.decode(this.escape(encode_id(x))));
+        },
+        pescapejs: function (x) {
+            console.log(base64.decode(this.escape(encode_id(x))));
+            return JSON.parse(base64.decode(this.escape(encode_id(x))));
+        }
     });
     PicarusUsers = Backbone.Collection.extend({
         model : PicarusUser,

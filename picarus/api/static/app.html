@@ -102,11 +102,16 @@
                   this.collection.bind('change', this.render);
               },
               render: function() {
+                          var columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
+                              return _.keys(x.attributes);
+                          })));
                           picarus_table = new Backbone.Table({
                           collection: this.collection,
-                          columns: [["email", "Email"],
-                                    ["uploadRowPrefix", "Row Prefix"],
-                                    {header: "Prefixes", getFormatted: function() { return _.escape(JSON.stringify(this.get('imagePrefixes')))}}]
+                          columns: _.map(columns, function (x) {
+                              if (x === 'row')
+                                  return ['row', 'email'];
+                              return {header: decode_id(x), getFormatted: function() { return _.escape(base64.decode(this.get(x)))}};
+                          }),
                           });
                           this.$el.html(picarus_table.render().el);
                       }
@@ -240,6 +245,13 @@
     <script type="text/javascript">
       function render_models_list() {
           models = new PicarusModels();
+          var prefix_to_type = {'feat:': 'feature',
+                                'mfeat:': 'multi_feature',
+                                'mask:': 'mask_feature',
+                                'pred:': 'classifier',
+                                'srch:': 'index',
+                                'hash:': 'hasher',
+                                'data:': 'preprocessor'}
           var AppView = Backbone.View.extend({
               el: $('#container'),
               initialize: function() {
@@ -251,13 +263,15 @@
               render: function() {
                           picarus_table = new Backbone.Table({
                           collection: this.collection,
-                          columns: [["name", "Name"], 
-                                    {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + this.escape('row') + '">edit</a></span>'}},
-                                    {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + this.escape('row') + '">edit</a></span>'}},
-                                    ["prefix_pretty", "Type"], ["creationTime", "Creation"],
+                          columns: [{header: "Name", className: "models-row", getFormatted: function() { return this.pescape('data:name')}},
+                                    {header: "Notes", className: "models-notes", getFormatted: function() { return this.pescape('data:notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + this.escape('row') + '">edit</a></span>'}},
+                                    {header: "Tags", className: "models-tags", getFormatted: function() { return this.pescape('data:tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + this.escape('row') + '">edit</a></span>'}},
+                                    {header: "Prefix", getFormatted: function() { return this.pescape('data:prefix')}},
+                                    {header: "Type", getFormatted: function() { return prefix_to_type[this.pescape('data:prefix')]}},
+                                    {header: "Creation Time", getFormatted: function() { return this.pescape('data:creation_time')}},
                                     {header: "Row", className: "models-row", getFormatted: function() { return this.escape('row')}},
-                                    {header: "Parameters", className: "models-params", getFormatted: function() { return _.escape(JSON.stringify(this.get('param')))}},
-                                    {header: "Inputs", className: "models-inputs", getFormatted: function() { return _.escape(JSON.stringify(this.get('inputs')))}},
+                                    {header: "Parameters", className: "models-params", getFormatted: function() { return this.pescape('data:param')}},
+                                    {header: "Inputs", className: "models-inputs", getFormatted: function() { return this.pescape('data:input')}},
                                     {header: "Delete", className: "models-row", getFormatted: function() { return '<button class="btn row_delete" type="submit" row="' + this.escape('row') + '">Delete</button>'}}]
                           });
                           $("#models").html(picarus_table.render().el);
@@ -310,13 +324,6 @@
           el.wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', text));
       }
       function render_models_create() {
-          PicarusParamModel = Backbone.Model.extend({
-              idAttribute: "path",
-          });
-          PicarusParamModels = Backbone.Collection.extend({
-              model : PicarusParamModel,
-              url : "/a1/params"
-          });
           models = new PicarusParamModels();
           var AppView = Backbone.View.extend({
               initialize: function() {
@@ -333,7 +340,11 @@
                   $('#row_select').html('');
                   var model_type = $('#type_select option:selected').val();
                   var name = $('#name_select option:selected').val();
-                  model = this.collection.where({type: model_type, name: name})[0];
+                  //model = this.collection.where({type: model_type, name: name})[0];
+                  model = models.filter(function (x) {
+                      if (x.pescape('type') == model_type && x.pescape('name') == name)
+                          return true;
+                  })[0];
 
                   function add_param_selections(params, param_prefix) {
                       _.each(params, function (value, key) {
@@ -354,37 +365,37 @@
                           }
                       });
                   }
-                  add_param_selections(model.get('modelParams'), 'model-');
-                  add_param_selections(model.get('moduleParams'), 'module-');
-                  if (model.get('data') === 'slice') {
+                  add_param_selections(model.pescapejs('model_params'), 'model-');
+                  add_param_selections(model.pescapejs('module_params'), 'module-');
+                  if (model.pescape('data') === 'slice') {
                       $('#row_select').append(document.getElementById('bpl_row_select').innerHTML);
                       row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
                   }
-                  _.each(model.get('inputs'), function (value) {
+                  _.each(model.pescapejs('inputs'), function (value) {
                       var cur_el;
                       // TODO: Finish model inputs, figure out how to take the values from here and integrate them in the response
                       if (value === 'processed_image') {
                           var cur_id = _.uniqueId('model_select_');
                           $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
-                          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'data:'},
+                          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'data:'},
                                           change: function() {},
                                           el: $('#' + cur_id)});
                       } else if (value === 'feature') {
                           var cur_id = _.uniqueId('model_select_');
                           $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
-                          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'feat:'},
+                          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'feat:'},
                                           change: function() {},
                                           el: $('#' + cur_id)});
                       } else if (value === 'multi_feature') {
                           var cur_id = _.uniqueId('model_select_');
                           $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
-                          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'mfeat:'},
+                          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'mfeat:'},
                                           change: function() {},
                                           el: $('#' + cur_id)});
                       } else if (value === 'hash') {
                           var cur_id = _.uniqueId('model_select_');
                           $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
-                          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'hash:'},
+                          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'hash:'},
                                           change: function() {},
                                           el: $('#' + cur_id)});
                       } else if (value === 'raw_image') {
@@ -403,15 +414,15 @@
               },
               renderName: function () {
                   var model_type = $('#type_select option:selected').val();
-                  var cur_models = this.collection.where({type: model_type});
+                  var cur_models = this.collection.filter(function (x) { return x.pescape('type') == model_type});
                   var select_template = "{{#models}}<option value='{{type}}'>{{type}}</option>{{/models}};"
-                  var models_filt = _.map(cur_models, function (data) {return {type: data.get('name')}});
+                  var models_filt = _.map(cur_models, function (data) {return {type: data.pescape('name')}});
                   $('#name_select').html(Mustache.render(select_template, {models: models_filt}));
                   this.renderParam();
               },
               renderType: function() {
                   var select_template = "{{#models}}<option value='{{type}}'>{{type}}</option>{{/models}};"
-                  var models_filt = _.uniq(_.map(this.collection.models, function (data) {return {type: data.get('type')}}));
+                  var models_filt = _.uniq(_.map(this.collection.models, function (data) {return {type: data.pescape('type')}}));
                   $('#type_select').html(Mustache.render(select_template, {models: models_filt}));
                   this.renderName();
               }
@@ -426,15 +437,19 @@
              }
              var model_type = $('#type_select option:selected').val();
              var name = $('#name_select option:selected').val();
-             var model = models.where({type: model_type, name: name})[0];
-             var path = model.get('path');
-             if (model.get('data') === 'slice') {
+             var model = models.filter(function (x) {
+                    if (x.pescape('type') == model_type && x.pescape('name') == name)
+                    return true;
+             })[0];
+             var path = model.get('row');
+             if (model.pescape('data') === 'slice') {
                  var startRow = encode_id($('#startRow').val());
                  var stopRow = encode_id($('#stopRow').val());
                  params.action = 'i/train/' + path
                  picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: params});
              } else {
-                 picarus_api("/a1/models/" + path, "POST", {success: success, data: params});
+                 params.path = path
+                 picarus_api("/a1/data/models", "POST", {success: success, data: params});
              }
          });
       }
@@ -574,7 +589,7 @@
           $('#results').html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
       }
       function render_process_preprocess() {
-          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'data:'},
+          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'data:'},
                           el: $('#model_select')});
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
@@ -599,7 +614,7 @@
 
     <script type="text/javascript">
       function render_process_feature() {
-          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'feat:' || x.get('prefix') === 'mfeat:'},
+          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'feat:' || x.pescape('data:prefix') === 'mfeat:'},
                           el: $('#model_select')});
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
@@ -624,7 +639,7 @@
 
     <script type="text/javascript">
       function render_process_classifier() {
-          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'pred:'},
+          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'pred:'},
                           el: $('#model_select')});
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
@@ -649,7 +664,7 @@
 
     <script type="text/javascript">
       function render_process_hash() {
-          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'hash:'},
+          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'hash:'},
                           el: $('#model_select')});
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
@@ -673,7 +688,7 @@
 
     <script type="text/javascript">
       function render_annotate_entity() {
-          row_selector();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
               var startRow = encode_id($('#startRow').val());
               var stopRow = encode_id($('#stopRow').val());
@@ -770,7 +785,7 @@
 
     <script type="text/javascript">
       function render_classify_compute() {
-          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'pred:'},
+          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'pred:'},
                           change: function() {},
                           el: $('#model_select')});
 
@@ -829,12 +844,12 @@
     </script>
     <script type="text/javascript">
       function render_classify_evaluate() {
-          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'pred:' && x.get('param').classifier_type === "c2tsZWFybl9kZWNpc2lvbl9mdW5j"},
+          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'pred:' && x.pescapejs('data:param').classifier_type === "c2tsZWFybl9kZWNpc2lvbl9mdW5j"},
                           change: function() {
                               var row = this.$el.find(":selected").val();
                               m = this.collection.get(row);
-                              $('#gtColumn').val(base64.decode(m.get('inputs').meta));
-                              $('#posClass').val(base64.decode(m.get('param').class_positive));
+                              $('#gtColumn').val(m.pescapejs('data:input').meta);
+                              $('#posClass').val(m.pescapejs('data:param').class_positive);
                               $('#modelKey').val(row);
                           },
                           el: $('#model_select')});
@@ -1127,7 +1142,7 @@
           picarus_api_row(table, row, "GET", {data: {column: imageColumn}, success: success_img_func});
       }
       function render_index_compute() {
-          model_dropdown({modelFilter: function (x) {return x.get('prefix') === 'srch:'},
+          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'srch:'},
                           change: function() {
                               var row = this.$el.find(":selected").val();
                               m = this.collection.get(row);
@@ -1166,17 +1181,6 @@
               data[imageColumn] = $('#imagefile')[0].files[0];
               picarus_api_upload(table, {data: data, success: upload_func})
           })
-      }
-    </script>
-
-
-    <script type="text/html" id="tpl_index_evaluate">
-      <%=rowSelect%>
-    </script>
-
-    <script type="text/javascript">
-      function render_index_evaluate() {
-          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
       }
     </script>
 
@@ -1647,33 +1651,6 @@
       <h3>Only output rows where column meta:class is exactly equal to 'dinner'</h3>
       <pre>SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner')</pre>
     </script>
-
-    <script type="text/html" id="tpl_docs_api">
-      <h2>REST /:version/data/ calls</h2>
-      <pre>
-        Supported
-        create → POST /:table
-        read → GET /:table
-        read → GET /data/:table/:row
-        update → PATCH /:table/:row
-        delete → DELETE /:table/row
-        delete → DELETE /:table/:row/:column
-
-        Planned
-        update → PUT /:row (common semantics suggest this includes ALL data, which may be very large for images)
-      </pre>
-
-      <h2>REST /:version/slice/ calls</h2>
-      <pre>
-        Supported
-        read → GET /:startRow/:stopRow
-
-        Planned
-        delete → GET /:startRow/:stopRow
-        delete → GET /:startRow/:stopRow/:column
-      </pre>
-    </script>
-
     </div>
 
 

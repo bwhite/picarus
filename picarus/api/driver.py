@@ -78,11 +78,12 @@ class PicarusManager(object):
         self.notes_column = 'data:notes'
         self.name_column = 'data:name'
         self.tags_column = 'data:tags'
+        self.sha1_column = 'data:sha1'
 
     def get_versions(self):
         return {x: get_version(x) for x in ['picarus', 'imfeat', 'imseg', 'hadoopy', 'impoint', 'hadoopy_hbase']}
 
-    def input_model_param_to_key(self, prefix, input, model, param={}, notes='', name='', tags=''):
+    def input_model_param_to_key(self, prefix, input, model, email, param={}, notes='', name='', tags=''):
         assert isinstance(input, dict)
         assert isinstance(param, dict)
         dumps = lambda x: json.dumps(x, sort_keys=True, separators=(',', ':'))
@@ -97,28 +98,28 @@ class PicarusManager(object):
             model_type = 'pickle'
             model_str = dumps(base64.b64encode(zlib.compress(pickle.dumps(model, -1))))
         input_model_param_str = dumps([input_str, model_str, param_str])
-        model_key = prefix + hashlib.sha1(input_model_param_str).digest()
-        # Only write if the row doesn't exist
-        if not self.hb.get(self.models_table, model_key, self.prefix_column):
-            cols = [hadoopy_hbase.Mutation(column=self.model_type_column, value=model_type),
-                    hadoopy_hbase.Mutation(column=self.input_column, value=input_str),
-                    hadoopy_hbase.Mutation(column=self.param_column, value=param_str),
-                    hadoopy_hbase.Mutation(column=self.versions_column, value=json.dumps(self.versions)),
-                    hadoopy_hbase.Mutation(column=self.prefix_column, value=prefix),
-                    hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time())),
-                    hadoopy_hbase.Mutation(column=self.notes_column, value=notes),
-                    hadoopy_hbase.Mutation(column=self.name_column, value=name),
-                    hadoopy_hbase.Mutation(column=self.tags_column, value=tags)]
-            chunk_count = 0
-            while model_str:
-                cols.append(hadoopy_hbase.Mutation(column=self.model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size]))
-                model_str = model_str[self.max_cell_size:]
-                print(chunk_count)
-                chunk_count += 1
-            cols.append(hadoopy_hbase.Mutation(column=self.model_chunks_column, value=np.array(chunk_count, dtype=np.uint32).tostring()))
-            self.hb.mutateRow(self.models_table, model_key, cols)
-        else:
-            print('Model exists!')
+        model_sha1 = hashlib.sha1(input_model_param_str).digest()
+        # Ensures model specifics cannot change, also ensures that name is unique
+        model_key = prefix + model_sha1 + os.urandom(7)
+        cols = [hadoopy_hbase.Mutation(column=self.model_type_column, value=model_type),
+                hadoopy_hbase.Mutation(column=self.input_column, value=input_str),
+                hadoopy_hbase.Mutation(column=self.param_column, value=param_str),
+                hadoopy_hbase.Mutation(column=self.versions_column, value=json.dumps(self.versions)),
+                hadoopy_hbase.Mutation(column=self.prefix_column, value=prefix),
+                hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time())),
+                hadoopy_hbase.Mutation(column=self.notes_column, value=notes),
+                hadoopy_hbase.Mutation(column=self.name_column, value=name),
+                hadoopy_hbase.Mutation(column=self.tags_column, value=tags),
+                hadoopy_hbase.Mutation(column=self.sha1_column, value=model_sha1),
+                hadoopy_hbase.Mutation(column='user:' + email, value='rw')]
+        chunk_count = 0
+        while model_str:
+            cols.append(hadoopy_hbase.Mutation(column=self.model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size]))
+            model_str = model_str[self.max_cell_size:]
+            print(chunk_count)
+            chunk_count += 1
+        cols.append(hadoopy_hbase.Mutation(column=self.model_chunks_column, value=np.array(chunk_count, dtype=np.uint32).tostring()))
+        self.hb.mutateRow(self.models_table, model_key, cols)
         return model_key
 
     def key_to_input_model_param(self, key):
