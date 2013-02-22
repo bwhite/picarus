@@ -169,28 +169,8 @@ EXAMPLE RESPONSE
     {"apiKey": "w0tnnb7wcUbpZFp8wH57"}
 
 
-Row Manipulation (/data)
----------------------------
-CREATE |arrow| POST /:table  - Create new row, generating row key using user's upload prefix
-
-READ |arrow| GET /:table/:row  - Get row
-
-UPDATE |arrow| PATCH /:table/:row  - Modify attributes on an row, row/columns need not exist before hand (can be used to create)
-
-DELETE |arrow| DELETE /:table/:row - Delete a row (idempotent)
-
-DELETE |arrow| DELETE /:table/:row/:column - Delete a column from a row (idempotent)
-
-EXECUTE |arrow| POST /:table/:row - ?(action)
-
-Slice Manipulation (/slice)
----------------------------
-READ |arrow| GET /:table/:startRow/:stopRow  - Get a row slice (TODO, params)
-
-EXECUTE |arrow| POST /:table/:startRow/:stopRow - ?(action)
-
-
-.. |arrow| unicode:: U+2794 .. right arrow
+Table Permissions
+-----------------
 
 +---------+----------------------------------+-----------+---------+---------+------------+
 | VERB    |  PATH                            |  images   | models  | users   | parameters |
@@ -218,21 +198,33 @@ EXECUTE |arrow| POST /:table/:startRow/:stopRow - ?(action)
 | DELETE  | /slice/:table/:startRow/:stopRow | TODO      | N       | N       | N          |
 +---------+----------------------------------+-----------+---------+---------+------------+
 
-Uploading an image
+/data/ 
+-------
+
+Get all rows from a table
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Convenient way to get all rows, only applicable for small tables (see table permissions).
+
+RESOURCE URL
+""""""""""""
+GET https://api.picar.us/a1/data/:table
+
+PARAMETERS
+"""""""""""
+\*ub64 column\* (ub64): Columns can be any value, if specified only those columns are returned, else all columns are returned.
+
+
+Uploading an Image
 ^^^^^^^^^^^^^^^^^^
 Upload an image without specifying a row.
 
 RESOURCE URL
 """"""""""""
-POST https://api.picar.us/a1/data/:table
-
-table: (string) name of the table (e.g., images)
+POST https://api.picar.us/a1/data/images
 
 PARAMETERS
 """""""""""
-\*ub64 column\* (ub64): binary
-
-
+\*ub64 column\* (ub64): Columns must include "data:image" and may include anything prefixed with "meta:".
 
 EXAMPLE RESPONSE
 """"""""""""""""
@@ -240,6 +232,44 @@ EXAMPLE RESPONSE
 
     {"row": ub64 row}
 
+
+Creating a Model
+^^^^^^^^^^^^^^^^^^
+Create a model that doesn't require training data.
+
+RESOURCE URL
+""""""""""""
+POST https://api.picar.us/a1/data/models
+
+PARAMETERS
+"""""""""""
+path (string): Model path (valid values found by GET /data/parameters)
+model-\* (string): Model parameter
+module-* (string): Module parameter
+key-* (ub64): Input parameter key
+
+EXAMPLE RESPONSE
+""""""""""""""""
+.. code:: javascript
+
+    {"row": ub64 row}
+
+
+Get a row
+^^^^^^^^^^^^^^^^^^
+Get a row from /data/
+
+RESOURCE URL
+""""""""""""
+GET https://api.picar.us/a1/data/:table/:row
+
+PARAMETERS
+"""""""""""
+\*ub64 column\* (ub64): Columns can be any value, if specified only those columns are returned, else all columns are returned.
+
+
+/slice/ 
+-------
 
 HBase
 ======
