@@ -295,6 +295,40 @@ action: Execute this on the row
 | i/search      | imageColumn, model             | Query search index using image        |
 +---------------+--------------------------------+---------------------------------------+
 
+
+
+Modify a row
+^^^^^^^^^^^^^^^^^^
+
+RESOURCE URL
+""""""""""""
+PATCH https://api.picar.us/a1/data/:table/:row
+
+PARAMETERS
+"""""""""""
+\*ub64 column\* (ub64): Columns can be any value, if specified only those columns are returned, else all columns are returned.
+column (ub64): Column to use (must have a matching parameter that is the column with modified value).  This parameter can be repeated. (NOTE: Will be removed)
+
+
+Delete a row
+^^^^^^^^^^^^^^^^^^
+
+RESOURCE URL
+""""""""""""
+DELETE https://api.picar.us/a1/data/:table/:row
+
+
+Delete a column from a row
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+RESOURCE URL
+""""""""""""
+DELETE https://api.picar.us/a1/data/:table/:row/:column
+
+
+/slice/ 
+-------
+
 Perform an action on a slice
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Each action specifies it's own return value and semantics.
@@ -342,8 +376,6 @@ action: Execute this on the row
 | i/train/index/linear         | \*TODO\*                                                                        |                                       |
 +------------------------------+---------------------------------------------------------------------------------+---------------------------------------+
 
-/slice/ 
--------
 
 HBase
 ======
