@@ -187,6 +187,7 @@ Python
 Javascript
 ^^^^^^^^^^
 .. code-block:: javascript
+
     // Requires underscore.js (http://underscorejs.org/) and base64
     // (http://stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js)
 
