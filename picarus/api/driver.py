@@ -289,7 +289,6 @@ class PicarusManager(object):
         print(repr(k))
         return k
 
-
     def _get_texton(self, classifier_key):
         forests = []
         threshs = [0.]

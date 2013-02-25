@@ -1,4 +1,8 @@
 *~
-.ropeproject/
 build
-data_tools/flickr_api_key.py
+picarus/api/flickr_keys.py
+picarus/api/email_auth.js
+*.pyc
+old/
+dist/
+picarus.egg-info/
