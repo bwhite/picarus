@@ -39,16 +39,16 @@ Philosophy
 ----------
 ::
 
-     Picarus Web App           HBase scales big              Free Software for all
-     Visual Analysis   Scan slices with high throughput   Large Scale Computer Vision
-    Look in your data           Contiguous Rows                 As Apache Two  
+        Picarus Web App           HBase scales big              Free Software for all
+        Visual Analysis   Scan slices with high throughput   Large Scale Computer Vision
+       Look in your data           Contiguous Rows                 As Apache Two  
 
 
 ::
 
-       Hadoop not easy                                          Privacy is key
-   Abstraction lowers the bar                          What we don't know can't hurt you
-      REST is for humans                                        Ignorance is ok
+       Hadoop not easy                                             Privacy is key
+   Abstraction lowers the bar                             What we don't know can't hurt you
+      REST is for humans                                           Ignorance is ok
 
 
 Capabilities
