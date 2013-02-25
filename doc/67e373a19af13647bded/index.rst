@@ -1,16 +1,10 @@
 Picarus
 ========
 
-
-..  toctree::
-    :maxdepth: 2
-
-Visit https://github.com/bwhite/picarus/ for the source.
-
 About
 --------
 
-Picarus is a Computer Vision web service and library for large-scale visual analysis.  Behind the scenes it uses Hadoop/HBase and the front end provides an easy to use REST interface and web app.  This is a broad project and is under active development, contact us if you are interested in using it or would like to take part in the development.
+Picarus is a Computer Vision web service and library for large-scale visual analysis.  Behind the scenes it uses Hadoop/HBase and the front end provides an easy to use REST interface and web app.  This is a broad project and is under active development, contact us if you are interested in using it or would like to take part in the development.  Visit https://github.com/bwhite/picarus/ for the source.
 
 Who
 ---
@@ -163,6 +157,28 @@ EXAMPLE RESPONSE
 
     {"apiKey": "w0tnnb7wcUbpZFp8wH57"}
 
+Encodings
+---------
+
+Column Semantics
+----------------
+In several API calls a "column" parameter is available, each column is ub64 encoded and the parameter itself is often optional (i.e., if not specified, all columns are returned) and repeatable (i.e., many columns can be specified and only those can be returned).  For GET operations, a row will be returned if it contains a single of the specified columns or any columns at all if there are none specified.  As these columns are used in HBase, the column family may also be specified and has the same semantics as they do with the Thrift API (i.e., has the effect of returning all columns in the column family); however, this should be avoided if not necessary as it is a goal to allow for other databases to be used (e.g., Cassandra, Accumulo) and this capability will not hold universally.
+
+HBase Filters
+-------------
+The GET /slice/:table/:startRow/:stopRow command takes in a filter argument that can be any valid HBase Thrift filter.  While documentation is available (http://hbase.apache.org/book/thrift.html) it is partially out of date (see https://issues.apache.org/jira/browse/HBASE-5946) so some caution must be taken.  Below are a few examples that work and using them as a guide the documentation can help elaborate on what else can be done.  This feature is new for HBase and has limitations, for example only ASCII characters may be used, while HBase rows/columns are represented as raw binary values.
+
+.. code::
+
+    # Only output rows where column meta:class is exactly equal to 'dinner', and if the meta:class column is missing, then include it
+    SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner')
+
+    # Only output rows where column meta:class is exactly equal to 'dinner' and if the meta:class column is missing, then don't include it
+    SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner', true, true)
+
+    # Only output rows where column meta:class starts with 'a'
+    SingleColumnValueFilter ('meta', 'class', =, 'binaryprefix:a')
+
 
 Table Permissions
 -----------------
@@ -269,11 +285,11 @@ Get a slice of rows
 
 PARAMETERS
 """""""""""
-* maxRows:
-* filter:
-* excludeStart:
-* cacheKey: 
-* column:
+* maxRows: Maximum number of rows (int, max value of 100)
+* filter: Valid HBase thrift filter
+* excludeStart: If 1 then skip the startRow, |maxRows| are still returned if we don't reach stopRow.
+* cacheKey: A user provided key (opaque string) that if used on a repeated call with excludeStart=1 and the new startRow (last row of the result), the internal scanner may be reused.  This is a significant optimization when enumerating long slices.
+* column: This is optional and repeated, represents columns that should be returned (if not specified then all columns are).
 
 
 Perform an action on a slice
@@ -336,54 +352,31 @@ TODO
 
 Column Families
 ^^^^^^^^^^^^^^^
-
-data
-"""""
-Image data.
-
-data:image is where the "source" image goes.  Preprocessors place other copies in data:
-
-thum
-""""
-Where visualization-only thumbnails exist (these are not to be used for actual analysis)
-
-image_150sq is an image with all sides equal to 150, cropping excess.
-
-feat
-""""
-Image features (picarus.api.NDArray vector, fixed size)
-
-mfeat
-"""""
-Image features (picarus.api.NDArray matrix, fixed columns, variable rows)
-
-mask
-""""
-Image masks (picarus.api.NDArray matrix, height/width matching image, fixed depth)
-
-pred
-""""
-Image predictions stored as a binary double.
-
-srch
-""""
-Search results
-
-attr
-""""
-Image attributes (basically metadata that is derived from the source data).  Similar to a prediction but generally "higher level", may come form a human and should generally be standardized.
-
-hash
-""""
-Hash codes stored as binary bytes.  Separated from feat so that it can be scanned fast.
-
-meta
-""""
-Image labels, tags, etc.
-
-misc
-""""
-Columns that don't fit into the other categories.
++--------------+------------------------------------------------------------------------------------------------------+
+| Column Family| Description                                                                                          |
++--------------+------------------------------------------------------------------------------------------------------+
+| data         | Image data. data:image is where the "source" image goes.  Preprocessors place other copies in data:  |
++--------------+------------------------------------------------------------------------------------------------------+
+| thum         | Where visualization-only thumbnails exist (these are not to be used for actual analysis)             |
++--------------+------------------------------------------------------------------------------------------------------+
+| feat         | Image features (picarus.api.NDArray vector, fixed size)                                              |
++--------------+------------------------------------------------------------------------------------------------------+
+| mfeat        | Image features (picarus.api.NDArray matrix, fixed columns, variable rows)                            |
++--------------+------------------------------------------------------------------------------------------------------+
+| mask         | Image masks (picarus.api.NDArray matrix, height/width matching image, fixed depth)                   |
++--------------+------------------------------------------------------------------------------------------------------+
+| pred         | Image predictions stored as a binary double.                                                         |
++--------------+------------------------------------------------------------------------------------------------------+
+| srch         | Search results                                                                                       |
++--------------+------------------------------------------------------------------------------------------------------+
+| attr         | Image attributes (basically metadata that is derived from the source data).                          |
++--------------+------------------------------------------------------------------------------------------------------+
+| hash         | Hash codes stored as binary bytes.  Separated from feat so that it can be scanned fast.              |
++--------------+------------------------------------------------------------------------------------------------------+
+| meta         | Image labels, tags, etc.                                                                             |
++--------------+------------------------------------------------------------------------------------------------------+
+| misc         | Columns that don't fit into the other categories.                                                    |
++--------------+------------------------------------------------------------------------------------------------------+
 
 Models Table
 ------------
@@ -399,6 +392,10 @@ Each row corresponds to a "model" which is something derived from data, primaril
 Column Families
 ^^^^^^^^^^^^^^^^
 
-data
-""""
-Used for all data.
++--------------+------------------------------------------------------------------------------------------------------+
+| Column Family| Description                                                                                          |
++--------------+------------------------------------------------------------------------------------------------------+
+| user         | Stored user permissions ("r" or "rw") as user:name@domain.com                                        |
++--------------+------------------------------------------------------------------------------------------------------+
+| data         | Used for everything not in user:                                                                     |
++--------------+------------------------------------------------------------------------------------------------------+
