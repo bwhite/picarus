@@ -159,6 +159,60 @@ EXAMPLE RESPONSE
 
 Encodings
 ---------
+JSON has become the standard interchange for REST services; however, it does not support binary data without encoding and when using HBase the row/column/value is, in general, binary as the underlying data is a byte string.  Moreover, we often using rows/columns in URLs, making standard url escape (due to %00 primarily) and base64 not appropriate as various browsers and intermediate servers will have issues with URLs containing these characters.  Values on the other hand are never used in URLs but they still must be JSON safe.  Base64 encoding is often performed natively and as values are often large (much larger than rows/columns) it makes sense to ensure that encoding/decoding them is as efficient as possible.  Consequently, rows/columns are always "urlsafe" base64 (+ -> - and / -> _) and values are always base64.  Below are implementations of the necessary enc/dec functions for all the encodings necessary in Picarus.  The encodings will be referred to by their abbreviated name (e.g., ub64) and from context it will be clear if enc/dec is intended.
+
+
+Python
+^^^^^^
+.. code:: python
+
+    import base64
+    import json
+
+    # b64
+    b64_enc = base64.b64encode
+    b64_dec = base64.b64decode
+
+    # ub64
+    b64_enc = base64.urlsafe_b64encode
+    b64_dec = base64.urlsafe_b64decode
+
+    # json_ub64_b64
+    json_ub64_b64_enc = lambda x: json.dumps({ub64_enc(k): b64_enc(v) for k, v in x.items()})
+    json_ub64_b64_dec = lambda x: {ub64_dec(k): b64_dec(v) for k, v in json.loads(x).items()}
+
+
+Javascript
+^^^^^^^^^^
+.. code:: javascript
+
+    // Requires base64 (http://stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js)
+    // and underscore.js (http://underscorejs.org/)
+
+    // b64
+    b64_enc = base64.encode
+    b64_dec = base64.decode
+
+    // ub64
+    function ub64_enc(data) {
+        return base64.encode(x).replace(/\+/g , '-').replace(/\//g , '_');
+    }
+    function ub64_dec(x) {
+        return base64.decode(x.replace(/\-/g , '+').replace(/\_/g , '/'));
+    }
+
+    // json_ub64_b64
+    function json_ub64_b64_enc(x)
+        return JSON.stringify(_.object(_.map(_.pairs(x), function (i) {
+            return [ub64_enc(i[0]), b64_enc(i[1])];
+        })));
+    }
+    function json_ub64_b64_dec(x)
+        return _.object(_.map(_.pairs(JSON.parse(x)), function (i) {
+            return [ub64_dec(i[0]), b64_dec(i[1])];
+        }));
+    }
+
 
 Column Semantics
 ----------------
