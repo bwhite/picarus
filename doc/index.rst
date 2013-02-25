@@ -167,7 +167,7 @@ POST https://api.picar.us/a1/auth/yubikey
 
 PARAMETERS
 """""""""""
-otp (string): Yubikey token
+* otp (string): Yubikey token
 
 EXAMPLE RESPONSE
 """"""""""""""""
@@ -179,47 +179,38 @@ EXAMPLE RESPONSE
 Table Permissions
 -----------------
 
-+---------+----------------------------------+-----------+---------+---------+------------+
-| VERB    |  PATH                            |  images   | models  | users   | parameters |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| GET     | /data/:table                     | N         | Y       | N       | Y          |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| GET     | /data/:table/:row                | Y         | Y       | Y       | N          |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| POST    | /data/:table                     | Y         | Y       | N       | N          |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| POST    | /data/:table/:row                | Y         | N       | N       | N          |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| PATCH   | /data/:table/:row                | Y         | Y       | N       | N          |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| DELETE  | /data/:table/:row                | Y         | Y       | N       | N          |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| DELETE  | /data/:table/:row/:column        | Y         | Y       | N       | N          |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| GET     | /slice/:table/:startRow/:stopRow | Y         | TODO    | N       | N          |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| POST    | /slice/:table/:startRow/:stopRow | Y         | N       | N       | N          |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| PATCH   | /slice/:table/:startRow/:stopRow | Y         | N       | N       | N          |
-+---------+----------------------------------+-----------+---------+---------+------------+
-| DELETE  | /slice/:table/:startRow/:stopRow | TODO      | N       | N       | N          |
-+---------+----------------------------------+-----------+---------+---------+------------+
+The table below contains the data commands for Picarus.  GET/PATCH/DELETE are idempotent (multiple applications have the same impact as one).  Params marked with a value of \* accepts column/value pairs, where the column name is ub64 encoded and the value is b64 encoded (see Encodings).  Each table defines which columns can be modified directly by a user.  Params marked with a value of \- do not accept parameters and ... means that additional parameters are available and specified below.  Params with "column" accept ub64 encoded column names and the parameter is optional and may be repeated for multiple columns.
 
-/data/ 
--------
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| Verb    | Path                             | Table                                      | Params                         |
++         +                                  +-----------+---------+---------+------------+                                +
+|         |                                  |  images   | models  | users   | parameters |                                |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| GET     | /data/:table                     | N         | Y       | N       | Y          | column (optional,repeated)     |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| GET     | /data/:table/:row                | Y         | Y       | Y       | N          | column (optional,repeated)     |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| POST    | /data/:table                     | Y         | Y       | N       | N          | \*                             |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| POST    | /data/:table/:row                | Y         | N       | N       | N          | action (required), ...         |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| PATCH   | /data/:table/:row                | Y         | Y       | N       | N          | \*                             |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| DELETE  | /data/:table/:row                | Y         | Y       | N       | N          | \-                             |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| DELETE  | /data/:table/:row/:column        | Y         | Y       | N       | N          | \-                             |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| GET     | /slice/:table/:startRow/:stopRow | Y         | TODO    | N       | N          | column (optional,repeated), ...|
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| POST    | /slice/:table/:startRow/:stopRow | Y         | N       | N       | N          | action (required), ...         |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| PATCH   | /slice/:table/:startRow/:stopRow | Y         | N       | N       | N          | \*                             |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
+| DELETE  | /slice/:table/:startRow/:stopRow | TODO      | N       | N       | N          | \-                             |
++---------+----------------------------------+-----------+---------+---------+------------+--------------------------------+
 
-Get all rows from a table
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-Convenient way to get all rows, only applicable for small tables (see table permissions).
-
-RESOURCE URL
-""""""""""""
-GET https://api.picar.us/a1/data/:table
-
-PARAMETERS
-"""""""""""
-\*ub64 column\* (ub64): Columns can be any value, if specified only those columns are returned, else all columns are returned.
-
+POST /data/:table
+------------------
 
 Uploading an Image
 ^^^^^^^^^^^^^^^^^^
@@ -231,7 +222,7 @@ POST https://api.picar.us/a1/data/images
 
 PARAMETERS
 """""""""""
-\*ub64 column\* (ub64): Columns must include "data:image" and may include anything prefixed with "meta:".
+* \*ub64 column\* (ub64): Columns must include "data:image" and may include anything prefixed with "meta:".
 
 EXAMPLE RESPONSE
 """"""""""""""""
@@ -250,10 +241,10 @@ POST https://api.picar.us/a1/data/models
 
 PARAMETERS
 """""""""""
-path (string): Model path (valid values found by GET /data/parameters)
-model-\* (string): Model parameter
-module-* (string): Module parameter
-key-* (ub64): Input parameter key
+* path (string): Model path (valid values found by GET /data/parameters)
+* model-\* (string): Model parameter
+* module-* (string): Module parameter
+* key-* (ub64): Input parameter key
 
 EXAMPLE RESPONSE
 """"""""""""""""
@@ -262,18 +253,8 @@ EXAMPLE RESPONSE
     {"row": ub64 row}
 
 
-Get a row
-^^^^^^^^^^^^^^^^^^
-Get a row from /data/
-
-RESOURCE URL
-""""""""""""
-GET https://api.picar.us/a1/data/:table/:row
-
-PARAMETERS
-"""""""""""
-\*ub64 column\* (ub64): Columns can be any value, if specified only those columns are returned, else all columns are returned.
-
+POST /data/:table/:row
+-----------------------
 
 Perform an action on a row
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -285,7 +266,7 @@ POST https://api.picar.us/a1/data/:table/:row
 
 PARAMETERS
 """""""""""
-action: Execute this on the row
+* action: Execute this on the row
 
 +---------------+--------------------------------+---------------------------------------+
 | action        | parameters                     | description                           |
@@ -296,38 +277,24 @@ action: Execute this on the row
 +---------------+--------------------------------+---------------------------------------+
 
 
+POST /data/:table/:startRow/:stopRow
+-------------------------------------
 
-Modify a row
-^^^^^^^^^^^^^^^^^^
+Get a slice of rows
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 RESOURCE URL
 """"""""""""
-PATCH https://api.picar.us/a1/data/:table/:row
+GET https://api.picar.us/a1/slice/:table/:startRow/:stopRow
 
 PARAMETERS
 """""""""""
-\*ub64 column\* (ub64): Columns can be any value, if specified only those columns are returned, else all columns are returned.
-column (ub64): Column to use (must have a matching parameter that is the column with modified value).  This parameter can be repeated. (NOTE: Will be removed)
+* maxRows:
+* filter:
+* excludeStart:
+* cacheKey: 
+* column:
 
-
-Delete a row
-^^^^^^^^^^^^^^^^^^
-
-RESOURCE URL
-""""""""""""
-DELETE https://api.picar.us/a1/data/:table/:row
-
-
-Delete a column from a row
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-RESOURCE URL
-""""""""""""
-DELETE https://api.picar.us/a1/data/:table/:row/:column
-
-
-/slice/ 
--------
 
 Perform an action on a slice
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -339,7 +306,7 @@ POST https://api.picar.us/a1/slice/:table/:startRow/:stopRow
 
 PARAMETERS
 """""""""""
-action: Execute this on the row
+* action: Execute this on the row
 
 
 +------------------------------+---------------------------------------------------------------------------------+---------------------------------------+
