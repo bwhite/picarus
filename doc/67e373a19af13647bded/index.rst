@@ -174,8 +174,8 @@ Python
     b64_dec = base64.b64decode
 
     # ub64
-    b64_enc = base64.urlsafe_b64encode
-    b64_dec = base64.urlsafe_b64decode
+    ub64_enc = base64.urlsafe_b64encode
+    ub64_dec = base64.urlsafe_b64decode
 
     # json_ub64_b64
     json_ub64_b64_enc = lambda x: json.dumps({ub64_enc(k): b64_enc(v)
