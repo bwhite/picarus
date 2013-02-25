@@ -178,8 +178,10 @@ Python
     b64_dec = base64.urlsafe_b64decode
 
     # json_ub64_b64
-    json_ub64_b64_enc = lambda x: json.dumps({ub64_enc(k): b64_enc(v) for k, v in x.items()})
-    json_ub64_b64_dec = lambda x: {ub64_dec(k): b64_dec(v) for k, v in json.loads(x).items()}
+    json_ub64_b64_enc = lambda x: json.dumps({ub64_enc(k): b64_enc(v)
+                                              for k, v in x.items()})
+    json_ub64_b64_dec = lambda x: {ub64_dec(k): b64_dec(v)
+                                   for k, v in json.loads(x).items()}
 
 
 Javascript
