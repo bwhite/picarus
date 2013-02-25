@@ -187,9 +187,8 @@ Python
 Javascript
 ^^^^^^^^^^
 .. code-block:: javascript
-
-    // Requires base64 (http://stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js)
-    // and underscore.js (http://underscorejs.org/)
+    // Requires underscore.js (http://underscorejs.org/) and base64
+    // (http://stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js)
 
     // b64
     b64_enc = base64.encode
