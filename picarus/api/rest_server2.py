@@ -163,11 +163,16 @@ def data_table(_auth_user, table):
     method = bottle.request.method.upper()
     with thrift_lock() as thrift:
         if method == 'GET':
+            columns = sorted(map(base64.urlsafe_b64decode, sorted(bottle.request.params.getall('column'))))
             if table_raw == 'parameters':
                 bottle.response.headers["Content-type"] = "application/json"
-                return json.dumps(PARAM_SCHEMAS_B64)
+                columns = set(columns)
+                if columns:
+                    # TODO: Test
+                    return json.dumps([{y: x[y] for y in columns.intersection(x)} for x in PARAM_SCHEMAS_B64])
+                else:
+                    return json.dumps(PARAM_SCHEMAS_B64)
             elif table_raw == 'models':
-                columns = sorted(map(base64.urlsafe_b64decode, sorted(bottle.request.params.getall('column'))))
                 user_column = 'user:' + _auth_user.email
                 output_user = user_column in columns or not columns or 'user:' in columns
                 hbase_filter = "SingleColumnValueFilter ('user', '%s', =, 'binaryprefix:r', true, true)" % _auth_user.email

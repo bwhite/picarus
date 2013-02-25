@@ -1,6 +1,0 @@
-To start a Picar.us cluster on Amazon EC2
-
-1. Start the cluster:  whirr launch-cluster --config picarus-hadoop.properties
-2. Run the proxy: bash ~/.whirr/picarus-cluster/hadoop-proxy.sh
-3. Update the hadoop config (ubuntu method):  sudo update-alternatives --install /etc/hadoop-0.20/conf hadoop-0.20-conf ~/.whirr/picarus-cluster /etc/hadoop-0.20/conf.whirr 60
-4. Install picarus on headnode (optional to allow launching jobs from it, alternatively it can be installed locally): 
