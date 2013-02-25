@@ -10,11 +10,13 @@ Visit https://github.com/bwhite/picarus/ for the source.
 About
 --------
 
+Picarus is a Computer Vision web service and library for large-scale visual analysis.  Behind the scenes it uses Hadoop/HBase and the front end provides an easy to use REST interface and web app.  This is a broad project and is under active development, contact us if you are interested in using it or would like to take part in the development.
+
 Who
 ---
 Picarus is developed by `Dapper Vision, Inc. <http://dappervision.com>`_ (`Brandyn White <http://brandynwhite.com>`_ and `Andrew Miller <http://blog.soc1024.com/pages/about-andrew-miller>`_).  We are PhD students at UMD and UCF respectively and are interested in Computer Vision, Web-Scale Machine Learning, HCI, Cryptography, and Social Networks.
 
-Background
+History
 ----------
 
 Concept and Draft (2008)
@@ -34,7 +36,12 @@ Focus expanded (2012)
 - Crawl, annotate, execute, train, analyze, visualize
 
 Philosophy
-----------
+---------------------
+::
+
+    Picarus Web App    HBase scales big   Computer Vision   Hadoop Capable      Privacy is key
+    Big Vision         Scan slices        Free Software     Hard to Use         Less Data
+    Look in your data  Contiguous Rows    As Apache Two     REST is for humans  Ignorance is ok
 
 Capabilities
 ------------
@@ -260,10 +267,6 @@ Perform an action on a row
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Each action specifies it's own return value and semantics.
 
-RESOURCE URL
-""""""""""""
-POST https://api.picar.us/a1/data/:table/:row
-
 PARAMETERS
 """""""""""
 * action: Execute this on the row
@@ -283,10 +286,6 @@ POST /data/:table/:startRow/:stopRow
 Get a slice of rows
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-RESOURCE URL
-""""""""""""
-GET https://api.picar.us/a1/slice/:table/:startRow/:stopRow
-
 PARAMETERS
 """""""""""
 * maxRows:
@@ -299,10 +298,6 @@ PARAMETERS
 Perform an action on a slice
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Each action specifies it's own return value and semantics.
-
-RESOURCE URL
-""""""""""""
-POST https://api.picar.us/a1/slice/:table/:startRow/:stopRow
 
 PARAMETERS
 """""""""""
