@@ -36,12 +36,12 @@ Focus expanded (2012)
 - Crawl, annotate, execute, train, analyze, visualize
 
 Philosophy
----------------------
+----------
 ::
 
-    Picarus Web App    HBase scales big   Computer Vision   Hadoop Capable      Privacy is key
-    Big Vision         Scan slices        Free Software     Hard to Use         Less Data
-    Look in your data  Contiguous Rows    As Apache Two     REST is for humans  Ignorance is ok
+    Picarus Web App   HBase scales big                 Computer Vision               Hadoop not easy             Privacy is key
+    Visual Analysis   Scan slices with high throughput Free Software for all to use  Abstraction lowers the bar  What we don't know can't hurt you
+    Look in your data Contiguous Rows                  As Apache Two                 REST is for humans          Ignorance is ok
 
 Capabilities
 ------------
@@ -69,13 +69,6 @@ Image Search
 
 - Binary Hash Function Learning: 
 - Search Indexing: 
-
-Security
---------
-
-Authentication
-
-Permissions
 
 Requirements
 ------------
@@ -132,10 +125,9 @@ Our projects (ordered by relevance)
 .. _mturk_vision: https://github.com/bwhite/mturk_vision
 .. _pycassa_server: https://github.com/bwhite/pycassa_server
 
-
-API
-===
-
+API Overview
+--------------
+You can access data by row (/data/:table/:row) or by slice (/slice/:table/:startRow/:stopRow which is [startRow, stopRow)).  Slices exploit the contiguous nature of the rows in HBase and allow for batch execution on Hadoop.  
 
 Authentication
 --------------
