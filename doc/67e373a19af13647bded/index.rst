@@ -164,7 +164,7 @@ JSON has become the standard interchange for REST services; however, it does not
 
 Python
 ^^^^^^
-.. code:: python
+.. code-block:: python
 
     import base64
     import json
@@ -186,7 +186,7 @@ Python
 
 Javascript
 ^^^^^^^^^^
-.. code:: javascript
+.. code-block:: javascript
 
     // Requires base64 (http://stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js)
     // and underscore.js (http://underscorejs.org/)
