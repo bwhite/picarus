@@ -1,2 +1,6 @@
 Picarus
 Copyright 2011-2013 Dapper Vision, Inc.
+
+The following modules were developed at the University of Maryland: College Park
+- picarus/modules/logos/*
+- NBNNClassifier and LocalNBNNClassifier in picarus/modules/__init__.py

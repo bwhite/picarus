@@ -168,7 +168,6 @@ def data_table(_auth_user, table):
                 bottle.response.headers["Content-type"] = "application/json"
                 columns = set(columns)
                 if columns:
-                    # TODO: Test
                     return json.dumps([{y: x[y] for y in columns.intersection(x)} for x in PARAM_SCHEMAS_B64])
                 else:
                     return json.dumps(PARAM_SCHEMAS_B64)
@@ -338,13 +337,11 @@ def data_slice(_auth_user, table, start_row, stop_row):
             bottle.abort(403)
         if method == 'GET':
             verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'r')
-            # TODO: Need to verify limits on this scan and check auth
             max_rows = min(100, int(bottle.request.params.get('maxRows', 1)))
             filter_string = bottle.request.params.get('filter')
             print('filter string[%s]' % filter_string)
             exclude_start = bool(int(bottle.request.params.get('excludeStart', 0)))
             cursor = bottle.request.params.get('cacheKey', '')
-            # TODO: Allow user to specify cursor, then we can output just the rows
             scanner_key_func = lambda x, y: (x, y, tuple(columns), max_rows, cursor, filter_string, _auth_user.email)
             scanner_key = scanner_key_func(start_row, stop_row)
             try:
@@ -695,8 +692,6 @@ for schema in PARAM_SCHEMAS:
     cur_schema['row'] = cur_path
     PARAM_SCHEMAS_B64.append(cur_schema)
 
-print(PARAM_SCHEMAS_B64)
-
 PARAM_SCHEMAS_SERVE = {}
 for schema in PARAM_SCHEMAS:
     PARAM_SCHEMAS_SERVE[schema['path']] = dict(schema)
@@ -706,21 +701,15 @@ def _parse_params(schema, prefix):
     kw = {}
     params = schema[prefix + '_params']
     get_param = lambda x: bottle.request.params[prefix + '-' + x]
-    print(params)
     for param_name, param in params.items():
-        print((param_name, param))
         if param['type'] == 'enum':
             param_value = get_param(param_name)
             if param_value not in param['values']:
-                print(3)
                 bottle.abort(400)
             kw[param_name] = param_value
         elif param['type'] == 'int':
             param_value = int(get_param(param_name))
             if not (param['min'] <= param_value < param['max']):
-                print(param)
-                print(param_value)
-                print(2)
                 bottle.abort(400)
             kw[param_name] = param_value
         elif param['type'] == 'const':
@@ -728,7 +717,6 @@ def _parse_params(schema, prefix):
         elif param['type'] == 'str':
             kw[param_name] = get_param(param_name)
         else:
-            print(1)
             bottle.abort(400)
     return kw
 
@@ -738,8 +726,6 @@ def _create_model_from_params(manager, _auth_user, path, create_model):
         schema = PARAM_SCHEMAS_SERVE[path]
         model_params = _parse_params(schema, 'model')
         module_params = _parse_params(schema, 'module')
-        print(model_params)
-        print(module_params)
         model_dict = {'name': schema['module'], 'kw': module_params}
         get_key = lambda x: base64.urlsafe_b64decode(bottle.request.params['key-' + x])   # TODO: Verify that model keys exist
         prefix = {'feature': 'feat:', 'preprocessor': 'data:', 'classifier': 'pred:', 'hasher': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[schema['type']]
