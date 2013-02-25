@@ -53,30 +53,13 @@ Philosophy
 
 Capabilities
 ------------
-Data Management
-
 - Crawling: Flickr
 - Annotation: Standalone or Mechanical Turk.  Several operating modes.
-
-Visualization
-
-- Thumbnails:
-- Metadata:
-- Exif:
-- Location: 
-
-Computer Vision
-
-- Image features:
-
-Machine Learning
-
-- Classifier Learning:
-
-Image Search
-
-- Binary Hash Function Learning: 
-- Search Indexing: 
+- Visualization: Thumbnails, Metadata, Exif, and Location
+- Image features
+- Classifier Training
+- Binary Hash Function Learning
+- Search Indexing
 
 Requirements
 ------------
