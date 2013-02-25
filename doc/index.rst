@@ -53,6 +53,8 @@ Philosophy
 
 Capabilities
 ------------
+Below is an incomplete list, more detail is available in the API documentation below.
+
 - Crawling: Flickr
 - Annotation: Standalone or Mechanical Turk.  Several operating modes.
 - Visualization: Thumbnails, Metadata, Exif, and Location
@@ -136,10 +138,6 @@ Send user an email with an API key.
 RESOURCE URL
 """"""""""""
 POST https://api.picar.us/a1/auth/email
-
-PARAMETERS
-"""""""""""
-None
 
 EXAMPLE RESPONSE
 """"""""""""""""
