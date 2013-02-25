@@ -46,9 +46,9 @@ Philosophy
 
 ::
 
-       Hadoop not easy                                          Privacy is key
+       Hadoop's not easy                                        Privacy is key
    Abstraction lowers the bar                          What we don't know can't hurt you
-      REST is for humans                                        Ignorance is safe
+      REST is for humans                                       Ignorance is safe
 
 
 Capabilities
