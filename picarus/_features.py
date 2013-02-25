@@ -1,5 +1,4 @@
 import imfeat
-import picarus.vision.face_feature
 import cPickle as pickle
 import numpy as np
 import bisect
