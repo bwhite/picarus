@@ -263,8 +263,8 @@ def data_row(_auth_user, table, row):
                 table_props['column_write_validator'](cur_column)
                 thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=cur_column, value=bottle.request.files[x].file.read())])
             for x in set(bottle.request.params) - set(bottle.request.files):
-                table_props['column_write_validator'](cur_column)
                 cur_column = base64.urlsafe_b64decode(x)
+                table_props['column_write_validator'](cur_column)
                 mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=base64.b64decode(bottle.request.params[x])))
             if mutations:
                 thrift.mutateRow(table, row, mutations)
@@ -499,7 +499,6 @@ def data_slice(_auth_user, table, start_row, stop_row):
                                                      columns=[inputs['feature'], inputs['meta']], start_row=start_row, stop_row=stop_row)
                     label_features = {0: [], 1: []}
                     for row, cols in row_cols:
-                        print(repr(row))
                         label = int(cols[inputs['meta']] == model_param['class_positive'])
                         label_features[label].append(cols[inputs['feature']])
                     labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
@@ -515,7 +514,6 @@ def data_slice(_auth_user, table, start_row, stop_row):
                     #label_values = ((cols[inputs['meta']], np.asfarray(picarus.api.np_fromstring(cols[inputs['multi_feature']]))) for _, cols in row_cols)
                     def gen():
                         for _, cols in row_cols:
-                            print(cols.keys())
                             yield cols[inputs['meta']], np.asfarray(picarus.api.np_fromstring(cols[inputs['multi_feature']]))
                     classifier = call_import(model_dict)
                     classifier.train(gen()) # label_values

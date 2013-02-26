@@ -158,8 +158,10 @@ function app_main() {
             return _.escape(base64.decode(this.escape(encode_id(x))));
         },
         pescapejs: function (x) {
-            console.log(base64.decode(this.escape(encode_id(x))));
             return JSON.parse(base64.decode(this.escape(encode_id(x))));
+        },
+        psave: function (attributes, options) {
+            return model.save(json_ub64_b64_enc(attributes), options);
         }
     });
     PicarusModels = Backbone.Collection.extend({

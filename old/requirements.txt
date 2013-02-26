@@ -1,3 +1,0 @@
-git+git://github.com/bwhite/hadoopy.git#egg=hadoopy
-git+git://github.com/bwhite/viderator.git#egg=viderator
-git+git://github.com/bwhite/imfeat.git#egg=imfeat
