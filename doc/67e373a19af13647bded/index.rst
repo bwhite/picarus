@@ -123,6 +123,10 @@ API Overview
 --------------
 You can access data by row (/data/:table/:row) or by slice (/slice/:table/:startRow/:stopRow which is [startRow, stopRow)).  Slices exploit the contiguous nature of the rows in HBase and allow for batch execution on Hadoop.
 
+Two-Factor Authentication: Yubikey/Email
+--------------------------------------------
+Picarus supports two forms of additional authentication Yubikey (yubico.com/yubikey) which is a hardware token that can be programmed and input through a Picarus admin tool (api/yubikey.py) and email where a key is sent to a user's email address.  Using a Yubikey has the benefit of a more streamlined login process (i.e., one press vs checking email and pasting key) and is preferred if available.
+
 Authentication
 --------------
 
