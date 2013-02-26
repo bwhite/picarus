@@ -243,6 +243,10 @@ The GET /slice/:table/:startRow/:stopRow command takes in a filter argument that
     SingleColumnValueFilter ('meta', 'class', =, 'binaryprefix:a')
 
 
+Content-Type: application/json
+------------------------------
+If the request "Content-Type" is set to "application/json" then JSON parameters may be provided as a JSON object where repeated fields are replaced with lists with the name pluralized (e.g., instead of ?column=1&column=2 it would be {"columns": ["1", "2"]} in JSON).
+
 Table Permissions
 -----------------
 
@@ -389,15 +393,17 @@ PARAMETERS
 +------------------------------+---------------------------------------------------------------------------------+---------------------------------------+
 | io/annotate/image/query_batch| imageColumn, query                                                              |                                       |
 +------------------------------+---------------------------------------------------------------------------------+---------------------------------------+
-| i/train/classifier/svmlinear | \*TODO\*                                                                        |                                       |
+| i/train/classifier/svmlinear | key-meta, model-class_positive, key-feature                                     |                                       |
 +------------------------------+---------------------------------------------------------------------------------+---------------------------------------+
-| i/train/classifier/nbnnlocal | \*TODO\*                                                                        |                                       |
+| i/train/classifier/nbnnlocal | key-meta, key-multi_feature                                                     |                                       |
 +------------------------------+---------------------------------------------------------------------------------+---------------------------------------+
-| i/train/hasher/rrmedian      | \*TODO\*                                                                        |                                       |
+| i/train/hasher/rrmedian      | module-hash_bits, key-feature                                                   |                                       |
 +------------------------------+---------------------------------------------------------------------------------+---------------------------------------+
 | i/train/index/linear         | \*TODO\*                                                                        |                                       |
 +------------------------------+---------------------------------------------------------------------------------+---------------------------------------+
 
+
+module-hash_bits': '64', 'action': 'i/train/hasher/rrmedian', 'key-feature'
 
 HBase
 ======

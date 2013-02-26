@@ -243,6 +243,10 @@ The GET /slice/:table/:startRow/:stopRow command takes in a filter argument that
     SingleColumnValueFilter ('meta', 'class', =, 'binaryprefix:a')
 
 
+Content-Type: application/json
+------------------------------
+If the request "Content-Type" is set to "application/json" then JSON parameters may be provided as a JSON object where repeated fields are replaced with lists with the name pluralized (e.g., instead of ?column=1&column=2 it would be {"columns": ["1", "2"]} in JSON).
+
 Table Permissions
 -----------------
 
