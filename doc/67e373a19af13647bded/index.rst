@@ -142,7 +142,7 @@ POST https://api.picar.us/a1/auth/email
 
 EXAMPLE RESPONSE
 """"""""""""""""
-.. code:: javascript
+.. code-block:: javascript
 
     {}
 
@@ -160,7 +160,7 @@ PARAMETERS
 
 EXAMPLE RESPONSE
 """"""""""""""""
-.. code:: javascript
+.. code-block:: javascript
 
     {"apiKey": "w0tnnb7wcUbpZFp8wH57"}
 
@@ -231,7 +231,7 @@ HBase Filters
 -------------
 The GET /slice/:table/:startRow/:stopRow command takes in a filter argument that can be any valid HBase Thrift filter.  While documentation is available (http://hbase.apache.org/book/thrift.html) it is partially out of date (see https://issues.apache.org/jira/browse/HBASE-5946) so some caution must be taken.  Below are a few examples that work and using them as a guide the documentation can help elaborate on what else can be done.  This feature is new for HBase and has limitations, for example only ASCII characters may be used, while HBase rows/columns are represented as raw binary values.
 
-.. code::
+.. code-block::
 
     # Only output rows where column meta:class is exactly equal to 'dinner', and if the meta:class column is missing, then include it
     SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner')
@@ -293,7 +293,7 @@ PARAMETERS
 
 EXAMPLE RESPONSE
 """"""""""""""""
-.. code:: javascript
+.. code-block:: javascript
 
     {"row": ub64 row}
 
@@ -315,7 +315,7 @@ PARAMETERS
 
 EXAMPLE RESPONSE
 """"""""""""""""
-.. code:: javascript
+.. code-block:: javascript
 
     {"row": ub64 row}
 
