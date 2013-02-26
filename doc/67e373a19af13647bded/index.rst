@@ -112,9 +112,16 @@ Our projects (ordered by relevance)
 .. _mturk_vision: https://github.com/bwhite/mturk_vision
 .. _pycassa_server: https://github.com/bwhite/pycassa_server
 
+
+Models
+------------------
+Picarus abstracts data analysis as a sequence of models with a defined flow from source data through them.  Each model describes how to instantiate it, what inputs it took (either other models or raw source data), what parameters it has, user notes/tags, and permissions (i.e., who can use/modify it).  The result is that given a column name (i.e., data stored for a specific image) we can determine exactly what process of steps occured to create it; moreover, this allows for natural utilization of pre-processed data, re-use of components, and parallel computation.  Models are immutable once created and this is enforced by their row encoding the hash of the model, input, and parameters which allows for verifying that the model has not been modified since its creation.  This is necessary to ensure consistency; moreover, the versions of each underlying module in use are stored in the model so that it is possible to manually determine if an incompatible change has been made which would necessitate reprocessing the data.
+
+Examples of models are preprocessors (i.e., take source data, condition is based on specific rules), features (i.e., take processed image and produce a visual feature), classifiers (i.e., take a feature and produce a confidence value (binary) or a ranked list of classes (multi-class)), hashers (i.e., take feature and produce a binary hash code), and search indexes (i.e., take a binary hash code and produce a ranked result list).  Essentially, an output column in the images table corresponds to a row in the models table.
+
 API Overview
 --------------
-You can access data by row (/data/:table/:row) or by slice (/slice/:table/:startRow/:stopRow which is [startRow, stopRow)).  Slices exploit the contiguous nature of the rows in HBase and allow for batch execution on Hadoop.  
+You can access data by row (/data/:table/:row) or by slice (/slice/:table/:startRow/:stopRow which is [startRow, stopRow)).  Slices exploit the contiguous nature of the rows in HBase and allow for batch execution on Hadoop.
 
 Authentication
 --------------
