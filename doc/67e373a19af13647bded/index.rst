@@ -404,7 +404,7 @@ Each row corresponds to an "image" along with all associated features, metadata,
 
 Permissions
 ^^^^^^^^^^^
-TODO
+Users can read all columns and write to data:image and meta: (i.e., anything under meta:).
 
 Column Families
 ^^^^^^^^^^^^^^^
@@ -439,7 +439,7 @@ Models Table
 
 Permissions
 ^^^^^^^^^^^
-TODO
+Users can read all columns and write to data:tags, data:notes, and user: (i.e., anything under user).
 
 Row
 ^^^
