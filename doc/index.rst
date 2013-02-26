@@ -216,12 +216,11 @@ Javascript
             return [ub64_enc(i[0]), b64_enc(i[1])];
         })));
     }
- 
-function json_ub64_b64_dec(x) {
-    return _.object(_.map(_.pairs(JSON.parse(x)), function (i) {
-        return [ub64_dec(i[0]), b64_dec(i[1])];
-    }));
-}
+    function json_ub64_b64_dec(x) {
+        return _.object(_.map(_.pairs(JSON.parse(x)), function (i) {
+            return [ub64_dec(i[0]), b64_dec(i[1])];
+        }));
+    }
 
 Column Semantics
 ----------------
