@@ -461,13 +461,13 @@ Column Families
 Models Table
 ------------
 
-Permissions
-^^^^^^^^^^^
-Users can read all columns and write to data:tags, data:notes, and user: (i.e., anything under user).
-
 Row
 ^^^
 Each row corresponds to a "model" which is something derived from data, primarily from the images table.  Parameters of the model should be included, along with the source columns used to produce it.
+
+Permissions
+^^^^^^^^^^^
+Users can read all columns and write to data:tags, data:notes, and user: (i.e., anything under user).
 
 Column Families
 ^^^^^^^^^^^^^^^^
