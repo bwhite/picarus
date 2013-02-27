@@ -226,6 +226,14 @@ Javascript
         }));
     }
 
+Versioning
+----------
+All API calls are prefixed with a version (currently /a1/) that is an opaque string.
+
+HTTP Status Codes
+-----------------
+Standard status codes used are 400, 401, 403, 404, and 500.  In general 4xx is a user error and 5xx is a server error.
+
 Column Semantics
 ----------------
 In several API calls a "column" parameter is available, each column is ub64 encoded and the parameter itself is often optional (i.e., if not specified, all columns are returned) and repeatable (i.e., many columns can be specified and only those can be returned).  For GET operations, a row will be returned if it contains a single of the specified columns or any columns at all if there are none specified.  As these columns are used in HBase, the column family may also be specified and has the same semantics as they do with the Thrift API (i.e., has the effect of returning all columns in the column family); however, this should be avoided if not necessary as it is a goal to allow for other databases to be used (e.g., Cassandra, Accumulo) and this capability will not hold universally.
