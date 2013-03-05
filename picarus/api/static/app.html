@@ -9,10 +9,13 @@
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 
     <!-- Le styles -->
-    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <!-- <link href="/static/bootstrap.min.css" rel="stylesheet">-->
+
+    <link href="/static/bootstrap_flat.css" rel="stylesheet">
+    <link href="/static/flat-ui.css" rel="stylesheet">
     <link href="/static/hint.min.css" rel="stylesheet">
-    <script type="text/javascript" src="//stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
     <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script type="text/javascript" src="//stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
     <script type="text/javascript" src="/static/bootstrap.min.js"></script>
     <script type="text/javascript" src="//www.google.com/jsapi"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
@@ -24,7 +27,6 @@
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/0.9.10/backbone-min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mustache.js/0.7.0/mustache.min.js"></script>
     <script src="https://raw.github.com/jsvine/Backbone.Table/master/backbone.table.js"></script>
-    
     <style>
       // Models Table
       table { margin: 10px; font-family: Georgia, serif }
@@ -33,11 +35,12 @@
       th { font-weight: bold; }
       th, td { padding: 5px 10px; }
       th+th, td+td { border-left: 1px solid #FFF; }
-      td.models-inputs {font-size: 8px}
+/*      td.models-inputs {font-size: 8px}
       td.models-params {font-size: 8px}
-      td.models-row {font-size: 8px}
-      .navbar .nav>li>a{padding-right: 7px;padding-left: 7px;}
+      td.models-row {font-size: 8px}*/
 /*
+      .navbar .nav>li>a{padding-right: 7px;padding-left: 7px;}
+
       Modified bootstrap: http://twitter.github.com/bootstrap/customize.html#components
       @navbarCollapseWidth: 766px
       @iconSpritePath: '/static/glyphicons-halflings.png';
@@ -87,12 +90,12 @@
     </script>
 
 
-    <script type="text/html" id="tpl_home">
+    <script type="text/html" id="tpl_data_user">
       <div id="users"></div>
     </script>
 
     <script type="text/javascript">
-      function render_home() {
+      function render_data_user() {
           users = new PicarusUsers();
           var AppView = Backbone.View.extend({
               initialize: function() {
@@ -108,7 +111,7 @@
                           collection: this.collection,
                           columns: _.map(columns, function (x) {
                               if (x === 'row')
-                                  return ['row', 'email'];
+                                  return {header: 'email', getFormatted: function() { return _.escape(base64.decode(this.get(x)))}}
                               return {header: decode_id(x), getFormatted: function() { return _.escape(base64.decode(this.get(x)))}};
                           }),
                           });
@@ -133,25 +136,41 @@
     </script>
 -->
 
+
     <script type="text/html" id="tpl_data_uploads">
       <div id="images"></div>
     </script> 
 
+
     <script type="text/javascript">
-      function render_data_uploads() {
+      function render_data_uploads(email_auth) {
           function success_user(xhr) {
-              var response = JSON.parse(xhr.responseText);
-              var startRow = response.uploadRowPrefix;
-              var imageColumn = encode_id('thum:image_150sq');
-              function success(row, columns) {
-                  $('#images').append(escape(decode_id(row)));
-                  $('#images').append($('<br>'));
-                  $('#images').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('width', '150px'));
-                  $('#images').append($('<br>'));
-              }
-              picarus_api_data_scanner("images", encode_id(startRow), encode_id(prefix_to_stop_row(startRow)), [imageColumn], {success: success, maxRows: 100});
+              response = JSON.parse(xhr.responseText);
+
           }
-          picarus_api("/a1/user", "GET", {success: success_user});
+          var AppView = Backbone.View.extend({
+              el: $('#container'),
+              initialize: function() {
+                  _.bindAll(this, 'render');
+                  this.model.bind('reset', this.render);
+                  this.model.bind('change', this.render);
+              },
+              render: function() {
+                  var startRow = this.model.pescape('upload_row_prefix');
+                  var imageColumn = encode_id('thum:image_150sq');
+                  function success(row, columns) {
+                      $('#images').append(escape(decode_id(row)));
+                      $('#images').append($('<br>'));
+                      $('#images').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('width', '150px'));
+                      $('#images').append($('<br>'));
+                  }
+                  picarus_api_data_scanner("images", encode_id(startRow), encode_id(prefix_to_stop_row(startRow)), [imageColumn], {success: success, maxRows: 100});
+              }
+          });
+          var model = new PicarusUser({row: encode_id(email_auth.email)});
+          new AppView({ model: model });
+          model.fetch();
+          //picarus_api("/a1/data/users/" + encode_id(email_auth.email), "GET", {success: success_user});
        }
     </script>
 
@@ -174,6 +193,8 @@
       <input class="input-small" type="text" placeholder="Iterations" id="demoiters" value="1">
       <input class="input-large" type="text" placeholder="Class Name" id="democlass" value="">
       <input class="input-large" type="text" placeholder="Query" id="demoquery" value="">
+      <input class="input-large" type="text" placeholder="Latitude" id="demolat" value="">
+      <input class="input-large" type="text" placeholder="Longitude" id="demolon" value="">
       <input class="input-small" type="checkbox" id="demogeo" checked> Geotagged
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
       <div class="progress progress-striped active" id="progress_bar">
@@ -203,9 +224,16 @@
           var min_upload_date = parseInt((new Date().getTime() / 1000 - min_time) * Math.random() + min_time);
           var max_upload_date = parseInt((new Date().getTime() / 1000 - min_upload_date) * Math.random() + min_upload_date);
           var auth = {email: $('#demouser').val(), auth: $('#demopass').val()};
+          var latitude = Number($('#demolat').val());
+          var longitude = Number($('#demolon').val());
           function call_api() {
               $('#progress').css('width', ((100. * (iters_orig - iters)) / iters_orig) + '%');
-              picarus_api("/a1/slice/images/" + encode_id(row_prefix) + '/' + encode_id(prefix_to_stop_row(row_prefix)), "POST", {success: success, data: {hasGeo: Number($('#demogeo').is(':checked')), className: demo_class, minUploadDate: min_upload_date, maxUploadDate: max_upload_date, action: 'o/crawl/flickr'}});
+              var p = {hasGeo: Number($('#demogeo').is(':checked')), className: demo_class, minUploadDate: min_upload_date, maxUploadDate: max_upload_date, action: 'o/crawl/flickr'};
+              if (latitude && longitude) {
+                  p.lat = String(latitude);
+                  p.lon = String(longitude);
+              }
+              picarus_api("/a1/slice/images/" + encode_id(row_prefix) + '/' + encode_id(prefix_to_stop_row(row_prefix)), "POST", {success: success, data: p});
           }
           function success() {
               console.log('Calling iter')
@@ -282,8 +310,8 @@
                               $('#save_button').click(function () {
                                   var attributes = {};
                                   attributes['data:notes'] = $('#modal_content').val();
-                                  model.psave(attributes, {patch: true});
-                                  $('#myModal').modal('hide')
+                                  model.save(attributes, {patch: true});
+                                  $('#myModal').modal('hide');
                               });
                               $('#myModal').modal('show')
                           })
@@ -852,14 +880,14 @@
                               var row = this.$el.find(":selected").val();
                               m = this.collection.get(row);
                               $('#gtColumn').val(m.pescapejs('data:input').meta);
-                              $('#posClass').val(m.pescapejs('data:param').class_positive);
+                              $('#posClass').val(base64.decode(m.pescapejs('data:param').class_positive));
                               $('#modelKey').val(row);
                           },
                           el: $('#model_select')});
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
           confs = {pos_confs: [], neg_confs: []};
-          var gt_column = encode_id($('#gtColumn').val());
+          var gt_column = $('#gtColumn').val();
           var conf_column = $('#modelKey').val();
           var startRow = encode_id($('#startRow').val());
           var stopRow = encode_id($('#stopRow').val());
@@ -1492,8 +1520,8 @@
     <script type="text/html" id="tpl_visualize_locations">
       <%=rowSelect%>
       <%=filter%>
-      <input class="input-small" type="text" placeholder="Target Latitude" id="demolat" value="38.8811">
-      <input class="input-small" type="text" placeholder="Target Longitude" id="demolong" value="-77.0369">
+      <input class="input-small" type="text" placeholder="Target Latitude" id="demolat" value="">
+      <input class="input-small" type="text" placeholder="Target Longitude" id="demolong" value="">
       <input class="input-small" type="text" placeholder="Max Distance" id="demodist" value="5">
       <input class="input-small" type="checkbox" id="filterInvert">
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
@@ -1650,22 +1678,16 @@
       }
     </script>
 
-    <script type="text/html" id="tpl_docs_filters">
+    <!--<script type="text/html" id="tpl_docs_filters">
       <h3>Only output rows where column meta:class is exactly equal to 'dinner'</h3>
       <pre>SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner')</pre>
     </script>
-    </div>
-
-
-    <div class="navbar navbar-inverse navbar-fixed-top">
+</div>-->
+<div class="container">
+    <div class="navbar navbar-inverse">
       <div class="navbar-inner">
         <div class="container">
-          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </a>
-          <div class="brand" style="padding-bottom: 0px; padding-top: 0px;"><img src="/static/picarus_small.svg" width="44px"\> picarus</div>
+          <div class="brand" style="padding-bottom: 12px; padding-top: 13px;"><img src="/static/picarus_small.svg" width="44px"\> picar.us</div>
           <div class="nav-collapse collapse">
             <!-- NAV BAR ITEM AREA -->
             <ul id="nav-item-container" class="nav"></ul>
@@ -1690,7 +1712,8 @@
         </div>
       </div>
     </div>
-    <div id="container" class="container" style="padding-top: 35px"></div>
+    <div id="container" style="min-height:500px;width:940px;position:absolute;z-index:-100;border:solid;overflow:auto; overflow-y:hidden"></div>
+    </div>
     <script type="text/javascript">
       $(document).ready(app_main);
       google.load("visualization", "1", {packages:["corechart"]});

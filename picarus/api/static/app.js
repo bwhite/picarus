@@ -152,7 +152,7 @@ function app_main() {
         defaults : {
         },
         url : function() {
-            return this.id ? '/a1/data/models/' + this.id + modelParams : '/a1/data/models' + modelParams; 
+            return this.id ? '/a1/data/models/' + this.id : '/a1/data/models' + modelParams; 
         },
         pescape: function (x) {
             return _.escape(base64.decode(this.escape(encode_id(x))));
@@ -161,7 +161,7 @@ function app_main() {
             return JSON.parse(base64.decode(this.escape(encode_id(x))));
         },
         psave: function (attributes, options) {
-            return model.save(json_ub64_b64_enc(attributes), options);
+            return this.save(object_ub64_b64_enc(attributes), options);
         }
     });
     PicarusModels = Backbone.Collection.extend({
@@ -228,8 +228,6 @@ function app_main() {
 
     // Based on: https://gist.github.com/2711454
     var all_view = _.map($('#tpls [id*=tpl]'), function (v) {
-        if (v.id === 'tpl_home')
-            return "";
         return v.id.slice(4).split('_').join('/')
     });
 
@@ -249,7 +247,7 @@ function app_main() {
             var selector_id;
             var prefix = 'tpl_';
             if (val === "") {
-                selector_id = "home"
+                selector_id = "data_user"
             } else {
                 selector_id = val.split('/').join('_');
             }
@@ -263,7 +261,7 @@ function app_main() {
             this.$el.html(this.content[route]);
             // Handles post render javascript calls if available
             if (route === "")
-                route = 'home';
+                route = 'data/user';
             var func_name = 'render_' + route.split('/').join('_');
             if (window.hasOwnProperty(func_name))
                 login_get(window[func_name]);
@@ -282,7 +280,7 @@ function app_main() {
         titles: _.object(_.map(all_view, function (val) {
             var name;
             if (val === "") {
-                name = "home"
+                name = "user";
             } else {
                 name = _.last(val.split('/', 2));
             }
@@ -301,14 +299,15 @@ function app_main() {
         render:function(route){
             this.$el.empty();
             var template = _.template("<li class='<%=active%>'><a href='<%=url%>'><%=visible%></a></li>");
-            var drop_template = _.template("<li class='dropdown <%=active%>'><a href='#' data-toggle='dropdown' class='dropdown-toggle'><%=prev_key%><b class='caret'></b></a><ul class='dropdown-menu'><% _.each(vals, function(data) { %> <li class='<%=data[2]%>'><a href='#<%=data[0]%>' data-toggle='tab'><%=data[1]%></a></li> <% }); %></ul></li>");
+            var drop_template = _.template("<li <%=active%>><a href='#'><%=prev_key%></a><ul><% _.each(vals, function(data) { %> <li class='<%=data[2]%>'><a href='#<%=data[0]%>'><%=data[1]%></a></li> <% }); %></ul></li>");
             var prev_els = [];
             var prev_key = undefined;
             var route_key = route.split('/', 2)[0]
             function flush_dropdown(el) {
-                el.append(drop_template({prev_key: capFirst(prev_key), vals: prev_els, active: route_key === prev_key ? 'active' : ''}));
+                el.append(drop_template({prev_key: capFirst(prev_key), vals: prev_els, active: route_key === prev_key ? "class='active'" : ''}));
             }
             for (var key in this.titles) {
+                var active = route === key ? 'active' : '';
                 var key_splits = key.split('/', 2);
                 var name = this.titles[key];
                 if (typeof prev_key != 'undefined' && (prev_key != key_splits[0] || key_splits.length < 2)) {
@@ -319,15 +318,14 @@ function app_main() {
                 // If a part of a dropdown, add to list, else add directly
                 if (key_splits.length >= 2) {
                     prev_key = key_splits[0];
-                    prev_els.push([key, name, route === key ? 'active' : '']);
+                    prev_els.push([key, name, active]);
                 } else {
-                    this.$el.append(template({url:'#' + key,visible:this.titles[key],active:route === key ? 'active' : ''}));
+                    this.$el.append(template({url:'#' + key,visible:this.titles[key],active:active}));
                 }
             }
             if (typeof prev_key != 'undefined') {
                 flush_dropdown(this.$el);
             }
-            $('.dropdown-toggle').dropdown();
         }
     });
     
@@ -337,7 +335,7 @@ function app_main() {
     new (Backbone.Router.extend({
         routes: _.object(_.map(all_view, function (val) {
             return [val, val];
-        }).concat([['*path', '']]))
+        }).concat([['*path', 'data/user']]))
     }));
     
     //Attach Backbone Views to existing HTML elements

@@ -148,6 +148,34 @@ def print_request():
     for k in ks:
         print('%s: %s' % (k, str(dict(getattr(bottle.request, k)))))
 
+
+def parse_params_files():
+    params = {}
+    files = {}
+    for x in bottle.request.files:
+        files[x] = bottle.request.files[x]
+    if bottle.request.content_type == "application/json":
+        return {str(k): str(v) for k, v in bottle.request.json.items()}, files
+    for x in set(bottle.request.params) - set(bottle.request.files):
+        params[x] = bottle.request.params[x]
+    return params, files
+
+
+def parse_columns():
+    columns = {}
+    if bottle.request.content_type == "application/json":
+        columns = bottle.request.json['columns']
+    else:
+        columns = bottle.request.params.getall('column')
+    return sorted((base64.urlsafe_b64decode(str(x)) for x in columns))
+
+
+def parse_params():
+    if bottle.request.content_type == "application/json":
+        return {str(k): str(v) for k, v in bottle.request.json.items()}
+    return dict(bottle.request.params)
+
+
 # /data/:table
 
 
@@ -163,7 +191,7 @@ def data_table(_auth_user, table):
     method = bottle.request.method.upper()
     with thrift_lock() as thrift:
         if method == 'GET':
-            columns = sorted(map(base64.urlsafe_b64decode, sorted(bottle.request.params.getall('column'))))
+            columns = parse_columns()
             if table_raw == 'parameters':
                 bottle.response.headers["Content-type"] = "application/json"
                 columns = set(columns)
@@ -196,21 +224,22 @@ def data_table(_auth_user, table):
                 verify_row_permissions('rw')
                 mutations = []
                 # NOTE: PATCH does the same operation, look into combining their logic
-                for x in bottle.request.files:
+                params, files = parse_params_files()
+                for x, y in files.items():
                     cur_column = base64.urlsafe_b64decode(x)
                     table_props['column_write_validator'](cur_column)
-                    thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=cur_column, value=bottle.request.files[x].file.read())])
-                for x in set(bottle.request.params) - set(bottle.request.files):
+                    thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=cur_column, value=y.file.read())])
+                for x, y in params.items():
                     cur_column = base64.urlsafe_b64decode(x)
                     table_props['column_write_validator'](cur_column)
-                    mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=base64.b64decode(bottle.request.params[x])))
+                    mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=base64.b64decode(y)))
                 if mutations:
                     thrift.mutateRow(table, row, mutations)
                 return {'row': base64.urlsafe_b64encode(row)}
             elif table_raw == 'models':
-                path = bottle.request.params['path']
+                path = params['path']
                 manager = PicarusManager(thrift=thrift)
-                return _create_model_from_params(manager, _auth_user, path, lambda model_dict, model_params, inputs: model_dict)
+                return _create_model_from_params(manager, _auth_user, path, lambda model_dict, model_params, inputs: model_dict, params)
         else:
             bottle.abort(403)
 
@@ -218,7 +247,7 @@ def data_table(_auth_user, table):
 def _user_to_dict(user):
     cols = {'stats': json.dumps(user.stats()), 'upload_row_prefix': user.upload_row_prefix, 'image_prefixes': json.dumps(user.image_prefixes)}
     cols = {base64.urlsafe_b64encode(x) : base64.b64encode(y) for x, y in cols.items()}
-    cols['row'] = user.email
+    cols['row'] = base64.urlsafe_b64encode(user.email)
     return cols
 
 # /data/:table/:row
@@ -234,9 +263,11 @@ def data_row(_auth_user, table, row):
         bottle.abort(400)
     if not (table and row):
         bottle.abort(400)
+    print_request()
     table_raw = table
     table_props = TABLES[table]
     table = table_props['hbase_table']
+    params, files = parse_params_files()
     with thrift_lock() as thrift:
         verify_row_permissions = lambda x: table_props['verify_row_permissions'](thrift, _auth_user, row, x)
         manager = PicarusManager(thrift=thrift)
@@ -245,8 +276,10 @@ def data_row(_auth_user, table, row):
         if method == 'GET':
             verify_row_permissions('r')
             if table_raw == 'users':
+                if _auth_user.email != row:
+                    bottle.abort(401)
                 return _user_to_dict(_auth_user)
-            columns = sorted(map(base64.urlsafe_b64decode, sorted(bottle.request.params.getall('column'))))
+            columns = parse_columns()
             if columns:
                 result = thrift.getRowWithColumns(table, row, columns)
             else:
@@ -258,33 +291,34 @@ def data_row(_auth_user, table, row):
         elif method == 'PATCH':
             verify_row_permissions('rw')
             mutations = []
-            for x in bottle.request.files:
+            for x, y in files.items():
                 cur_column = base64.urlsafe_b64decode(x)
                 table_props['column_write_validator'](cur_column)
-                thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=cur_column, value=bottle.request.files[x].file.read())])
-            for x in set(bottle.request.params) - set(bottle.request.files):
+                thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=cur_column, value=y.file.read())])
+            print(params)
+            for x, y in params.items():
                 cur_column = base64.urlsafe_b64decode(x)
                 table_props['column_write_validator'](cur_column)
-                mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=base64.b64decode(bottle.request.params[x])))
+                mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=base64.b64decode(y)))
             if mutations:
                 thrift.mutateRow(table, row, mutations)
             return {}
         elif method == 'POST':
             if table != 'images':
                 bottle.abort(403)
-            action = bottle.request.params['action']
-            image_column = base64.urlsafe_b64decode(bottle.request.params['imageColumn'])
+            action = params['action']
+            image_column = base64.urlsafe_b64decode(params['imageColumn'])
             results = thrift.get(table, row, image_column)
             if not results:
                 bottle.abort(404)
             if action == 'i/classify':
                 verify_row_permissions('r')
-                classifier = _classifier_from_key(manager, base64.urlsafe_b64decode(bottle.request.params['model']))
+                classifier = _classifier_from_key(manager, base64.urlsafe_b64decode(params['model']))
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps(classifier(results[0].value))
             elif action == 'i/search':
                 verify_row_permissions('r')
-                index = _index_from_key(manager, base64.urlsafe_b64decode(bottle.request.params['model']))
+                index = _index_from_key(manager, base64.urlsafe_b64decode(params['model']))
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps(index(results[0].value))
             else:
@@ -332,16 +366,17 @@ def data_slice(_auth_user, table, start_row, stop_row):
         start_row = base64.urlsafe_b64decode(start_row)
         stop_row = base64.urlsafe_b64decode(stop_row)
         method = bottle.request.method.upper()
-        columns = sorted(map(base64.urlsafe_b64decode, sorted(bottle.request.params.getall('column'))))
+        params, files = parse_params_files()
+        columns = parse_columns()
         if table not in ('images',):
             bottle.abort(403)
         if method == 'GET':
             verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'r')
-            max_rows = min(100, int(bottle.request.params.get('maxRows', 1)))
-            filter_string = bottle.request.params.get('filter')
+            max_rows = min(100, int(params.get('maxRows', 1)))
+            filter_string = params.get('filter')
             print('filter string[%s]' % filter_string)
-            exclude_start = bool(int(bottle.request.params.get('excludeStart', 0)))
-            cursor = bottle.request.params.get('cacheKey', '')
+            exclude_start = bool(int(params.get('excludeStart', 0)))
+            cursor = params.get('cacheKey', '')
             scanner_key_func = lambda x, y: (x, y, tuple(columns), max_rows, cursor, filter_string, _auth_user.email)
             scanner_key = scanner_key_func(start_row, stop_row)
             try:
@@ -377,14 +412,15 @@ def data_slice(_auth_user, table, start_row, stop_row):
             # NOTE: This only fetches rows that have a column in data: (it is a significant optimization)
             # NOTE: Only parameters allowed, no "files" due to memory restrictions
             mutations = []
-            for x in bottle.request.params:
-                mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=base64.b64decode(bottle.request.params[x])))
+            params = parse_params()
+            for x, y in params.items():
+                mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=base64.b64decode(y)))
             if mutations:
                 for row, _ in hadoopy_hbase.scanner(thrift, table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()', columns=['data:']):
                     thrift.mutateRow(table, row, mutations)
             return {}
         elif method == 'POST':
-            action = bottle.request.params['action']
+            action = params['action']
             if action == 'io/thumbnail':
                 verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running thumb')
@@ -398,25 +434,25 @@ def data_slice(_auth_user, table, start_row, stop_row):
             elif action == 'io/preprocess':
                 verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running preprocessor')
-                manager.image_preprocessor(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
+                manager.image_preprocessor(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/classify':
                 verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running classifier')
-                manager.feature_to_prediction(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
+                manager.feature_to_prediction(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/feature':
                 verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running feature')
-                manager.image_to_feature(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
+                manager.image_to_feature(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/hash':
                 verify_slice_permissions(_auth_user.image_prefixes, start_row, stop_row, 'rw')
                 print('Running hash')
-                manager.feature_to_hash(base64.urlsafe_b64decode(bottle.request.params['model']), start_row=start_row, stop_row=stop_row)
+                manager.feature_to_hash(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'i/dedupe/identical':
-                col = base64.urlsafe_b64decode(bottle.request.params['column'])
+                col = base64.urlsafe_b64decode(params['column'])
                 features = {}
                 dedupe_feature = lambda x, y: features.setdefault(base64.b64encode(hashlib.md5(y).digest()), []).append(base64.urlsafe_b64encode(x))
                 print('Running dedupe')
@@ -434,23 +470,26 @@ def data_slice(_auth_user, table, start_row, stop_row):
                 p = {}
                 row_prefix = start_row
                 assert row_prefix.find(':') != -1
-                class_name = bottle.request.params['className']
-                query = bottle.request.params.get('query')
+                class_name = params['className']
+                query = params.get('query')
                 query = class_name if query is None else query
-                p['api_key'] = bottle.request.params.get('apiKey', FLICKR_API_KEY)
-                p['api_secret'] = bottle.request.params.get('apiSecret', FLICKR_API_SECRET)
-                if 'hasGeo' in bottle.request.params:
-                    p['has_geo'] = bottle.request.params['hasGeo'] == '1'
+                p['lat'] = query = params.get('lat')
+                p['lon'] = query = params.get('lon')
+                p['radius'] = query = params.get('radius')
+                p['api_key'] = params.get('apiKey', FLICKR_API_KEY)
+                p['api_secret'] = params.get('apiSecret', FLICKR_API_SECRET)
+                if 'hasGeo' in params:
+                    p['has_geo'] = params['hasGeo'] == '1'
                 try:
-                    p['min_upload_date'] = int(bottle.request.params['minUploadDate'])
+                    p['min_upload_date'] = int(params['minUploadDate'])
                 except KeyError:
                     pass
                 try:
-                    p['max_upload_date'] = int(bottle.request.params['maxUploadDate'])
+                    p['max_upload_date'] = int(params['maxUploadDate'])
                 except KeyError:
                     pass
                 try:
-                    p['page'] = int(bottle.request.params['page'])
+                    p['page'] = int(params['page'])
                 except KeyError:
                     pass
                 return {'data': {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name, query, **p)}}
@@ -460,18 +499,18 @@ def data_slice(_auth_user, table, start_row, stop_row):
                     bottle.abort(500)  # Need to garbage collect these
                 secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
                 p = {}
-                image_column = base64.urlsafe_b64decode(bottle.request.params['imageColumn'])
+                image_column = base64.urlsafe_b64decode(params['imageColumn'])
                 if action == 'io/annotate/image/entity':
-                    entity_column = base64.urlsafe_b64decode(bottle.request.params['entityColumn'])
+                    entity_column = base64.urlsafe_b64decode(params['entityColumn'])
                     p['data'] = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (start_row, stop_row, entity_column, image_column)
                     p['type'] = 'image_entity'
                 elif action == 'io/annotate/image/query':
-                    query = bottle.request.params['query']
+                    query = params['query']
                     p['data'] = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
                     p['type'] = 'image_query'
                     p['query'] = query
                 elif action == 'io/annotate/image/query_batch':
-                    query = bottle.request.params['query']
+                    query = params['query']
                     p['data'] = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
                     p['type'] = 'image_query_batch'
                     p['query'] = query
@@ -550,13 +589,13 @@ def data_slice(_auth_user, table, start_row, stop_row):
 
                 print(path)
                 if path == 'classifier/svmlinear':
-                    return _create_model_from_params(manager, _auth_user, path, classifier_sklearn)
+                    return _create_model_from_params(manager, _auth_user, path, classifier_sklearn, params)
                 elif path == 'classifier/nbnnlocal':
-                    return _create_model_from_params(manager, _auth_user, path, classifier_class_distance_list)
+                    return _create_model_from_params(manager, _auth_user, path, classifier_class_distance_list, params)
                 elif path == 'hasher/rrmedian':
-                    return _create_model_from_params(manager, _auth_user, path, hasher_train)
+                    return _create_model_from_params(manager, _auth_user, path, hasher_train, params)
                 elif path == 'index/linear':
-                    return _create_model_from_params(manager, _auth_user, path, index_train)
+                    return _create_model_from_params(manager, _auth_user, path, index_train, params)
                 else:
                     bottle.abort(400)
             else:
@@ -695,11 +734,11 @@ for schema in PARAM_SCHEMAS:
     PARAM_SCHEMAS_SERVE[schema['path']] = dict(schema)
 
 
-def _parse_params(schema, prefix):
+def _parse_model_params(params, schema, prefix):
     kw = {}
-    params = schema[prefix + '_params']
-    get_param = lambda x: bottle.request.params[prefix + '-' + x]
-    for param_name, param in params.items():
+    schema_params = schema[prefix + '_params']
+    get_param = lambda x: params[prefix + '-' + x]
+    for param_name, param in schema_params.items():
         if param['type'] == 'enum':
             param_value = get_param(param_name)
             if param_value not in param['values']:
@@ -719,13 +758,13 @@ def _parse_params(schema, prefix):
     return kw
 
 
-def _create_model_from_params(manager, _auth_user, path, create_model):
+def _create_model_from_params(manager, _auth_user, path, create_model, params):
     try:
         schema = PARAM_SCHEMAS_SERVE[path]
-        model_params = _parse_params(schema, 'model')
-        module_params = _parse_params(schema, 'module')
+        model_params = _parse_model_params(params, schema, 'model')
+        module_params = _parse_model_params(params, schema, 'module')
         model_dict = {'name': schema['module'], 'kw': module_params}
-        get_key = lambda x: base64.urlsafe_b64decode(bottle.request.params['key-' + x])   # TODO: Verify that model keys exist
+        get_key = lambda x: base64.urlsafe_b64decode(params['key-' + x])   # TODO: Verify that model keys exist
         prefix = {'feature': 'feat:', 'preprocessor': 'data:', 'classifier': 'pred:', 'hasher': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[schema['type']]
         inputs = {x: get_key(x) for x in schema['inputs']}
         model = create_model(model_dict, model_params, inputs)
@@ -762,8 +801,9 @@ def auth_email(_auth_user):
 @USERS.auth_login_key(True)
 def auth_yubikey(_auth_user):
     print_request()
+    params = parse_params()
     try:
-        email = YUBIKEY.verify(bottle.request.params['otp'])
+        email = YUBIKEY.verify(params['otp'])
     except UnknownUser:
         bottle.abort(401)
     if not email or email != _auth_user.email:
