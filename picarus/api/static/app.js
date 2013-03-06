@@ -74,6 +74,12 @@ function login_get(func) {
     }
 }
 
+function wrap_hints() {
+    $('[hint]').each(function (x) {
+        $(this).wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', $(this).attr('hint')));
+    });
+}
+
 function model_dropdown(args) {
     var models = new PicarusModels();
     if (typeof args.change === 'undefined') {
@@ -259,6 +265,8 @@ function app_main() {
         render:function(route){
             //Simply sets the content as appropriate
             this.$el.html(this.content[route]);
+            // Post-process the DOM for Picarus specific helpers
+            wrap_hints()
             // Handles post render javascript calls if available
             if (route === "")
                 route = 'data/user';

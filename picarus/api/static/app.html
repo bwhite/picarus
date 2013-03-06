@@ -15,18 +15,18 @@
     <link href="/static/flat-ui.css" rel="stylesheet">
     <link href="/static/hint.min.css" rel="stylesheet">
     <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-    <script type="text/javascript" src="//stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js"></script>
-    <script type="text/javascript" src="/static/bootstrap.min.js"></script>
-    <script type="text/javascript" src="//www.google.com/jsapi"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
-    <script type="text/javascript" src="/static/encodings.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.3.1/jquery.cookie.min.js"></script>
-    <script type="text/javascript" src="/static/picarus_api.js"></script>
-    <script type="text/javascript" src="/static/app.js"></script>
-    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBsKtzgLTIsaoxAFUvSNoJ8n3j4w9VZs0&sensor=false"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/0.9.10/backbone-min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mustache.js/0.7.0/mustache.min.js"></script>
-    <script src="https://raw.github.com/jsvine/Backbone.Table/master/backbone.table.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.3.1/jquery.cookie.min.js"></script>
+    <script type="text/javascript" src="//www.google.com/jsapi"></script>
+    <script type="text/javascript" src="/static/base64.js"></script>
+    <script type="text/javascript" src="/static/bootstrap.min.js"></script>
+    <script type="text/javascript" src="/static/encodings.js"></script>
+    <script type="text/javascript" src="/static/picarus_api.js"></script>
+    <script type="text/javascript" src="/static/app.js"></script>
+    <script type="text/javascript" src="/static/backbone.table.js"></script>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBsKtzgLTIsaoxAFUvSNoJ8n3j4w9VZs0&sensor=false"></script>
     <style>
       // Models Table
       table { margin: 10px; font-family: Georgia, serif }
@@ -35,18 +35,6 @@
       th { font-weight: bold; }
       th, td { padding: 5px 10px; }
       th+th, td+td { border-left: 1px solid #FFF; }
-/*      td.models-inputs {font-size: 8px}
-      td.models-params {font-size: 8px}
-      td.models-row {font-size: 8px}*/
-/*
-      .navbar .nav>li>a{padding-right: 7px;padding-left: 7px;}
-
-      Modified bootstrap: http://twitter.github.com/bootstrap/customize.html#components
-      @navbarCollapseWidth: 766px
-      @iconSpritePath: '/static/glyphicons-halflings.png';
-      @iconWhiteSpritePath: '/static/glyphicons-halflings-white.png'
-      @navbarHeight: 25px
-*/
     </style>
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
@@ -76,7 +64,8 @@
     </script>
 
     <script type="text/html" id="bpl_row_select">
-          <select id="rowPrefixDrop"></select>
+          <h3>Slice</h3>
+          <select id="rowPrefixDrop" class="input-small"></select>
           <span class="hint hint--bottom" data-hint="Start row (inclusive, percent encode binary)"><input class="input-small" type="text" placeholder="Row start" id="startRow"></span>
           <span class="hint hint--bottom" data-hint="Stop row (exclusive, percent encode binary)"><input class="input-small" type="text" placeholder="Row stop" id="stopRow"></span>
     </script>
@@ -86,6 +75,7 @@
     </script>
 
     <script type="text/html" id="bpl_prefix_select">
+          <h3>Prefix</h3>
           <select id="rowPrefixDrop"></select>
     </script>
 
@@ -138,7 +128,7 @@
 
 
     <script type="text/html" id="tpl_data_uploads">
-      <div id="images"></div>
+      <div id="images" style="padding-left:20px; padding-right:20px"></div>
     </script> 
 
 
@@ -159,12 +149,12 @@
                   var startRow = this.model.pescape('upload_row_prefix');
                   var imageColumn = encode_id('thum:image_150sq');
                   function success(row, columns) {
-                      $('#images').append(escape(decode_id(row)));
-                      $('#images').append($('<br>'));
+                      //$('#images').append(escape(decode_id(row)));
+                      //$('#images').append($('<br>'));
                       $('#images').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('width', '150px'));
-                      $('#images').append($('<br>'));
+                      //$('#images').append($('<br>'));
                   }
-                  picarus_api_data_scanner("images", encode_id(startRow), encode_id(prefix_to_stop_row(startRow)), [imageColumn], {success: success, maxRows: 100});
+                  picarus_api_data_scanner("images", encode_id(startRow), encode_id(prefix_to_stop_row(startRow)), [imageColumn], {success: success, maxRows: 24});
               }
           });
           var model = new PicarusUser({row: encode_id(email_auth.email)});
@@ -189,17 +179,24 @@
  -->
 
     <script type="text/html" id="tpl_crawl_flickr">
-      <%=prefixSelect%>
-      <input class="input-small" type="text" placeholder="Iterations" id="demoiters" value="1">
-      <input class="input-large" type="text" placeholder="Class Name" id="democlass" value="">
-      <input class="input-large" type="text" placeholder="Query" id="demoquery" value="">
-      <input class="input-large" type="text" placeholder="Latitude" id="demolat" value="">
-      <input class="input-large" type="text" placeholder="Longitude" id="demolon" value="">
-      <input class="input-small" type="checkbox" id="demogeo" checked> Geotagged
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <%=prefixSelect%>
+        </div>
+        <div class="span8">
+        <h3>Options</h3>
+      <input class="input-small" type="text" placeholder="Iterations" hint="Crawl iterations" id="demoiters" value="1">
+      <input class="input-large" type="text" placeholder="Class Name" hint="Class name (put in meta:class)" id="democlass" value="">
+      <input class="input-large" type="text" placeholder="Query" hint="Query used for search" id="demoquery" value="">
+      <input class="input-large" type="text" placeholder="Latitude" hint="Latitude (decimal)" id="demolat" value="">
+      <input class="input-large" type="text" placeholder="Longitude" hint="Longitude (decimal)" id="demolon" value="">
+      <input class="input-small" type="checkbox" hint="Geotagged images only" id="demogeo" checked> Geotagged
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
       <div class="progress progress-striped active" id="progress_bar">
         <div class="bar" style="width: 0%;"  id="progress"></div>
       </div>
+      </div>
+        </div>
     </script>
 
     <script type="text/javascript">
@@ -341,13 +338,20 @@
     </script>
 
     <script type="text/html" id="tpl_models_create">
-        <div id="selects">
-            <select id="type_select"></select>
-            <select id="name_select"></select>
-            <div id="params"></div>
-            <div id="row_select"></div>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span11">
+          <h3>Options</h3>
+          <span id="selects">
+            <select id="type_select" class="input-medium"></select>
+            <select id="name_select" class="input-medium"></select>
+            <span id="params"></span>
+            <span id="row_select"></span>
+          </span>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
-        <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      </div>
+
+
         <div id="results"></div>
     </script>
     <script type="text/javascript">
@@ -385,10 +389,10 @@
                               cur_el = $('<select>').attr('name', param_prefix + key).html(Mustache.render(select_template, {models: value.values}));
                           } else if (value.type == 'int') {
                               // TODO: Client-side data validation
-                              cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text');
+                              cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
                           } else if (value.type == 'str') {
                               // TODO: Client-side data validation
-                              cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text');
+                              cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
                           }
                           if (typeof cur_el !== 'undefined') {
                               $('#params').append(cur_el);
@@ -407,25 +411,25 @@
                       // TODO: Finish model inputs, figure out how to take the values from here and integrate them in the response
                       if (value === 'processed_image') {
                           var cur_id = _.uniqueId('model_select_');
-                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value).addClass('input-medium'));
                           model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'data:'},
                                           change: function() {},
                                           el: $('#' + cur_id)});
                       } else if (value === 'feature') {
                           var cur_id = _.uniqueId('model_select_');
-                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value).addClass('input-medium'));
                           model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'feat:'},
                                           change: function() {},
                                           el: $('#' + cur_id)});
                       } else if (value === 'multi_feature') {
                           var cur_id = _.uniqueId('model_select_');
-                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value).addClass('input-medium'));
                           model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'mfeat:'},
                                           change: function() {},
                                           el: $('#' + cur_id)});
                       } else if (value === 'hash') {
                           var cur_id = _.uniqueId('model_select_');
-                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value));
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value).addClass('input-medium'));
                           model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'hash:'},
                                           change: function() {},
                                           el: $('#' + cur_id)});
@@ -434,7 +438,7 @@
                       } else if (value === 'meta') {
                           var cur_id = _.uniqueId('model_select_');
                           //
-                          var el = $('<select>').attr('id', cur_id).attr('name', 'key-' + value);
+                          var el = $('<select>').attr('id', cur_id).attr('name', 'key-' + value).addClass('input-medium');
                           _.each(['meta:class', 'meta:class_0', 'meta:class_1', 'meta:class_2'], function (x) {
                               el.append($('<option>').attr('value', encode_id(x)).text(x))
                           });
@@ -487,8 +491,16 @@
     </script>
 
     <script type="text/html" id="tpl_process_thumbnail">
-      <%=rowSelect%>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span5">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
+
       <div id="results"></div>
     </script>
 
@@ -514,8 +526,15 @@
     </script>
 
     <script type="text/html" id="tpl_process_exif">
-      <%=rowSelect%>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span5">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
       <div id="results"></div>
     </script>
 
@@ -535,10 +554,17 @@
     </script>
 
     <script type="text/html" id="tpl_process_modify">
-      <%=rowSelect%>
-      <input class="input-small" type="text" placeholder="Column" id="columnName" value="">
-      <input class="input-small" type="text" placeholder="Value" id="columnValue" value="">
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span5">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <input class="input-small" type="text" placeholder="Column" id="columnName" value="">
+          <input class="input-small" type="text" placeholder="Value" id="columnValue" value="">
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
       <div id="results"></div>
     </script>
 
@@ -562,12 +588,22 @@
     </script>
 
     <script type="text/html" id="tpl_process_copy">
-      <%=rowSelect%>
-      <select id="rowPrefixDrop2"></select>
-      <input class="input-small" type="text" placeholder="Column" id="columnName" value="">
-      <input class="input-small" type="text" placeholder="Value" id="columnValue" value="">
-      <input class="input-small" type="text" placeholder="Max Rows" id="maxRows" value="">
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</div>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span5">
+          <%=rowSelect%>
+        </div>
+        <div class="span3">
+          <h3>Prefix</h3>
+          <select id="rowPrefixDrop2"></select>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <input class="input-small" type="text" placeholder="Column" id="columnName" value="">
+          <input class="input-small" type="text" placeholder="Value" id="columnValue" value="">
+          <input class="input-small" type="text" placeholder="Max Rows" id="maxRows" value="">
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</div>
+        </div>
+      </div>
     </script>
 
     <script type="text/javascript">
@@ -606,9 +642,19 @@
     </script>
 
     <script type="text/html" id="tpl_process_preprocess">
-      <select id="model_select"></select>
-      <%=rowSelect%>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <h3>Model</h3>
+          <select id="model_select"></select>
+        </div>
+        <div class="span3">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
       <div id="results"></div>
     </script>
 
@@ -637,9 +683,19 @@
     </script>
 
     <script type="text/html" id="tpl_process_feature">
-      <select id="model_select"></select>
-      <%=rowSelect%>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <h3>Model</h3>
+          <select id="model_select"></select>
+        </div>
+        <div class="span3">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
       <div id="results"></div>
     </script>
 
@@ -662,9 +718,19 @@
     </script>
 
     <script type="text/html" id="tpl_process_classifier">
-      <select id="model_select"></select>
-      <%=rowSelect%>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <h3>Model</h3>
+          <select id="model_select"></select>
+        </div>
+        <div class="span3">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
       <div id="results"></div>
     </script>
 
@@ -687,9 +753,19 @@
     </script>
 
     <script type="text/html" id="tpl_process_hash">
-      <select id="model_select"></select>
-      <%=rowSelect%>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <h3>Model</h3>
+          <select id="model_select"></select>
+        </div>
+        <div class="span3">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
       <div id="results"></div>
     </script>
 
@@ -712,8 +788,16 @@
     </script>
 
     <script type="text/html" id="tpl_annotate_entity">
-      <%=rowSelect%>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
+
       <div id="response"></div>
     </script>
 
@@ -742,9 +826,16 @@
     </script>
 
     <script type="text/html" id="tpl_annotate_query">
-      <%=rowSelect%>
-      <input class="input-small" type="text" placeholder="Query" id="query" value="">
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <input class="input-small" type="text" placeholder="Query" id="query" value="">
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
       <div id="response"></div>
     </script>
 
@@ -774,9 +865,16 @@
     </script>
 
     <script type="text/html" id="tpl_annotate_batch">
-      <%=rowSelect%>
-      <input class="input-small" type="text" placeholder="Query" id="query" value="">
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <input class="input-small" type="text" placeholder="Query" id="query" value="">
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
       <div id="response"></div>
     </script>
 
@@ -806,10 +904,17 @@
     </script>
 
     <script type="text/html" id="tpl_classify_compute">
-      <div class="hero-unit" style="padding-top: 10px; padding-bottom: 10px; padding-left: 10px; padding-right: 10px;">
-        <select id="model_select"></select>
-        <input type="file" id="imagefile" class="input-small">
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <h3>Model</h3>
+          <select id="model_select"></select>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <input type="file" id="imagefile" class="input-small">
+        </div>
       </div>
+
       <div id="results">
       </div>
     </script>
@@ -855,23 +960,33 @@
     </script>
 
     <script type="text/html" id="tpl_classify_evaluate">
-      <div>
-        <select id="model_select"></select>
-      <%=rowSelect%>
-      <input class="input-small" type="text" placeholder="Positive Class" id="posClass" value="" readonly="readonly">
-      <input class="input-small" type="text" placeholder="GT Column" id="gtColumn" readonly="readonly" value="" >
-      <input class="input-small" type="text" placeholder="Classifier Key" id="modelKey" value="" readonly="readonly">
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
-      </div>
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <h3>Model</h3>
+          <select id="model_select"></select>
+        </div>
+        <div class="span3">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <input class="input-small" type="text" placeholder="Positive Class" id="posClass" value="" readonly="readonly">
+          <input class="input-small" type="text" placeholder="GT Column" id="gtColumn" readonly="readonly" value="" >
+          <input class="input-small" type="text" placeholder="Classifier Key" id="modelKey" value="" readonly="readonly">
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
       <div class="progress progress-striped active" id="progress_bar">
         <div class="bar" style="width: 0%;"  id="progress"></div>
       </div>
+        </div>
+      </div>
+      <div class="span11">
       <div id="base" style="position:relative;top:-35px;"></div>
       <div id="graph_confidence_scatter" style="height:200px;width:600px"></div>
       <div id="graph_confidence_scatter_norm" style="height:200px;width:600px"></div>
       <div id="graph_confidence_accuracy" style="height:200px;width:600px"></div>
       <div id="graph_rps" style="height:300px;width:300px;float:left;"></div>
       <div id="graph_roc" style="height:300px;width:300px;float:left;"></div>
+      </div>
     </script>
     <script type="text/javascript">
       function render_classify_evaluate() {
@@ -1156,10 +1271,16 @@
 
 
     <script type="text/html" id="tpl_index_compute">
-      <div>
-        <select id="model_select"></select>
-      <input class="input-small" type="text" placeholder="Index Key" id="modelKey" value="" readonly="readonly">
-        <input type="file" id="imagefile" class="input-small">
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <h3>Model</h3>
+          <select id="model_select"></select>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <input class="input-small" type="text" placeholder="Index Key" id="modelKey" value="" readonly="readonly">
+          <input type="file" id="imagefile" class="input-small">
+        </div>
       </div>
       <div id="results"></div>
     </script>
@@ -1216,10 +1337,17 @@
     </script>
 
     <script type="text/html" id="tpl_visualize_thumbnails">
-      <%=rowSelect%>
-      <%=filter%>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
-      <div id="results"></div>
+        <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+          <div class="span5">
+          <%=rowSelect%>
+          </div>
+          <div class="span5">
+          <h3>Options</h3>
+          <%=filter%>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          </div>
+        </div>
+      <div id="results" style="padding-left:20px; padding-right:20px"></div>
     </script>
 
     <script type="text/javascript">
@@ -1251,11 +1379,18 @@
 
 
     <script type="text/html" id="tpl_visualize_metadata">
-      <%=rowSelect%>
-      <%=filter%>
-      <input class="input-small" type="text" placeholder="Max Size" id="maxSize" value="128">
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
-      <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+        <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+          <div class="span5">
+          <%=rowSelect%>
+          </div>
+          <div class="span5">
+          <h3>Options</h3>
+          <%=filter%>
+          <input class="input-small" type="text" placeholder="Max Size" id="maxSize" value="128">
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+          </div>
+        </div>
       <div id="results"></div>
     </script>
 
@@ -1335,11 +1470,18 @@
     </script>
 
     <script type="text/html" id="tpl_visualize_exif">
-      <%=rowSelect%>
-      <%=filter%>
-      <input class="input-small" type="text" placeholder="Max Size" id="maxSize" value="128">
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
-      <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+        <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+          <div class="span5">
+          <%=rowSelect%>
+          </div>
+          <div class="span5">
+          <h3>Options</h3>
+          <%=filter%>
+          <input class="input-small" type="text" placeholder="Max Size" id="maxSize" value="128">
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+          </div>
+        </div>
       <div id="results"></div>
     </script>
 
@@ -1426,10 +1568,17 @@
     </script>
 
     <script type="text/html" id="tpl_visualize_duplicates">
-      <%=rowSelect%>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
-      <button class="btn" type="submit" id="nextButton" style="margin-bottom: 9px" disabled>Next</button>
-      <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+        <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+          <div class="span5">
+          <%=rowSelect%>
+          </div>
+          <div class="span5">
+          <h3>Options</h3>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <button class="btn" type="submit" id="nextButton" style="margin-bottom: 9px" disabled>Next</button>
+          <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+          </div>
+        </div>
       <div id="results"></div>
       <div id="clusters"></div>
     </script>
@@ -1518,14 +1667,21 @@
     </script>
 
     <script type="text/html" id="tpl_visualize_locations">
-      <%=rowSelect%>
-      <%=filter%>
-      <input class="input-small" type="text" placeholder="Target Latitude" id="demolat" value="">
-      <input class="input-small" type="text" placeholder="Target Longitude" id="demolong" value="">
-      <input class="input-small" type="text" placeholder="Max Distance" id="demodist" value="5">
-      <input class="input-small" type="checkbox" id="filterInvert">
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
-      <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+        <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+          <div class="span5">
+          <%=rowSelect%>
+          </div>
+          <div class="span5">
+          <h3>Options</h3>
+          <%=filter%>
+          <input class="input-small" type="text" placeholder="Target Latitude" id="demolat" value="">
+          <input class="input-small" type="text" placeholder="Target Longitude" id="demolong" value="">
+          <input class="input-small" type="text" placeholder="Max Distance" id="demodist" value="5">
+          <input class="input-small" type="checkbox" id="filterInvert">
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+          </div>
+        </div>
       <div id="map_canvas" style="width:100%; height:500px"></div>
     </script>
 
@@ -1605,8 +1761,14 @@
     </script>
 
     <script type="text/html" id="tpl_visualize_times">
-      <%=rowSelect%>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+          <div class="span5">
+          <%=rowSelect%>
+          </div>
+          <div class="span5">
+          <h3>Options</h3>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
       <div id="histYear"></div>
       <div id="histMonth"></div>
       <div id="histHour"></div>
@@ -1700,8 +1862,8 @@
         <h3>Authenticate</h3>
       </div>
       <div class="modal-body">
-        <div class="well control-group" id="secondFactorAuth">
-          <input class="input-xlarge" type="password" placeholder="Yubikey" id="otp" value="" disabled> <div style="padding-bottom: 5px">OR</div> <input class="input-large" type="password" placeholder="API Key" id="apiKey" value=""disabled><button class="btn" type="submit" id="emailKeys" style="margin-bottom: 9px" disabled>Email Key</button>
+        <div class="well" id="secondFactorAuth">
+          <div class="control-group"><input class="input-large" type="password" placeholder="Yubikey" id="otp" value="" disabled></div><div style="padding-bottom: 5px">OR</div><div class="control-group"><input class="input-large" type="password" placeholder="API Key" id="apiKey" value=""disabled><a class="login-link" style="padding-left: 5px" id="emailKeys" href="#">Need an API key?  Click to email.</a></div>
         </div>
         <div style="padding-bottom: 10px">
           AND
