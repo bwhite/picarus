@@ -1112,7 +1112,7 @@ textarea,
   .checkbox .icon-to-fade,
   .radio .icon,
   .radio .icon-to-fade {
-    background: url("../images/checkbox.png") -90px 0 no-repeat;
+    background: url("checkbox.png") -90px 0 no-repeat;
     display: block;
     height: 20px;
     left: 0;

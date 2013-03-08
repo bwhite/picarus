@@ -26,6 +26,7 @@
     <script type="text/javascript" src="/static/picarus_api.js"></script>
     <script type="text/javascript" src="/static/app.js"></script>
     <script type="text/javascript" src="/static/backbone.table.js"></script>
+    <script type="text/javascript" src="/static/custom_checkbox_and_radio.js"></script>
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBsKtzgLTIsaoxAFUvSNoJ8n3j4w9VZs0&sensor=false"></script>
     <style>
       // Models Table
@@ -35,6 +36,8 @@
       th { font-weight: bold; }
       th, td { padding: 5px 10px; }
       th+th, td+td { border-left: 1px solid #FFF; }
+      .skinny {border: 0px; padding: 0px; margin: 0px}
+
     </style>
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
@@ -187,15 +190,15 @@
         <h3>Options</h3>
       <input class="input-small" type="text" placeholder="Iterations" hint="Crawl iterations" id="demoiters" value="1">
       <input class="input-large" type="text" placeholder="Class Name" hint="Class name (put in meta:class)" id="democlass" value="">
-      <input class="input-large" type="text" placeholder="Query" hint="Query used for search" id="demoquery" value="">
+      <input class="input-large" type="text" placeholder="Query" hint="Query used for search (put in meta:query)" id="demoquery" value="">
       <input class="input-large" type="text" placeholder="Latitude" hint="Latitude (decimal)" id="demolat" value="">
       <input class="input-large" type="text" placeholder="Longitude" hint="Longitude (decimal)" id="demolon" value="">
-      <input class="input-small" type="checkbox" hint="Geotagged images only" id="demogeo" checked> Geotagged
+      <label class="checkbox" style="margin-bottom: 0px;" hint="Geotagged images only" for="demogeo">
+        <input type="checkbox" value="" id="demogeo"> Geotagged
+      </label>
       <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
-      <div class="progress progress-striped active" id="progress_bar">
-        <div class="bar" style="width: 0%;"  id="progress"></div>
       </div>
-      </div>
+      <div class="clearfix span12 skinny" id="results"></div>
         </div>
     </script>
 
@@ -204,15 +207,17 @@
       row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
       $('#runButton').click(function () {
           var demo_class = $('#democlass').val();
+          var demo_query = $('#demoquery').val();
           var row_prefix = $('#rowPrefixDrop').val();
           if (demo_class.length == 0 && row_prefix.length == 0) {
               display_alert('Must specify class and prefix');
               return;
           }
           var iters = parseInt($('#demoiters').val())
-          var iters_orig = iters;
-          if (isNaN(iters) || iters < 1 || iters > 1000) {
-              display_alert('Iters must be 0 < x <= 1000');
+          var simul = 10;
+          var done = 0;
+          if (isNaN(iters) || iters < 1 || iters > 20) {
+              display_alert('Iters must be 0 < x <= 20');
               return;
           }
           /* Check input */
@@ -224,8 +229,14 @@
           var latitude = Number($('#demolat').val());
           var longitude = Number($('#demolon').val());
           function call_api() {
-              $('#progress').css('width', ((100. * (iters_orig - iters)) / iters_orig) + '%');
-              var p = {hasGeo: Number($('#demogeo').is(':checked')), className: demo_class, minUploadDate: min_upload_date, maxUploadDate: max_upload_date, action: 'o/crawl/flickr'};
+              if (iters <= 0) {
+                  simul -= 1;
+                  if (simul == 0)
+                      alert_success_wrap($('#results'))();
+                  return;
+              }
+              iters -= 1;
+              var p = {hasGeo: Number($('#demogeo').is(':checked')), className: demo_class, className: demo_query, minUploadDate: min_upload_date, maxUploadDate: max_upload_date, action: 'o/crawl/flickr'};
               if (latitude && longitude) {
                   p.lat = String(latitude);
                   p.lon = String(longitude);
@@ -233,15 +244,10 @@
               picarus_api("/a1/slice/images/" + encode_id(row_prefix) + '/' + encode_id(prefix_to_stop_row(row_prefix)), "POST", {success: success, data: p});
           }
           function success() {
-              console.log('Calling iter')
-              if (iters > 0) {
-                  iters -= 1;
-                  call_api(1);
-              } else {
-                  alert('Done crawling');
-              }
+              call_api();
           }
-          call_api(1);
+          alert_running_wrap($('#results'))();
+          _.each(_.range(simul), call_api);
       });
 
 
@@ -350,9 +356,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-
-
-        <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
     <script type="text/javascript">
       function add_hint(el, text) {
@@ -450,14 +454,14 @@
               renderName: function () {
                   var model_type = $('#type_select option:selected').val();
                   var cur_models = this.collection.filter(function (x) { return x.pescape('type') == model_type});
-                  var select_template = "{{#models}}<option value='{{type}}'>{{type}}</option>{{/models}};"
-                  var models_filt = _.map(cur_models, function (data) {return {type: data.pescape('name')}});
+                  var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
+                  var models_filt = _.map(cur_models, function (data) {return data.pescape('name')});
                   $('#name_select').html(Mustache.render(select_template, {models: models_filt}));
                   this.renderParam();
               },
               renderType: function() {
-                  var select_template = "{{#models}}<option value='{{type}}'>{{type}}</option>{{/models}};"
-                  var models_filt = _.uniq(_.map(this.collection.models, function (data) {return {type: data.pescape('type')}}));
+                  var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
+                  var models_filt = _.uniq(_.map(this.collection.models, function (data) {return data.pescape('type')}));
                   $('#type_select').html(Mustache.render(select_template, {models: models_filt}));
                   this.renderName();
               }
@@ -500,27 +504,17 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-
-      <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
-      function alert_running() {
-          $('#results').html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
-      }
-      function alert_done() {
-          $('#results').html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
-      }
       function render_process_thumbnail() {
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
-              alert_running();
+              alert_running_wrap($('#results'))();
               var startRow = encode_id($('#startRow').val());
               var stopRow = encode_id($('#stopRow').val());
-              function success() {
-                  alert_done();
-              }
-              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/thumbnail'}});
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: alert_success_wrap($('#results')), fail: alert_fail_wrap($('#results')), data: {action: 'io/thumbnail'}});
           });
       }
     </script>
@@ -535,7 +529,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-      <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -565,7 +559,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-      <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -604,6 +598,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</div>
         </div>
       </div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -655,7 +650,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-      <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -696,7 +691,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-      <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -731,7 +726,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-      <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -766,7 +761,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-      <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -787,6 +782,20 @@
       }
     </script>
 
+    <script type="text/html" id="tpl_annotate_list">
+      <div class="clearfix span12 skinny" id="results">
+      <div id="annotations"></div>
+      </div>
+    </script>
+
+    <script type="text/javascript">
+      function render_annotate_list() {
+          results = new PicarusRows([], {'table': 'annotations'});
+          new RowsView({collection: results, el: $('#annotations')});
+          results.fetch();
+      }
+    </script>
+
     <script type="text/html" id="tpl_annotate_entity">
       <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
         <div class="span3">
@@ -797,8 +806,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-
-      <div id="response"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -811,14 +819,14 @@
               var entityColumn = encode_id('meta:class');
               function success(xhr) {
                   response = JSON.parse(xhr.responseText);
-                  $('#response').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
-                  $('#response').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
-                  $('#response').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
-                  $('#response').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
               }
               picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/entity', imageColumn: imageColumn, entityColumn: entityColumn}});
           });
@@ -836,7 +844,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-      <div id="response"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -850,14 +858,14 @@
               var query = $('#query').val();
               function success(xhr) {
                   response = JSON.parse(xhr.responseText);
-                  $('#response').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
-                  $('#response').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
-                  $('#response').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
-                  $('#response').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
               }
               picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query', imageColumn: imageColumn, entityColumn: entityColumn, query: query}});
           });
@@ -875,7 +883,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
         </div>
       </div>
-      <div id="response"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -889,14 +897,14 @@
               var query = $('#query').val();
               function success(xhr) {
                   response = JSON.parse(xhr.responseText);
-                  $('#response').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
-                  $('#response').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
-                  $('#response').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
-                  $('#response').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
-                  $('#response').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
+                  $('#results').append($('<br>'));
               }
               picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query_batch', imageColumn: imageColumn, entityColumn: entityColumn, query: query}});
           });
@@ -914,8 +922,7 @@
           <input type="file" id="imagefile" class="input-small">
         </div>
       </div>
-
-      <div id="results">
+      <div class="clearfix span12 skinny" id="results"></div>
       </div>
     </script>
 
@@ -979,13 +986,13 @@
       </div>
         </div>
       </div>
-      <div class="span11">
-      <div id="base" style="position:relative;top:-35px;"></div>
-      <div id="graph_confidence_scatter" style="height:200px;width:600px"></div>
-      <div id="graph_confidence_scatter_norm" style="height:200px;width:600px"></div>
-      <div id="graph_confidence_accuracy" style="height:200px;width:600px"></div>
-      <div id="graph_rps" style="height:300px;width:300px;float:left;"></div>
-      <div id="graph_roc" style="height:300px;width:300px;float:left;"></div>
+      <div class="clearfix span12 skinny" id="results">
+        <div id="base" style="position:relative;top:-35px;"></div>
+        <div id="graph_confidence_scatter" style="height:200px;width:600px"></div>
+        <div id="graph_confidence_scatter_norm" style="height:200px;width:600px"></div>
+        <div id="graph_confidence_accuracy" style="height:200px;width:600px"></div>
+        <div id="graph_rps" style="height:300px;width:300px;float:left;"></div>
+        <div id="graph_roc" style="height:300px;width:300px;float:left;"></div>
       </div>
     </script>
     <script type="text/javascript">
@@ -1269,7 +1276,6 @@
       }
     </script>
 
-
     <script type="text/html" id="tpl_index_compute">
       <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
         <div class="span3">
@@ -1282,7 +1288,7 @@
           <input type="file" id="imagefile" class="input-small">
         </div>
       </div>
-      <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
     
     <script type="text/javascript">
@@ -1347,7 +1353,7 @@
           <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
           </div>
         </div>
-      <div id="results" style="padding-left:20px; padding-right:20px"></div>
+      <div class="clearfix span12 skinny" style="padding-left:20px; padding-right:20px" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -1364,6 +1370,8 @@
               }
               $('#results').html('');
               function success(row, columns) {
+                  if (!_.has(columns, imageColumn))
+                      return;
                   $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('title', row))
                   //$('#results').append($('<br>'));
               }
@@ -1391,7 +1399,7 @@
           <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
           </div>
         </div>
-      <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -1482,7 +1490,7 @@
           <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
           </div>
         </div>
-      <div id="results"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -1501,7 +1509,7 @@
               button_confirm_click_reset($('#removeButton'));
               // Setup table
               images = new PicarusImages();
-              var exif_column = base64.encode('meta:exif');
+              var exif_column = encode_id('meta:exif');
               function remove_rows() {
                  // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
                  var rows = _.map(images.models, function (x) {return x.id})
@@ -1519,7 +1527,7 @@
                           this.collection.bind('add', this.render);
                       },
                       render: function() {
-                          var cur_images = this.collection.filter(function (x) {return x.get(exif_column) != 'e30='});
+                          var cur_images = this.collection.filter(function (x) {return x.get(exif_column) != 'e30=' && !_.isUndefined(x.get(exif_column))});
                           columns = _.uniq(_.flatten(_.map(cur_images, function (x) {
                               return _.keys(JSON.parse(base64.decode(x.get(exif_column))));
                           }))).concat(['row']);
@@ -1579,8 +1587,7 @@
           <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
           </div>
         </div>
-      <div id="results"></div>
-      <div id="clusters"></div>
+      <div class="clearfix span12 skinny" id="results"></div>
     </script>
 
     <script type="text/javascript">
@@ -1613,7 +1620,7 @@
                   var num = 30;
                   var next_clusters = clusters.slice(num);
                   var cur_clusters = clusters.slice(0, num);
-                  var el = $('#clusters');
+                  var el = $('#results');
                   el.empty();
                   $('#nextButton').unbind();
                   if (next_clusters.length) {
@@ -1657,7 +1664,7 @@
 
                               }
                   });
-                  new AppView({collection: clusters, el: $('#clusters')});
+                  new AppView({collection: clusters, el: $('#results')});
                   clusters.reset(dedupe_response);
                  */
               }
@@ -1837,6 +1844,44 @@
               }
           picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [timeColumn], {success: time_success, done: time_done});
       })
+      }
+    </script>
+
+    <script type="text/html" id="tpl_visualize_annotations">
+        <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+          <div class="span5">
+          <h3>Options</h3>
+          <input class="input-small" type="text" placeholder="Task" id="task" value="">
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          </div>
+        </div>
+      <div class="clearfix span12 skinny" style="padding-left:20px; padding-right:20px" id="results">
+      <h3>Users Table</h3>
+      <div id="annotation-users"></div>
+      <h3>Results Table</h3>
+      <div id="annotation-results"></div>
+      </div>
+    </script>
+
+    <script type="text/javascript">
+      function render_visualize_annotations() {
+          $('#runButton').click(function () {
+              var task = $('#task').val();
+              // TODO: Add dropdown to select annotator to query
+              // TODO: Histogram of annotation times, annotation time vs annotation iteration (scatter and median), histogram of image annotations
+              // TODO: Abstract functions for getting image annotations based on annotation type
+              // TODO: Filter rows and/or modify column based on annotation
+              // TODO: Add voting rules for neg/pos/unsure
+              // TODO: Add other annotation types
+      
+              var results = new PicarusRows([], {'table': 'annotations-results-' + task});
+              new RowsView({collection: results, el: $('#annotation-results')});
+              results.fetch();
+
+              var users = new PicarusRows([], {'table': 'annotations-users-' + task});
+              new RowsView({collection: users, el: $('#annotation-users')});
+              users.fetch();
+          });
       }
     </script>
 

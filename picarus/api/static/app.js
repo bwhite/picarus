@@ -74,6 +74,24 @@ function login_get(func) {
     }
 }
 
+function alert_running_wrap(el) {
+    return function () {
+        el.html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
+    }
+}
+
+function alert_success_wrap(el) {
+    return function () {
+        el.html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
+    }
+}
+
+function alert_fail_wrap(el) {
+    return function () {
+        el.html('<div class="alert alert-error"><strong>Error!</strong> Job failed!</div>');
+    }
+}
+
 function wrap_hints() {
     $('[hint]').each(function (x) {
         $(this).wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', $(this).attr('hint')));
@@ -153,6 +171,76 @@ function app_main() {
     modelParams = '?' + param_encode(_.map(modelParams, function (x) {
         return ['column', encode_id(x)];
     }));
+    PicarusRow = Backbone.Model.extend({
+        idAttribute: "row",
+        initialize: function(models, options) {
+            this.table = options.table;
+            if (_.isArray(options.columns)) {
+                this.params = '?' + param_encode(_.map(options.columns, function (x) {
+                    return ['column', encode_id(x)];
+                }));
+            } else {
+                this.params = '';
+            }
+        },
+        url : function() {
+            return this.id ? '/a1/data/' + this.table + '/' + this.id : '/a1/data/' + this.table + '/' + this.params; 
+        },
+        pescape: function (x) {
+            return _.escape(base64.decode(this.escape(encode_id(x))));
+        },
+        pescapejs: function (x) {
+            return JSON.parse(base64.decode(this.escape(encode_id(x))));
+        },
+        psave: function (attributes, options) {
+            return this.save(object_ub64_b64_enc(attributes), options);
+        }
+    });
+
+    PicarusRows = Backbone.Collection.extend({
+        model : PicarusRow,
+        initialize: function(models, options) {
+            this.table = options.table;
+            if (_.isArray(options.columns)) {
+                this.params = '?' + param_encode(_.map(options.columns, function (x) {
+                    return ['column', encode_id(x)];
+                }));
+            } else {
+                this.params = '';
+            }
+        },
+        url : function() {
+            return this.id ? '/a1/data/' + this.table + '/' + this.id : '/a1/data/' + this.table + this.params; 
+        }
+    });
+
+    RowsView = Backbone.View.extend({
+        initialize: function() {
+            _.bindAll(this, 'render');
+            this.collection.bind('reset', this.render);
+            this.collection.bind('change', this.render);
+        },
+        render: function() {
+            var columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
+                return _.keys(x.attributes);
+            })));
+            picarus_table = new Backbone.Table({
+                collection: this.collection,
+                columns: _.map(columns, function (x) {
+                    if (x === 'row')
+                        return {header: 'row', getFormatted: function() { return _.escape(this.get(x))}};
+                    return {header: decode_id(x), getFormatted: function() {
+                        var val = this.get(x);
+                        if (_.isUndefined(val))
+                            return '';
+                        return _.escape(base64.decode(val))}
+                    };
+                }),
+            });
+            this.$el.html(picarus_table.render().el);
+        }
+    });
+
     PicarusModel = Backbone.Model.extend({
         idAttribute: "row",
         defaults : {
@@ -266,7 +354,8 @@ function app_main() {
             //Simply sets the content as appropriate
             this.$el.html(this.content[route]);
             // Post-process the DOM for Picarus specific helpers
-            wrap_hints()
+            wrap_hints();
+            custom_checkbox_and_radio();
             // Handles post render javascript calls if available
             if (route === "")
                 route = 'data/user';

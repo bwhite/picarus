@@ -4,6 +4,7 @@ monkey.patch_all()
 import json
 import bottle
 import os
+import re
 import argparse
 import gevent.queue
 import base64
@@ -14,9 +15,10 @@ import numpy as np
 import gevent
 import crawlers
 import hashlib
-import multiprocessing
+import mturk_vision
 from users import Users, UnknownUser
 from yubikey import Yubikey
+import annotators
 import picarus._features
 from picarus._importer import call_import
 from driver import PicarusManager
@@ -101,10 +103,55 @@ def _users_verify_row_permissions(thrift, _auth_user, row, permissions):
         bottle.abort(403)
 
 
-TABLES = {'images': {'hbase_table': 'images', 'column_write_validator': _images_column_write_validate, 'verify_row_permissions': _images_verify_row_permissions},
-          'models': {'hbase_table': 'picarus_models', 'column_write_validator': _models_column_write_validate, 'verify_row_permissions': _models_verify_row_permissions},
-          'users': {'hbase_table': None, 'verify_row_permissions': _users_verify_row_permissions},
-          'parameters': {'hbase_table': None, 'verify_row_permissions': None}}
+def dod_to_lod_b64(dod):
+    # Converts from dod[row][column] to list of {row, col0_ub64:val0_b64, ...}
+    # dod: dict of dicts
+    # lod: list of dicts
+    print(dod)
+    outs = []
+    for row, columns in sorted(dod.items(), key=lambda x: x[0]):
+        out = {'row': base64.urlsafe_b64encode(row)}
+        out.update({base64.urlsafe_b64encode(x): base64.b64encode(y) if isinstance(y, str) else base64.b64encode(json.dumps(y)) for x, y in columns.items()})
+        outs.append(out)
+    print(outs)
+    return outs
+
+
+def get_table(_auth_user, table):
+    annotation_re = re.search('annotations\-(results|users)\-([a-zA-Z0-9_\-]+)', table)
+    if annotation_re:
+        annotation_table, annotation_task = annotation_re.groups()
+        try:
+            try:
+                cur_task_secret = ANNOTATORS.get_task_secret(annotation_task, _auth_user.email)
+            except annotators.UnauthorizedException:
+                bottle.abort(401)
+            cur_task = ANNOTATION_TASKS[annotation_task]
+            if annotation_table == 'results':
+                cur_table = cur_task.admin_results(cur_task_secret)
+            elif annotation_table == 'users':
+                cur_table = cur_task.admin_users(cur_task_secret)
+            else:
+                bottle.abort(500)
+            cur_table = dod_to_lod_b64(cur_table)
+            return {'hbase_table': None, 'verify_row_permissions': None, 'table': cur_table}
+        except KeyError:
+            bottle.abort(404)
+    elif table == 'annotations':
+        try:
+            try:
+                cur_table = ANNOTATORS.get_tasks(_auth_user.email)
+            except annotators.UnauthorizedException:
+                bottle.abort(401)
+            cur_table = dod_to_lod_b64(cur_table)
+            return {'hbase_table': None, 'verify_row_permissions': None, 'table': cur_table}
+        except KeyError:
+            bottle.abort(404)
+    else:
+        try:
+            return TABLES[table]
+        except KeyError:
+            bottle.abort(404)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run Picarus REST Frontend')
@@ -114,6 +161,9 @@ if __name__ == "__main__":
     parser.add_argument('--yubikey_redis_host', help='Redis Host', default='localhost')
     parser.add_argument('--yubikey_redis_port', type=int, help='Redis Port', default=6380)
     parser.add_argument('--yubikey_redis_db', type=int, help='Redis DB', default=1)
+    parser.add_argument('--annotations_redis_host', help='Annotations Host', default='localhost')
+    parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
+    parser.add_argument('--annotations_redis_db', type=int, help='Annotations DB', default=2)
 
     parser.add_argument('--port', default='15000', type=int)
     parser.add_argument('--thrift_server', default='localhost')
@@ -125,6 +175,7 @@ if __name__ == "__main__":
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     USERS = Users(ARGS.users_redis_host, ARGS.users_redis_port, ARGS.users_redis_db)
     YUBIKEY = Yubikey(ARGS.yubikey_redis_host, ARGS.yubikey_redis_port, ARGS.yubikey_redis_db)
+    ANNOTATORS = annotators.Annotators(ARGS.annotations_redis_host, ARGS.annotations_redis_port, ARGS.annotations_redis_db)
     #manager = PicarusManager(thrift=THRIFT)
 
 
@@ -187,20 +238,22 @@ def parse_params():
 def data_table(_auth_user, table):
     print_request()
     table_raw = table
-    table_props = TABLES[table]
+    table_props = get_table(_auth_user, table)
     table = table_props['hbase_table']
     method = bottle.request.method.upper()
     with thrift_lock() as thrift:
         if method == 'GET':
-            columns = parse_columns()
-            if table_raw == 'parameters':
+            if 'table' in table_props:
+                columns = map(base64.urlsafe_b64encode, parse_columns())
                 bottle.response.headers["Content-type"] = "application/json"
                 columns = set(columns)
                 if columns:
-                    return json.dumps([{y: x[y] for y in columns.intersection(x)} for x in PARAM_SCHEMAS_B64])
+                    columns.add('row')
+                    return json.dumps([{y: x[y] for y in columns.intersection(x)} for x in table_props['table']])
                 else:
-                    return json.dumps(PARAM_SCHEMAS_B64)
+                    return json.dumps(table_props['table'])
             elif table_raw == 'models':
+                columns = parse_columns()
                 user_column = 'user:' + _auth_user.email
                 output_user = user_column in columns or not columns or 'user:' in columns
                 hbase_filter = "SingleColumnValueFilter ('user', '%s', =, 'binaryprefix:r', true, true)" % _auth_user.email
@@ -266,7 +319,7 @@ def data_row(_auth_user, table, row):
         bottle.abort(400)
     print_request()
     table_raw = table
-    table_props = TABLES[table]
+    table_props = get_table(_auth_user, table)
     table = table_props['hbase_table']
     params, files = parse_params_files()
     with thrift_lock() as thrift:
@@ -341,7 +394,7 @@ def data_row_col(_auth_user, table, row, col):
         bottle.abort(400)
     if not (table and row and col):
         bottle.abort(400)
-    table_props = TABLES[table]
+    table_props = get_table(_auth_user, table)
     table = table_props['hbase_table']
     with thrift_lock() as thrift:
         verify_row_permissions = lambda x: table_props['verify_row_permissions'](thrift, _auth_user, row, x)
@@ -495,45 +548,44 @@ def data_slice(_auth_user, table, start_row, stop_row):
                     pass
                 return {'data': {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name, query, **p)}}
             elif action in ('io/annotate/image/query', 'io/annotate/image/entity', 'io/annotate/image/query_batch'):
-                global MTURK_SERVER
-                if MTURK_SERVER is not None:
-                    bottle.abort(500)  # Need to garbage collect these
                 secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
+                task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
                 p = {}
                 image_column = base64.urlsafe_b64decode(params['imageColumn'])
                 if action == 'io/annotate/image/entity':
                     entity_column = base64.urlsafe_b64decode(params['entityColumn'])
-                    p['data'] = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (start_row, stop_row, entity_column, image_column)
+                    data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (start_row, stop_row, entity_column, image_column)
                     p['type'] = 'image_entity'
                 elif action == 'io/annotate/image/query':
                     query = params['query']
-                    p['data'] = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
+                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
                     p['type'] = 'image_query'
                     p['query'] = query
                 elif action == 'io/annotate/image/query_batch':
                     query = params['query']
-                    p['data'] = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
+                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
                     p['type'] = 'image_query_batch'
                     p['query'] = query
                 else:
                     bottle.abort(400)
-                p['redis_address'] = 'localhost'
-                p['redis_port'] = 6382
-                p['port'] = 16000
                 p['num_tasks'] = 100
                 p['mode'] = 'standalone'
                 p['setup'] = True
                 p['reset'] = True
+                host, port = 'api0.picar.us', ARGS.port
+                base_url = 'http://api0.picar.us:%d/%s/annotate/%s' % (ARGS.port, VERSION, task)
+                worker = base_url + '/index.html'
+                redis_host, redis_port = ANNOTATORS.add_task(task, _auth_user.email, secret, host, port, base_url, worker, p).split(':')
                 p['secret'] = secret
+                #localhost:6382
+                p['redis_address'] = redis_host
+                p['redis_port'] = int(redis_port)
                 print(p)
-                base_url = 'http://api0.picar.us:%d' % p['port']
-                admin_prefix = '/admin/%s/' % secret
-                MTURK_SERVER = multiprocessing.Process(target=_mturk_wrapper, kwargs=p)
-                MTURK_SERVER.start()
-                return {'worker': base_url, 'stop': base_url + admin_prefix + 'stop', 'results': base_url + admin_prefix + 'results.js', 'users': base_url + admin_prefix + 'users.js'}
+                ANNOTATION_TASKS[task] = mturk_vision.manager(data=data, **p)
+                return {'worker': base_url + '/index.html'}
             elif action.startswith('i/train/'):
                 path = action[8:]
-                
+
                 def classifier_sklearn(model_dict, model_param, inputs):
                     row_cols = hadoopy_hbase.scanner(thrift, table,
                                                      columns=[inputs['feature'], inputs['meta']], start_row=start_row, stop_row=stop_row)
@@ -718,22 +770,21 @@ PARAM_SCHEMAS.append({'name': 'nbnnlocal',
                       'module_params': {}})
 
 
-for x in PARAM_SCHEMAS:
-    x['path'] = '/'.join([x['type'], x['name']])
-    x['prefix'] = {'feature': 'feat:', 'preprocessor': 'data:', 'classifier': 'pred:', 'hasher': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[x['type']]
-
-PARAM_SCHEMAS_B64 = []
-for schema in PARAM_SCHEMAS:
-    cur_schema = dict(schema)
-    cur_path = cur_schema['path']
-    cur_schema = {base64.urlsafe_b64encode(x) : base64.b64encode(y) if isinstance(y, str) else base64.b64encode(json.dumps(y)) for x, y in cur_schema.items() if x != 'path'}
-    cur_schema['row'] = cur_path
-    PARAM_SCHEMAS_B64.append(cur_schema)
-
 PARAM_SCHEMAS_SERVE = {}
-for schema in PARAM_SCHEMAS:
-    PARAM_SCHEMAS_SERVE[schema['path']] = dict(schema)
 
+for x in PARAM_SCHEMAS:
+    schema = dict(x)
+    schema['prefix'] = {'feature': 'feat:', 'preprocessor': 'data:', 'classifier': 'pred:', 'hasher': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[x['type']]
+    PARAM_SCHEMAS_SERVE['/'.join([x['type'], x['name']])] = schema
+
+
+PARAM_SCHEMAS_B64 = dod_to_lod_b64(PARAM_SCHEMAS_SERVE)
+
+
+TABLES = {'images': {'hbase_table': 'images', 'column_write_validator': _images_column_write_validate, 'verify_row_permissions': _images_verify_row_permissions},
+          'models': {'hbase_table': 'picarus_models', 'column_write_validator': _models_column_write_validate, 'verify_row_permissions': _models_verify_row_permissions},
+          'users': {'hbase_table': None, 'verify_row_permissions': _users_verify_row_permissions},
+          'parameters': {'hbase_table': None, 'verify_row_permissions': None, 'table': PARAM_SCHEMAS_B64}}
 
 def _parse_model_params(params, schema, prefix):
     kw = {}
@@ -812,7 +863,7 @@ def auth_yubikey(_auth_user):
     return {'apiKey': _auth_user.create_api_key()}
 
 
-MTURK_SERVER = None
+ANNOTATION_TASKS = {}  # [task] = manager
 
 
 def _mturk_wrapper(*args, **kw):
@@ -825,6 +876,68 @@ def _mturk_wrapper(*args, **kw):
     else:
         manager.filter_annotations_to_hbase()
     return out
+
+
+@bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/index.html')
+@check_version
+def annotate_index(task):
+    return ANNOTATION_TASKS[task].index
+
+
+@bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/static/:file_name')
+@check_version
+def annotation_static(task, file_name):
+    if task not in ANNOTATION_TASKS:
+        bottle.abort(401)
+    root = mturk_vision.__path__[0] + '/static'
+    return bottle.static_file(file_name, root)
+
+
+@bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/user.js')
+@check_version
+def annotation_user(task):
+    return ANNOTATION_TASKS[task].user(bottle.request)
+
+
+@bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/config.js')
+@check_version
+def annotation_config(task):
+    return ANNOTATION_TASKS[task].config
+
+
+@bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/:user_id/data.js')
+@check_version
+def annotation_data(task, user_id):
+    return ANNOTATION_TASKS[task].make_data(user_id)
+
+
+@bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/image/:image_key')
+@check_version
+def annotation_image_get(task, image_key):
+    try:
+        data_key = image_key.rsplit('.', 1)[0]
+        cur_data = ANNOTATION_TASKS[task].read_data(data_key)
+    except KeyError:
+        bottle.abort(404)
+    bottle.response.content_type = "image/jpeg"
+    return cur_data
+
+
+@bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/data/:data_key')
+@check_version
+def annotation_data_get(task, data_key):
+    try:
+        cur_data = ANNOTATION_TASKS[task].read_data(data_key)
+    except KeyError:
+        bottle.abort(404)
+    return cur_data
+
+
+@bottle.post('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/result')
+@check_version
+def annotation_result(task):
+    return ANNOTATION_TASKS[task].result(**bottle.request.json)
+
 
 if __name__ == '__main__':
     import gevent.pywsgi
