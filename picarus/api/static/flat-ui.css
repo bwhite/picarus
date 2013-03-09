@@ -562,10 +562,11 @@ h6 {
     -webkit-transform: scale(1, 0.99);
     -webkit-transform-origin: 0 0;
     display: none\9;
-    -webkit-transition: 0.3s ease-out;
-    -moz-transition: 0.3s ease-out;
-    -o-transition: 0.3s ease-out;
-    transition: 0.3s ease-out;
+    // Commented by Brandyn, these were annoying
+    //-webkit-transition: 0.3s ease-out;
+    //-moz-transition: 0.3s ease-out;
+    //-o-transition: 0.3s ease-out;
+    //transition: 0.3s ease-out;
     -webkit-backface-visibility: hidden; }
     .navbar .nav ul ul {
       left: 95%;
