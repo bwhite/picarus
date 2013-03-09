@@ -313,7 +313,7 @@
                               $('#save_button').click(function () {
                                   var attributes = {};
                                   attributes['data:notes'] = $('#modal_content').val();
-                                  model.save(attributes, {patch: true});
+                                  model.psave(attributes, {patch: true});
                                   $('#myModal').modal('hide');
                               });
                               $('#myModal').modal('show')
@@ -819,14 +819,7 @@
               var entityColumn = encode_id('meta:class');
               function success(xhr) {
                   response = JSON.parse(xhr.responseText);
-                  $('#results').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
-                  $('#results').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
-                  $('#results').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
-                  $('#results').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', '/v1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
               }
               picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/entity', imageColumn: imageColumn, entityColumn: entityColumn}});
           });
@@ -1467,7 +1460,7 @@
                   columns.row = row;
                   images.add(columns);
               }
-              var params = {success: success, maxRows: 1000, done: done};
+              var params = {success: success, maxRows: 10000, done: done};
               var filter = unescape($('#filter').val());
               if (filter.length > 0) {
                   params.filter = filter;

@@ -110,24 +110,19 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
         params.maxRows = Infinity;
     }
     if (typeof params.maxRowsIter == "undefined") {
-        params.maxRowsIter = Math.min(100, params.maxRows);
+        params.maxRowsIter = Math.min(10000, params.maxRows);
+    }
+    if (typeof params.maxBytes == "undefined") {
+        params.maxBytes = 1048576;
     }
     function param_encode(dd) {
         return _.map(dd, function (v) {
             return v.join('=');
         }).join('&');
     }
-    function uuid() {
-        // From: http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-            return v.toString(16);
-        });
-    }
     var column_suffix = _.map(columns, function (value) {return ['column', value]});
     var lastRow = undefined;
     var numRows = 0;
-    var cacheKey = uuid();
     if (typeof params.filter != "undefined") {
         column_suffix = column_suffix.concat([['filter', escape(params.filter)]]);
     }
@@ -151,10 +146,14 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
         }
         numRows += data.length;
         console.log(numRows);
-        if (data.length >= params.maxRowsIter && params.maxRows > 0) {
+        // If there is more data left to get, and we want more data
+        // It's possible that this will make 1 extra call at the end that returns nothing,
+        // but there are several trade-offs and that is the simplest implementation that doesn't
+        // encode extra parameters, modify status codes (nonstandard), output fixed rows only, etc.
+        if (data.length && params.maxRows > 0) {
             isdone = false;
             function next_call() {
-                var dd = _.pairs({maxRows: String(params.maxRowsIter), excludeStart: "1", cacheKey: cacheKey}).concat(column_suffix);
+                var dd = _.pairs({maxRows: String(params.maxRowsIter), excludeStart: "1"}).concat(column_suffix);
                 var url = "/a1/slice/" + table + "/" + _.last(data).row + "/" + stopRow + '?' + param_encode(dd);
                 picarus_api(url, "GET", {success: map_success});
             }
@@ -169,7 +168,7 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
             params.done({lastRow: lastRow, numRows: numRows});
         }
     }
-    var dd = _.pairs({maxRows: String(params.maxRowsIter), cacheKey: cacheKey}).concat(column_suffix);
+    var dd = _.pairs({maxRows: String(params.maxRowsIter)}).concat(column_suffix);
     picarus_api("/a1/slice/" + table +  "/" + startRow + "/" + stopRow + '?' + param_encode(dd), "GET", {success: map_success});
 }
 

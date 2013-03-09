@@ -16,6 +16,7 @@ from picarus._importer import call_import
 from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
 from parameters import PARAM_SCHEMAS_SERVE
 
+# These need to be set before using this module
 thrift_lock = None
 VERSION = None
 ANNOTATORS = None
