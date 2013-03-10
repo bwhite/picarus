@@ -149,7 +149,7 @@
                   this.model.bind('change', this.render);
               },
               render: function() {
-                  var startRow = this.model.pescape('upload_row_prefix');
+                  var startRow = _.unescape(this.model.pescape('upload_row_prefix'));
                   var imageColumn = encode_id('thum:image_150sq');
                   function success(row, columns) {
                       //$('#images').append(escape(decode_id(row)));
@@ -791,11 +791,22 @@
     <script type="text/javascript">
       function render_annotate_list() {
           results = new PicarusRows([], {'table': 'annotations'});
-          new RowsView({collection: results, el: $('#annotations')});
+          var deleteColumn = {header: "Delete", getFormatted: function() { return '<button class="btn row_delete" type="submit" row="' + this.escape('row') + '">Delete</button>'}};
+          var workerColumn = {header: "Worker", getFormatted: function() {
+              return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.pescape('task')});
+          }};
+          function postRender() {
+              function delete_row(data) {
+                  var row = data.target.getAttribute('row');
+                  results.get(row).destroy({wait: true});
+              }
+              button_confirm_click($('.row_delete'), delete_row);
+          }
+          new RowsView({collection: results, el: $('#annotations'), extraColumns: [workerColumn, deleteColumn], postRender: postRender});
           results.fetch();
       }
     </script>
-
+<!--
     <script type="text/html" id="tpl_annotate_entity">
       <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
         <div class="span3">
@@ -819,7 +830,7 @@
               var entityColumn = encode_id('meta:class');
               function success(xhr) {
                   response = JSON.parse(xhr.responseText);
-                  $('#results').append($('<a>').attr('href', '/v1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
+                  $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
               }
               picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/entity', imageColumn: imageColumn, entityColumn: entityColumn}});
           });
@@ -851,20 +862,13 @@
               var query = $('#query').val();
               function success(xhr) {
                   response = JSON.parse(xhr.responseText);
-                  $('#results').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
-                  $('#results').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
-                  $('#results').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
-                  $('#results').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
               }
               picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query', imageColumn: imageColumn, entityColumn: entityColumn, query: query}});
           });
       }
     </script>
-
+-->
     <script type="text/html" id="tpl_annotate_batch">
       <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
         <div class="span3">
@@ -890,14 +894,7 @@
               var query = $('#query').val();
               function success(xhr) {
                   response = JSON.parse(xhr.responseText);
-                  $('#results').append($('<a>').attr('href', response.worker).text('Worker').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
-                  $('#results').append($('<a>').attr('href', response.results).text('Results').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
-                  $('#results').append($('<a>').attr('href', response.results).text('Users').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
-                  $('#results').append($('<a>').attr('href', response.stop).text('Stop').attr('target', '_blank'));
-                  $('#results').append($('<br>'));
+                  $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
               }
               picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query_batch', imageColumn: imageColumn, entityColumn: entityColumn, query: query}});
           });
@@ -1460,7 +1457,7 @@
                   columns.row = row;
                   images.add(columns);
               }
-              var params = {success: success, maxRows: 10000, done: done};
+              var params = {success: success, maxRows: 1000, done: done};
               var filter = unescape($('#filter').val());
               if (filter.length > 0) {
                   params.filter = filter;
@@ -1844,11 +1841,14 @@
         <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
           <div class="span5">
           <h3>Options</h3>
-          <input class="input-small" type="text" placeholder="Task" id="task" value="">
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <select id="annotator_select"></select>
           </div>
         </div>
       <div class="clearfix span12 skinny" style="padding-left:20px; padding-right:20px" id="results">
+      <h3>Positive Samples</h3>
+      <div id="positive_samples"></div>
+      <h3>Negative Samples</h3>
+      <div id="negative_samples"></div>
       <h3>Users Table</h3>
       <div id="annotation-users"></div>
       <h3>Results Table</h3>
@@ -1858,23 +1858,78 @@
 
     <script type="text/javascript">
       function render_visualize_annotations() {
-          $('#runButton').click(function () {
-              var task = $('#task').val();
+          var rows = new PicarusRows([], {'table': 'annotations'});
+          function accumulate(hist, vals, inc) {
+              _.each(vals, function (x) {
+                  if (_.has(hist, x))
+                      hist[x] += inc;
+                  else
+                      hist[x] = inc;
+              });
+          }
+          function image_batch_score(users, results, scoreUnselected) {
+              // Only count explicit marks
+              scores = {};
+
+              pick = function (s, l) { return _.map(s, function (x) {return l[x]});}
+
+              results.each(function (x) {
+                  d = x.pescapejs('user_data');
+                  images = x.pescapejs('images');
+                  if (_.isUndefined(d))
+                      return;
+                  if (d.polarity) {
+                      accumulate(scores, pick(d.selected, images), 1);
+                      if (scoreUnselected)
+                          accumulate(scores, pick(d.notSelected, images), -1);
+                  } else {
+                      accumulate(scores, pick(d.selected, images), -1);
+                      if (scoreUnselected)
+                          accumulate(scores, pick(d.notSelected, images), 1);
+                  }
+              });
+              return scores;
+          }
+          function change() {
+              var task = decode_id($('#annotator_select').find(":selected").val());
               // TODO: Add dropdown to select annotator to query
               // TODO: Histogram of annotation times, annotation time vs annotation iteration (scatter and median), histogram of image annotations
               // TODO: Abstract functions for getting image annotations based on annotation type
               // TODO: Filter rows and/or modify column based on annotation
               // TODO: Add voting rules for neg/pos/unsure
               // TODO: Add other annotation types
-      
               var results = new PicarusRows([], {'table': 'annotations-results-' + task});
-              new RowsView({collection: results, el: $('#annotation-results')});
+              var users = new PicarusRows([], {'table': 'annotations-users-' + task});
+              var imageColumn = encode_id('thum:image_150sq');
+              function data_change() {
+                  var scores = image_batch_score(users, results, false);
+                  posScores = _.sortBy(_.filter(_.pairs(scores), function (x) {return x[1] > 0}), function (x) { return -x[1] }).slice(0, 24);
+                  negScores = _.sortBy(_.filter(_.pairs(scores), function (x) {return x[1] < 0}), function (x) { return x[1] }).slice(0, 24);
+                  function display_samples(div, scores) {
+                      div.html('');
+                      _.each(scores, function (x) {
+                      var id = _.uniqueId('image_');
+                          div.append($('<img>').attr('id', id).attr('title', 'Row: ' + x[0] + ' Score: ' + x[1]));
+                          function success(xhr) {
+                              response = JSON.parse(xhr.responseText);
+                              $('#' + id).attr('src', 'data:image/jpeg;base64,' + response[imageColumn]).attr('width', '150px')
+                          }
+                          picarus_api("/a1/data/images/" + x[0], "GET", {success: success, data: {columns: imageColumn}});
+                      });
+                  }
+                  display_samples($('#positive_samples'), posScores);
+                  display_samples($('#negative_samples'), negScores);
+                  display_samples($('#unlabled_samples'), negScores);
+              }
+
+              new RowsView({collection: results, el: $('#annotation-results'), postRender: _.debounce(data_change, 100)});
               results.fetch();
 
-              var users = new PicarusRows([], {'table': 'annotations-users-' + task});
-              new RowsView({collection: users, el: $('#annotation-users')});
+              new RowsView({collection: users, el: $('#annotation-users'), postRender: _.debounce(data_change, 100)});
               users.fetch();
-          });
+          }
+          rows_dropdown(rows, {el: $('#annotator_select'), text: function (x) {return x.pescapejs('params').query}, change: change});
+          rows.fetch();
       }
     </script>
 

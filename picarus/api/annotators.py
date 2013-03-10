@@ -9,6 +9,10 @@ class UnauthorizedException(Exception):
     """User is not authorized to make this call"""
 
 
+class CapacityException(Exception):
+    """Not enough backend REDIS servers"""
+
+
 class Annotators(object):
 
     def __init__(self, host, port, db):
@@ -24,6 +28,8 @@ class Annotators(object):
         data = {'task': task, 'owner': owner, '_secret': secret, '_data': data,
                 'params': json.dumps(params)}
         redis_host_port = self.db.spop(self.available_servers)
+        if redis_host_port is None:
+            raise CapacityException
         data['_redis_host_port'] = redis_host_port
         self.db.hmset(self.annotator_prefix + task, data)
         return redis_host_port

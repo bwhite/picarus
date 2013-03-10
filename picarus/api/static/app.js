@@ -128,6 +128,40 @@ function model_dropdown(args) {
     models.fetch();
 }
 
+function rows_dropdown(rows, args) {
+    if (_.isUndefined(args.change)) {
+        args.change = function () {};
+    }
+    if (_.isUndefined(args.filter)) {
+        args.filter = function () {return true};
+    }
+    if (_.isUndefined(args.text)) {
+        args.text = function (x) {return x.escape('row')};
+    }
+    var AppView = Backbone.View.extend({
+        el: $('#container'),
+        initialize: function() {
+            _.bindAll(this, 'render');
+            _.bindAll(this, 'renderDrop');
+            this.$el.bind('reset', this.renderDrop);
+            this.$el.bind('change', this.renderDrop);
+            this.collection.bind('reset', this.render);
+            this.collection.bind('change', this.render);
+        },
+        renderDrop: args.change,
+        render: function() {
+            n = this.$el;
+            this.$el.empty();
+            var select_template = "{{#models}}<option value='{{row}}'>{{text}}</option>{{/models}};"
+            var models_filt = _.map(rows.filter(args.filter), function (data) {return {row: data.escape('row'), text: args.text(data)}});
+            this.$el.append(Mustache.render(select_template, {models: models_filt}));
+            this.renderDrop();
+        }
+    });
+    av = new AppView({collection: rows, el: args.el});
+    rows.fetch();
+}
+
 function row_selector(prefixDrop, startRow, stopRow) {
     var AppView = Backbone.View.extend({
         initialize: function() {
@@ -183,14 +217,14 @@ function app_main() {
                 this.params = '';
             }
         },
-        url : function() {
-            return this.id ? '/a1/data/' + this.table + '/' + this.id : '/a1/data/' + this.table + '/' + this.params; 
-        },
         pescape: function (x) {
             return _.escape(base64.decode(this.escape(encode_id(x))));
         },
         pescapejs: function (x) {
-            return JSON.parse(base64.decode(this.escape(encode_id(x))));
+            var val = this.get(encode_id(x));
+            if (_.isUndefined(val))
+                return;
+            return JSON.parse(base64.decode(val));
         },
         psave: function (attributes, options) {
             return this.save(object_ub64_b64_enc(attributes), options);
@@ -215,29 +249,43 @@ function app_main() {
     });
 
     RowsView = Backbone.View.extend({
-        initialize: function() {
+        initialize: function(options) {
             _.bindAll(this, 'render');
             this.collection.bind('reset', this.render);
             this.collection.bind('change', this.render);
+            this.collection.bind('remove', this.render);
+            this.collection.bind('destroy', this.render);
+            this.extraColumns = [];
+            this.postRender = function () {};
+            if (!_.isUndefined(options.postRender))
+                this.postRender = options.postRender;
+            if (!_.isUndefined(options.extraColumns))
+                this.extraColumns = options.extraColumns;
         },
         render: function() {
             var columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
                 return _.keys(x.attributes);
             })));
+            var table_columns = _.map(columns, function (x) {
+                if (x === 'row')
+                    return {header: 'row', getFormatted: function() { return _.escape(this.get(x))}};
+                return {header: decode_id(x), getFormatted: function() {
+                    var val = this.get(x);
+                    if (_.isUndefined(val))
+                        return '';
+                    return _.escape(base64.decode(val))}
+                };
+            }).concat(this.extraColumns);
             picarus_table = new Backbone.Table({
                 collection: this.collection,
-                columns: _.map(columns, function (x) {
-                    if (x === 'row')
-                        return {header: 'row', getFormatted: function() { return _.escape(this.get(x))}};
-                    return {header: decode_id(x), getFormatted: function() {
-                        var val = this.get(x);
-                        if (_.isUndefined(val))
-                            return '';
-                        return _.escape(base64.decode(val))}
-                    };
-                }),
+                columns: table_columns,
             });
-            this.$el.html(picarus_table.render().el);
+            if (this.collection.length) {
+                this.$el.html(picarus_table.render().el);
+                this.postRender();
+            } else {
+                this.$el.html('<div class="alert alert-info">Table Empty</div>');
+            }
         }
     });
 

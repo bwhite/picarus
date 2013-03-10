@@ -40,7 +40,7 @@ class User(object):
     def __init__(self, user_db, email, setup=False):
         self._user_db = user_db
         self.email = email
-        self.upload_row_prefix = 'userupload%s:' % base64.b64encode(hashlib.sha1(email).digest())[:-1]
+        self.upload_row_prefix = 'userupload%s:' % base64.urlsafe_b64encode(hashlib.sha1(email).digest())[:-1]
         self._stat_keys = ('start', 'finish', 'total_time')
         self._user_prefix = 'user:'
         self._stat_prefix = 'stat:'
@@ -245,6 +245,10 @@ def main():
         user = users.get_user(args.email)
         user.add_image_prefix(args.prefix, args.permissions)
 
+    def _add_image_upload_prefix(args, users):
+        user = users.get_user(args.email)
+        user.add_image_prefix(user.upload_row_prefix, 'rw')
+
     def _remove_user_image_prefix(args, users):
         user = users.get_user(args.email)
         user.remove_image_prefix(args.prefix)
@@ -279,6 +283,10 @@ def main():
     subparser.add_argument('prefix', help='Prefix')
     subparser.add_argument('permissions', help='Permissions')
     subparser.set_defaults(func=_add_user_image_prefix)
+
+    subparser = subparsers.add_parser('add_image_upload_prefix', help='Add upload prefix')
+    subparser.add_argument('email', help='email')
+    subparser.set_defaults(func=_add_image_upload_prefix)
 
     subparser = subparsers.add_parser('remove_image_prefix', help='Remove prefix')
     subparser.add_argument('email', help='email')

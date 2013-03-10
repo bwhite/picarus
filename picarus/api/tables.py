@@ -161,26 +161,25 @@ class AnnotationsTable(BaseTableSmall):
 
     def delete_row(self, row):
         ANNOTATORS.delete_task(row, self.owner)
+        return {}
 
 
-class AnnotationDataTable(object):
+class AnnotationDataTable(BaseTableSmall):
 
-    def __init__(self, _auth_user, table, task, annotation_tasks):
+    def __init__(self, _auth_user, table, task):
         self.owner = _auth_user.email
         self.table = table
         self.task = task
-        self.annotation_tasks = annotation_tasks
 
-    def get_table(self):
+    def _get_table(self):
         try:
             secret = ANNOTATORS.get_task_secret(self.task, self.owner)
         except annotators.UnauthorizedException:
             bottle.abort(401)
-        annotation_task = self.annotation_tasks[self.task]
         if self.table == 'results':
-            table = annotation_task.admin_results(secret)
+            table = ANNOTATORS.get_manager(self.task).admin_results(secret)
         elif self.table == 'users':
-            table = annotation_task.admin_users(secret)
+            table = ANNOTATORS.get_manager(self.task).admin_users(secret)
         else:
             bottle.abort(500)
         return dod_to_lod_b64(table)
@@ -208,6 +207,18 @@ class HBaseTable(object):
             if mutations:
                 thrift.mutateRow(self.table, row, mutations)
         return {}
+
+    def delete_row(self, row):
+        with thrift_lock() as thrift:
+            self._row_validate(row, 'rw', thrift)
+            thrift.deleteAllRow(self.table, row)
+            return {}
+
+    def delete_column(self, row, column):
+        with thrift_lock() as thrift:
+            self._row_validate(row, 'rw', thrift)
+            thrift.mutateRow(self.table, row, [hadoopy_hbase.Mutation(column=column, isDelete=True)])
+            return {}
 
 
 class ImagesHBaseTable(HBaseTable):
@@ -421,23 +432,27 @@ class ImagesHBaseTable(HBaseTable):
                 image_column = base64.urlsafe_b64decode(params['imageColumn'])
                 if action == 'io/annotate/image/entity':
                     entity_column = base64.urlsafe_b64decode(params['entityColumn'])
-                    data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (start_row, stop_row, entity_column, image_column)
+                    data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row),
+                                                                                       entity_column, image_column)
                     p['type'] = 'image_entity'
                 elif action == 'io/annotate/image/query':
                     query = params['query']
-                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
+                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row), image_column)
                     p['type'] = 'image_query'
                     p['query'] = query
                 elif action == 'io/annotate/image/query_batch':
                     query = params['query']
-                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (start_row, stop_row, image_column)
+                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row), image_column)
                     p['type'] = 'image_query_batch'
                     p['query'] = query
                 else:
                     bottle.abort(400)
                 p['num_tasks'] = 100
                 p['mode'] = 'standalone'
-                redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p).split(':')
+                try:
+                    redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p).split(':')
+                except annotators.CapacityException:
+                    bottle.abort(503)
                 p['setup'] = True
                 p['reset'] = True
                 p['secret'] = secret
@@ -570,23 +585,10 @@ class ModelsHBaseTable(HBaseTable):
             manager = PicarusManager(thrift=thrift)
             return _create_model_from_params(manager, self.owner, path, lambda model_dict, model_params, inputs: model_dict, params)
 
-    def delete_row(self, row):
-        with thrift_lock() as thrift:
-            self._row_validate(row, 'rw', thrift)
-            thrift.deleteAllRow(self.table, row)
-            return {}
-
-    def delete_column(self, row, column):
-        with thrift_lock() as thrift:
-            self._row_validate(row, 'rw', thrift)
-            thrift.mutateRow(self.table, row, [hadoopy_hbase.Mutation(column=column, isDelete=True)])
-            return {}
-
-
 def get_table(_auth_user, table):
     annotation_re = re.search('annotations\-(results|users)\-([a-zA-Z0-9_\-]+)', table)
     if annotation_re:
-        return AnnotationDataTable(_auth_user, **annotation_re.groups())
+        return AnnotationDataTable(_auth_user, *annotation_re.groups())
     elif table == 'annotations':
         return AnnotationsTable(_auth_user)
     elif table == 'images':
