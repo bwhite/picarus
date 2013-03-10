@@ -1849,6 +1849,8 @@
       <div id="positive_samples"></div>
       <h3>Negative Samples</h3>
       <div id="negative_samples"></div>
+      <h3>Other Samples (not pos/neg)</h3>
+      <div id="other_samples"></div>
       <h3>Users Table</h3>
       <div id="annotation-users"></div>
       <h3>Results Table</h3>
@@ -1903,11 +1905,12 @@
               var imageColumn = encode_id('thum:image_150sq');
               function data_change() {
                   var scores = image_batch_score(users, results, false);
-                  posScores = _.sortBy(_.filter(_.pairs(scores), function (x) {return x[1] > 0}), function (x) { return -x[1] }).slice(0, 24);
-                  negScores = _.sortBy(_.filter(_.pairs(scores), function (x) {return x[1] < 0}), function (x) { return x[1] }).slice(0, 24);
+                  posScores = _.sortBy(_.filter(_.pairs(scores), function (x) {return x[1] > 0}), function (x) { return -x[1] });
+                  negScores = _.sortBy(_.filter(_.pairs(scores), function (x) {return x[1] < 0}), function (x) { return x[1] });
+                  negScores = _.sortBy(_.filter(_.pairs(scores), function (x) {return x[1] < 0}), function (x) { return x[1] });
                   function display_samples(div, scores) {
                       div.html('');
-                      _.each(scores, function (x) {
+                      _.each(scores.slice(0, 24), function (x) {
                       var id = _.uniqueId('image_');
                           div.append($('<img>').attr('id', id).attr('title', 'Row: ' + x[0] + ' Score: ' + x[1]));
                           function success(xhr) {
@@ -1919,7 +1922,7 @@
                   }
                   display_samples($('#positive_samples'), posScores);
                   display_samples($('#negative_samples'), negScores);
-                  display_samples($('#unlabled_samples'), negScores);
+                  display_samples($('#other_samples'), otherScores);
               }
 
               new RowsView({collection: results, el: $('#annotation-results'), postRender: _.debounce(data_change, 100)});
