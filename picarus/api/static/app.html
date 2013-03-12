@@ -83,6 +83,41 @@
     </script>
 
 
+    <script type="text/html" id="tpl_data_prefixes">
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span5">
+          <h3>Actions</h3>
+          <select id="prefixTable" class="input-small" hint="Table for the new prefix">
+            <option value='images'>images</option>
+          </select>
+          <input class="input-small" type="text" placeholder="Prefix" hint="New prefix to add" id="prefix" value="">
+          <select id="permissions" class="input-mini" hint="Permissions for new prefix">
+            <option value='r'>r</option>
+            <option value='rw'>rw</option>
+          </select>
+          <button class="btn" type="submit" id="createButton" style="margin-bottom: 9px">Create Prefix</button>
+        </div>
+      </div>
+      <div id="prefixes"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_data_prefixes() {
+          rows = new PicarusRows([], {'table': 'prefixes'});
+          $('#createButton').click(function () {
+              var row = $('#prefixTable option:selected').val();
+              var data = {}
+              data[$('#prefix').val()] = $('#permissions option:selected').val(); 
+              rows.pget(row).psave(data, {patch: true});        
+          });
+          var tableColumn = {header: "Table", getFormatted: function() {
+              return _.escape(base64.decode(this.get('row')));
+          }};
+          new RowsView({collection: rows, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
+          rows.fetch();
+      }
+    </script>
+
     <script type="text/html" id="tpl_data_user">
       <div id="users"></div>
     </script>
@@ -791,7 +826,6 @@
     <script type="text/javascript">
       function render_annotate_list() {
           results = new PicarusRows([], {'table': 'annotations'});
-          var deleteColumn = {header: "Delete", getFormatted: function() { return '<button class="btn row_delete" type="submit" row="' + this.escape('row') + '">Delete</button>'}};
           var workerColumn = {header: "Worker", getFormatted: function() {
               return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.pescape('task')});
           }};
@@ -802,7 +836,7 @@
               }
               button_confirm_click($('.row_delete'), delete_row);
           }
-          new RowsView({collection: results, el: $('#annotations'), extraColumns: [workerColumn, deleteColumn], postRender: postRender});
+          new RowsView({collection: results, el: $('#annotations'), extraColumns: [workerColumn], postRender: postRender, deleteRows: true});
           results.fetch();
       }
     </script>
@@ -1410,7 +1444,7 @@
               function remove_rows() {
                  // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
                  var rows = _.map(images.models, function (x) {return x.id})
-                 picarus_api_delete_rows(rows, {done: function () {alert('Done removing rows')}});
+                 picarus_api_delete_rows(rows, progressModal());
               }
               function done() {
                   $('#results').html('');
@@ -1503,7 +1537,7 @@
               function remove_rows() {
                  // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
                  var rows = _.map(images.models, function (x) {return x.id})
-                 picarus_api_delete_rows(rows, {done: function () {alert('Done removing rows')}});
+                 picarus_api_delete_rows(rows, progressModal());
               }
               function done() {
                   $('#results').html('');
@@ -1592,6 +1626,7 @@
       }
       function button_confirm_click_reset(button) {
           button.removeClass('btn-danger');
+          button.unbind();
       }
       function render_visualize_duplicates() {
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
@@ -1631,7 +1666,7 @@
               function remove_dupes(clusters) {
                  var rows = [];
                  _.each(clusters, function (x) {rows = rows.concat(_.shuffle(x.rows).slice(1));console.log(rows.length)});
-                 picarus_api_delete_rows(rows, {done: function () {alert('Done removing duplicates')}});
+                 picarus_api_delete_rows(rows, progressModal());
               }
               function success_func(xhr) {
                   alert_done();
@@ -1728,7 +1763,7 @@
                   var centerLong = Number($('#demolong').val());
                   button_confirm_click($('#removeButton'), function () {
                       var rows = _.map(images.models, function (x) {return x.get('row')});
-                      picarus_api_delete_rows(rows, {done: function () {alert('Done removing rows')}});
+                      picarus_api_delete_rows(rows, progressModal());
                   });
                   $('#removeButton').removeAttr('disabled');
                   if (!centerLat || !centerLat) {
@@ -1839,17 +1874,43 @@
 
     <script type="text/html" id="tpl_visualize_annotations">
         <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
-          <div class="span5">
+          <div class="span12">
           <h3>Options</h3>
           <select id="annotator_select"></select>
+          <input class="input-mini" type="text" hint="Negative if: neg / total >=" id="negPct" value="1">
+          <input class="input-mini" type="text" hint="Negative if: neg >=" id="negCnt" value="1">
+          <input class="input-mini" type="text" hint="Positive if: pos / total >=" id="posPct" value="1">
+          <input class="input-mini" type="text" hint="Positive if: pos >=" id="posCnt" value="1">
+          <label class="checkbox" style="margin-bottom: 0px;" hint="Include 'unclicked' images" for="unclicked">
+            <input type="checkbox" value="" id="unclicked">
+          </label>
+          </div>
+          <div class="span8">
+            <div class="span2">
+          <h3>Split Actions</h3>
+          <select id="actionSplit" class="input-small" hint="Splits class to modify (defined by thresholds above)">
+            <option value='positive'>Positive</option>
+            <option value='negative'>Negative</option>
+            <option value='other'>Other</option>
+          </select>
+          </div>
+          <div class="span8 well">
+            <div class="span2">
+              <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px;margin-top: 9px" hint="Remove all rows in the split">Remove</button>
+            </div>
+            <div class="span1" style="margin-top: 12px">
+              <strong>OR</strong>
+              </div>
+            <div class="span4">
+              <input class="input-small" type="text" hint="Column Name" id="colName" value="meta:class">
+              <input class="input-small" type="text" hint="Column Value" id="colValue" value="">
+              <button class="btn" type="submit" id="modifyButton" style="margin-bottom: 9px" hint="Set a column to a value for all rows in the split">Modify</button>
+            </div>
           </div>
         </div>
       <div class="clearfix span12 skinny" style="padding-left:20px; padding-right:20px" id="results">
-      <h3>Positive Samples</h3>
       <div id="positive_samples"></div>
-      <h3>Negative Samples</h3>
       <div id="negative_samples"></div>
-      <h3>Other Samples (not pos/neg)</h3>
       <div id="other_samples"></div>
       <h3>Users Table</h3>
       <div id="annotation-users"></div>
@@ -1871,29 +1932,50 @@
           }
           function image_batch_score(users, results, scoreUnselected) {
               // Only count explicit marks
-              scores = {};
+              scoresPos = {};
+              scoresNeg = {};
+              scoresTotal = {};
 
               pick = function (s, l) { return _.map(s, function (x) {return l[x]});}
 
               results.each(function (x) {
                   d = x.pescapejs('user_data');
                   images = x.pescapejs('images');
+                  accumulate(scoresTotal, images, 0);  // Makes each image show up, even if not annotated
                   if (_.isUndefined(d))
                       return;
                   if (d.polarity) {
-                      accumulate(scores, pick(d.selected, images), 1);
+                      accumulate(scoresPos, pick(d.selected, images), 1);
                       if (scoreUnselected)
-                          accumulate(scores, pick(d.notSelected, images), -1);
+                          accumulate(scoresNeg, pick(d.notSelected, images), 1);
                   } else {
-                      accumulate(scores, pick(d.selected, images), -1);
+                      accumulate(scoresNeg, pick(d.selected, images), 1);
                       if (scoreUnselected)
-                          accumulate(scores, pick(d.notSelected, images), 1);
+                          accumulate(scoresPos, pick(d.notSelected, images), 1);
                   }
               });
-              return scores;
+              _.each(scoresPos, function (y, x) {
+                  if (_.has(scoresTotal, x)) {
+                      scoresTotal[x] += y;
+                  } else {
+                      scoresTotal[x] = y;
+                  }
+              });
+              _.each(scoresNeg, function (y, x) {
+                  if (_.has(scoresTotal, x)) {
+                      scoresTotal[x] += y;
+                  } else {
+                      scoresTotal[x] = y;
+                  }
+              });
+              return {scoresPos: scoresPos, scoresNeg: scoresNeg, scoresTotal: scoresTotal};
           }
           function change() {
-              var task = decode_id($('#annotator_select').find(":selected").val());
+              var task = $('#annotator_select').find(":selected").val();
+              if (_.isUndefined(task)) {
+      return;
+              }
+              task = decode_id(task);
               // TODO: Add dropdown to select annotator to query
               // TODO: Histogram of annotation times, annotation time vs annotation iteration (scatter and median), histogram of image annotations
               // TODO: Abstract functions for getting image annotations based on annotation type
@@ -1903,26 +1985,68 @@
               var results = new PicarusRows([], {'table': 'annotations-results-' + task});
               var users = new PicarusRows([], {'table': 'annotations-users-' + task});
               var imageColumn = encode_id('thum:image_150sq');
+              $('#negPct').change(data_change);
+              $('#posPct').change(data_change);
+              $('#posCnt').change(data_change);
+              $('#negCnt').change(data_change);
+              $('#unclicked').change(data_change);
               function data_change() {
-                  var scores = image_batch_score(users, results, false);
-                  posScores = _.sortBy(_.filter(_.pairs(scores), function (x) {return x[1] > 0}), function (x) { return -x[1] });
-                  negScores = _.sortBy(_.filter(_.pairs(scores), function (x) {return x[1] < 0}), function (x) { return x[1] });
-                  negScores = _.sortBy(_.filter(_.pairs(scores), function (x) {return x[1] < 0}), function (x) { return x[1] });
-                  function display_samples(div, scores) {
+                  negPct = Number($('#negPct').val());
+                  posPct = Number($('#posPct').val());
+                  negCnt = Math.max(1, Number($('#negCnt').val()));
+                  posCnt = Math.max(1, Number($('#posCnt').val()));
+                  unclicked = $('#unclicked').is(':checked')
+                  scores = image_batch_score(users, results, unclicked);
+                  ts = scores.scoresTotal;
+                  posScores = _.sortBy(_.filter(_.pairs(scores.scoresPos), function (x) {return x[1] >= posCnt && (x[1] / ts[x[0]]) >= posPct}), function (x) { return -x[1] });
+                  negScores = _.sortBy(_.filter(_.pairs(scores.scoresNeg), function (x) {return x[1] >= negCnt && (x[1] / ts[x[0]]) >= negPct}), function (x) { return x[1] });
+                  os = _.omit(_.omit(ts, _.keys(scores.scoresPos)), _.keys(scores.scoresNeg));
+                  otherScores = _.shuffle(_.pairs(os));
+                  function display_samples(div, scores, title) {
                       div.html('');
+                      div.append($('<h3>').text(title + ' ' + scores.length + ' / ' + _.size(ts)));
+
                       _.each(scores.slice(0, 24), function (x) {
                       var id = _.uniqueId('image_');
-                          div.append($('<img>').attr('id', id).attr('title', 'Row: ' + x[0] + ' Score: ' + x[1]));
+                          div.append($('<img>').attr('id', id).attr('title', 'Row: ' + x[0] + ' Score: ' + x[1]).addClass('hide'));
                           function success(xhr) {
                               response = JSON.parse(xhr.responseText);
-                              $('#' + id).attr('src', 'data:image/jpeg;base64,' + response[imageColumn]).attr('width', '150px')
+                              if (_.isUndefined(response[imageColumn]))
+                                  return;
+                              $('#' + id).attr('src', 'data:image/jpeg;base64,' + response[imageColumn]).attr('width', '150px').removeClass('hide');
                           }
                           picarus_api("/a1/data/images/" + x[0], "GET", {success: success, data: {columns: imageColumn}});
                       });
                   }
-                  display_samples($('#positive_samples'), posScores);
-                  display_samples($('#negative_samples'), negScores);
-                  display_samples($('#other_samples'), otherScores);
+                  display_samples($('#positive_samples'), posScores, 'Positive Samples');
+                  display_samples($('#negative_samples'), negScores, 'Negative Samples');
+                  display_samples($('#other_samples'), otherScores, 'Other Samples (not pos/neg)');
+
+                  // Hookup delete
+                  function delete_row() {
+                      action = $('#actionSplit').find(":selected").val();
+                      delKeys = _.keys(_.object({'positive': posScores, 'negative': negScores, 'other': otherScores}[action]));
+                      picarus_api_delete_rows(delKeys, progressModal());
+                      button_confirm_click_reset($('#removeButton'));
+                      button_confirm_click($('#removeButton'), delete_row);
+                  }
+                  button_confirm_click($('#removeButton'), delete_row);
+                  // Hookup modify
+                  function modify_row() {
+                      var action = $('#actionSplit').find(":selected").val();
+                      var modifyKeys = _.keys(_.object({'positive': posScores, 'negative': negScores, 'other': otherScores}[action]));
+                      picarus_api_modify_rows(modifyKeys, $('#colName').val(), $('#colValue').val(), progressModal());
+                      button_confirm_click_reset($('#modifyButton'));
+                      button_confirm_click($('#modifyButton'), modify_row);
+                  }
+                  button_confirm_click($('#modifyButton'), modify_row);
+                  $('#actionSplit').change(change_actions);
+                  function change_actions () {
+                      button_confirm_click_reset($('#removeButton'));
+                      button_confirm_click($('#removeButton'), delete_row);
+                      button_confirm_click_reset($('#modifyButton'));
+                      button_confirm_click($('#modifyButton'), modify_row);
+                  }
               }
 
               new RowsView({collection: results, el: $('#annotation-results'), postRender: _.debounce(data_change, 100)});
@@ -1967,6 +2091,16 @@
         <div  class="well">
           <input class="input-large" type="text" placeholder="Email" id="email" value=""><span class="help-inline">Email</span>
           <input class="input-large" type="password" placeholder="Login Key" id="loginKey" value=""><span class="help-inline">Login Key</span>
+        </div>
+      </div>
+    </div>
+    <div id="progressModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+      <div class="modal-header">
+        <h3>Processing</h3>
+      </div>
+      <div class="modal-body">
+        <div class="progress progress-striped active" id="progressBar">
+          <div class="bar" style="width: 0%;"  id="progress"></div>
         </div>
       </div>
     </div>

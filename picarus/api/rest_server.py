@@ -176,6 +176,11 @@ def static(name):
     return bottle.static_file(name, root=os.path.join(os.getcwd(), 'static'))
 
 
+@bottle.get('/')
+def index():
+    return bottle.static_file('app.html', root=os.path.join(os.getcwd(), 'static'))
+
+
 @bottle.get('/robots.txt')
 def robots():
     return '''User-agent: *

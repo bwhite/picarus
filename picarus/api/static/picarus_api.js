@@ -174,25 +174,51 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
 
 
 function picarus_api_delete_rows(rows, params) {
-    var maxRowsIter = 1;
-    if (typeof params == "undefined") {
+    function action(row, s) {
+        picarus_api_row('images', row, "DELETE", {success: s});
+    }
+    picarus_api_row_action(rows, action, params);
+}
+
+function picarus_api_modify_rows(rows, column, value, params) {
+    function action(row, s) {
+        var data = {};
+        data[encode_id(column)] = base64.encode(value);
+        picarus_api_row('images', row, "PATCH", {success: s, data: data});
+    }
+    picarus_api_row_action(rows, action, params);
+}
+
+
+function picarus_api_row_action(rows, action, params) {
+    var maxRowsIter = 20;
+    var rowsLeft = rows.length;
+    var origRows = rows.length;
+    if (_.isUndefined(params))
         params = {};
-    }
-    // TODO: Can't increase maxRowsIter until done is called after the very last element returns
-    if (typeof params.maxRowsIter != "undefined") {
+    if (!_.isUndefined(params.maxRowsIter))
         maxRowsIter = params.maxRowsIter;
-    }
-    if (!rows.length) {
-        if (typeof params.done != "undefined") {
+    if (_.isUndefined(params.update))
+        params.update = function () {};
+    if (_.isUndefined(params.done))
+        params.done = function () {};
+    function success() {
+        rowsLeft -= 1;
+        params.update(1 - rowsLeft / origRows);
+        if (!rowsLeft)
             params.done();
-        }
-        return;
     }
-    _.each(rows.slice(0, maxRowsIter), function (row, n) {
-        var del_params = {};
-        if (n == 0) {
-            del_params.success = function () {picarus_api_delete_rows(rows.slice(maxRowsIter), params)};
-        }
-        picarus_api_row('images', row, "DELETE", del_params);
+    function work(s) {
+        var row = rows.pop();
+        if (_.isUndefined(row))
+            return;
+        action(row, s);
+    }
+    _.each(_.range(maxRowsIter), function () {
+        work(function () { 
+                 success();
+                 while (rows.length)
+                     work(success);
+             });
     });
 }

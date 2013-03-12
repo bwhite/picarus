@@ -137,6 +137,17 @@ class BaseTableSmall(object):
         else:
             return json.dumps(full_table)
 
+    def get_row(self, row, columns):
+        table = self._get_row(row, columns)
+        column_values = table[row]
+        if columns:
+            columns = set(columns).intersection(column_values)
+            return {base64.urlsafe_b64encode(x): base64.b64encode(column_values[x])
+                    for x in columns}
+        else:
+            return {base64.urlsafe_b64encode(x): base64.b64encode(y)
+                    for x, y in column_values.items()}
+
 
 class ParametersTable(BaseTableSmall):
 
@@ -145,6 +156,59 @@ class ParametersTable(BaseTableSmall):
 
     def _get_table(self):
         return self._params
+
+
+class PrefixesTable(BaseTableSmall):
+
+    def __init__(self, _auth_user):
+        self._prefixes = {'images': _auth_user.image_prefixes}
+        self._auth_user = _auth_user
+
+    def _get_table(self):
+        return dod_to_lod_b64(self._prefixes)
+
+    def _get_row(self, row, columns):
+        return self._prefixes
+
+    def _row_column_value_validator(self, table, prefix, permissions):
+        if permissions not in ('r', 'rw'):
+            bottle.abort(403)
+        for cur_prefix, cur_permissions in self._prefixes[table].items():
+            if prefix.startswith(cur_prefix) and cur_permissions.startswith(permissions):
+                return
+        bottle.abort(403)  # No valid prefix lets the user do this
+
+    def patch_row(self, row, params, files):
+        if files:
+            bottle.abort(403)  # Files not allowed
+        for x, y in params.items():
+            new_prefix = base64.urlsafe_b64decode(x)
+            new_permissions = base64.b64decode(y)
+            self._row_column_value_validator(row, new_prefix, new_permissions)
+            if row == 'images':
+                self._auth_user.add_image_prefix(new_prefix, new_permissions)
+            else:
+                bottle.abort(403)
+        return {}
+
+    def delete_column(self, row, column):
+        if row == 'images':
+            self._auth_user.remove_image_prefix(column)
+        else:
+            bottle.abort(403)
+        return {}
+
+
+class UsersTable(object):
+    # TODO: Remove the user's table, it is not necessary anymore
+
+    def __init__(self, _auth_user):
+        self._auth_user = _auth_user
+
+    def get_row(self, row, columns):
+        if self._auth_user.email != row:
+            bottle.abort(401)
+        return _user_to_dict(self._auth_user)
 
 
 class AnnotationsTable(BaseTableSmall):
@@ -535,17 +599,6 @@ class ImagesHBaseTable(HBaseTable):
                 bottle.abort(400)
 
 
-class UsersTable(object):
-
-    def __init__(self, _auth_user):
-        self._auth_user = _auth_user
-
-    def get_row(self, row, columns):
-        if self._auth_user.email != row:
-            bottle.abort(401)
-        return _user_to_dict(self._auth_user)
-
-
 class ModelsHBaseTable(HBaseTable):
 
     def __init__(self, _auth_user):
@@ -595,6 +648,10 @@ def get_table(_auth_user, table):
         return ImagesHBaseTable(_auth_user)
     elif table == 'models':
         return ModelsHBaseTable(_auth_user)
+    elif table == 'models':
+        return ModelsHBaseTable(_auth_user)
+    elif table == 'prefixes':
+        return PrefixesTable(_auth_user)
     elif table == 'parameters':
         return ParametersTable()
     elif table == 'users':

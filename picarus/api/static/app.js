@@ -74,6 +74,17 @@ function login_get(func) {
     }
 }
 
+function progressModal() {
+    $('#progressModal').modal('show');
+    function update(pct) {
+        $('#progress').css('width', (100 * pct + '%'));
+    }
+    function done() {
+        $('#progressModal').modal('hide');
+    }
+    return {done: done, update: update};
+}
+
 function alert_running_wrap(el) {
     return function () {
         el.html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
@@ -228,6 +239,17 @@ function app_main() {
         },
         psave: function (attributes, options) {
             return this.save(object_ub64_b64_enc(attributes), options);
+        },
+        punset: function (column) {
+            var table = this.table;
+            if (_.isUndefined(table))
+                table = this.collection.table;
+            var row = this.id;
+            function s() {
+                this.unset(column);
+            }
+            s = _.bind(s, this);
+            picarus_api("/a1/data/" + table + "/" + row + "/" + column, 'DELETE', {success: s});
         }
     });
 
@@ -243,10 +265,22 @@ function app_main() {
                 this.params = '';
             }
         },
+        pget: function(x) {
+            return this.get(encode_id(x));
+        },
         url : function() {
             return this.id ? '/a1/data/' + this.table + '/' + this.id : '/a1/data/' + this.table + this.params; 
         }
     });
+
+    function deleteValueFunc(row, column) {
+        if (column == 'row')
+            return '';
+        return Mustache.render('<a class="value_delete" style="padding-left: 5px" row="{{row}}" column="{{column}}">Delete</a>', {row: row, column: column});
+    }
+    function deleteRowFunc(row) {
+        return Mustache.render('<button class="btn row_delete" type="submit" row="{{row}}"">Delete</button>', {row: row});
+    }
 
     RowsView = Backbone.View.extend({
         initialize: function(options) {
@@ -257,23 +291,54 @@ function app_main() {
             this.collection.bind('destroy', this.render);
             this.extraColumns = [];
             this.postRender = function () {};
+            this.deleteValues = false;
+            this.deleteRows = false;
             if (!_.isUndefined(options.postRender))
                 this.postRender = options.postRender;
             if (!_.isUndefined(options.extraColumns))
                 this.extraColumns = options.extraColumns;
+            if (options.deleteRows) {
+                this.deleteRows = true;
+                function delete_row(data) {
+                    var row = data.target.getAttribute('row');
+                    this.collection.get(row).destroy({wait: true});
+                }
+                delete_row = _.bind(delete_row, this);
+                this.postRender = _.compose(this.postRender, function () {
+                    button_confirm_click($('.row_delete'), delete_row);
+                });
+                this.extraColumns.push({header: "Delete", getFormatted: function() { return deleteRowFunc(this.escape('row'))}});
+            }
+            if (options.deleteValues) {
+                this.deleteValues = true;
+                function delete_value(data) {
+                    var row = data.target.getAttribute('row');
+                    var column = data.target.getAttribute('column');
+                    this.collection.get(row).punset(column);
+                }
+                delete_value = _.bind(delete_value, this);
+                this.postRender = _.compose(this.postRender, function () {
+                    button_confirm_click($('.value_delete'), delete_value);
+                });
+            }
         },
         render: function() {
             var columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
                 return _.keys(x.attributes);
             })));
+            var deleteValueFuncLocal = function () {return ''};
+            if (this.deleteValues)
+                deleteValueFuncLocal = deleteValueFunc;
             var table_columns = _.map(columns, function (x) {
                 if (x === 'row')
                     return {header: 'row', getFormatted: function() { return _.escape(this.get(x))}};
+                outExtra = '';
                 return {header: decode_id(x), getFormatted: function() {
                     var val = this.get(x);
                     if (_.isUndefined(val))
                         return '';
-                    return _.escape(base64.decode(val))}
+                    return _.escape(base64.decode(val)) + deleteValueFuncLocal(this.get('row'), x);
+                }
                 };
             }).concat(this.extraColumns);
             picarus_table = new Backbone.Table({
