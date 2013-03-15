@@ -18,7 +18,7 @@ function picarus_api(url, method, args) {
     } else {
         if (args.hasOwnProperty('data')) {
             jQuery.each(args.data, function(k, v) {
-                data.append(k, v);
+                data.append(encodeURIComponent(k), encodeURIComponent(v));
             });
         }
     }
@@ -202,6 +202,8 @@ function picarus_api_row_action(rows, action, params) {
         params.update = function () {};
     if (_.isUndefined(params.done))
         params.done = function () {};
+    if (!rowsLeft)
+        params.done();
     function success() {
         rowsLeft -= 1;
         params.update(1 - rowsLeft / origRows);

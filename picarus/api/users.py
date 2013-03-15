@@ -155,7 +155,7 @@ class Users(object):
         self.email_func = email_auth_factory()
 
     def add_user(self, email):
-        User(self.user_db, email, setup=True)
+        return User(self.user_db, email, setup=True)
 
     def remove_user(self, email):
         self.get_user(email).delete()
@@ -239,7 +239,9 @@ def main():
     def _add_user(args, users):
         for x in args.emails:
             print('Adding user [%s]' % x)
-            users.add_user(x)
+            user = users.add_user(x)
+            user.add_image_prefix(user.upload_row_prefix, 'rw')
+            users.email_login_api_key(user)
 
     def _add_user_image_prefix(args, users):
         user = users.get_user(args.email)

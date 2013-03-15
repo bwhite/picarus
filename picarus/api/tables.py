@@ -179,12 +179,14 @@ class PrefixesTable(BaseTableSmall):
         bottle.abort(403)  # No valid prefix lets the user do this
 
     def patch_row(self, row, params, files):
+        print(row, params, files)
         if files:
             bottle.abort(403)  # Files not allowed
         for x, y in params.items():
             new_prefix = base64.urlsafe_b64decode(x)
             new_permissions = base64.b64decode(y)
             self._row_column_value_validator(row, new_prefix, new_permissions)
+            print((row, new_prefix, new_permissions))
             if row == 'images':
                 self._auth_user.add_image_prefix(new_prefix, new_permissions)
             else:
@@ -400,14 +402,14 @@ class ImagesHBaseTable(HBaseTable):
 
     def patch_slice(self, start_row, stop_row, params, files):
         self._slice_validate(start_row, stop_row, 'w')
-        # NOTE: This only fetches rows that have a column in data: (it is a significant optimization)
+        # NOTE: This only fetches rows that have a column in data:image (it is a significant optimization)
         # NOTE: Only parameters allowed, no "files" due to memory restrictions
         mutations = []
         for x, y in params.items():
             mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=base64.b64decode(y)))
         if mutations:
             with thrift_lock() as thrift:
-                for row, _ in hadoopy_hbase.scanner(thrift, self.table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()', columns=['data:']):
+                for row, _ in hadoopy_hbase.scanner(thrift, self.table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()', columns=['data:image']):
                     thrift.mutateRow(self.table, row, mutations)
         return {}
 
@@ -487,7 +489,7 @@ class ImagesHBaseTable(HBaseTable):
                     p['page'] = int(params['page'])
                 except KeyError:
                     pass
-                return {'data': {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name, query, **p)}}
+                return {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name, query, **p)}
             elif action in ('io/annotate/image/query', 'io/annotate/image/entity', 'io/annotate/image/query_batch'):
                 self._slice_validate(start_row, stop_row, 'r')
                 secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]

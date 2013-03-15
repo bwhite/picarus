@@ -81,7 +81,7 @@ def parse_params_files():
     files = {}
     for x in bottle.request.files:
         files[x] = bottle.request.files[x]
-    if bottle.request.content_type == "application/json":
+    if "application/json" in bottle.request.content_type:
         return {str(k): str(v) for k, v in bottle.request.json.items()}, files
     for x in set(bottle.request.params) - set(bottle.request.files):
         params[x] = bottle.request.params[x]
@@ -132,6 +132,7 @@ def data_row(_auth_user, table_name, row):
     if method == 'GET':
         return table.get_row(row, parse_columns())
     elif method == 'PATCH':
+        print_request()
         return table.patch_row(row, *parse_params_files())
     elif method == 'POST':
         return table.post_row(row, *parse_params_files())

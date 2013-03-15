@@ -32,7 +32,7 @@ function login_get(func) {
             }
             $('#secondFactorAuth').addClass('info');
             $('#secondFactorAuth').removeClass('error');
-            picarus_api("/a1/users/" + encodeURIComponent(email), "GET", {success: success, email: email, auth: apiKey, fail: fail});
+            picarus_api("/a1/data/users/" + encode_id(email), "GET", {success: success, email: email, auth: apiKey, fail: fail});
         }
         function use_api(apiKey) {
             var email = $('#email').val();
@@ -173,6 +173,7 @@ function rows_dropdown(rows, args) {
     rows.fetch();
 }
 
+
 function row_selector(prefixDrop, startRow, stopRow) {
     var AppView = Backbone.View.extend({
         initialize: function() {
@@ -230,6 +231,9 @@ function app_main() {
         },
         pescape: function (x) {
             return _.escape(base64.decode(this.escape(encode_id(x))));
+        },
+        pescaperow: function () {
+            return _.escape(base64.decode(this.escape('row')));
         },
         pescapejs: function (x) {
             var val = this.get(encode_id(x));
