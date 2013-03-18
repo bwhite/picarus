@@ -99,7 +99,6 @@ def _parse_model_params(params, schema, prefix):
 
 def _create_model_from_params(manager, owner, path, create_model, params):
     try:
-        path = base64.urlsafe_b64decode(path)
         schema = PARAM_SCHEMAS_SERVE[path]
         model_params = _parse_model_params(params, schema, 'model')
         module_params = _parse_model_params(params, schema, 'module')
@@ -430,7 +429,6 @@ class ImagesHBaseTable(HBaseTable):
             elif action == 'io/preprocess':
                 self._slice_validate(start_row, stop_row, 'rw')
                 print('Running preprocessor')
-                print(base64.urlsafe_b64decode(params['model']))
                 manager.image_preprocessor(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/classify':

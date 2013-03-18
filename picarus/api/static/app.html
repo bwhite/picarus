@@ -554,10 +554,10 @@
              if (model.pescape('data') === 'slice') {
                  var startRow = encode_id($('#startRow').val());
                  var stopRow = encode_id($('#stopRow').val());
-                 params.action = 'i/train/' + path
+                 params.action = 'i/train/' + decode_id(path);
                  picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: params});
              } else {
-                 params.path = path
+                 params.path = decode_id(path);
                  picarus_api("/a1/data/models", "POST", {success: success, data: params});
              }
          });

@@ -189,10 +189,6 @@ class PicarusManager(object):
 
     def image_preprocessor(self, model_key, **kw):
         input_dict, model_dict, _ = self.key_to_input_model_param(model_key)
-        print('---------------------')
-        print(input_dict)
-        print(model_dict)
-        print('---------------------')
         model_fp = picarus.api.model_tofile(model_dict)
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(model_key),

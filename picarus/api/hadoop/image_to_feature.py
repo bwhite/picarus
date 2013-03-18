@@ -17,7 +17,7 @@ class Mapper(picarus.api.HBaseMapper):
 
     def _map(self, row, image_binary):
         image = imfeat.image_fromstring(image_binary)
-        yield row, picarus.api.np_tostring(self._feat(image))
+        yield row, picarus.api.np_tostring(self._feat.compute_feature(image))
 
 
 if __name__ == '__main__':
