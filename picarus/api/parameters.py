@@ -2,24 +2,25 @@
 PARAM_SCHEMAS = []
 PARAM_SCHEMAS.append({'name': 'preprocessor',
                       'type': 'preprocessor',
-                      'module': 'imfeat.ImagePreprocessor',
+                      'module': 'picarus.ImagePreprocessor',
                       'data': 'none',   # none, row, slice
                       'inputs': ['raw_image'],  # abstract columns to be used for input
                       'model_params': {},
                       'module_params': {'compression': {'type': 'enum', 'values': ['jpg']},
-                                       'size': {'type': 'int', 'min': 32, 'max': 1025},
-                                       'method': {'type': 'enum', 'values': ['force_max_side', 'max_side', 'force_square']}}})
+                                        'size': {'type': 'int', 'min': 32, 'max': 1025},
+                                        'method': {'type': 'enum', 'values': ['force_max_side', 'max_side', 'force_square']}}})
 
 PARAM_SCHEMAS.append({'name': 'histogram',
                       'type': 'feature',
                       'data': 'none',
                       'inputs': ['processed_image'],
-                      'module': 'imfeat.Histogram',
+                      'module': 'picarus.HistogramImageFeature',
                       'model_params': {'feature_type': {'type': 'const', 'value': 'feature'}},
                       'module_params': {'mode': {'type': 'enum', 'values': ['bgr', 'rgb', 'xyz', 'ycrcb',
-                                                                           'hsv', 'luv', 'hls', 'lab', 'gray']},
-                                       'num_bins': {'type': 'int', 'min': 1, 'max': 17},
-                                       'style': {'type': 'enum', 'values': ['joint', 'planar']}}})
+                                                                            'hsv', 'luv', 'hls', 'lab']},
+                                        'num_bins': {'type': 'int', 'min': 1, 'max': 17},
+                                        'levels': {'type': 'int', 'min': 1, 'max': 3}}})
+
 
 PARAM_SCHEMAS.append({'name': 'svmlinear',
                       'type': 'classifier',

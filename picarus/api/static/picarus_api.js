@@ -18,7 +18,7 @@ function picarus_api(url, method, args) {
     } else {
         if (args.hasOwnProperty('data')) {
             jQuery.each(args.data, function(k, v) {
-                data.append(encodeURIComponent(k), encodeURIComponent(v));
+                data.append(k, v);
             });
         }
     }

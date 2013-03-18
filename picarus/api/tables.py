@@ -430,6 +430,7 @@ class ImagesHBaseTable(HBaseTable):
             elif action == 'io/preprocess':
                 self._slice_validate(start_row, stop_row, 'rw')
                 print('Running preprocessor')
+                print(base64.urlsafe_b64decode(params['model']))
                 manager.image_preprocessor(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/classify':

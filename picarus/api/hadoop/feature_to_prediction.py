@@ -4,6 +4,7 @@ import os
 import numpy as np
 import json
 import picarus.api
+import picarus_takeout
 
 
 class Mapper(picarus.api.HBaseMapper):

@@ -132,7 +132,6 @@ def data_row(_auth_user, table_name, row):
     if method == 'GET':
         return table.get_row(row, parse_columns())
     elif method == 'PATCH':
-        print_request()
         return table.patch_row(row, *parse_params_files())
     elif method == 'POST':
         return table.post_row(row, *parse_params_files())
@@ -167,6 +166,7 @@ def data_slice(_auth_user, table_name, start_row, stop_row):
     elif method == 'PATCH':
         return table.patch_slice(start_row, stop_row, *parse_params_files())
     elif method == 'POST':
+        print_request()
         return table.post_slice(start_row, stop_row, *parse_params_files())
     else:
         bottle.abort(403)
@@ -203,7 +203,6 @@ def auth_email(_auth_user):
 @check_version
 @USERS.auth_login_key(True)
 def auth_yubikey(_auth_user):
-    print_request()
     params = parse_params()
     try:
         email = YUBIKEY.verify(params['otp'])

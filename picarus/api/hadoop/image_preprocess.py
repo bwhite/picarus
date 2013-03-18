@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import hadoopy
+import picarus_takeout
 import imfeat
 import os
 import picarus.api
