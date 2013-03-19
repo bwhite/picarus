@@ -413,6 +413,60 @@
       }
     </script>
 
+    <script type="text/html" id="tpl_models_list2">
+      <div id="models"></div>
+      <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+          <h3 id="myModalLabel" id="modal_header"></h3>
+        </div>
+        <div class="modal-body">
+          <textarea id="modal_content" style="width: 100%; height: 100%; box-sizing: border-box;  resize: none; "></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" data-dismiss="modal" aria-hidden="true" id="close_button">Close</button>
+          <button class="btn btn-primary" id="save_button">Save changes</button>
+        </div>
+      </div>
+    <div id="results" class="container"></div>
+    <div id="takeoutModal" class="modal hide fade" data-keyboard="false" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h3>Picarus Takeout</h3>
+      </div>
+      <div class="modal-body">
+        <div class="well">
+          <textarea rows="10" style="resize: none;width: 475px" id="takeoutText"></textarea>
+      </div>
+    </div>
+    </script>
+    
+    <script type="text/javascript">
+      function render_models_list2() {
+          var columns = ['data:name', 'data:output_type', 'data:tags', 'data:notes', 'data:prefix', 'data:start_row', 'data:stop_row', 'data:creation_time', 'row', 'data:param', 'data:input'];
+          var columns_model = _.filter(columns, function (x) {return x !== 'row'})
+          results = new PicarusRows([], {'table': 'models', columns: columns_model});
+          var takeoutColumn = {header: "Takeout", getFormatted: function() {
+              return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: this.escape('row')});
+          }};
+          function takeoutSuccess(xhr) {
+              $('#takeoutText').val(xhr.responseText);
+              $('#takeoutModal').modal('show');
+          }
+          function postRender() {
+              $('.takeout_link').click(function (data) {
+                  picarus_api_row('models', $(data.target).attr('row'), 'POST', {data: {'action': 'i/takeout/link'}, success: takeoutSuccess})
+              });
+              $('.takeout_chain').click(function (data) {
+                  picarus_api_row('models', $(data.target).attr('row'), 'POST', {data: {'action': 'i/takeout/chain'}, success: takeoutSuccess})
+              });
+          }
+          new RowsView({collection: results, el: $('#results'), extraColumns: [takeoutColumn], postRender: postRender, deleteRows: true, columns: columns});
+          results.fetch();
+      }
+    </script>
+
+
     <script type="text/html" id="tpl_models_create">
       <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
         <div class="span11">
@@ -563,6 +617,159 @@
          });
       }
     </script>
+
+    <script type="text/html" id="tpl_models_create2">
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span11">
+          <h3>Options</h3>
+          <span id="selects">
+            <select id="type_select" class="input-medium"></select>
+            <select id="name_select" class="input-medium"></select>
+            <span id="params"></span>
+            <span id="row_select"></span>
+          </span>
+          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+        </div>
+      </div>
+      <div class="clearfix span12 skinny" id="results"></div>
+    </script>
+    <script type="text/javascript">
+      function add_hint(el, text) {
+          el.wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', text));
+      }
+      
+      function render_models_create2() {
+          results = new PicarusRows([], {'table': 'parameters'});
+          var AppView = Backbone.View.extend({
+              initialize: function() {
+                  _.bindAll(this, 'renderType');
+                  _.bindAll(this, 'renderName');
+                  this.collection.bind('reset', this.renderType);
+                  this.collection.bind('change', this.renderType);
+                  this.collection.bind('add', this.renderType);
+              },
+              events: {'change #type_select': 'renderName',
+                       'change #name_select': 'renderParam'},
+              renderParam: function () {
+                  $('#params').html('');
+                  $('#row_select').html('');
+                  var model_type = $('#type_select option:selected').val();
+                  var name = $('#name_select option:selected').val();
+                  //model = this.collection.where({type: model_type, name: name})[0];
+                  model = results.filter(function (x) {
+                      if (x.pescape('output_type') == model_type && x.pescape('name') == name)
+                          return true;
+                  })[0];
+
+                  function add_param_selections(params, param_prefix) {
+                      _.each(params, function (value, key) {
+                          var cur_el;
+                          if (value.type == 'enum') {
+                              var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
+                              cur_el = $('<select>').attr('name', param_prefix + key).html(Mustache.render(select_template, {models: value.values}));
+                          } else if (value.type == 'int') {
+                              // TODO: Client-side data validation
+                              cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
+                          } else if (value.type == 'str') {
+                              // TODO: Client-side data validation
+                              cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
+                          }
+                          if (typeof cur_el !== 'undefined') {
+                              $('#params').append(cur_el);
+                              add_hint(cur_el, key);
+                          }
+                      });
+                  }
+                  add_param_selections(model.pescapejs('model_params'), 'model-');
+                  add_param_selections(model.pescapejs('module_params'), 'module-');
+                  if (model.pescape('data') === 'slice') {
+                      $('#row_select').append(document.getElementById('bpl_row_select').innerHTML);
+                      row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+                  }
+                  _.each(model.pescapejs('inputs'), function (value) {
+                      var cur_el;
+                      // TODO: Finish model inputs, figure out how to take the values from here and integrate them in the response
+                      if (value === 'processed_image') {
+                          var cur_id = _.uniqueId('model_select_');
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value).addClass('input-medium'));
+                          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'data:'},
+                                          change: function() {},
+                                          el: $('#' + cur_id)});
+                      } else if (value === 'feature') {
+                          var cur_id = _.uniqueId('model_select_');
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value).addClass('input-medium'));
+                          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'feat:'},
+                                          change: function() {},
+                                          el: $('#' + cur_id)});
+                      } else if (value === 'multi_feature') {
+                          var cur_id = _.uniqueId('model_select_');
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value).addClass('input-medium'));
+                          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'mfeat:'},
+                                          change: function() {},
+                                          el: $('#' + cur_id)});
+                      } else if (value === 'hash') {
+                          var cur_id = _.uniqueId('model_select_');
+                          $('#params').append($('<select>').attr('id', cur_id).attr('name', 'key-' + value).addClass('input-medium'));
+                          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'hash:'},
+                                          change: function() {},
+                                          el: $('#' + cur_id)});
+                      } else if (value === 'raw_image') {
+                          $('#params').append($('<input>').attr('name', 'key-' + value).attr('type', 'hidden').val(encode_id('data:image')));
+                      } else if (value === 'meta') {
+                          var cur_id = _.uniqueId('model_select_');
+                          //
+                          var el = $('<select>').attr('id', cur_id).attr('name', 'key-' + value).addClass('input-medium');
+                          _.each(['meta:class', 'meta:class_0', 'meta:class_1', 'meta:class_2'], function (x) {
+                              el.append($('<option>').attr('value', encode_id(x)).text(x))
+                          });
+                          $('#params').append(el);
+                      }
+
+                  });
+              },
+              renderName: function () {
+                  var model_type = $('#type_select option:selected').val();
+                  var cur_models = this.collection.filter(function (x) { return x.pescape('output_type') == model_type});
+                  var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
+                  var models_filt = _.map(cur_models, function (data) {return data.pescape('name')});
+                  $('#name_select').html(Mustache.render(select_template, {models: models_filt}));
+                  this.renderParam();
+              },
+              renderType: function() {
+                  var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
+                  var models_filt = _.uniq(_.map(this.collection.models, function (data) {return data.pescape('output_type')}));
+                  $('#type_select').html(Mustache.render(select_template, {models: models_filt}));
+                  this.renderName();
+              }
+         });
+         av = new AppView({collection: results, el: $('#selects')});
+         results.fetch();
+         $('#runButton').click(function () {
+             var params = _.object($('#params :input').map(function () {return [[$(this).attr('name'), $(this).val()]]}));
+             function success(xhr) {
+                 response = JSON.parse(xhr.responseText);
+                 $('#results').html(response.row);
+             }
+             var model_type = $('#type_select option:selected').val();
+             var name = $('#name_select option:selected').val();
+             var model = results.filter(function (x) {
+                    if (x.pescape('output_type') == model_type && x.pescape('name') == name)
+                    return true;
+             })[0];
+             var path = model.get('row');
+             if (model.pescape('data') === 'slice') {
+                 var startRow = encode_id($('#startRow').val());
+                 var stopRow = encode_id($('#stopRow').val());
+                 params.action = 'i/train/' + decode_id(path);
+                 picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: params});
+             } else {
+                 params.path = decode_id(path);
+                 picarus_api("/a1/data/models", "POST", {success: success, data: params});
+             }
+         });
+      }
+    </script>
+
 
     <script type="text/html" id="tpl_process_thumbnail">
       <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
@@ -731,7 +938,7 @@
           $('#results').html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
       }
       function render_process_preprocess() {
-          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'data:'},
+          model_dropdown({modelFilter: function (x) {return x.pescape('data:output_type') === 'processed_image'},
                           el: $('#model_select')});
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
@@ -766,6 +973,7 @@
 
     <script type="text/javascript">
       function render_process_feature() {
+          // TODO: Combine all of these one-off job runners into a single one and standardize the calling convention (multi_feature/feature/mask_feature instead of just feature)
           model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'feat:' || x.pescape('data:prefix') === 'mfeat:'},
                           el: $('#model_select')});
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
@@ -865,11 +1073,6 @@
               return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.pescape('task')});
           }};
           function postRender() {
-              function delete_row(data) {
-                  var row = data.target.getAttribute('row');
-                  results.get(row).destroy({wait: true});
-              }
-              button_confirm_click($('.row_delete'), delete_row);
           }
           new RowsView({collection: results, el: $('#annotations'), extraColumns: [workerColumn], postRender: postRender, deleteRows: true});
           results.fetch();
@@ -1056,7 +1259,7 @@
     </script>
     <script type="text/javascript">
       function render_classify_evaluate() {
-          model_dropdown({modelFilter: function (x) {return x.pescape('data:prefix') === 'pred:' && x.pescapejs('data:param').classifier_type === "c2tsZWFybl9kZWNpc2lvbl9mdW5j"},
+          model_dropdown({modelFilter: function (x) {return x.pescape('data:output_type') === 'binary_class_confidence'},
                           change: function() {
                               var row = this.$el.find(":selected").val();
                               m = this.collection.get(row);

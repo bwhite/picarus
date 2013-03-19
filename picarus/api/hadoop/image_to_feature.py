@@ -16,8 +16,15 @@ class Mapper(picarus.api.HBaseMapper):
             self._feat = lambda x: self._feat_orig.compute_dense(x)
 
     def _map(self, row, image_binary):
-        image = imfeat.image_fromstring(image_binary)
-        yield row, picarus.api.np_tostring(self._feat.compute_feature(image))
+        try:
+            if not image_binary:
+                raise ValueError
+            image = imfeat.image_fromstring(image_binary)
+        except:
+            hadoopy.counter('ERROR', 'FEATURE')
+            print('Error on row[%r]' % row)
+        else:
+            yield row, picarus.api.np_tostring(self._feat.compute_feature(image))
 
 
 if __name__ == '__main__':

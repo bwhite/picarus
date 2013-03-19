@@ -22,6 +22,11 @@ VERSION = None
 ANNOTATORS = None
 
 
+class PrettyFloat(float):
+    def __repr__(self):
+        return '%.15g' % self
+
+
 def dod_to_lod_b64(dod):
     # Converts from dod[row][column] to list of {row, col0_ub64:val0_b64, ...}
     # dod: dict of dicts
@@ -43,22 +48,64 @@ def encode_row(row, columns):
 
 
 def _classifier_from_key(manager, key):
-    input, classifier, param = manager.key_to_input_model_param(key)
-    if param['classifier_type'] == 'sklearn_decision_func':
+    input, classifier, param, out = manager.key_to_input_model_param_output(key)
+    if out == 'binary_class_confidence':
         real_classifier = lambda x: float(classifier.decision_function(x).flat[0])
-        input, feature, param = manager.key_to_input_model_param(input['feature'])
+        input, feature, param, feature_type = manager.key_to_input_model_param_output(input['feature'])
     else:
         real_classifier = classifier
-        input, feature, param = manager.key_to_input_model_param(input['multi_feature'])
+        input, feature, param, feature_type = manager.key_to_input_model_param_output(input['multi_feature'])
     loader = lambda x: call_import(x) if isinstance(x, dict) else x
     feature = loader(feature)
-    if param['feature_type'] == 'multi_feature':
+    if feature_type == 'multi_feature':
         real_feature = lambda x: feature.compute_dense(x)
     else:
-        real_feature = feature
+        if hasattr(feature, 'compute_feature'):
+            real_feature = lambda x: feature.compute_feature(x)
+        else:
+            real_feature = feature
     input, preprocessor, param = manager.key_to_input_model_param(input['processed_image'])
     preprocessor = loader(preprocessor)
-    return lambda x: real_classifier(real_feature(preprocessor.asarray(x)))
+
+    #d
+    def fun(x):
+        print(preprocessor.asarray(x).shape)
+        f = real_feature(preprocessor.asarray(x))
+        print(' '.join(map(str, f.tolist())))
+        print(np.dot(f, classifier.coef_.tolist()[0]) + classifier.intercept_.ravel()[0])
+        print(real_classifier(f))
+        return real_classifier(f)
+    #d
+    return fun
+    #return lambda x: real_classifier(real_feature(preprocessor.asarray(x)))
+
+
+def _takeout_model_from_key(manager, key):
+    input, model, param, output_type = manager.key_to_input_model_param_output(key)
+    if isinstance(model, dict):
+        if model['name'] not in ('picarus.HistogramImageFeature', 'picarus.ImagePreprocessor'):
+            bottle.abort(400)
+    else:
+        if output_type == 'binary_class_confidence':
+            model = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': map(PrettyFloat, model.coef_.tolist()[0]),
+                                                                'intercept': PrettyFloat(model.intercept_[0])}}
+        else:
+            bottle.abort(400)
+    inputs = list(set(input).difference(['meta']))
+    if len(inputs) != 1:
+        bottle.abort(400)
+    return {'model': model, 'input': inputs[0], 'output': output_type}
+
+
+def _takeout_model_chain_from_key(manager, key):
+    input, classifier, param = manager.key_to_input_model_param(key)
+    inputs = list(set(input).difference(['meta']))
+    print((input, inputs))
+    if len(inputs) != 1:
+        bottle.abort(500)
+    if inputs[0] == 'raw_image':
+        return [_takeout_model_from_key(manager, key)]
+    return _takeout_model_chain_from_key(manager, input[inputs[0]]) + [_takeout_model_from_key(manager, key)]
 
 
 def _index_from_key(manager, key):
@@ -97,17 +144,18 @@ def _parse_model_params(params, schema, prefix):
     return kw
 
 
-def _create_model_from_params(manager, owner, path, create_model, params):
+def _create_model_from_params(manager, owner, path, create_model, params, start_row=None, stop_row=None):
     try:
         schema = PARAM_SCHEMAS_SERVE[path]
         model_params = _parse_model_params(params, schema, 'model')
         module_params = _parse_model_params(params, schema, 'module')
         model_dict = {'name': schema['module'], 'kw': module_params}
         get_key = lambda x: base64.urlsafe_b64decode(params['key-' + x])   # TODO: Verify that model keys exist
-        prefix = {'feature': 'feat:', 'preprocessor': 'data:', 'classifier': 'pred:', 'hasher': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[schema['type']]
+        prefix = schema['prefix']
         inputs = {x: get_key(x) for x in schema['inputs']}
         model = create_model(model_dict, model_params, inputs)
-        row = manager.input_model_param_to_key(prefix, input=inputs, model=model, email=owner, name=manager.model_to_name(model_dict), param=model_params)
+        row = manager.input_model_param_to_key(prefix, input=inputs, output_type=schema['output_type'], model=model, email=owner, model_dict=model_dict, name=manager.model_to_name(model_dict),
+                                               param=model_params, start_row=start_row, stop_row=stop_row)
         return {'row': base64.urlsafe_b64encode(row)}
     except ValueError:
         bottle.abort(500)
@@ -437,6 +485,7 @@ class ImagesHBaseTable(HBaseTable):
                 manager.feature_to_prediction(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/feature':
+                # TODO: Split this up into multi_feature, mask_feature, etc.
                 self._slice_validate(start_row, stop_row, 'rw')
                 print('Running feature')
                 manager.image_to_feature(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
@@ -535,8 +584,11 @@ class ImagesHBaseTable(HBaseTable):
                                                      columns=[inputs['feature'], inputs['meta']], start_row=start_row, stop_row=stop_row)
                     label_features = {0: [], 1: []}
                     for row, cols in row_cols:
-                        label = int(cols[inputs['meta']] == model_param['class_positive'])
-                        label_features[label].append(cols[inputs['feature']])
+                        try:
+                            label = int(cols[inputs['meta']] == model_param['class_positive'])
+                            label_features[label].append(cols[inputs['feature']])
+                        except KeyError:
+                            continue
                     labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
                     features = label_features[0] + label_features[1]
                     features = np.asfarray([picarus.api.np_fromstring(x) for x in features])
@@ -586,14 +638,14 @@ class ImagesHBaseTable(HBaseTable):
                     return clusterer.cluster(features)
 
                 print(path)
-                if path == 'classifier/svmlinear':
-                    return _create_model_from_params(manager, self.owner, path, classifier_sklearn, params)
-                elif path == 'classifier/nbnnlocal':
-                    return _create_model_from_params(manager, self.owner, path, classifier_class_distance_list, params)
+                if path == 'binary_class_confidence/svmlinear':
+                    return _create_model_from_params(manager, self.owner, path, classifier_sklearn, params, start_row=start_row, stop_row=stop_row)
+                elif path == 'multi_feature/nbnnlocal':
+                    return _create_model_from_params(manager, self.owner, path, classifier_class_distance_list, params, start_row=start_row, stop_row=stop_row)
                 elif path == 'hasher/rrmedian':
-                    return _create_model_from_params(manager, self.owner, path, hasher_train, params)
+                    return _create_model_from_params(manager, self.owner, path, hasher_train, params, start_row=start_row, stop_row=stop_row)
                 elif path == 'index/linear':
-                    return _create_model_from_params(manager, self.owner, path, index_train, params)
+                    return _create_model_from_params(manager, self.owner, path, index_train, params, start_row=start_row, stop_row=stop_row)
                 else:
                     bottle.abort(400)
             else:
@@ -633,11 +685,26 @@ class ModelsHBaseTable(HBaseTable):
         bottle.response.headers["Content-type"] = "application/json"
         return json.dumps(outs)
 
+    def post_row(self, row, params, files):
+        action = params['action']
+        with thrift_lock() as thrift:
+            manager = PicarusManager(thrift=thrift)
+            if action == 'i/takeout/link':
+                self._row_validate(row, 'r', thrift)
+                return _takeout_model_from_key(manager, row)
+            elif action == 'i/takeout/chain':
+                self._row_validate(row, 'r', thrift)
+                bottle.response.headers["Content-type"] = "application/json"
+                return json.dumps(_takeout_model_chain_from_key(manager, row))
+            else:
+                bottle.abort(400)
+
     def post_table(self, params, files):
         path = params['path']
         with thrift_lock() as thrift:
             manager = PicarusManager(thrift=thrift)
             return _create_model_from_params(manager, self.owner, path, lambda model_dict, model_params, inputs: model_dict, params)
+
 
 def get_table(_auth_user, table):
     annotation_re = re.search('annotations\-(results|users)\-([a-zA-Z0-9_\-]+)', table)

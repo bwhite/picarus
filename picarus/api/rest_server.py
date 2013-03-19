@@ -15,6 +15,8 @@ import annotators
 import logging
 import contextlib
 import tables
+from json import encoder
+encoder.FLOAT_REPR = lambda o: format(o, '.f')
 
 
 def check_version(func):

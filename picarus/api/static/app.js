@@ -110,7 +110,8 @@ function wrap_hints() {
 }
 
 function model_dropdown(args) {
-    var models = new PicarusModels();
+    var columns_model = ['data:name', 'data:output_type', 'data:tags', 'data:notes', 'data:prefix', 'data:start_row', 'data:stop_row', 'data:creation_time', 'data:param', 'data:input'];
+    var models = new PicarusRows([], {'table': 'models', columns: columns_model});
     if (typeof args.change === 'undefined') {
         args.change = function () {};
     }
@@ -244,16 +245,21 @@ function app_main() {
         psave: function (attributes, options) {
             return this.save(object_ub64_b64_enc(attributes), options);
         },
-        punset: function (column) {
+        get_table: function () {
             var table = this.table;
             if (_.isUndefined(table))
                 table = this.collection.table;
-            var row = this.id;
+            return table;
+        },
+        punset: function (column) {
             function s() {
                 this.unset(column);
             }
             s = _.bind(s, this);
-            picarus_api("/a1/data/" + table + "/" + row + "/" + column, 'DELETE', {success: s});
+            picarus_api("/a1/data/" + this.get_table() + "/" + this.id + "/" + column, 'DELETE', {success: s});
+        },
+        url : function() {
+            return '/a1/data/' + this.get_table() + '/' + this.id;
         }
     });
 
@@ -325,11 +331,21 @@ function app_main() {
                     button_confirm_click($('.value_delete'), delete_value);
                 });
             }
+            if (options.columns) {
+                this.columns = _.map(options.columns, function (x) {
+                    if (x == 'row')
+                        return x;
+                    return encode_id(x);
+                });
+            }
         },
         render: function() {
-            var columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
-                return _.keys(x.attributes);
-            })));
+            
+            var columns = this.columns;
+            if (_.isUndefined(columns))
+                columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
+                    return _.keys(x.attributes);
+                })));
             var deleteValueFuncLocal = function () {return ''};
             if (this.deleteValues)
                 deleteValueFuncLocal = deleteValueFunc;

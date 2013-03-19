@@ -70,6 +70,7 @@ class PicarusManager(object):
         self.model_chunks_column = 'data:model_chunks'
         self.model_column = 'data:model'
         self.input_column = 'data:input'
+        self.output_type_column = 'data:output_type'
         self.param_column = 'data:param'
         self.versions_column = 'data:versions'
         self.prefix_column = 'data:prefix'
@@ -79,11 +80,13 @@ class PicarusManager(object):
         self.name_column = 'data:name'
         self.tags_column = 'data:tags'
         self.sha1_column = 'data:sha1'
+        self.start_row_column = 'data:start_row'
+        self.stop_row_column = 'data:stop_row'
 
     def get_versions(self):
         return {x: get_version(x) for x in ['picarus', 'imfeat', 'imseg', 'hadoopy', 'impoint', 'hadoopy_hbase']}
 
-    def input_model_param_to_key(self, prefix, input, model, email, param={}, notes='', name='', tags=''):
+    def input_model_param_to_key(self, prefix, input, model, output_type, email, model_dict={}, param={}, notes='', name='', tags='', start_row=None, stop_row=None):
         assert isinstance(input, dict)
         assert isinstance(param, dict)
         dumps = lambda x: json.dumps(x, sort_keys=True, separators=(',', ':'))
@@ -103,6 +106,7 @@ class PicarusManager(object):
         model_key = prefix + model_sha1 + os.urandom(7)
         cols = [hadoopy_hbase.Mutation(column=self.model_type_column, value=model_type),
                 hadoopy_hbase.Mutation(column=self.input_column, value=input_str),
+                hadoopy_hbase.Mutation(column=self.output_type_column, value=output_type),
                 hadoopy_hbase.Mutation(column=self.param_column, value=param_str),
                 hadoopy_hbase.Mutation(column=self.versions_column, value=json.dumps(self.versions)),
                 hadoopy_hbase.Mutation(column=self.prefix_column, value=prefix),
@@ -112,6 +116,10 @@ class PicarusManager(object):
                 hadoopy_hbase.Mutation(column=self.tags_column, value=tags),
                 hadoopy_hbase.Mutation(column=self.sha1_column, value=model_sha1),
                 hadoopy_hbase.Mutation(column='user:' + email, value='rw')]
+        if start_row is not None:
+            cols.append(hadoopy_hbase.Mutation(column=self.start_row_column, value=start_row))
+        if stop_row is not None:
+            cols.append(hadoopy_hbase.Mutation(column=self.stop_row_column, value=stop_row))
         chunk_count = 0
         while model_str:
             cols.append(hadoopy_hbase.Mutation(column=self.model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size]))
@@ -134,6 +142,20 @@ class PicarusManager(object):
         if not isinstance(model, dict):
             model = pickle.loads(zlib.decompress(base64.b64decode(model)))
         return input, model, param
+
+    def key_to_input_model_param_output(self, key):
+        columns = self.hb.getRowWithColumns(self.models_table, key, [self.input_column, self.model_chunks_column, self.param_column, self.output_type_column])[0].columns
+        input, param = json.loads(columns[self.input_column].value), json.loads(columns[self.param_column].value)
+        model_chunks = np.fromstring(columns[self.model_chunks_column].value, dtype=np.uint32)
+        output_type = columns[self.output_type_column].value
+        columns = self.hb.getRowWithColumns(self.models_table, key, [self.model_column + '-%d' % x for x in range(model_chunks)])[0].columns
+        model = ''.join(columns[self.model_column + '-%d' % x].value for x in range(model_chunks))
+        model = json.loads(model)
+        input = {k: base64.b64decode(v) for k, v in input.items()}
+        param = {k: base64.b64decode(v) for k, v in param.items()}
+        if not isinstance(model, dict):
+            model = pickle.loads(zlib.decompress(base64.b64decode(model)))
+        return input, model, param, output_type
 
     def _model_to_pb(self, pb, model, name):
         if isinstance(model, dict):
@@ -198,9 +220,9 @@ class PicarusManager(object):
                              cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
 
     def image_to_feature(self, feature_key, **kw):
-        input_dict, feature, params = self.key_to_input_model_param(feature_key)
+        input_dict, feature, params, feature_type = self.key_to_input_model_param_output(feature_key)
         feature_fp = picarus.api.model_tofile(feature)
-        feature_type = params['feature_type']
+        print(feature_type)
         assert feature_type in ('feature', 'multi_feature', 'mask_feature')
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(feature_key),
@@ -265,12 +287,13 @@ class PicarusManager(object):
         return k
 
     def feature_to_prediction(self, model_key, **kw):
-        input_dict, classifier, param = self.key_to_input_model_param(model_key)
+        input_dict, classifier, param, out = self.key_to_input_model_param_output(model_key)
         classifier_fp = picarus.api.model_tofile(classifier)
+        classifier_type = 'sklearn_decision_func' if out == 'binary_class_confidence' else 'class_distance_list'
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(model_key),
                    'CLASSIFIER_FN': os.path.basename(classifier_fp.name),
-                   'CLASSIFIER_TYPE': param['classifier_type']}
+                   'CLASSIFIER_TYPE': classifier_type}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_dict['feature']], files=[classifier_fp.name], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=classifier_fp, **kw)
