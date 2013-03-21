@@ -66,60 +66,53 @@ class PicarusManager(object):
         self.class_column = 'meta:class_2'
         self.indoor_class_column = 'meta:class_0'
         self.num_mappers = 6
-        self.versions = self.get_versions()
+        #self.versions = self.get_versions()
+
+        # Model columns
         self.model_chunks_column = 'data:model_chunks'
         self.model_column = 'data:model'
         self.input_column = 'data:input'
+        self.input_type_column = 'data:input_type'
         self.output_type_column = 'data:output_type'
-        self.param_column = 'data:param'
-        self.versions_column = 'data:versions'
-        self.prefix_column = 'data:prefix'
         self.model_type_column = 'data:model_type'
         self.creation_time_column = 'data:creation_time'
         self.notes_column = 'data:notes'
         self.name_column = 'data:name'
         self.tags_column = 'data:tags'
-        self.sha1_column = 'data:sha1'
-        self.start_row_column = 'data:start_row'
-        self.stop_row_column = 'data:stop_row'
+        self.factory_info_column = 'data:factory_info'
 
     def get_versions(self):
         return {x: get_version(x) for x in ['picarus', 'imfeat', 'imseg', 'hadoopy', 'impoint', 'hadoopy_hbase']}
 
-    def input_model_param_to_key(self, prefix, input, model, output_type, email, model_dict={}, param={}, notes='', name='', tags='', start_row=None, stop_row=None):
-        assert isinstance(input, dict)
-        assert isinstance(param, dict)
+    def output_type_to_prefix(self, output_type):
+        return {'feature': 'feat:', 'processed_image': 'data:', 'binary_class_confidence': 'pred:', 'multi_class_distance': 'pred:', 'hash': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[output_type]
+
+    def input_model_param_to_key(self, input, model, input_type, output_type, email, name, notes='', tags='', factory_info=None):
+        assert isinstance(input, str)
         dumps = lambda x: json.dumps(x, sort_keys=True, separators=(',', ':'))
-        input = {k: base64.b64encode(v) for k, v in input.items()}
-        param = {k: base64.b64encode(v) for k, v in param.items()}
-        input_str = dumps(input)
-        param_str = dumps(param)
         if isinstance(model, dict):
             model_type = 'json'
             model_str = dumps(model)
         else:
             model_type = 'pickle'
             model_str = dumps(base64.b64encode(zlib.compress(pickle.dumps(model, -1))))
-        input_model_param_str = dumps([input_str, model_str, param_str])
-        model_sha1 = hashlib.sha1(input_model_param_str).digest()
+        input_model_str = dumps([input, model_str])
+        model_sha1 = hashlib.sha1(input_model_str).digest()
         # Ensures model specifics cannot change, also ensures that name is unique
+        prefix = self.output_type_to_prefix(output_type)
         model_key = prefix + model_sha1 + os.urandom(7)
-        cols = [hadoopy_hbase.Mutation(column=self.model_type_column, value=model_type),
-                hadoopy_hbase.Mutation(column=self.input_column, value=input_str),
+
+        cols = [hadoopy_hbase.Mutation(column=self.input_column, value=input),
+                hadoopy_hbase.Mutation(column=self.input_type_column, value=input_type),
                 hadoopy_hbase.Mutation(column=self.output_type_column, value=output_type),
-                hadoopy_hbase.Mutation(column=self.param_column, value=param_str),
-                hadoopy_hbase.Mutation(column=self.versions_column, value=json.dumps(self.versions)),
-                hadoopy_hbase.Mutation(column=self.prefix_column, value=prefix),
+                hadoopy_hbase.Mutation(column=self.model_column, value=model_type),
                 hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time())),
                 hadoopy_hbase.Mutation(column=self.notes_column, value=notes),
                 hadoopy_hbase.Mutation(column=self.name_column, value=name),
                 hadoopy_hbase.Mutation(column=self.tags_column, value=tags),
-                hadoopy_hbase.Mutation(column=self.sha1_column, value=model_sha1),
                 hadoopy_hbase.Mutation(column='user:' + email, value='rw')]
-        if start_row is not None:
-            cols.append(hadoopy_hbase.Mutation(column=self.start_row_column, value=start_row))
-        if stop_row is not None:
-            cols.append(hadoopy_hbase.Mutation(column=self.stop_row_column, value=stop_row))
+        if factory_info is not None:
+            cols.append(hadoopy_hbase.Mutation(column=self.factory_info_column, value=factory_info))
         chunk_count = 0
         while model_str:
             cols.append(hadoopy_hbase.Mutation(column=self.model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size]))
@@ -143,19 +136,24 @@ class PicarusManager(object):
             model = pickle.loads(zlib.decompress(base64.b64decode(model)))
         return input, model, param
 
-    def key_to_input_model_param_output(self, key):
-        columns = self.hb.getRowWithColumns(self.models_table, key, [self.input_column, self.model_chunks_column, self.param_column, self.output_type_column])[0].columns
-        input, param = json.loads(columns[self.input_column].value), json.loads(columns[self.param_column].value)
-        model_chunks = np.fromstring(columns[self.model_chunks_column].value, dtype=np.uint32)
-        output_type = columns[self.output_type_column].value
-        columns = self.hb.getRowWithColumns(self.models_table, key, [self.model_column + '-%d' % x for x in range(model_chunks)])[0].columns
-        model = ''.join(columns[self.model_column + '-%d' % x].value for x in range(model_chunks))
+    def key_to_model(self, key):
+        columns = {x: y.value for x, y in self.hb.getRow(self.models_table, key)[0].columns.items()}
+        column_to_name = {}
+        names = ['model_chunks', 'input', 'input_type', 'output_type', 'model_type', 'creation_time', 'notes', 'name', 'tags', 'factory_info']
+        for name in names:
+            column_to_name[getattr(self, name + '_column')] = name
+        model_chunks = np.fromstring(columns[self.model_chunks_column], dtype=np.uint32)
+        model = []
+        for x in range(model_chunks):
+            col = self.model_column + '-%d' % x
+            model.append(columns[col])
+            del columns[col]
+        del columns[self.model_chunks_column]
+        model = ''.join(model)
         model = json.loads(model)
-        input = {k: base64.b64decode(v) for k, v in input.items()}
-        param = {k: base64.b64decode(v) for k, v in param.items()}
         if not isinstance(model, dict):
             model = pickle.loads(zlib.decompress(base64.b64decode(model)))
-        return input, model, param, output_type
+        return model, {column_to_name[k] : v for k, v in columns.items() if k in column_to_name}
 
     def _model_to_pb(self, pb, model, name):
         if isinstance(model, dict):
@@ -194,13 +192,8 @@ class PicarusManager(object):
 
     def image_thumbnail(self, **kw):
         # Makes 150x150 thumbnails from the data:image column
-        model_fp = picarus.api.model_tofile({'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}})
-        cmdenvs = {'HBASE_TABLE': self.images_table,
-                   'HBASE_OUTPUT_COLUMN': base64.b64encode('thum:image_150sq'),
-                   'MODEL_FN': os.path.basename(model_fp.name)}
-        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_preprocess.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, files=[model_fp.name], columns=['data:image'], single_value=True,
-                             cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
+        model = {'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}}
+        self.takeout_link_job(model, 'data:image', 'thum:image_150sq', **kw)
 
     def image_exif(self, **kw):
         cmdenvs = {'HBASE_TABLE': self.images_table,
@@ -210,28 +203,42 @@ class PicarusManager(object):
                              cmdenvs=cmdenvs, **kw)
 
     def image_preprocessor(self, model_key, **kw):
-        input_dict, model_dict, _ = self.key_to_input_model_param(model_key)
-        model_fp = picarus.api.model_tofile(model_dict)
+        model, columns = self.key_to_model(model_key)
+        model_fp = picarus.api.model_tofile(model)
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(model_key),
                    'MODEL_FN': os.path.basename(model_fp.name)}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_preprocess.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_dict['raw_image']], single_value=True,
+                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[base64.urlsafe_b64decode(columns['input'])], single_value=True,
                              cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
 
-    def image_to_feature(self, feature_key, **kw):
-        input_dict, feature, params, feature_type = self.key_to_input_model_param_output(feature_key)
-        feature_fp = picarus.api.model_tofile(feature)
-        print(feature_type)
-        assert feature_type in ('feature', 'multi_feature', 'mask_feature')
+    def image_to_feature(self, model_key, **kw):
+        model, columns = self.key_to_model(model_key)
+        model_fp = picarus.api.model_tofile(model)
         cmdenvs = {'HBASE_TABLE': self.images_table,
-                   'HBASE_OUTPUT_COLUMN': base64.b64encode(feature_key),
-                   'FEATURE_FN': os.path.basename(feature_fp.name),
-                   'FEATURE_TYPE': feature_type}
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode(model_key),
+                   'MODEL_FN': os.path.basename(model_fp.name)}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_to_feature.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, columns=[input_dict['processed_image']], single_value=True,
-                             cmdenvs=cmdenvs, files=[feature_fp.name],
-                             jobconfs={'mapred.task.timeout': '6000000'}, dummy_fp=feature_fp, **kw)
+                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[base64.urlsafe_b64decode(columns['input'])], single_value=True,
+                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
+
+    def takeout_link_job(self, model, input_column, output_column, **kw):
+        model_fp = picarus.api.model_tofile(model)
+        cmdenvs = {'HBASE_TABLE': self.images_table,
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
+                   'MODEL_FN': os.path.basename(model_fp.name)}
+        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/takeout_link_job.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
+                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
+
+    def takeout_chain_job(self, model, input_column, output_column, **kw):
+        model_fp = picarus.api.model_tofile(model)
+        cmdenvs = {'HBASE_TABLE': self.images_table,
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
+                   'MODEL_FN': os.path.basename(model_fp.name)}
+        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
+                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
 
     def features_to_hasher(self, feature_key, hasher, **kw):
         features = hadoopy_hbase.scanner_column(self.hb, self.images_table, feature_key, **kw)

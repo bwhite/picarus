@@ -13,7 +13,7 @@ function picarus_api(url, method, args) {
     if (method === 'GET') {
         data = undefined;
         if (args.hasOwnProperty('data')) {
-            data = data;
+            data = args.data;
         }
     } else {
         if (args.hasOwnProperty('data')) {

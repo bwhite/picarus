@@ -15,8 +15,6 @@ import annotators
 import logging
 import contextlib
 import tables
-from json import encoder
-encoder.FLOAT_REPR = lambda o: format(o, '.f')
 
 
 def check_version(func):
@@ -101,6 +99,7 @@ def parse_columns():
 
 def parse_params():
     if bottle.request.content_type == "application/json":
+        # TODO: Is this too strict?  We may want to let json expose real types
         return {str(k): str(v) for k, v in bottle.request.json.items()}
     return dict(bottle.request.params)
 
@@ -115,6 +114,7 @@ def data_table(_auth_user, table_name):
     if method == 'GET':
         return table.get_table(columns=parse_columns())
     elif method == 'POST':
+        print_request()
         return table.post_table(*parse_params_files())
     else:
         bottle.abort(403)

@@ -85,6 +85,14 @@ function progressModal() {
     return {done: done, update: update};
 }
 
+function alert_running() {
+    $('#results').html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
+}
+
+function alert_done() {
+    $('#results').html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
+}
+
 function alert_running_wrap(el) {
     return function () {
         el.html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
@@ -110,7 +118,7 @@ function wrap_hints() {
 }
 
 function model_dropdown(args) {
-    var columns_model = ['data:name', 'data:output_type', 'data:tags', 'data:notes', 'data:prefix', 'data:start_row', 'data:stop_row', 'data:creation_time', 'data:param', 'data:input'];
+    var columns_model = ['data:name', 'data:input_type', 'data:output_type', 'data:tags', 'data:notes', 'data:prefix', 'data:start_row', 'data:stop_row', 'data:creation_time', 'data:param', 'data:input', 'data:factory_info'];
     var models = new PicarusRows([], {'table': 'models', columns: columns_model});
     if (typeof args.change === 'undefined') {
         args.change = function () {};
@@ -131,7 +139,7 @@ function model_dropdown(args) {
             n = this.$el;
             this.$el.empty();
             var select_template = "{{#models}}<option value='{{row}}'>{{text}}</option>{{/models}};"
-            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.pescape('data:tags')}});
+            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.pescape('data:input_type') + ' ' + data.pescape('data:output_type') + ' ' + data.pescape('data:tags')}});
             this.$el.append(Mustache.render(select_template, {models: models_filt}));
             this.renderDrop();
         }
@@ -207,6 +215,44 @@ function row_selector(prefixDrop, startRow, stopRow) {
     });
 }
 
+function slices_selector(prefixDrop, startRow, stopRow, addButton, clearButton, slicesText) {
+    var AppView = Backbone.View.extend({
+        initialize: function() {
+            _.bindAll(this, 'render');
+            this.model.bind('reset', this.render);
+            this.model.bind('change', this.render);
+        },
+        events: {'change': 'renderDrop'},
+        renderDrop: function () {
+            var prefix = prefixDrop.children().filter('option:selected').val();
+            if (typeof startRow !== 'undefined')
+                startRow.val(prefix);
+            // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
+            if (typeof stopRow !== 'undefined')
+                stopRow.val(prefix_to_stop_row(prefix));
+        },
+        render: function() {
+            this.$el.empty();
+            // TODO: Check permissions and accept perissions as argument
+            var prefixes = _.keys(this.model.pescapejs('image_prefixes'));
+            var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
+            this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
+            this.renderDrop();
+        }
+    });
+    addButton.click(function () {
+        slicesText.append($('<option>').text(startRow.val() + '/' + stopRow.val()).attr('value', encode_id(startRow.val()) + '/' + encode_id(stopRow.val())));
+    });
+    clearButton.click(function () {
+        slicesText.html('');
+    });
+    var auth = login_get(function (email_auth) {
+        user = new PicarusUser({row: encode_id(email_auth.email)});
+        new AppView({model: user, el: prefixDrop});
+        user.fetch();
+    });
+}
+
 function app_main() {
     // Setup models
     function param_encode(dd) {
@@ -214,10 +260,6 @@ function app_main() {
             return v.join('=');
         }).join('&');
     }
-    var modelParams = ['data:input', 'data:versions', 'data:prefix', 'data:creation_time', 'data:param', 'data:notes', 'data:name', 'data:tags'];
-    modelParams = '?' + param_encode(_.map(modelParams, function (x) {
-        return ['column', encode_id(x)];
-    }));
     PicarusRow = Backbone.Model.extend({
         idAttribute: "row",
         initialize: function(models, options) {
@@ -374,46 +416,7 @@ function app_main() {
         }
     });
 
-    PicarusModel = Backbone.Model.extend({
-        idAttribute: "row",
-        defaults : {
-        },
-        url : function() {
-            return this.id ? '/a1/data/models/' + this.id : '/a1/data/models' + modelParams; 
-        },
-        pescape: function (x) {
-            return _.escape(base64.decode(this.escape(encode_id(x))));
-        },
-        pescapejs: function (x) {
-            return JSON.parse(base64.decode(this.escape(encode_id(x))));
-        },
-        psave: function (attributes, options) {
-            return this.save(object_ub64_b64_enc(attributes), options);
-        }
-    });
-    PicarusModels = Backbone.Collection.extend({
-        model : PicarusModel,
-        url : function() {
-            return '/a1/data/models' + modelParams; 
-        }
-    });
-
-    PicarusParamModel = Backbone.Model.extend({
-        idAttribute: "row",
-        pescape: function (x) {
-            return _.escape(base64.decode(this.escape(encode_id(x))));
-        },
-        pescapejs: function (x) {
-            console.log(base64.decode(this.escape(encode_id(x))));
-            return JSON.parse(base64.decode(this.escape(encode_id(x))));
-        }
-    });
-    PicarusParamModels = Backbone.Collection.extend({
-        model : PicarusParamModel,
-        url : "/a1/data/parameters"
-    });
-
-    PicarusUser = Backbone.Model.extend({
+    PicarusUser = Backbone.Model.extend({ // TODO: Switch over to PicarusRow
         idAttribute: "row",
         defaults : {
         },
@@ -434,7 +437,7 @@ function app_main() {
         url : "/a1/data/users"
     });
 
-    PicarusImage = Backbone.Model.extend({
+    PicarusImage = Backbone.Model.extend({ // TODO: Switch over to PicarusRow
         idAttribute: "row",
         defaults : {
         },
