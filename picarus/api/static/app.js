@@ -117,6 +117,18 @@ function wrap_hints() {
     });
 }
 
+function button_running() {
+    $('#runButton').button('loading');
+}
+
+function button_reset() {
+    $('#runButton').button('reset');
+}
+
+function button_error() {
+    $('#runButton').button('error');
+}
+
 function model_dropdown(args) {
     var columns_model = ['data:name', 'data:input_type', 'data:output_type', 'data:tags', 'data:notes', 'data:prefix', 'data:start_row', 'data:stop_row', 'data:creation_time', 'data:param', 'data:input', 'data:factory_info'];
     var models = new PicarusRows([], {'table': 'models', columns: columns_model});
@@ -138,8 +150,10 @@ function model_dropdown(args) {
         render: function() {
             n = this.$el;
             this.$el.empty();
-            var select_template = "{{#models}}<option value='{{row}}'>{{text}}</option>{{/models}};"
-            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.pescape('data:input_type') + ' ' + data.pescape('data:output_type') + ' ' + data.pescape('data:tags')}});
+            var select_template = "{{#models}}<option value='{{row}}'>{{{text}}}</option>{{/models}};" // text is escaped already
+            // TODO: The name needs to be escaped in a special way for this to work
+            //base64.decode(data.get(encode_id('data:name')))
+            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.pescape('data:tags') + ' ' + data.pescape('data:name')}});
             this.$el.append(Mustache.render(select_template, {models: models_filt}));
             this.renderDrop();
         }
@@ -215,7 +229,11 @@ function row_selector(prefixDrop, startRow, stopRow) {
     });
 }
 
-function slices_selector(prefixDrop, startRow, stopRow, addButton, clearButton, slicesText) {
+function slices_selector() {
+    var prefixDrop = $('#slicesSelectorPrefixDrop'), startRow = $('#slicesSelectorStartRow'), stopRow = $('#slicesSelectorStopRow');
+    var addButton = $('#slicesSelectorAddButton'), clearButton = $('#slicesSelectorClearButton'), slicesText = $('#slicesSelectorSlices');
+    if (!prefixDrop.size())  // Skip if not visible
+        return;
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
@@ -251,6 +269,15 @@ function slices_selector(prefixDrop, startRow, stopRow, addButton, clearButton, 
         new AppView({model: user, el: prefixDrop});
         user.fetch();
     });
+}
+
+function slices_selector_get(split) {
+    var out = _.map($('#slicesSelectorSlices').children(), function (x) {return $(x).attr('value')});
+    if (split)
+        return _.map(out, function (x) {
+            return x.split('/')
+        });
+    return out;
 }
 
 function app_main() {
@@ -428,7 +455,6 @@ function app_main() {
             return _.escape(base64.decode(this.escape(encode_id(x))));
         },
         pescapejs: function (x) {
-            console.log(base64.decode(this.escape(encode_id(x))));
             return JSON.parse(base64.decode(this.escape(encode_id(x))));
         }
     });
@@ -483,8 +509,10 @@ function app_main() {
             }
             return [val, _.template(document.getElementById(prefix + selector_id).innerHTML, {baseLogin: document.getElementById('bpl_login').innerHTML,
                                                                                               rowSelect: document.getElementById('bpl_row_select').innerHTML,
+                                                                                              slicesSelect: document.getElementById('bpl_slices_select').innerHTML,
                                                                                               filter: document.getElementById('bpl_filter').innerHTML,
-                                                                                              prefixSelect: document.getElementById('bpl_prefix_select').innerHTML})];
+                                                                                              prefixSelect: document.getElementById('bpl_prefix_select').innerHTML,
+                                                                                              runButton: document.getElementById('bpl_run_button').innerHTML})];
         })),
         render:function(route){
             //Simply sets the content as appropriate

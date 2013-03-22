@@ -500,7 +500,8 @@ class ImagesHBaseTable(HBaseTable):
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = base64.urlsafe_b64decode(params['model'])
                 chain_inputs, model_chain = zip(*_takeout_model_chain_from_key(manager, model_key))
-                manager.takeout_chain_job(model_chain, chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row)
+                print(model_chain)
+                manager.takeout_chain_job(list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/hash':
                 self._slice_validate(start_row, stop_row, 'rw')

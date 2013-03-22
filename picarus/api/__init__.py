@@ -80,7 +80,7 @@ def feature_classifier_fromstring(c_ser):
 
 
 def model_tofile(model):
-    if isinstance(model, dict):
+    if isinstance(model, dict) or isinstance(model, list):
         return _tempfile(zlib.compress(json.dumps(model)), suffix='.js.gz')
     else:
         return _tempfile(zlib.compress(pickle.dumps(model)), suffix='.pkl.gz')

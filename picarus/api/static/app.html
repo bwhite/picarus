@@ -67,6 +67,10 @@
       <input type="hidden" id="userAuth" value="">
     </script>
 
+    <script type="text/html" id="bpl_run_button">
+      <button class="btn" type="submit" data-loading-text="<i class='icon-time icon-white'></i>" data-error-text="<i class='icon-warning-sign icon-white'></i>" id="runButton" style="margin-bottom: 9px">Run</button>
+    </script>
+
     <script type="text/html" id="bpl_row_select">
           <h3>Slice</h3>
           <select id="rowPrefixDrop" class="input-small"></select>
@@ -76,12 +80,12 @@
 
     <script type="text/html" id="bpl_slices_select">
           <h3>Slices</h3>
-          <select id="rowPrefixDrop" class="input-small"></select>
-          <span class="hint hint--bottom" data-hint="Start row (inclusive, percent encode binary)"><input class="input-small" type="text" placeholder="Row start" id="startRow"></span>
-          <span class="hint hint--bottom" data-hint="Stop row (exclusive, percent encode binary)"><input class="input-small" type="text" placeholder="Row stop" id="stopRow"></span>
-          <button class="btn" type="submit" id="addSliceButton" style="margin-bottom: 9px">Add</button>
-          <button class="btn" type="submit" id="clearSliceButton" style="margin-bottom: 9px">Clear</button>
-          <span class="hint hint--bottom" data-hint="Slices selected for input"><select id="slicesText"></select></span>
+          <select id="slicesSelectorPrefixDrop" class="input-small" hint="Available row prefixes"></select>
+          <input class="input-small" type="text" placeholder="Row start" id="slicesSelectorStartRow" hint="Start row (inclusive, percent encode binary)">
+          <input class="input-small" type="text" placeholder="Row stop" id="slicesSelectorStopRow" hint="Stop row (exclusive, percent encode binary)">
+          <button class="btn" type="submit" id="slicesSelectorAddButton" style="margin-bottom: 9px">Add</button>
+          <button class="btn" type="submit" id="slicesSelectorClearButton" style="margin-bottom: 9px">Clear</button>
+          <select id="slicesSelectorSlices" hint="Slices selected for input"></select>
     </script>
 
 
@@ -267,7 +271,7 @@
       <label class="checkbox" style="margin-bottom: 0px;" hint="Geotagged images only" for="demogeo">
         <input type="checkbox" value="" id="demogeo"> Geotagged
       </label>
-      <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+      <%=runButton%>
       </div>
       <div class="clearfix span12 skinny" id="results"></div>
       <div class="clearfix span12 skinny" id="numRows"></div>
@@ -278,6 +282,7 @@
       function render_crawl_flickr() {
       row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
       $('#runButton').click(function () {
+          button_running();
           var demo_class = $('#democlass').val();
           var demo_query = $('#demoquery').val();
           var row_prefix = $('#rowPrefixDrop').val();
@@ -303,7 +308,7 @@
               if (iters <= 0) {
                   simul -= 1;
                   if (simul == 0)
-                      alert_success_wrap($('#results'))();
+                      button_reset();
                   return;
               }
               iters -= 1;
@@ -328,7 +333,6 @@
               }
               picarus_api("/a1/slice/images/" + encode_id(row_prefix) + '/' + encode_id(prefix_to_stop_row(row_prefix)), "POST", {success: success, data: p});
           }
-          alert_running_wrap($('#results'))();
           _.each(_.range(simul), call_api);
       });
 
@@ -419,7 +423,7 @@
             <span id="params"></span>
             <span id="slices_select"></span>
           </span>
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Create</button>
+          <%=runButton%>
         </div>
       </div>
       <div class="clearfix span12 skinny" id="results"></div>
@@ -473,7 +477,7 @@
                   add_param_selections(model.pescapejs('params'), 'param-');
                   if (model.pescape('data') === 'slices') {
                       $('#slices_select').append(document.getElementById('bpl_slices_select').innerHTML);
-                      slices_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'), $('#addSliceButton'), $('#clearSliceButton'), $('#slicesText'));
+                      slices_selector();
                   }
                   var inputs;
                   if (model.pescape('type') == 'model')
@@ -482,7 +486,6 @@
                       inputs = model.pescapejs('input_types');
                   _.each(inputs, function (value) {
                       var cur_el;
-                      console.log(value);
                       var cur_id = _.uniqueId('model_select_');          
                       if (value === 'raw_image') {
                           $('#params').append($('<input>').attr('name', 'input-' + value).attr('type', 'hidden').val(encode_id('data:image')));
@@ -534,7 +537,7 @@
              params.path = decode_id(path);
              if (model.pescape('type') === 'factory') {
                  params.table = 'images';
-                 params.slices = _.map($('#slicesText').children(), function (x) {return $(x).attr('value')}).join(',');
+                 params.slices = slices_selector_get().join(',');
                  p = params;
                  picarus_api("/a1/data/models", "POST", {success: success, data: params});
              } else {
@@ -600,7 +603,10 @@
         </div>
         <div class="span5">
           <h3>Options</h3>
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <label class="checkbox" style="margin-bottom: 0px;" hint="Process entire chain" for="chainCheck">
+            <input type="checkbox" value="" id="chainCheck">
+          </label>
+          <%=runButton%>
         </div>
       </div>
       <div class="clearfix span12 skinny" id="results"></div>
@@ -612,14 +618,14 @@
                           el: $('#model_select')});
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
-              alert_running();
+              button_running();
               var startRow = encode_id($('#startRow').val());
               var stopRow = encode_id($('#stopRow').val());
-              function success() {
-                  alert_done();
-              }
-              var data = {action: 'io/link', model: $('#model_select').find(":selected").val()};
-              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: data});
+              var action = 'io/link';
+              if ($('#chainCheck').is(':checked'))
+                  action = 'io/chain';
+              var data = {action: action, model: $('#model_select').find(":selected").val()};
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: button_reset, fail: button_error, data: data});
           });
       }
     </script>
@@ -631,7 +637,7 @@
         </div>
         <div class="span5">
           <h3>Options</h3>
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
         </div>
       </div>
       <div class="clearfix span12 skinny" id="results"></div>
@@ -641,10 +647,10 @@
       function render_process_thumbnail() {
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
-              alert_running_wrap($('#results'))();
+              button_running();
               var startRow = encode_id($('#startRow').val());
               var stopRow = encode_id($('#stopRow').val());
-              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: alert_success_wrap($('#results')), fail: alert_fail_wrap($('#results')), data: {action: 'io/thumbnail'}});
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: button_reset, fail: button_error, data: {action: 'io/thumbnail'}});
           });
       }
     </script>
@@ -656,7 +662,7 @@
         </div>
         <div class="span5">
           <h3>Options</h3>
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
         </div>
       </div>
       <div class="clearfix span12 skinny" id="results"></div>
@@ -666,13 +672,10 @@
       function render_process_exif() {
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
-              alert_running();
+              button_running();
               var startRow = encode_id($('#startRow').val());
               var stopRow = encode_id($('#stopRow').val());
-              function success() {
-                  alert_done();
-              }
-              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/exif'}});
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: button_reset, fail: button_error, data: {action: 'io/exif'}});
           });
       }
     </script>
@@ -686,7 +689,7 @@
           <h3>Options</h3>
           <input class="input-small" type="text" placeholder="Column" id="columnName" value="">
           <input class="input-small" type="text" placeholder="Value" id="columnValue" value="">
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
         </div>
       </div>
       <div class="clearfix span12 skinny" id="results"></div>
@@ -696,17 +699,14 @@
       function render_process_modify() {
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
-              alert_running();
+              button_running();
               var columnName = encode_id($('#columnName').val());
               var columnValue = base64.encode($('#columnValue').val());
               var startRow = encode_id($('#startRow').val());
               var stopRow = encode_id($('#stopRow').val());
-              function success() {
-                  alert_done();
-              }
               var data = {};
               data[columnName] = columnValue;
-              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "PATCH", {success: success, data: data});
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "PATCH", {success: button_reset, fail: button_error, data: data});
           });
       }
     </script>
@@ -725,7 +725,7 @@
           <input class="input-small" type="text" placeholder="Column" id="columnName" value="">
           <input class="input-small" type="text" placeholder="Value" id="columnValue" value="">
           <input class="input-small" type="text" placeholder="Max Rows" id="maxRows" value="">
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</div>
+          <%=runButton%>
         </div>
       </div>
       <div class="clearfix span12 skinny" id="results"></div>
@@ -741,7 +741,7 @@
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           row_selector($('#rowPrefixDrop2'));
           $('#runButton').click(function () {
-              alert_running();
+              button_running();
               var imageColumn = encode_id('data:image');
               var columnName = encode_id($('#columnName').val());
               var columnValue = $('#columnValue').val();
@@ -754,14 +754,12 @@
                   var cur_row = encode_id(prefix + random_bytes(10));
                   cur_data = {};
                   cur_data[imageColumn] = columns[imageColumn];
-                  console.log(cur_row);
-                  console.log(columns[imageColumn].length);
                   if (columnName.length)
                       cur_data[columnName] = base64.encode(columnValue);
                   picarus_api_row("images", cur_row, "PATCH", {data: cur_data});
               }
               // Scan through rows, each one write back to the prefix
-              picarus_api_data_scanner("images", startRow, stopRow, [imageColumn], {success: success, maxRows: maxRows, maxRowsIter: 5});
+              picarus_api_data_scanner("images", startRow, stopRow, [imageColumn], {success: success, fail: button_error, maxRows: maxRows, maxRowsIter: 5});
           });
       }
     </script>
@@ -792,7 +790,7 @@
         </div>
         <div class="span5">
           <h3>Options</h3>
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
         </div>
       </div>
       <div class="clearfix span12 skinny" id="results"></div>
@@ -823,7 +821,7 @@
         <div class="span5">
           <h3>Options</h3>
           <input class="input-small" type="text" placeholder="Query" id="query" value="">
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
         </div>
       </div>
       <div class="clearfix span12 skinny" id="results"></div>
@@ -855,7 +853,7 @@
         <div class="span5">
           <h3>Options</h3>
           <input class="input-small" type="text" placeholder="Query" id="query" value="">
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
         </div>
       </div>
       <div class="clearfix span12 skinny" id="results"></div>
@@ -887,7 +885,7 @@
           <div class="span5">
           <h3>Options</h3>
           <%=filter%>
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
           </div>
         </div>
       <div class="clearfix span12 skinny" style="padding-left:20px; padding-right:20px" id="results"></div>
@@ -932,7 +930,7 @@
           <h3>Options</h3>
           <%=filter%>
           <input class="input-small" type="text" placeholder="Max Size" id="maxSize" value="128">
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
           <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
           </div>
         </div>
@@ -1023,7 +1021,7 @@
           <h3>Options</h3>
           <%=filter%>
           <input class="input-small" type="text" placeholder="Max Size" id="maxSize" value="128">
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
           <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
           </div>
         </div>
@@ -1119,7 +1117,7 @@
           </div>
           <div class="span5">
           <h3>Options</h3>
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
           <button class="btn" type="submit" id="nextButton" style="margin-bottom: 9px" disabled>Next</button>
           <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
           </div>
@@ -1144,6 +1142,7 @@
       function render_visualize_duplicates() {
           row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
           $('#runButton').click(function () {
+              button_running();
               var startRow = encode_id(unescape($('#startRow').val()));
               var stopRow = encode_id(unescape($('#stopRow').val()));
               var imageColumn = encode_id('data:image');
@@ -1153,7 +1152,6 @@
                   return;
               }
               button_confirm_click_reset($('#removeButton'));
-              alert_running();
               function display_clusters (clusters) {
                   var num = 30;
                   var next_clusters = clusters.slice(num);
@@ -1178,17 +1176,17 @@
               }
               function remove_dupes(clusters) {
                  var rows = [];
-                 _.each(clusters, function (x) {rows = rows.concat(_.shuffle(x.rows).slice(1));console.log(rows.length)});
+                 _.each(clusters, function (x) {rows = rows.concat(_.shuffle(x.rows).slice(1));});
                  picarus_api_delete_rows(rows, progressModal());
               }
               function success_func(xhr) {
-                  alert_done();
+                  button_reset();
                   var dedupe_response = JSON.parse(xhr.responseText);
                   $('#removeButton').removeAttr('disabled');
                   button_confirm_click($('#removeButton'), function () {remove_dupes(dedupe_response)})
                   display_clusters(dedupe_response);
               }
-              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success_func, data: {action: 'i/dedupe/identical', column: imageColumn}});
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success_func, fail: button_error, data: {action: 'i/dedupe/identical', column: imageColumn}});
           });
       }
     </script>
@@ -1205,7 +1203,7 @@
           <input class="input-small" type="text" placeholder="Target Longitude" id="demolong" value="">
           <input class="input-small" type="text" placeholder="Max Distance" id="demodist" value="5">
           <input class="input-small" type="checkbox" id="filterInvert">
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
           <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
           </div>
         </div>
@@ -1294,7 +1292,7 @@
           </div>
           <div class="span5">
           <h3>Options</h3>
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
+          <%=runButton%>
         </div>
       <div id="histYear"></div>
       <div id="histMonth"></div>
@@ -1561,21 +1559,19 @@
           <h3>Model</h3>
           <select id="model_select"></select>
         </div>
-        <div class="span3">
-          <%=rowSelect%>
+        <div class="span8">
+          <%=slicesSelect%>
         </div>
         <div class="span5">
           <h3>Options</h3>
           <input class="input-small" type="text" placeholder="Positive Class" id="posClass" value="" readonly="readonly">
           <input class="input-small" type="text" placeholder="GT Column" id="gtColumn" readonly="readonly" value="" >
           <input class="input-small" type="text" placeholder="Classifier Key" id="modelKey" value="" readonly="readonly">
-          <button class="btn" type="submit" id="runButton" style="margin-bottom: 9px">Run</button>
-      <div class="progress progress-striped active" id="progress_bar">
-        <div class="bar" style="width: 0%;"  id="progress"></div>
-      </div>
+          <%=runButton%>
         </div>
       </div>
       <div class="clearfix span12 skinny" id="results">
+        <div id="slicesTable" style="padding: 15px 35px 15px 35px"></div>
         <div id="base" style="position:relative;top:-35px;"></div>
         <div id="graph_confidence_scatter" style="height:200px;width:600px"></div>
         <div id="graph_confidence_scatter_norm" style="height:200px;width:600px"></div>
@@ -1595,40 +1591,70 @@
                               $('#modelKey').val(row);
                           },
                           el: $('#model_select')});
-          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+          slices_selector();
           $('#runButton').click(function () {
-          confs = {pos_confs: [], neg_confs: []};
-          var gt_column = $('#gtColumn').val();
-          var conf_column = $('#modelKey').val();
-          var startRow = encode_id($('#startRow').val());
-          var stopRow = encode_id($('#stopRow').val());
-          var posClass = $('#posClass').val();
-          $('#progress_bar').show()
-          function success(row, columns) {
-              $('#progress').css('width', (100 * (confs.pos_confs.length + confs.neg_confs.length) / 19850.) + '%')
-              if (_.has(columns, conf_column) && _.has(columns, gt_column)) {
-                  if (base64.decode(columns[gt_column]) == posClass) {
-                      confs.pos_confs.push(msgpack.unpack(base64.decode(columns[conf_column])));
-                  } else {
-                      confs.neg_confs.push(msgpack.unpack(base64.decode(columns[conf_column])));
+              button_running();
+              confs = {pos_confs: [], neg_confs: []};
+              var gt_column = $('#gtColumn').val();
+              var conf_column = $('#modelKey').val();
+              var posClass = $('#posClass').val();
+              
+              sliceStats = {}; // [startRow/stopRow] = {# pos, # neg, # noconf, #nometa, #noconfmeta}
+              var slices = slices_selector_get(true);
+              _.each(slices, function (start_stop_row, index) {
+                  var curSlice = start_stop_row.join('/');
+                  sliceStats[curSlice] = {'numPos': 0, 'numNeg': 0, 'noConf': 0, 'noGT': 0, 'noConfGT': 0};
+                  function success(row, columns) {
+                      $('#progress').css('width', (100 * (confs.pos_confs.length + confs.neg_confs.length) / 19850.) + '%')
+                      c = columns;
+                      if (_.has(columns, conf_column) && _.has(columns, gt_column)) {
+                          if (base64.decode(columns[gt_column]) == posClass) {
+                              sliceStats[curSlice].numPos += 1;
+                              confs.pos_confs.push(msgpack.unpack(base64.decode(columns[conf_column])));
+                          } else {
+                              sliceStats[curSlice].numNeg += 1;
+                              confs.neg_confs.push(msgpack.unpack(base64.decode(columns[conf_column])));
+                          }
+                      } else {
+                          if (!_.has(columns, conf_column))
+                              sliceStats[curSlice].noConf += 1;
+                              if (!_.has(columns, gt_column))
+                                  sliceStats[curSlice].noConfGT += 1;
+                          if (!_.has(columns, gt_column))
+                              sliceStats[curSlice].noGT += 1;
+                      }
                   }
-              } else {
-                  console.log('Row without confidence or GT');
-              }
-          }
-              function success_confs() {
-                  $('#progress_bar').hide()
-                  confs.neg_confs.sort(function(a, b) {return a - b});
-                  confs.pos_confs.sort(function(a, b) {return a - b});
-                  plot_confs(confs);
-              }
-              picarus_api_data_scanner("images", startRow, stopRow, [gt_column, conf_column], {success: success, done: success_confs});
+                  var success_confs;
+                  if (index == (slices.length - 1))
+                      success_confs = function () {
+                          confs.neg_confs.sort(function(a, b) {return a - b});
+                          confs.pos_confs.sort(function(a, b) {return a - b});
+                          plot_confs(confs);
+                          render_slice_stats_table($('#slicesTable'), sliceStats);
+                          button_reset();
+                      }
+                  else
+                      success_confs = function () {}
+                  picarus_api_data_scanner("images", start_stop_row[0], start_stop_row[1], [gt_column, conf_column], {success: success, done: success_confs});
+              });
           })
+      }
+      function render_slice_stats_table(table, sliceStats) {
+          //sliceStats[curSlice] = {'numPos': 0, 'numNeg': 0, 'noConf': 0, 'noGT': 0, 'noConfGT': 0};
+          var select_template = "<table>{{#slices}}<tr><td>{{name}}</td><td>{{numPos}}</td><td>{{numNeg}}</td><td>{{noConf}}</td><td>{{noGT}}</td><td>{{noConfGT}}</td></tr>{{/slices}}</table>"
+          function convert_name(k) {
+              return _.map(k.split('/'), function (x) {
+                  return decode_id(x);
+              }).join('/');
+          }
+          var slices = [{name: 'Slice', numPos: 'Pos', numNeg: 'Neg', noConf: 'No Conf', noGT: 'No GT', noConfGT: 'No ConfGT'}];
+          slices = slices.concat(_.map(sliceStats, function (v, k) {v.name = convert_name(k); return v}));
+          table.html(Mustache.render(select_template, {slices: slices}));
       }
       function confs_to_conf_hist(pos_confs, neg_confs, bins, normalize) {
           /* Takes in confs, produces a histogram capturing both pos/neg confs in each bin
              TODO: Check that each bin gets get an equal portion of the range
-           */
+          */
           var min_conf = Math.min(pos_confs[0], neg_confs[0]);
           var max_conf = Math.min(pos_confs[pos_confs.length - 1], neg_confs[neg_confs.length - 1]);
           var shift = min_conf;
@@ -1661,59 +1687,59 @@
           cms = confs_to_confusion_matrix([], []);
           if (!_.isEqual(cms, []))
               return 1;
-
+          
           cms = confs_to_confusion_matrix([0], []);
           if (!_.isEqual(cms, [[1, 0, 0, 0, 0]]))
               return 2;
-
+          
           cms = confs_to_confusion_matrix([], [0]);
           if (!_.isEqual(cms, [[0, 0, 1, 0, Infinity]]))
               return 3;
-
+          
           cms = confs_to_confusion_matrix([0], [0]);
           if (!_.isEqual(cms, [[1, 1, 0, 0, 0], [0, 0, 1, 1, Infinity]]))
               return 4;
-
+          
           cms = confs_to_confusion_matrix([1], [0]);
           if (!_.isEqual(cms, [[1, 0, 1, 0, 1]]))
               return 5;
-
+          
           cms = confs_to_confusion_matrix([0], [1]);
           if (!_.isEqual(cms, [[1, 1, 0, 0, 0], [0, 0, 1, 1, Infinity]]))
               return 6;
-
+          
           cms = confs_to_confusion_matrix([0, 0], [0]);
           if (!_.isEqual(cms, [[2, 1, 0, 0, 0], [0, 0, 1, 2, Infinity]]))
               return 7;
-
+          
           cms = confs_to_confusion_matrix([0, 1], [0]);
           if (!_.isEqual(cms, [[2, 1, 0, 0, 0], [1, 0, 1, 1, 1]]))
               return 8;
-
+          
           cms = confs_to_confusion_matrix([0, 0], [1]);
           if (!_.isEqual(cms, [[2, 1, 0, 0, 0], [0, 0, 1, 2, Infinity]]))
               return 9;
-
+          
           cms = confs_to_confusion_matrix([1, 2], [0]);
           if (!_.isEqual(cms, [[2, 0, 1, 0, 1]]))
               return 10;
-
+          
           cms = confs_to_confusion_matrix([0, 2], [1]);
           if (!_.isEqual(cms, [[2, 1, 0, 0, 0], [1, 0, 1, 1, 2]]))
               return 11;
-
+          
           cms = confs_to_confusion_matrix([0, 1], [2]);
           if (!_.isEqual(cms, [[2, 1, 0, 0, 0], [0, 0, 1, 2, Infinity]]))
               return 12;
-
+          
           cms = confs_to_confusion_matrix([1, 2], [0, 3]);
           if (!_.isEqual(cms, [[2, 1, 1, 0, 1], [0, 0, 2, 2, Infinity]]))
               return 13;
-
+          
           cms = confs_to_confusion_matrix([1, 2, 3], [0, 3]);
           if (!_.isEqual(cms, [[3, 1, 1, 0, 1], [0, 0, 2, 3, Infinity]]))
               return 14;
-
+          
           cms = confs_to_confusion_matrix([1, 2, 3, 3], [0, 3]);
           if (!_.isEqual(cms, [[4, 1, 1, 0, 1], [0, 0, 2, 4, Infinity]]))
               return 15;
@@ -1802,13 +1828,13 @@
                          hAxis: {title: 'Confidence'}};
           var chart0 = new google.visualization.LineChart(document.getElementById('graph_confidence_scatter'));
           chart0.draw(data0, options);
-
+          
           var data1 = to_google_data(confs_to_conf_hist(confs.pos_confs, confs.neg_confs, 100, true), ['Confidence', '+', '-']);
           options = {title: 'Classifier Confidence (normalized)',
                      hAxis: {title: 'Confidence'}};
           var chart1 = new google.visualization.LineChart(document.getElementById('graph_confidence_scatter_norm'));
           chart1.draw(data1, options);
-
+          
           // PR Curve
           var cms = confs_to_confusion_matrix(confs.pos_confs, confs.neg_confs);
           // Confidence accuracy
@@ -1825,7 +1851,7 @@
                      legend: {position: 'none'}};
           var chart2 = new google.visualization.LineChart(document.getElementById('graph_rps'));
           chart2.draw(data2, options);
-
+          
           var data3 = to_google_data(cms_to_fpr_tprs(cms), ['fpr', 'tpr'], true);
           options = {title: 'ROC Curve',
                      hAxis: {title: 'FPR', minValue: 0, maxValue: 1},
@@ -1834,7 +1860,7 @@
                      legend: {position: 'none'}};
           var chart3 = new google.visualization.LineChart(document.getElementById('graph_roc'));
           chart3.draw(data3, options);
-
+          
           
           // This connects all the charts together
           function setNearest(chart, data, column, select_columns, val) {
@@ -1846,7 +1872,7 @@
                       minIndex = i;
                   }
               }
-                              
+              
               chart.setSelection(_.map(select_columns, function (col) {return {row: minIndex, column: col}}));
           }
           function setSelections(thresh) {
