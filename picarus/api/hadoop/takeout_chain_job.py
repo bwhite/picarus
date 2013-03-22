@@ -11,7 +11,6 @@ class Mapper(picarus.api.HBaseMapper):
     def __init__(self):
         super(Mapper, self).__init__()
         self._model = zlib.decompress(open(os.environ['MODEL_FN']).read())
-        print(self._model)
         self.job = picarus_takeout.ModelChain(self._model)
 
     def _map(self, row, input_binary):

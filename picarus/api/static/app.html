@@ -564,20 +564,33 @@
 
     <script type="text/javascript">
       function render_models_single() {
-          model_dropdown({modelFilter: function (x) {return true},
-                          change: function() {},
-                          el: $('#model_select')});
-
-          $('#imagefile').change(function () {
+          var models = model_dropdown({modelFilter: function (x) {return true},
+                                       change: function() {},
+                                       el: $('#model_select')});
+          function fileChange() {
+              $('#imagefile').wrap('<div />');
               if ($('#imagefile')[0].files.length != 1) {
                   display_alert('You must specify an image!');
                   return;
               }
               var modelKey = $('#model_select').find(":selected").val();
               function success_func(xhr) {
+                  $('#imagefile').parent().html($('#imagefile').parent().html());
+                  $('#imagefile').change(fileChange);
                   result = JSON.parse(xhr.responseText);
-                  // TODO: Check the model's output_type and display based on that
-                  $('#results').html('Classifier Confidence: ' + msgpack.unpack(base64.decode(result[modelKey])));
+                  var outputType = models.get(modelKey).pescape('data:output_type');
+                  if (outputType == 'binary_class_confidence') {
+                      $('#results').html($('<h3>').text('Classifier Confidence'));
+                      $('#results').append(msgpack.unpack(base64.decode(result[modelKey])));
+                  } else if (outputType == 'processed_image') {
+                      $('#results').html($('<h3>').text('Processed Image'));
+                      $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + result[modelKey]));
+                  } else if (outputType == 'feature') {
+                      $('#results').html($('<h3>').text('Feature'));
+                      $('#results').html(_.escape(JSON.stringify(msgpack.unpack(base64.decode(result[modelKey]))[0])));
+                  } else {
+                      alert('Unrecognized output type')
+                  }
               }
               function upload_func(xhr) {
                   var response = JSON.parse(xhr.responseText);
@@ -588,7 +601,8 @@
               data[encode_id('data:image')] = $('#imagefile')[0].files[0];
               picarus_api_upload(table, {data: data, success: upload_func})
               $('#results').html('');
-          });
+          }
+          $('#imagefile').change(fileChange);
       }
     </script>
 
@@ -759,7 +773,7 @@
                   picarus_api_row("images", cur_row, "PATCH", {data: cur_data});
               }
               // Scan through rows, each one write back to the prefix
-              picarus_api_data_scanner("images", startRow, stopRow, [imageColumn], {success: success, fail: button_error, maxRows: maxRows, maxRowsIter: 5});
+              picarus_api_data_scanner("images", startRow, stopRow, [imageColumn], {success: success, done: button_reset, fail: button_error, maxRows: maxRows, maxRowsIter: 5});
           });
       }
     </script>
@@ -1110,87 +1124,6 @@
       }
     </script>
 
-    <script type="text/html" id="tpl_visualize_duplicates">
-        <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
-          <div class="span5">
-          <%=rowSelect%>
-          </div>
-          <div class="span5">
-          <h3>Options</h3>
-          <%=runButton%>
-          <button class="btn" type="submit" id="nextButton" style="margin-bottom: 9px" disabled>Next</button>
-          <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
-          </div>
-        </div>
-      <div class="clearfix span12 skinny" id="results"></div>
-    </script>
-
-    <script type="text/javascript">
-      function button_confirm_click(button, fun) {
-          button.unbind();
-          button.click(function (data) {
-              var button = $(data.target);
-              button.unbind();
-              button.addClass('btn-danger');
-              button.click(fun);
-          });
-      }
-      function button_confirm_click_reset(button) {
-          button.removeClass('btn-danger');
-          button.unbind();
-      }
-      function render_visualize_duplicates() {
-          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
-          $('#runButton').click(function () {
-              button_running();
-              var startRow = encode_id(unescape($('#startRow').val()));
-              var stopRow = encode_id(unescape($('#stopRow').val()));
-              var imageColumn = encode_id('data:image');
-              var thumbColumn = encode_id('thum:image_150sq');
-              if (startRow.length == 0 || stopRow.length == 0) {
-                  display_alert('Must specify rows');
-                  return;
-              }
-              button_confirm_click_reset($('#removeButton'));
-              function display_clusters (clusters) {
-                  var num = 30;
-                  var next_clusters = clusters.slice(num);
-                  var cur_clusters = clusters.slice(0, num);
-                  var el = $('#results');
-                  el.empty();
-                  $('#nextButton').unbind();
-                  if (next_clusters.length) {
-                      $('#nextButton').removeAttr('disabled');
-                      $('#nextButton').click(function () {display_clusters(next_clusters)});
-                  } else {
-                      $('#nextButton').attr('disabled', '');
-                  }
-                  _.each(cur_clusters, function (x) {
-                      _.each(x.rows, function (y) {
-                          var cur_id = _.uniqueId('image_');
-                          el.append($('<img>').attr('id', cur_id));
-                          load_image('images', y, thumbColumn, cur_id);
-                      })
-                      el.append($('<br>'));
-                  });
-              }
-              function remove_dupes(clusters) {
-                 var rows = [];
-                 _.each(clusters, function (x) {rows = rows.concat(_.shuffle(x.rows).slice(1));});
-                 picarus_api_delete_rows(rows, progressModal());
-              }
-              function success_func(xhr) {
-                  button_reset();
-                  var dedupe_response = JSON.parse(xhr.responseText);
-                  $('#removeButton').removeAttr('disabled');
-                  button_confirm_click($('#removeButton'), function () {remove_dupes(dedupe_response)})
-                  display_clusters(dedupe_response);
-              }
-              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success_func, fail: button_error, data: {action: 'i/dedupe/identical', column: imageColumn}});
-          });
-      }
-    </script>
-
     <script type="text/html" id="tpl_visualize_locations">
         <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
           <div class="span5">
@@ -1294,10 +1227,12 @@
           <h3>Options</h3>
           <%=runButton%>
         </div>
-      <div id="histYear"></div>
-      <div id="histMonth"></div>
-      <div id="histHour"></div>
-      <div id="histDay"></div>
+      <div class="clearfix span12 skinny" id="results">
+        <div id="histYear"></div>
+        <div id="histMonth"></div>
+        <div id="histHour"></div>
+        <div id="histDay"></div>
+      </div>
     </script>
 
     <script type="text/javascript">
@@ -1331,7 +1266,7 @@
           return hist;
       }
       function dataToListHist(data) {
-          return _.pairs(dataToHist(data)).sort();
+          return _.map(_.pairs(dataToHist(data)), function (x) {return [Number(x[0]), x[1]]}).sort();
       }
           $('#runButton').click(function () {
           var timeColumn = encode_id('meta:dateupload');

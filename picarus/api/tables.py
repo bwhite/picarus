@@ -49,39 +49,6 @@ def encode_row(row, columns):
     return out
 
 
-def _classifier_from_key(manager, key):
-    input, classifier, param, out = manager.key_to_input_model_param_output(key)
-    if out == 'binary_class_confidence':
-        real_classifier = lambda x: float(classifier.decision_function(x).flat[0])
-        input, feature, param, feature_type = manager.key_to_input_model_param_output(input['feature'])
-    else:
-        real_classifier = classifier
-        input, feature, param, feature_type = manager.key_to_input_model_param_output(input['multi_feature'])
-    loader = lambda x: call_import(x) if isinstance(x, dict) else x
-    feature = loader(feature)
-    if feature_type == 'multi_feature':
-        real_feature = lambda x: feature.compute_dense(x)
-    else:
-        if hasattr(feature, 'compute_feature'):
-            real_feature = lambda x: feature.compute_feature(x)
-        else:
-            real_feature = feature
-    input, preprocessor, param = manager.key_to_input_model_param(input['processed_image'])
-    preprocessor = loader(preprocessor)
-
-    #d
-    def fun(x):
-        print(preprocessor.asarray(x).shape)
-        f = real_feature(preprocessor.asarray(x))
-        print(' '.join(map(str, f.tolist())))
-        print(np.dot(f, classifier.coef_.tolist()[0]) + classifier.intercept_.ravel()[0])
-        print(real_classifier(f))
-        return real_classifier(f)
-    #d
-    return fun
-    #return lambda x: real_classifier(real_feature(preprocessor.asarray(x)))
-
-
 def _takeout_model_link_from_key(manager, key):
     model, columns = manager.key_to_model(key)
     if not isinstance(model, dict) or model['name'] not in ('picarus.HistogramImageFeature', 'picarus.ImagePreprocessor', 'picarus.LinearClassifier'):
@@ -94,18 +61,6 @@ def _takeout_model_chain_from_key(manager, key):
     if columns['input_type'] == 'raw_image':
         return [_takeout_model_link_from_key(manager, key)]
     return _takeout_model_chain_from_key(manager, base64.urlsafe_b64decode(columns['input'])) + [_takeout_model_link_from_key(manager, key)]
-
-
-def _index_from_key(manager, key):
-    loader = lambda x: call_import(x) if isinstance(x, dict) else x
-    input, index, param = manager.key_to_input_model_param(key)
-    input, hasher, param = manager.key_to_input_model_param(input['hash'])
-    hasher = loader(hasher)
-    input, feature, param = manager.key_to_input_model_param(input['feature'])
-    feature = loader(feature)
-    input, preprocessor, param = manager.key_to_input_model_param(input['processed_image'])
-    preprocessor = loader(preprocessor)
-    return lambda x: [json.loads(index.metadata[y]) for y in index.search_hash_knn(hasher(feature(preprocessor.asarray(x))).ravel(), 10)]
 
 
 def _parse_params(params, schema):
@@ -143,9 +98,7 @@ def _create_model_from_params(manager, email, path, params):
         schema = PARAM_SCHEMAS_SERVE[path]
         model_params = _parse_params(params, schema)
         model = {'name': schema['name'], 'kw': model_params}
-        print(params)
         input = _get_input(params, schema['input_type'])
-        print('input = ' + input)
         row = manager.input_model_param_to_key(input=input, model=model, input_type=schema['input_type'], output_type=schema['output_type'], email=email, name=manager.model_to_name(model))
         return {'row': base64.urlsafe_b64encode(row)}
     except ValueError:
@@ -158,7 +111,6 @@ def _create_model_from_factory(manager, email, path, create_model, params):
     inputs = {x: _get_input(params, x) for x in schema['input_types']}
     row = manager.input_model_param_to_key(**create_model(model_params, inputs, schema))
     return {'row': base64.urlsafe_b64encode(row)}
-
 
 
 def _user_to_dict(user):
@@ -226,14 +178,12 @@ class PrefixesTable(BaseTableSmall):
         bottle.abort(403)  # No valid prefix lets the user do this
 
     def patch_row(self, row, params, files):
-        print(row, params, files)
         if files:
             bottle.abort(403)  # Files not allowed
         for x, y in params.items():
             new_prefix = base64.urlsafe_b64decode(x)
             new_permissions = base64.b64decode(y)
             self._row_column_value_validator(row, new_prefix, new_permissions)
-            print((row, new_prefix, new_permissions))
             if row == 'images':
                 self._auth_user.add_image_prefix(new_prefix, new_permissions)
             else:
@@ -313,7 +263,6 @@ class HBaseTable(object):
                 self._column_write_validate(cur_column)
                 thrift.mutateRow(self.table, row, [hadoopy_hbase.Mutation(column=cur_column, value=y.file.read())])
             for x, y in params.items():
-                print(x)
                 cur_column = base64.urlsafe_b64decode(x)
                 self._column_write_validate(cur_column)
                 mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=base64.b64decode(y)))
@@ -414,7 +363,6 @@ class ImagesHBaseTable(HBaseTable):
                 chain_inputs, model_chain = zip(*_takeout_model_chain_from_key(manager, model_key))
                 binary_input = thrift.get(self.table, row, chain_inputs[0])[0].value  # TODO: Check val
                 model = picarus_takeout.ModelChain(json.dumps(model_chain))
-                print('Loaded!!')
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps({params['model']: base64.b64encode(model.process_binary(binary_input))})
             else:
@@ -469,12 +417,10 @@ class ImagesHBaseTable(HBaseTable):
             manager = PicarusManager(thrift=thrift)
             if action == 'io/thumbnail':
                 self._slice_validate(start_row, stop_row, 'rw')
-                print('Running thumb')
                 manager.image_thumbnail(start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/exif':
                 self._slice_validate(start_row, stop_row, 'rw')
-                print('Running exif')
                 manager.image_exif(start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/preprocess':
@@ -483,7 +429,6 @@ class ImagesHBaseTable(HBaseTable):
                 return {}
             elif action == 'io/classify':
                 self._slice_validate(start_row, stop_row, 'rw')
-                print('Running classifier')
                 manager.feature_to_prediction(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/feature':
@@ -500,12 +445,10 @@ class ImagesHBaseTable(HBaseTable):
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = base64.urlsafe_b64decode(params['model'])
                 chain_inputs, model_chain = zip(*_takeout_model_chain_from_key(manager, model_key))
-                print(model_chain)
                 manager.takeout_chain_job(list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/hash':
                 self._slice_validate(start_row, stop_row, 'rw')
-                print('Running hash')
                 manager.feature_to_hash(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'i/dedupe/identical':
@@ -513,7 +456,6 @@ class ImagesHBaseTable(HBaseTable):
                 col = base64.urlsafe_b64decode(params['column'])
                 features = {}
                 dedupe_feature = lambda x, y: features.setdefault(base64.b64encode(hashlib.md5(y).digest()), []).append(base64.urlsafe_b64encode(x))
-                print('Running dedupe')
                 for cur_row, cur_col in hadoopy_hbase.scanner_row_column(thrift, self.table, column=col,
                                                                          start_row=start_row, per_call=10,
                                                                          stop_row=stop_row):
@@ -524,7 +466,6 @@ class ImagesHBaseTable(HBaseTable):
                 self._slice_validate(start_row, stop_row, 'w')
                 # Only slices where the start_row can be used as a prefix may be used
                 assert start_row and ord(start_row[-1]) != 255 and start_row[:-1] + chr(ord(start_row[-1]) + 1) == stop_row
-                print('Running flickr')
                 p = {}
                 row_prefix = start_row
                 assert row_prefix.find(':') != -1
@@ -585,7 +526,6 @@ class ImagesHBaseTable(HBaseTable):
                 p['secret'] = secret
                 p['redis_address'] = redis_host
                 p['redis_port'] = int(redis_port)
-                print(p)
                 mturk_vision.manager(data=data, **p)
                 return {'task': task}
             else:
@@ -660,7 +600,6 @@ class ModelsHBaseTable(HBaseTable):
                 table = params['table']
                 slices = parse_slices()
                 start_stop_rows = [map(base64.urlsafe_b64decode, s.split('/')) for s in slices]
-                print(start_stop_rows)
                 data_table = get_table(self._auth_user, table)
                 for start_row, stop_row in start_stop_rows:
                     data_table._slice_validate(start_row, stop_row, 'r')
@@ -677,8 +616,6 @@ class ModelsHBaseTable(HBaseTable):
                                 label_features[label].append(cols[base64.urlsafe_b64decode(inputs['feature'])])
                             except KeyError:
                                 continue
-                    print(len(label_features[0]))
-                    print(len(label_features[1]))
                     labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
                     features = label_features[0] + label_features[1]
                     features = np.asfarray([msgpack.unpackb(x)[0] for x in features])

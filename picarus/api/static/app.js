@@ -74,6 +74,20 @@ function login_get(func) {
     }
 }
 
+function button_confirm_click(button, fun) {
+    button.unbind();
+    button.click(function (data) {
+        var button = $(data.target);
+        button.unbind();
+        button.addClass('btn-danger');
+        button.click(fun);
+    });
+}
+function button_confirm_click_reset(button) {
+    button.removeClass('btn-danger');
+    button.unbind();
+}
+
 function progressModal() {
     $('#progressModal').modal('show');
     function update(pct) {
@@ -154,12 +168,14 @@ function model_dropdown(args) {
             // TODO: The name needs to be escaped in a special way for this to work
             //base64.decode(data.get(encode_id('data:name')))
             var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.pescape('data:tags') + ' ' + data.pescape('data:name')}});
+            models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
             this.$el.append(Mustache.render(select_template, {models: models_filt}));
             this.renderDrop();
         }
     });
     av = new AppView({collection: models, el: args.el});
     models.fetch();
+    return models;
 }
 
 function rows_dropdown(rows, args) {
@@ -188,6 +204,7 @@ function rows_dropdown(rows, args) {
             this.$el.empty();
             var select_template = "{{#models}}<option value='{{row}}'>{{text}}</option>{{/models}};"
             var models_filt = _.map(rows.filter(args.filter), function (data) {return {row: data.escape('row'), text: args.text(data)}});
+            models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
             this.$el.append(Mustache.render(select_template, {models: models_filt}));
             this.renderDrop();
         }
@@ -217,6 +234,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
             var prefixes = _.keys(this.model.pescapejs('image_prefixes'));
+            prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
             this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
             this.renderDrop();
@@ -253,6 +271,7 @@ function slices_selector() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
             var prefixes = _.keys(this.model.pescapejs('image_prefixes'));
+            prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
             this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
             this.renderDrop();
