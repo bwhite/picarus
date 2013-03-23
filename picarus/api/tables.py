@@ -355,14 +355,14 @@ class ImagesHBaseTable(HBaseTable):
                 self._row_validate(row, 'r')
                 chain_input, model_link = _takeout_model_link_from_key(manager, model_key)
                 binary_input = thrift.get(self.table, row, chain_input)[0].value  # TODO: Check val
-                model = picarus_takeout.ModelLink(json.dumps(model_link))
+                model = picarus_takeout.ModelChain(msgpack.dumps([model_link]))
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps({params['model']: base64.b64encode(model.process_binary(binary_input))})
             elif action == 'i/chain':
                 self._row_validate(row, 'r')
                 chain_inputs, model_chain = zip(*_takeout_model_chain_from_key(manager, model_key))
                 binary_input = thrift.get(self.table, row, chain_inputs[0])[0].value  # TODO: Check val
-                model = picarus_takeout.ModelChain(json.dumps(model_chain))
+                model = picarus_takeout.ModelChain(msgpack.dumps(model_chain))
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps({params['model']: base64.b64encode(model.process_binary(binary_input))})
             else:
@@ -439,7 +439,7 @@ class ImagesHBaseTable(HBaseTable):
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = base64.urlsafe_b64decode(params['model'])
                 chain_input, model_link = _takeout_model_link_from_key(manager, model_key)
-                manager.takeout_link_job(model_link, chain_input, model_key, start_row=start_row, stop_row=stop_row)
+                manager.takeout_chain_job([model_link], chain_input, model_key, start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/chain':
                 self._slice_validate(start_row, stop_row, 'rw')
@@ -581,12 +581,10 @@ class ModelsHBaseTable(HBaseTable):
             manager = PicarusManager(thrift=thrift)
             if action == 'i/takeout/link':
                 self._row_validate(row, 'r', thrift)
-                bottle.response.headers["Content-type"] = "application/json"
-                return json.dumps(_takeout_model_link_from_key(manager, row)[1], separators=(',', ':'))
+                return base64.b64encode(msgpack.dumps(_takeout_model_link_from_key(manager, row)[1]))
             elif action == 'i/takeout/chain':
                 self._row_validate(row, 'r', thrift)
-                bottle.response.headers["Content-type"] = "application/json"
-                return json.dumps(zip(*_takeout_model_chain_from_key(manager, row))[1], separators=(',', ':'))
+                return base64.b64encode(msgpack.dumps(zip(*_takeout_model_chain_from_key(manager, row))[1]))
             else:
                 bottle.abort(400)
 

@@ -22,6 +22,7 @@ import scipy.cluster.vq
 import hashlib
 import subprocess
 import cv2
+import msgpack
 from confmat import save_confusion_matrix
 
 logging.basicConfig(level=logging.DEBUG)
@@ -89,9 +90,9 @@ class PicarusManager(object):
 
     def input_model_param_to_key(self, input, model, input_type, output_type, email, name, notes='', tags='', factory_info=None):
         assert isinstance(input, str)
-        dumps = lambda x: json.dumps(x, sort_keys=True, separators=(',', ':'))
+        dumps = lambda x: msgpack.dumps(x)
         if isinstance(model, dict):
-            model_type = 'json'
+            model_type = 'msgpack'
             model_str = dumps(model)
         else:
             model_type = 'pickle'
@@ -119,14 +120,14 @@ class PicarusManager(object):
             model_str = model_str[self.max_cell_size:]
             print(chunk_count)
             chunk_count += 1
-        cols.append(hadoopy_hbase.Mutation(column=self.model_chunks_column, value=np.array(chunk_count, dtype=np.uint32).tostring()))
+        cols.append(hadoopy_hbase.Mutation(column=self.model_chunks_column, value=str(chunk_count)))
         self.hb.mutateRow(self.models_table, model_key, cols)
         return model_key
 
     def key_to_input_model_param(self, key):
         columns = self.hb.getRowWithColumns(self.models_table, key, [self.input_column, self.model_chunks_column, self.param_column])[0].columns
         input, param = json.loads(columns[self.input_column].value), json.loads(columns[self.param_column].value)
-        model_chunks = np.fromstring(columns[self.model_chunks_column].value, dtype=np.uint32)
+        model_chunks = int(columns[self.model_chunks_column].value)
         columns = self.hb.getRowWithColumns(self.models_table, key, [self.model_column + '-%d' % x for x in range(model_chunks)])[0].columns
         model = ''.join(columns[self.model_column + '-%d' % x].value for x in range(model_chunks))
         model = json.loads(model)
@@ -142,7 +143,7 @@ class PicarusManager(object):
         names = ['model_chunks', 'input', 'input_type', 'output_type', 'model_type', 'creation_time', 'notes', 'name', 'tags', 'factory_info']
         for name in names:
             column_to_name[getattr(self, name + '_column')] = name
-        model_chunks = np.fromstring(columns[self.model_chunks_column], dtype=np.uint32)
+        model_chunks = int(columns[self.model_chunks_column])
         model = []
         for x in range(model_chunks):
             col = self.model_column + '-%d' % x
@@ -150,9 +151,7 @@ class PicarusManager(object):
             del columns[col]
         del columns[self.model_chunks_column]
         model = ''.join(model)
-        model = json.loads(model)
-        if not isinstance(model, dict):
-            model = pickle.loads(zlib.decompress(base64.b64decode(model)))
+        model = msgpack.loads(model)
         return model, {column_to_name[k] : v for k, v in columns.items() if k in column_to_name}
 
     def _model_to_pb(self, pb, model, name):
@@ -220,15 +219,6 @@ class PicarusManager(object):
                    'MODEL_FN': os.path.basename(model_fp.name)}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_to_feature.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, files=[model_fp.name], columns=[base64.urlsafe_b64decode(columns['input'])], single_value=True,
-                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
-
-    def takeout_link_job(self, model, input_column, output_column, **kw):
-        model_fp = picarus.api.model_tofile(model)
-        cmdenvs = {'HBASE_TABLE': self.images_table,
-                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
-                   'MODEL_FN': os.path.basename(model_fp.name)}
-        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/takeout_link_job.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
                              jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
 
     def takeout_chain_job(self, model, input_column, output_column, **kw):

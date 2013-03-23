@@ -8,6 +8,7 @@ import os
 import hadoopy_hbase
 import base64
 import imfeat
+import msgpack
 from picarus._importer import call_import
 
 
@@ -32,6 +33,8 @@ class HBaseMapper(object):
 def model_fromfile(path):
     if path.endswith('.js.gz'):
         return call_import(json.loads(zlib.decompress(open(path).read())))
+    elif path.endswith('.msgpack.gz'):
+        return call_import(msgpack.load(zlib.decompress(open(path).read())))
     elif path.endswith('.pkl.gz'):
         return pickle.loads(zlib.decompress(open(path).read()))
     else:
@@ -81,7 +84,7 @@ def feature_classifier_fromstring(c_ser):
 
 def model_tofile(model):
     if isinstance(model, dict) or isinstance(model, list):
-        return _tempfile(zlib.compress(json.dumps(model)), suffix='.js.gz')
+        return _tempfile(zlib.compress(msgpack.dumps(model)), suffix='.msgpack.gz')
     else:
         return _tempfile(zlib.compress(pickle.dumps(model)), suffix='.pkl.gz')
 
