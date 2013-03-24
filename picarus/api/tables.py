@@ -617,6 +617,12 @@ class ModelsHBaseTable(HBaseTable):
                     labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
                     features = label_features[0] + label_features[1]
                     features = np.asfarray([msgpack.unpackb(x)[0] for x in features])
+                    num_nans = 0
+                    for feature in features:
+                        if np.any(np.isnan(feature)):
+                            num_nans += 1
+                            print(feature)
+                    print('NumNans[%d]' % num_nans)
                     import sklearn.svm
                     classifier = sklearn.svm.LinearSVC()
                     classifier.fit(features, np.asarray(labels))

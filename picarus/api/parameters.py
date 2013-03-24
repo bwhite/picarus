@@ -37,15 +37,15 @@ PARAM_SCHEMAS.append({'type': 'model',
                                  'num_bins': {'type': 'int', 'min': 1, 'max': 17},
                                  'levels': {'type': 'int', 'min': 1, 'max': 3}}})
 
-#PARAM_SCHEMAS.append({'type': 'model',
-#                      'name': 'picarus.modules.ImageBlocks',
-#                      'kind': 'feature',
-#                      'input_type': 'processed_image',
-#                      'output_type': 'multi_feature',
-#                      'params': {'mode': {'type': 'enum', 'values': ['bgr', 'rgb', 'xyz', 'ycrcb',
-#                                                                     'hsv', 'luv', 'hls', 'lab', 'gray']},
-#                                 'num_sizes': {'type': 'int', 'min': 1, 'max': 5},
-#                                 'sbin': {'type': 'int', 'min': 8, 'max': 257}}})
+PARAM_SCHEMAS.append({'type': 'model',
+                      'name': 'picarus.BlocksImageMultiFeature',
+                      'kind': 'feature',
+                      'input_type': 'processed_image',
+                      'output_type': 'multi_feature',
+                      'params': {'mode': {'type': 'enum', 'values': ['bgr', 'rgb', 'xyz', 'ycrcb',
+                                                                     'hsv', 'luv', 'hls', 'lab']},
+                                 'levels': {'type': 'int', 'min': 1, 'max': 5},
+                                 'block_size': {'type': 'int', 'min': 16, 'max': 129}}})
 
 PARAM_SCHEMAS.append({'type': 'factory',
                       'name': 'svmlinear',
@@ -54,12 +54,13 @@ PARAM_SCHEMAS.append({'type': 'factory',
                       'input_types': ['feature', 'meta'],
                       'params': {'class_positive': {'type': 'str'}}})
 
-#PARAM_SCHEMAS.append({'type': 'factory',
-#                      'name': 'nbnnlocal',
-#                      'kind': 'classifier',
-#                      'data': 'slices',
-#                      'input_types': ['multi_feature', 'meta'],
-#                      'params': {}})
+
+PARAM_SCHEMAS.append({'type': 'factory',
+                      'name': 'nbnnlocal',
+                      'kind': 'classifier',
+                      'data': 'slices',
+                      'input_types': ['multi_feature', 'meta'],
+                      'params': {'block_size': {'type': 'int', 'min': 1, 'max': 64}}})
 
 
 #PARAM_SCHEMAS.append({'type': 'factory',

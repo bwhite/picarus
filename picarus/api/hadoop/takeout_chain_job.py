@@ -5,6 +5,7 @@ import os
 import picarus.api
 import zlib
 import msgpack
+import sys
 
 
 class Mapper(picarus.api.HBaseMapper):
@@ -16,11 +17,13 @@ class Mapper(picarus.api.HBaseMapper):
         self.job = picarus_takeout.ModelChain(self._model)
 
     def _map(self, row, input_binary):
-        #try:
-        yield row, self.job.process_binary(input_binary)
-        #except:
-        #    hadoopy.counter('ERROR', 'BadRow')
-        #    print('Error on row[%r]' % row)
+        try:
+            yield row, self.job.process_binary(input_binary)
+        except:
+            sys.stdout.flush()
+            hadoopy.counter('ERROR', 'BadRow')
+        else:
+            hadoopy.counter('STATUS', 'GoodRow')
 
 if __name__ == '__main__':
     hadoopy.run(Mapper, required_cmdenvs=['HBASE_TABLE', 'HBASE_OUTPUT_COLUMN', 'MODEL_FN'])
