@@ -56,11 +56,11 @@ PARAM_SCHEMAS.append({'type': 'factory',
 
 
 PARAM_SCHEMAS.append({'type': 'factory',
-                      'name': 'nbnnlocal',
+                      'name': 'localnbnn',
                       'kind': 'classifier',
                       'data': 'slices',
                       'input_types': ['multi_feature', 'meta'],
-                      'params': {'block_size': {'type': 'int', 'min': 1, 'max': 64}}})
+                      'params': {'max_results': {'type': 'int', 'min': 1, 'max': 64}}})
 
 
 #PARAM_SCHEMAS.append({'type': 'factory',

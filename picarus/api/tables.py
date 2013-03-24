@@ -51,7 +51,7 @@ def encode_row(row, columns):
 
 def _takeout_model_link_from_key(manager, key):
     model, columns = manager.key_to_model(key)
-    if not isinstance(model, dict) or model['name'] not in ('picarus.HistogramImageFeature', 'picarus.ImagePreprocessor', 'picarus.LinearClassifier'):
+    if not isinstance(model, dict):
         bottle.abort(400)
     return base64.urlsafe_b64decode(columns['input']), model
 
@@ -584,7 +584,9 @@ class ModelsHBaseTable(HBaseTable):
                 return base64.b64encode(msgpack.dumps(_takeout_model_link_from_key(manager, row)[1]))
             elif action == 'i/takeout/chain':
                 self._row_validate(row, 'r', thrift)
-                return base64.b64encode(msgpack.dumps(zip(*_takeout_model_chain_from_key(manager, row))[1]))
+                o = msgpack.dumps(zip(*_takeout_model_chain_from_key(manager, row))[1])
+                open('takeouthack.model', 'w').write(o)
+                return base64.b64encode(o)
             else:
                 bottle.abort(400)
 
@@ -627,22 +629,42 @@ class ModelsHBaseTable(HBaseTable):
                     classifier = sklearn.svm.LinearSVC()
                     classifier.fit(features, np.asarray(labels))
                     factory_info = {'slices': slices, 'num_rows': len(features), 'data': 'slices', 'params': params, 'inputs': inputs}
-                    model = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': map(PrettyFloat, classifier.coef_.tolist()[0]),
-                                                                        'intercept': PrettyFloat(classifier.intercept_[0])}}
+                    model = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': classifier.coef_.tolist()[0],
+                                                                        'intercept': classifier.intercept_[0]}}
                     return {'input': inputs['feature'], 'model': model, 'input_type': 'feature', 'output_type': 'binary_class_confidence',
                             'email': self.owner, 'name': manager.model_to_name(model), 'factory_info': json.dumps(factory_info)}
 
-                def classifier_class_distance_list(model_dict, model_param, inputs):
-                    row_cols = hadoopy_hbase.scanner(thrift, self.table,
-                                                     columns=[inputs['multi_feature'], inputs['meta']], start_row=start_row, stop_row=stop_row)
-
-                    #label_values = ((cols[inputs['meta']], np.asfarray(picarus.api.np_fromstring(cols[inputs['multi_feature']]))) for _, cols in row_cols)
-                    def gen():
+                def classifier_localnbnn(params, inputsub64, schema):
+                    print(inputsub64)
+                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
+                    print(inputs)
+                    features = []
+                    indeces = []
+                    num_features = 0
+                    feature_size = 0
+                    labels_dict = {}
+                    labels = []
+                    for start_row, stop_row in start_stop_rows:
+                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
+                                                         columns=[inputs['multi_feature'], inputs['meta']], start_row=start_row, stop_row=stop_row)
                         for _, cols in row_cols:
-                            yield cols[inputs['meta']], np.asfarray(picarus.api.np_fromstring(cols[inputs['multi_feature']]))
-                    classifier = call_import(model_dict)
-                    classifier.train(gen())  # label_values
-                    return classifier
+                            try:
+                                label = cols[inputs['meta']]
+                                f, s = msgpack.unpackb(cols[inputs['multi_feature']])
+                                if label not in labels_dict:
+                                    labels_dict[label] = len(labels_dict)
+                                    labels.append(label)
+                                feature_size = s[1]
+                                num_features += s[0]
+                                features += f
+                                indeces += [labels_dict[label]] * s[0]
+                            except KeyError:
+                                pass
+                    factory_info = {'slices': slices, 'data': 'slices', 'params': params, 'inputs': inputsub64}
+                    model = {'name': 'picarus.LocalNBNNClassifier', 'kw': {'features': features, 'indeces': indeces, 'labels': labels,
+                                                                           'feature_size': feature_size, 'max_results': params['max_results']}}
+                    return {'input': inputsub64['multi_feature'], 'model': model, 'input_type': 'feature', 'output_type': 'multi_class_distance',
+                            'email': self.owner, 'name': manager.model_to_name(model), 'factory_info': json.dumps(factory_info)}
 
                 def hasher_train(model_dict, model_param, inputs):
                     hasher = call_import(model_dict)
@@ -675,8 +697,8 @@ class ModelsHBaseTable(HBaseTable):
 
                 if path == 'factory/classifier/svmlinear':
                     return _create_model_from_factory(manager, self.owner, path, classifier_sklearn, params)
-                #elif path == 'classifier/nbnnlocal':
-                #    return _create_model_from_factory(manager, self.owner, path, classifier_class_distance_list, params, start_row=start_row, stop_row=stop_row)
+                elif path == 'factory/classifier/localnbnn':
+                    return _create_model_from_factory(manager, self.owner, path, classifier_localnbnn, params)
                 #elif path == 'hasher/rrmedian':
                 #    return _create_model_from_factory(manager, self.owner, path, hasher_train, params, start_row=start_row, stop_row=stop_row)
                 #elif path == 'index/linear':
