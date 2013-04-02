@@ -120,7 +120,7 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
             return v.join('=');
         }).join('&');
     }
-    var column_suffix = _.map(columns, function (value) {return ['column', value]});
+    var column_suffix =  [['columns', _.map(columns, function (x) {return encode_id(x)}).join(',')]];
     var lastRow = undefined;
     var numRows = 0;
     if (typeof params.filter != "undefined") {

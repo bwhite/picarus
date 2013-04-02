@@ -17,6 +17,8 @@
 # output_type:
 # params:
 
+import sys
+
 PARAM_SCHEMAS = []
 PARAM_SCHEMAS.append({'type': 'model',
                       'name': 'picarus.ImagePreprocessor',
@@ -34,8 +36,53 @@ PARAM_SCHEMAS.append({'type': 'model',
                       'output_type': 'feature',
                       'params': {'mode': {'type': 'enum', 'values': ['bgr', 'rgb', 'xyz', 'ycrcb',
                                                                      'hsv', 'luv', 'hls', 'lab']},
-                                 'num_bins': {'type': 'int', 'min': 1, 'max': 17},
+                                 'num_bins': {'type': 'int_list', 'min': 1, 'max': 17, 'min_size': 3, 'max_size': 4},
                                  'levels': {'type': 'int', 'min': 1, 'max': 3}}})
+
+PARAM_SCHEMAS.append({'type': 'model',
+                      'name': 'picarus.GISTImageFeature',
+                      'kind': 'feature',
+                      'input_type': 'processed_image',
+                      'output_type': 'feature',
+                      'params': {'orientations_per_scale': {'type': 'int_list', 'min': 1, 'max': 9, 'min_size': 1, 'max_size': 4},
+                                 'num_blocks': {'type': 'int', 'min': 1, 'max': 8}}})
+
+
+PARAM_SCHEMAS.append({'type': 'model',
+                      'name': 'picarus.PixelsImageFeature',
+                      'kind': 'feature',
+                      'input_type': 'processed_image',
+                      'output_type': 'feature',
+                      'params': {'mode': {'type': 'enum', 'values': ['bgr', 'rgb', 'xyz', 'ycrcb',
+                                                                     'hsv', 'luv', 'hls', 'lab']}}})
+
+
+PARAM_SCHEMAS.append({'type': 'model',
+                      'name': 'picarus.HOGImageMaskFeature',
+                      'kind': 'feature',
+                      'input_type': 'processed_image',
+                      'output_type': 'mask_feature',
+                      'params': {'bin_size': {'type': 'int', 'min': 2, 'max': 65}}})
+
+
+PARAM_SCHEMAS.append({'type': 'model',
+                      'name': 'picarus.BinaryPredictor',
+                      'kind': 'classifier',
+                      'input_type': 'binary_class_confidence',
+                      'output_type': 'binary_prediction',
+                      'params': {'threshold': {'type': 'float', 'min': -sys.float_info.max, 'max': sys.float_info.max}}})
+
+
+PARAM_SCHEMAS.append({'type': 'model',
+                      'name': 'picarus.FaceImageObjectDetector',
+                      'kind': 'detector',
+                      'input_type': 'processed_image',
+                      'output_type': 'image_detections',
+                      'params': {'scale_factor': {'type': 'float', 'min': 1, 'max': 10},
+                                 'min_neighbors': {'type': 'int', 'min': 0, 'max': 10},
+                                 'min_size': {'type': 'int', 'min': 0, 'max': 1025},
+                                 'max_size': {'type': 'int', 'min': 0, 'max': 1025}}})
+
 
 PARAM_SCHEMAS.append({'type': 'model',
                       'name': 'picarus.BlocksImageMultiFeature',
@@ -54,6 +101,24 @@ PARAM_SCHEMAS.append({'type': 'factory',
                       'input_types': ['feature', 'meta'],
                       'params': {'class_positive': {'type': 'str'}}})
 
+PARAM_SCHEMAS.append({'type': 'factory',
+                      'name': 'bovw',
+                      'kind': 'feature',
+                      'data': 'slices',
+                      'input_types': ['mask_feature'],
+                      'params': {'max_per_row': {'type': 'int', 'min': 1, 'max': 101},
+                                 'num_clusters': {'type': 'int', 'min': 2, 'max': 1000},
+                                 'levels': {'type': 'int', 'min': 1, 'max': 4}}})
+
+PARAM_SCHEMAS.append({'type': 'factory',
+                      'name': 'spherical',
+                      'kind': 'hasher',
+                      'data': 'slices',
+                      'input_types': ['feature'],
+                      'params': {'num_pivots': {'type': 'int', 'min': 1, 'max': 513},
+                                 'eps_m': {'type': 'float', 'min': 0., 'max': 1.},
+                                 'eps_s': {'type': 'float', 'min': 0., 'max': 1.},
+                                 'max_iters': {'type': 'int', 'min': 1, 'max': 101}}})
 
 PARAM_SCHEMAS.append({'type': 'factory',
                       'name': 'localnbnn',

@@ -17,6 +17,7 @@ import json
 import distpy
 import impoint
 from picarus._importer import call_import
+import spherical_hash
 
 
 def _lf(fn):

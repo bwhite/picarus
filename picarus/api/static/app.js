@@ -144,7 +144,7 @@ function button_error() {
 }
 
 function model_dropdown(args) {
-    var columns_model = ['data:name', 'data:input_type', 'data:output_type', 'data:tags', 'data:notes', 'data:prefix', 'data:start_row', 'data:stop_row', 'data:creation_time', 'data:param', 'data:input', 'data:factory_info'];
+    var columns_model = ['meta:'];
     var models = new PicarusRows([], {'table': 'models', columns: columns_model});
     if (typeof args.change === 'undefined') {
         args.change = function () {};
@@ -165,9 +165,7 @@ function model_dropdown(args) {
             n = this.$el;
             this.$el.empty();
             var select_template = "{{#models}}<option value='{{row}}'>{{{text}}}</option>{{/models}};" // text is escaped already
-            // TODO: The name needs to be escaped in a special way for this to work
-            //base64.decode(data.get(encode_id('data:name')))
-            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.pescape('data:tags') + ' ' + data.pescape('data:name')}});
+            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.pescape('meta:tags') + ' ' + data.pescape('meta:name')}});
             models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
             this.$el.append(Mustache.render(select_template, {models: models_filt}));
             this.renderDrop();
@@ -213,6 +211,29 @@ function rows_dropdown(rows, args) {
     rows.fetch();
 }
 
+
+function project_selector(projectsDrop) {
+    var AppView = Backbone.View.extend({
+        initialize: function() {
+            _.bindAll(this, 'render');
+            this.model.bind('reset', this.render);
+            this.model.bind('change', this.render);
+        },
+        render: function() {
+            this.$el.empty();
+            var projects = _.keys(this.model.pescapejs('image_projects'));
+            projects.sort(function (x, y) {return Number(x > y) - Number(x < y)});
+            var select_template = "{{#projects}}<option value='{{.}}'>{{.}}</option>{{/projects}};"
+            this.$el.append(Mustache.render(select_template, {projects: projects}));
+            this.renderDrop();
+        }
+    });
+    var auth = login_get(function (email_auth) {
+        user = new PicarusUser({row: encode_id(email_auth.email)});
+        new AppView({model: user, el: projectsDrop});
+        user.fetch();
+    });
+}
 
 function row_selector(prefixDrop, startRow, stopRow) {
     var AppView = Backbone.View.extend({
@@ -311,9 +332,7 @@ function app_main() {
         initialize: function(models, options) {
             this.table = options.table;
             if (_.isArray(options.columns)) {
-                this.params = '?' + param_encode(_.map(options.columns, function (x) {
-                    return ['column', encode_id(x)];
-                }));
+                this.params = '?columns=' + _.map(options.columns, function (x) {return encode_id(x)}).join(',');
             } else {
                 this.params = '';
             }
@@ -356,9 +375,7 @@ function app_main() {
         initialize: function(models, options) {
             this.table = options.table;
             if (_.isArray(options.columns)) {
-                this.params = '?' + param_encode(_.map(options.columns, function (x) {
-                    return ['column', encode_id(x)];
-                }));
+                this.params = '?columns=' + _.map(options.columns, function (x) {return encode_id(x)}).join(',');
             } else {
                 this.params = '';
             }

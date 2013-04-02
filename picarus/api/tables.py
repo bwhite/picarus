@@ -11,6 +11,9 @@ import picarus.api
 import numpy as np
 import crawlers
 import re
+import scipy.cluster.vq
+import scipy as sp
+import random
 import picarus_takeout
 import msgpack # TODO: Abstract these operations
 from driver import PicarusManager
@@ -49,18 +52,43 @@ def encode_row(row, columns):
     return out
 
 
+def key_to_model(manager, *args, **kw):
+    try:
+        return manager.key_to_model(*args, **kw)
+    except IndexError:
+        bottle.abort(404)
+
+
 def _takeout_model_link_from_key(manager, key):
-    model, columns = manager.key_to_model(key)
+    model_binary, columns = key_to_model(manager, key, 'link')
+    model = msgpack.loads(model_binary)
+    if not isinstance(model, dict):
+        bottle.abort(400)
+    return model
+
+
+def _takeout_model_chain_from_key(manager, key):
+    if key == 'data:image':
+        return []
+    columns = key_to_model(manager, key)
+    if columns['input_type'] == 'raw_image':
+        return [_takeout_model_link_from_key(manager, key)]
+    return _takeout_model_chain_from_key(manager, base64.urlsafe_b64decode(columns['input'])) + [_takeout_model_link_from_key(manager, key)]
+
+
+def _takeout_input_model_link_from_key(manager, key):
+    model_binary, columns = key_to_model(manager, key, 'link')
+    model = msgpack.loads(model_binary)
     if not isinstance(model, dict):
         bottle.abort(400)
     return base64.urlsafe_b64decode(columns['input']), model
 
 
-def _takeout_model_chain_from_key(manager, key):
-    model, columns = manager.key_to_model(key)
+def _takeout_input_model_chain_from_key(manager, key):
+    columns = key_to_model(manager, key)
     if columns['input_type'] == 'raw_image':
-        return [_takeout_model_link_from_key(manager, key)]
-    return _takeout_model_chain_from_key(manager, base64.urlsafe_b64decode(columns['input'])) + [_takeout_model_link_from_key(manager, key)]
+        return [_takeout_input_model_link_from_key(manager, key)]
+    return _takeout_input_model_chain_from_key(manager, base64.urlsafe_b64decode(columns['input'])) + [_takeout_input_model_link_from_key(manager, key)]
 
 
 def _parse_params(params, schema):
@@ -78,6 +106,26 @@ def _parse_params(params, schema):
             param_value = int(get_param(param_name))
             if not (param['min'] <= param_value < param['max']):
                 bottle.abort(400)
+            kw[param_name] = param_value
+        elif param['type'] == 'float':
+            param_value = float(get_param(param_name))
+            if not (param['min'] <= param_value < param['max']):
+                bottle.abort(400)
+            kw[param_name] = param_value
+        elif param['type'] == 'int_list':
+            param_value = {}
+            for x in range(param['max_size']):
+                try:
+                    bin_value = int(get_param(param_name + ':' + str(x)))
+                    if not (param['min'] <= bin_value < param['max']):
+                        bottle.abort(400)
+                    param_value[x] = bin_value
+                except KeyError:
+                    pass
+            param_value = sorted(param_value.items())
+            if not len(param_value) == param_value[-1][0] + 1:
+                bottle.abort(400)
+            param_value = [x[1] for x in param_value]
             kw[param_name] = param_value
         elif param['type'] == 'const':
             kw[param_name] = param['value']
@@ -97,11 +145,14 @@ def _create_model_from_params(manager, email, path, params):
     try:
         schema = PARAM_SCHEMAS_SERVE[path]
         model_params = _parse_params(params, schema)
-        model = {'name': schema['name'], 'kw': model_params}
+        model_link = {'name': schema['name'], 'kw': model_params}
         input = _get_input(params, schema['input_type'])
-        row = manager.input_model_param_to_key(input=input, model=model, input_type=schema['input_type'], output_type=schema['output_type'], email=email, name=manager.model_to_name(model))
+        model_chain = _takeout_model_chain_from_key(manager, base64.urlsafe_b64decode(input)) + [model_link]
+        row = manager.input_model_param_to_key(input=input, model_link=model_link, model_chain=model_chain, input_type=schema['input_type'],
+                                               output_type=schema['output_type'], email=email, name=manager.model_to_name(model_link))
         return {'row': base64.urlsafe_b64encode(row)}
     except ValueError:
+        raise
         bottle.abort(500)
 
 
@@ -157,45 +208,67 @@ class ParametersTable(BaseTableSmall):
         return self._params
 
 
-class PrefixesTable(BaseTableSmall):
+class RedisUsersTable(BaseTableSmall):
 
-    def __init__(self, _auth_user):
-        self._prefixes = {'images': _auth_user.image_prefixes}
+    def __init__(self, _auth_user, table, set_column, del_column):
         self._auth_user = _auth_user
+        self._table = table
+        self._set_column = set_column
+        self._del_column = del_column
 
     def _get_table(self):
-        return dod_to_lod_b64(self._prefixes)
+        return dod_to_lod_b64(self._table)
 
     def _get_row(self, row, columns):
-        return self._prefixes
-
-    def _row_column_value_validator(self, table, prefix, permissions):
-        if permissions not in ('r', 'rw'):
-            bottle.abort(403)
-        for cur_prefix, cur_permissions in self._prefixes[table].items():
-            if prefix.startswith(cur_prefix) and cur_permissions.startswith(permissions):
-                return
-        bottle.abort(403)  # No valid prefix lets the user do this
+        return self._table
 
     def patch_row(self, row, params, files):
         if files:
             bottle.abort(403)  # Files not allowed
         for x, y in params.items():
-            new_prefix = base64.urlsafe_b64decode(x)
-            new_permissions = base64.b64decode(y)
-            self._row_column_value_validator(row, new_prefix, new_permissions)
-            if row == 'images':
-                self._auth_user.add_image_prefix(new_prefix, new_permissions)
-            else:
+            new_column = base64.urlsafe_b64decode(x)
+            new_value = base64.b64decode(y)
+            self._row_column_value_validator(row, new_column, new_value)
+            try:
+                self._set_column[row](new_column, new_value)
+            except KeyError:
                 bottle.abort(403)
         return {}
 
     def delete_column(self, row, column):
-        if row == 'images':
-            self._auth_user.remove_image_prefix(column)
-        else:
+        try:
+            self._del_column[row](column)
+        except KeyError:
             bottle.abort(403)
         return {}
+
+
+class PrefixesTable(RedisUsersTable):
+
+    def __init__(self, _auth_user):
+        super(PrefixesTable, self).__init__(_auth_user, {'images': _auth_user.image_prefixes},
+                                            {'images': _auth_user.add_image_prefix},
+                                            {'images': _auth_user.remove_image_prefix})
+
+    def _row_column_value_validator(self, row, new_column, new_value):
+        if new_value not in ('r', 'rw'):
+            bottle.abort(403)
+        for cur_prefix, cur_permissions in self._table[row].items():
+            if new_column.startswith(cur_prefix) and cur_permissions.startswith(new_value):
+                return
+        bottle.abort(403)  # No valid prefix lets the user do this
+
+
+class ProjectsTable(RedisUsersTable):
+
+    def __init__(self, _auth_user):
+        super(ProjectsTable, self).__init__(_auth_user, {'images': _auth_user.image_projects},
+                                            {'images': _auth_user.add_image_project},
+                                            {'images': _auth_user.remove_image_project})
+
+    def _row_column_value_validator(self, row, new_column, new_value):
+        # TODO: Add checks
+        return
 
 
 class UsersTable(object):
@@ -261,7 +334,8 @@ class HBaseTable(object):
             for x, y in files.items():
                 cur_column = base64.urlsafe_b64decode(x)
                 self._column_write_validate(cur_column)
-                thrift.mutateRow(self.table, row, [hadoopy_hbase.Mutation(column=cur_column, value=y.file.read())])
+                v = y.file.read()
+                thrift.mutateRow(self.table, row, [hadoopy_hbase.Mutation(column=cur_column, value=v)])
             for x, y in params.items():
                 cur_column = base64.urlsafe_b64decode(x)
                 self._column_write_validate(cur_column)
@@ -281,6 +355,20 @@ class HBaseTable(object):
             self._row_validate(row, 'rw', thrift)
             thrift.mutateRow(self.table, row, [hadoopy_hbase.Mutation(column=column, isDelete=True)])
             return {}
+
+    def get_row(self, row, columns):
+        with thrift_lock() as thrift:
+            self._row_validate(row, 'r', thrift)
+            if columns:
+                result = thrift.getRowWithColumns(self.table, row, columns)
+            else:
+                result = thrift.getRow(self.table, row)
+        if not result:
+            bottle.abort(404)
+        # TODO: Should this produce 'row' also?  Check backbone.js
+        return {base64.urlsafe_b64encode(x): base64.b64encode(y.value)
+                for x, y in result[0].columns.items()}
+
 
 
 class ImagesHBaseTable(HBaseTable):
@@ -332,19 +420,6 @@ class ImagesHBaseTable(HBaseTable):
         self.patch_row(row, params, files)
         return {'row': base64.urlsafe_b64encode(row)}
 
-    def get_row(self, row, columns):
-        self._row_validate(row, 'r')
-        with thrift_lock() as thrift:
-            if columns:
-                result = thrift.getRowWithColumns(self.table, row, columns)
-            else:
-                result = thrift.getRow(self.table, row)
-        if not result:
-            bottle.abort(404)
-        # TODO: Should this produce 'row' also?  Check backbone.js
-        return {base64.urlsafe_b64encode(x): base64.b64encode(y.value)
-                for x, y in result[0].columns.items()}
-
     def post_row(self, row, params, files):
         action = params['action']
         with thrift_lock() as thrift:
@@ -353,18 +428,23 @@ class ImagesHBaseTable(HBaseTable):
             # TODO: Allow io/ so that we can write back to the image too
             if action == 'i/link':
                 self._row_validate(row, 'r')
-                chain_input, model_link = _takeout_model_link_from_key(manager, model_key)
+                # TODO: Get this directly from model
+                chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
                 binary_input = thrift.get(self.table, row, chain_input)[0].value  # TODO: Check val
                 model = picarus_takeout.ModelChain(msgpack.dumps([model_link]))
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps({params['model']: base64.b64encode(model.process_binary(binary_input))})
             elif action == 'i/chain':
                 self._row_validate(row, 'r')
-                chain_inputs, model_chain = zip(*_takeout_model_chain_from_key(manager, model_key))
+                # TODO: Get this directly from model
+                chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
                 binary_input = thrift.get(self.table, row, chain_inputs[0])[0].value  # TODO: Check val
+                model_chain = list(model_chain)
                 model = picarus_takeout.ModelChain(msgpack.dumps(model_chain))
                 bottle.response.headers["Content-type"] = "application/json"
-                return json.dumps({params['model']: base64.b64encode(model.process_binary(binary_input))})
+                v = base64.b64encode(model.process_binary(binary_input))
+                print(v[:50])
+                return json.dumps({params['model']: v})
             else:
                 bottle.abort(400)
 
@@ -377,6 +457,7 @@ class ImagesHBaseTable(HBaseTable):
 
     def get_slice(self, start_row, stop_row, columns, params, files):
         self._slice_validate(start_row, stop_row, 'r')
+        columns = map(base64.urlsafe_b64decode, columns)
         max_rows = min(10000, int(params.get('maxRows', 1)))
         max_bytes = min(1048576, int(params.get('maxBytes', 1048576)))
         filter_string = params.get('filter')
@@ -423,34 +504,39 @@ class ImagesHBaseTable(HBaseTable):
                 self._slice_validate(start_row, stop_row, 'rw')
                 manager.image_exif(start_row=start_row, stop_row=stop_row)
                 return {}
-            elif action == 'io/preprocess':
-                self._slice_validate(start_row, stop_row, 'rw')
-                manager.image_preprocessor(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
-                return {}
-            elif action == 'io/classify':
-                self._slice_validate(start_row, stop_row, 'rw')
-                manager.feature_to_prediction(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
-                return {}
-            elif action == 'io/feature':
-                self._slice_validate(start_row, stop_row, 'rw')
-                manager.takeout_link_job(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
-                return {}
             elif action == 'io/link':
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = base64.urlsafe_b64decode(params['model'])
-                chain_input, model_link = _takeout_model_link_from_key(manager, model_key)
+                chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
                 manager.takeout_chain_job([model_link], chain_input, model_key, start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/chain':
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = base64.urlsafe_b64decode(params['model'])
-                chain_inputs, model_chain = zip(*_takeout_model_chain_from_key(manager, model_key))
+                chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
                 manager.takeout_chain_job(list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row)
                 return {}
-            elif action == 'io/hash':
+            elif action == 'io/garbage':
                 self._slice_validate(start_row, stop_row, 'rw')
-                manager.feature_to_hash(base64.urlsafe_b64decode(params['model']), start_row=start_row, stop_row=stop_row)
-                return {}
+                columns_removed = set()
+                columns_kept = set()
+                # TODO: Get all user models and save those too
+                active_models = set()
+                for cur_row, cur_cols in hadoopy_hbase.scanner(thrift, self.table, filter='KeyOnlyFilter()',
+                                                               start_row=start_row, per_call=10,
+                                                               stop_row=stop_row):
+                    for k in cur_cols.keys():
+                        if not (k.startswith('meta:') or k.startswith('thum:') or k == 'data:image' or k in active_models):
+                            if k not in columns_removed:
+                                columns_removed.add(k)
+                                print(columns_removed)
+                                print(len(columns_removed))
+                        else:
+                            if k not in columns_kept:
+                                columns_kept.add(k)
+                                print(columns_kept)
+                                print(len(columns_kept))
+                return {'columnsRemoved': list(columns_removed), 'columnsKept': list(columns_kept)}
             elif action == 'i/dedupe/identical':
                 self._slice_validate(start_row, stop_row, 'r')
                 col = base64.urlsafe_b64decode(params['column'])
@@ -469,12 +555,12 @@ class ImagesHBaseTable(HBaseTable):
                 p = {}
                 row_prefix = start_row
                 assert row_prefix.find(':') != -1
-                class_name = params['className']
-                query = params.get('query')
-                query = class_name if query is None else query
-                p['lat'] = query = params.get('lat')
-                p['lon'] = query = params.get('lon')
-                p['radius'] = query = params.get('radius')
+                print('params[%r]' % params)
+                class_name = params.get('className')
+                query = params['query']
+                p['lat'] = params.get('lat')
+                p['lon'] = params.get('lon')
+                p['radius'] = params.get('radius')
                 p['api_key'] = params.get('apiKey', FLICKR_API_KEY)
                 p['api_secret'] = params.get('apiSecret', FLICKR_API_SECRET)
                 if 'hasGeo' in params:
@@ -491,7 +577,7 @@ class ImagesHBaseTable(HBaseTable):
                     p['page'] = int(params['page'])
                 except KeyError:
                     pass
-                return {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name, query, **p)}
+                return {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name=class_name, query=query, **p)}
             elif action in ('io/annotate/image/query', 'io/annotate/image/entity', 'io/annotate/image/query_batch'):
                 self._slice_validate(start_row, stop_row, 'r')
                 secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
@@ -515,6 +601,8 @@ class ImagesHBaseTable(HBaseTable):
                     p['query'] = query
                 else:
                     bottle.abort(400)
+                if 'instructions' in params:
+                    p['instructions'] = params['instructions']
                 p['num_tasks'] = 100
                 p['mode'] = 'standalone'
                 try:
@@ -544,18 +632,18 @@ def parse_slices():
 class ModelsHBaseTable(HBaseTable):
 
     def __init__(self, _auth_user):
-        super(ModelsHBaseTable, self).__init__(_auth_user, 'picarus_models')
+        super(ModelsHBaseTable, self).__init__(_auth_user, 'models')
         self._auth_user = _auth_user
 
     def _column_write_validate(self, column):
-        if column in ('data:notes', 'data:tags'):
+        if column in ('meta:notes', 'meta:tags'):
             return
         if column.startswith('user:'):
             return
         bottle.abort(403)
 
     def _row_validate(self, row, permissions, thrift):
-        results = thrift.get('picarus_models', row, 'user:' + self.owner)
+        results = thrift.get(self.table, row, 'user:' + self.owner)
         if not results:
             bottle.abort(403)
         if not results[0].value.startswith(permissions):
@@ -566,29 +654,18 @@ class ModelsHBaseTable(HBaseTable):
         output_user = user_column in columns or not columns or 'user:' in columns
         hbase_filter = "SingleColumnValueFilter ('user', '%s', =, 'binaryprefix:r', true, true)" % self.owner
         outs = []
+        if columns:
+            columns = columns + [user_column]
+        else:
+            columns = None
         with thrift_lock() as thrift:
-            for row, cols in hadoopy_hbase.scanner(thrift, self.table, columns=columns + [user_column], filter=hbase_filter):
+            for row, cols in hadoopy_hbase.scanner(thrift, self.table, columns=columns, filter=hbase_filter):
                 self._row_validate(row, 'r', thrift)
                 if not output_user:
                     del cols[user_column]
                 outs.append(encode_row(row, cols))
         bottle.response.headers["Content-type"] = "application/json"
         return json.dumps(outs)
-
-    def post_row(self, row, params, files):
-        action = params['action']
-        with thrift_lock() as thrift:
-            manager = PicarusManager(thrift=thrift)
-            if action == 'i/takeout/link':
-                self._row_validate(row, 'r', thrift)
-                return base64.b64encode(msgpack.dumps(_takeout_model_link_from_key(manager, row)[1]))
-            elif action == 'i/takeout/chain':
-                self._row_validate(row, 'r', thrift)
-                o = msgpack.dumps(zip(*_takeout_model_chain_from_key(manager, row))[1])
-                open('takeouthack.model', 'w').write(o)
-                return base64.b64encode(o)
-            else:
-                bottle.abort(400)
 
     def post_table(self, params, files):
         path = params['path']
@@ -604,40 +681,35 @@ class ModelsHBaseTable(HBaseTable):
                 for start_row, stop_row in start_stop_rows:
                     data_table._slice_validate(start_row, stop_row, 'r')
 
-                def classifier_sklearn(params, inputs, schema):
+                def classifier_sklearn(params, inputsub64, schema):
+                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
                     label_features = {0: [], 1: []}
                     for start_row, stop_row in start_stop_rows:
                         row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
-                                                         columns=[base64.urlsafe_b64decode(inputs['feature']), base64.urlsafe_b64decode(inputs['meta'])],
+                                                         columns=[inputs['feature'], inputs['meta']],
                                                          start_row=start_row, stop_row=stop_row)
                         for row, cols in row_cols:
                             try:
-                                label = int(cols[base64.urlsafe_b64decode(inputs['meta'])] == params['class_positive'])
-                                label_features[label].append(cols[base64.urlsafe_b64decode(inputs['feature'])])
+                                label = int(cols[inputs['meta']] == params['class_positive'])
+                                label_features[label].append(cols[inputs['feature']])
                             except KeyError:
                                 continue
                     labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
                     features = label_features[0] + label_features[1]
-                    features = np.asfarray([msgpack.unpackb(x)[0] for x in features])
-                    num_nans = 0
-                    for feature in features:
-                        if np.any(np.isnan(feature)):
-                            num_nans += 1
-                            print(feature)
-                    print('NumNans[%d]' % num_nans)
+                    features = np.asfarray([msgpack.loads(x)[0] for x in features])
                     import sklearn.svm
                     classifier = sklearn.svm.LinearSVC()
                     classifier.fit(features, np.asarray(labels))
-                    factory_info = {'slices': slices, 'num_rows': len(features), 'data': 'slices', 'params': params, 'inputs': inputs}
-                    model = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': classifier.coef_.tolist()[0],
-                                                                        'intercept': classifier.intercept_[0]}}
-                    return {'input': inputs['feature'], 'model': model, 'input_type': 'feature', 'output_type': 'binary_class_confidence',
-                            'email': self.owner, 'name': manager.model_to_name(model), 'factory_info': json.dumps(factory_info)}
+                    factory_info = {'slices': slices, 'num_rows': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
+                    model_link = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': classifier.coef_.tolist()[0],
+                                                                             'intercept': classifier.intercept_[0]}}
+                    model_chain = _takeout_model_chain_from_key(manager, inputs['feature']) + [model_link]
+                    return {'input': inputsub64['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
+                            'output_type': 'binary_class_confidence', 'email': self.owner, 'name': manager.model_to_name(model_link),
+                            'factory_info': json.dumps(factory_info)}
 
                 def classifier_localnbnn(params, inputsub64, schema):
-                    print(inputsub64)
                     inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
-                    print(inputs)
                     features = []
                     indeces = []
                     num_features = 0
@@ -650,7 +722,7 @@ class ModelsHBaseTable(HBaseTable):
                         for _, cols in row_cols:
                             try:
                                 label = cols[inputs['meta']]
-                                f, s = msgpack.unpackb(cols[inputs['multi_feature']])
+                                f, s = msgpack.loads(cols[inputs['multi_feature']])
                                 if label not in labels_dict:
                                     labels_dict[label] = len(labels_dict)
                                     labels.append(label)
@@ -661,10 +733,86 @@ class ModelsHBaseTable(HBaseTable):
                             except KeyError:
                                 pass
                     factory_info = {'slices': slices, 'data': 'slices', 'params': params, 'inputs': inputsub64}
-                    model = {'name': 'picarus.LocalNBNNClassifier', 'kw': {'features': features, 'indeces': indeces, 'labels': labels,
-                                                                           'feature_size': feature_size, 'max_results': params['max_results']}}
-                    return {'input': inputsub64['multi_feature'], 'model': model, 'input_type': 'feature', 'output_type': 'multi_class_distance',
-                            'email': self.owner, 'name': manager.model_to_name(model), 'factory_info': json.dumps(factory_info)}
+                    model_link = {'name': 'picarus.LocalNBNNClassifier', 'kw': {'features': features, 'indeces': indeces, 'labels': labels,
+                                                                                'feature_size': feature_size, 'max_results': params['max_results']}}
+                    model_chain = _takeout_model_chain_from_key(manager, inputs['multi_feature']) + [model_link]
+                    return {'input': inputsub64['multi_feature'], 'model_link': model_link, 'model_chain': model_chain,
+                            'input_type': 'multi_feature', 'output_type': 'multi_class_distance',
+                            'email': self.owner, 'name': manager.model_to_name(model_link), 'factory_info': json.dumps(factory_info)}
+
+                def classifier_localnbnn(params, inputsub64, schema):
+                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
+                    features = []
+                    indeces = []
+                    num_features = 0
+                    feature_size = 0
+                    labels_dict = {}
+                    labels = []
+                    for start_row, stop_row in start_stop_rows:
+                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
+                                                         columns=[inputs['multi_feature'], inputs['meta']], start_row=start_row, stop_row=stop_row)
+                        for _, cols in row_cols:
+                            try:
+                                label = cols[inputs['meta']]
+                                f, s = msgpack.loads(cols[inputs['multi_feature']])
+                                if label not in labels_dict:
+                                    labels_dict[label] = len(labels_dict)
+                                    labels.append(label)
+                                feature_size = s[1]
+                                num_features += s[0]
+                                features += f
+                                indeces += [labels_dict[label]] * s[0]
+                            except KeyError:
+                                pass
+                    factory_info = {'slices': slices, 'data': 'slices', 'params': params, 'inputs': inputsub64}
+                    model_link = {'name': 'picarus.LocalNBNNClassifier', 'kw': {'features': features, 'indeces': indeces, 'labels': labels,
+                                                                                'feature_size': feature_size, 'max_results': params['max_results']}}
+                    model_chain = _takeout_model_chain_from_key(manager, inputs['multi_feature']) + [model_link]
+                    return {'input': inputsub64['multi_feature'], 'model_link': model_link, 'model_chain': model_chain,
+                            'input_type': 'multi_feature', 'output_type': 'multi_class_distance',
+                            'email': self.owner, 'name': manager.model_to_name(model_link), 'factory_info': json.dumps(factory_info)}
+
+                def feature_bovw_mask(params, inputsub64, schema):
+                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
+                    features = []
+                    for start_row, stop_row in start_stop_rows:
+                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
+                                                         columns=[inputs['mask_feature']],
+                                                         start_row=start_row, stop_row=stop_row)
+                        for row, cols in row_cols:
+                            cur_feature = msgpack.loads(cols[inputs['mask_feature']])
+                            cur_feature = np.array(cur_feature[0]).reshape((-1, cur_feature[1][2]))
+                            features += random.sample(cur_feature, min(len(cur_feature), params['max_per_row']))
+                            print(len(features))
+                    features = np.asfarray(features)
+                    clusters = sp.cluster.vq.kmeans(features, params['num_clusters'])[0]
+                    num_clusters = clusters.shape[0]
+                    factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
+                    model_link = {'name': 'picarus.BOVWImageFeature', 'kw': {'clusters': clusters.ravel().tolist(), 'num_clusters': num_clusters,
+                                                                             'levels': params['levels']}}
+                    model_chain = _takeout_model_chain_from_key(manager, inputs['mask_feature']) + [model_link]
+                    return {'input': inputsub64['mask_feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
+                            'output_type': 'feature', 'email': self.owner, 'name': manager.model_to_name(model_link),
+                            'factory_info': json.dumps(factory_info)}
+
+                def hasher_spherical(params, inputsub64, schema):
+                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
+                    features = []
+                    for start_row, stop_row in start_stop_rows:
+                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
+                                                         columns=[inputs['feature']],
+                                                         start_row=start_row, stop_row=stop_row)
+                        for row, cols in row_cols:
+                            cur_feature = msgpack.loads(cols[inputs['feature']])
+                            features.append(np.array(cur_feature[0]))
+                    features = np.asfarray(features)
+                    out = picarus.modules.spherical_hash.train_takeout(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
+                    factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
+                    model_link = {'name': 'picarus.SphericalHasher', 'kw': out}
+                    model_chain = _takeout_model_chain_from_key(manager, inputs['feature']) + [model_link]
+                    return {'input': inputsub64['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
+                            'output_type': 'hash', 'email': self.owner, 'name': manager.model_to_name(model_link),
+                            'factory_info': json.dumps(factory_info)}
 
                 def hasher_train(model_dict, model_param, inputs):
                     hasher = call_import(model_dict)
@@ -699,6 +847,10 @@ class ModelsHBaseTable(HBaseTable):
                     return _create_model_from_factory(manager, self.owner, path, classifier_sklearn, params)
                 elif path == 'factory/classifier/localnbnn':
                     return _create_model_from_factory(manager, self.owner, path, classifier_localnbnn, params)
+                elif path == 'factory/feature/bovw':
+                    return _create_model_from_factory(manager, self.owner, path, feature_bovw_mask, params)
+                elif path == 'factory/hasher/spherical':
+                    return _create_model_from_factory(manager, self.owner, path, hasher_spherical, params)
                 #elif path == 'hasher/rrmedian':
                 #    return _create_model_from_factory(manager, self.owner, path, hasher_train, params, start_row=start_row, stop_row=stop_row)
                 #elif path == 'index/linear':
@@ -717,10 +869,10 @@ def get_table(_auth_user, table):
         return ImagesHBaseTable(_auth_user)
     elif table == 'models':
         return ModelsHBaseTable(_auth_user)
-    elif table == 'models':
-        return ModelsHBaseTable(_auth_user)
     elif table == 'prefixes':
         return PrefixesTable(_auth_user)
+    elif table == 'projects':
+        return ProjectsTable(_auth_user)
     elif table == 'parameters':
         return ParametersTable()
     elif table == 'users':

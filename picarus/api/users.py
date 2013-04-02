@@ -47,6 +47,7 @@ class User(object):
         self._api_key_prefix = 'auth:'
         self._login_key_prefix = 'login:'
         self._image_row_prefix = 'image_prefix:'
+        self._image_project_prefix = 'imageproject:'
         self._enabled_col = 'enabled'
         self.key_length = 15
         assert self.key_length % 3 == 0
@@ -111,9 +112,19 @@ class User(object):
     def remove_image_prefix(self, prefix):
         self._user_db.hdel(self._image_row_prefix + self.email, prefix)
 
+    def add_image_project(self, project, slices):
+        self._user_db.hset(self._image_project_prefix + self.email, project, slices)
+
+    def remove_image_project(self, project):
+        self._user_db.hdel(self._image_project_prefix + self.email, project)
+
     @property
     def image_prefixes(self):
         return self._user_db.hgetall(self._image_row_prefix + self.email)
+
+    @property
+    def image_projects(self):
+        return self._user_db.hgetall(self._image_project_prefix + self.email)
 
     @property
     def login_key(self):

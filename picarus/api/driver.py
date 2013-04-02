@@ -51,7 +51,7 @@ class PicarusManager(object):
         self.image_orig_column = 'data:image'
         self.image_column = 'data:image_320'
         self.images_table = 'images'
-        self.models_table = 'picarus_models'
+        self.models_table = 'models'
         self.hb = thrift if thrift is not None else hadoopy_hbase.connect()
         self.max_cell_size = 10 * 1024 * 1024  # 10MB
         # Feature Settings
@@ -70,43 +70,55 @@ class PicarusManager(object):
         #self.versions = self.get_versions()
 
         # Model columns
-        self.model_chunks_column = 'data:model_chunks'
-        self.model_column = 'data:model'
-        self.input_column = 'data:input'
-        self.input_type_column = 'data:input_type'
-        self.output_type_column = 'data:output_type'
-        self.model_type_column = 'data:model_type'
-        self.creation_time_column = 'data:creation_time'
-        self.notes_column = 'data:notes'
-        self.name_column = 'data:name'
-        self.tags_column = 'data:tags'
-        self.factory_info_column = 'data:factory_info'
+        self.model_link_chunks_column = 'meta:model_link_chunks'
+        self.model_chain_chunks_column = 'meta:model_chain_chunks'
+        self.model_link_column = 'data:model_link'
+        self.model_chain_column = 'data:model_chain'
+        self.input_column = 'meta:input'
+        self.model_link_sha1_column = 'meta:model_link_sha1'
+        self.model_chain_sha1_column = 'meta:model_chain_sha1'
+        self.model_link_size_column = 'meta:model_link_size'
+        self.model_chain_size_column = 'meta:model_chain_size'
+        self.input_type_column = 'meta:input_type'
+        self.output_type_column = 'meta:output_type'
+        self.model_link_type_column = 'meta:model_link_type'
+        self.model_chain_type_column = 'meta:model_chain_type'
+        self.creation_time_column = 'meta:creation_time'
+        self.notes_column = 'meta:notes'
+        self.name_column = 'meta:name'
+        self.tags_column = 'meta:tags'
+        self.factory_info_column = 'meta:factory_info'
 
     def get_versions(self):
         return {x: get_version(x) for x in ['picarus', 'imfeat', 'imseg', 'hadoopy', 'impoint', 'hadoopy_hbase']}
 
     def output_type_to_prefix(self, output_type):
-        return {'feature': 'feat:', 'processed_image': 'data:', 'binary_class_confidence': 'pred:', 'multi_class_distance': 'pred:', 'hash': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[output_type]
+        return {'feature': 'feat:', 'binary_prediction': 'pred:', 'image_detections': 'pred:', 'processed_image': 'data:', 'binary_class_confidence': 'pred:', 'mask_feature' : 'mask:', 'multi_class_distance': 'pred:', 'hash': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[output_type]
 
-    def input_model_param_to_key(self, input, model, input_type, output_type, email, name, notes='', tags='', factory_info=None):
+    def input_model_param_to_key(self, input, model_link, model_chain, input_type, output_type, email, name, notes='', tags='', factory_info=None):
         assert isinstance(input, str)
+        check_model = lambda x: isinstance(x, dict) and set(['name', 'kw']) == set(x.keys())
         dumps = lambda x: msgpack.dumps(x)
-        if isinstance(model, dict):
-            model_type = 'msgpack'
-            model_str = dumps(model)
+        if check_model(model_link) and all(map(check_model, model_chain)):
+            model_chain_type = model_link_type = 'msgpack'
+            model_link_str = dumps(model_link)
+            model_chain_str = dumps(model_chain)
         else:
-            model_type = 'pickle'
-            model_str = dumps(base64.b64encode(zlib.compress(pickle.dumps(model, -1))))
-        input_model_str = dumps([input, model_str])
-        model_sha1 = hashlib.sha1(input_model_str).digest()
-        # Ensures model specifics cannot change, also ensures that name is unique
+            raise ValueError('Model must be a dict!')
+        model_link_sha1 = hashlib.sha1(model_link_str).hexdigest()
+        model_chain_sha1 = hashlib.sha1(model_chain_str).hexdigest()
         prefix = self.output_type_to_prefix(output_type)
-        model_key = prefix + model_sha1 + os.urandom(7)
+        model_key = prefix + hashlib.sha1(model_chain_str).digest()[:8] + os.urandom(8)
 
         cols = [hadoopy_hbase.Mutation(column=self.input_column, value=input),
                 hadoopy_hbase.Mutation(column=self.input_type_column, value=input_type),
                 hadoopy_hbase.Mutation(column=self.output_type_column, value=output_type),
-                hadoopy_hbase.Mutation(column=self.model_column, value=model_type),
+                hadoopy_hbase.Mutation(column=self.model_link_sha1_column, value=model_link_sha1),
+                hadoopy_hbase.Mutation(column=self.model_chain_sha1_column, value=model_chain_sha1),
+                hadoopy_hbase.Mutation(column=self.model_link_type_column, value=model_link_type),
+                hadoopy_hbase.Mutation(column=self.model_chain_type_column, value=model_chain_type),
+                hadoopy_hbase.Mutation(column=self.model_link_size_column, value=str(len(model_link_str))),
+                hadoopy_hbase.Mutation(column=self.model_chain_size_column, value=str(len(model_chain_str))),
                 hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time())),
                 hadoopy_hbase.Mutation(column=self.notes_column, value=notes),
                 hadoopy_hbase.Mutation(column=self.name_column, value=name),
@@ -114,13 +126,16 @@ class PicarusManager(object):
                 hadoopy_hbase.Mutation(column='user:' + email, value='rw')]
         if factory_info is not None:
             cols.append(hadoopy_hbase.Mutation(column=self.factory_info_column, value=factory_info))
-        chunk_count = 0
-        while model_str:
-            cols.append(hadoopy_hbase.Mutation(column=self.model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size]))
-            model_str = model_str[self.max_cell_size:]
-            print(chunk_count)
-            chunk_count += 1
-        cols.append(hadoopy_hbase.Mutation(column=self.model_chunks_column, value=str(chunk_count)))
+
+        def save_model(model_str, model_column, model_chunks_column):
+            chunk_count = 0
+            while model_str:
+                cols.append(hadoopy_hbase.Mutation(column=model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size]))
+                model_str = model_str[self.max_cell_size:]
+                chunk_count += 1
+            cols.append(hadoopy_hbase.Mutation(column=model_chunks_column, value=str(chunk_count)))
+        save_model(model_link_str, self.model_link_column, self.model_link_chunks_column)
+        save_model(model_chain_str, self.model_chain_column, self.model_chain_chunks_column)
         self.hb.mutateRow(self.models_table, model_key, cols)
         return model_key
 
@@ -137,22 +152,23 @@ class PicarusManager(object):
             model = pickle.loads(zlib.decompress(base64.b64decode(model)))
         return input, model, param
 
-    def key_to_model(self, key):
-        columns = {x: y.value for x, y in self.hb.getRow(self.models_table, key)[0].columns.items()}
-        column_to_name = {}
-        names = ['model_chunks', 'input', 'input_type', 'output_type', 'model_type', 'creation_time', 'notes', 'name', 'tags', 'factory_info']
-        for name in names:
-            column_to_name[getattr(self, name + '_column')] = name
-        model_chunks = int(columns[self.model_chunks_column])
-        model = []
-        for x in range(model_chunks):
-            col = self.model_column + '-%d' % x
-            model.append(columns[col])
-            del columns[col]
-        del columns[self.model_chunks_column]
-        model = ''.join(model)
-        model = msgpack.loads(model)
-        return model, {column_to_name[k] : v for k, v in columns.items() if k in column_to_name}
+    def key_to_model(self, key, model_type=None):
+        columns = {x[5:]: y.value for x, y in self.hb.getRowWithColumns(self.models_table, key, ['meta:'])[0].columns.items()}
+        if model_type is None:
+            return columns
+        if model_type == 'link':
+            model_chunks_column = self.model_link_chunks_column[5:]
+            model_column = self.model_link_column
+        elif model_type == 'chain':
+            model_chunks_column = self.model_chain_chunks_column[5:]
+            model_column = self.model_chain_column
+        else:
+            raise ValueError
+        model_chunks = int(columns[model_chunks_column])
+        model_chunk_columns = [model_column + '-%d' % x for x in range(model_chunks)]
+        chunks = [(int(x.split('-')[1]), y.value) for x, y in self.hb.getRowWithColumns(self.models_table, key, model_chunk_columns)[0].columns.items()]
+        chunks.sort()
+        return ''.join([x[1] for x in chunks]), columns
 
     def _model_to_pb(self, pb, model, name):
         if isinstance(model, dict):
@@ -187,12 +203,14 @@ class PicarusManager(object):
         return c
 
     def create_tables(self):
-        self.hb.createTable(self.models_table, [hadoopy_hbase.ColumnDescriptor('data:')])
+        self.hb.createTable(self.models_table, [hadoopy_hbase.ColumnDescriptor('data:', maxVersions=1, compression='SNAPPY'),
+                                                hadoopy_hbase.ColumnDescriptor('meta:', maxVersions=1),
+                                                hadoopy_hbase.ColumnDescriptor('user:', maxVersions=1)])
 
     def image_thumbnail(self, **kw):
         # Makes 150x150 thumbnails from the data:image column
-        model = {'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}}
-        self.takeout_link_job(model, 'data:image', 'thum:image_150sq', **kw)
+        model = [{'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}}]
+        self.takeout_chain_job(model, 'data:image', 'thum:image_150sq', **kw)
 
     def image_exif(self, **kw):
         cmdenvs = {'HBASE_TABLE': self.images_table,
@@ -508,12 +526,15 @@ class PicarusManager(object):
         for x, y in sorted(model.get('kw', {}).items()):
             y = repr(y)
             if len(y) > 20:
-                y = 'sha1:' + repr(hashlib.sha1(y).hexdigest())
+                y = 'sha1:' + repr(hashlib.sha1(y).hexdigest()[:4])
             args.append('%s=%s' % (x, y))
         return model['name'] + '(%s)' % ', '.join(args)
 
-
 if __name__ == '__main__':
+    image_retrieval = PicarusManager()
+    image_retrieval.create_tables()
+
+if 0 and __name__ == '__main__':
     image_retrieval = PicarusManager()
     #image_retrieval.create_tables()
 

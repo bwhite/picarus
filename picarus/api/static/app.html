@@ -20,6 +20,8 @@
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mustache.js/0.7.0/mustache.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.3.1/jquery.cookie.min.js"></script>
     <script type="text/javascript" src="//www.google.com/jsapi"></script>
+    <script type="text/javascript" src="/static/core-min.js"></script>
+    <script type="text/javascript" src="/static/enc-base64-min.js"></script>
     <script type="text/javascript" src="/static/base64.js"></script>
     <script type="text/javascript" src="/static/bootstrap.min.js"></script>
     <script type="text/javascript" src="/static/encodings.js"></script>
@@ -28,6 +30,8 @@
     <script type="text/javascript" src="/static/backbone.table.js"></script>
     <script type="text/javascript" src="/static/custom_checkbox_and_radio.js"></script>
     <script type="text/javascript" src="/static/msgpack.js"></script>
+    <script type="text/javascript" src="/static/FileSaver.min.js"></script>
+    <script src="//crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/sha1.js"></script>
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBsKtzgLTIsaoxAFUvSNoJ8n3j4w9VZs0&sensor=false"></script>
     <style>
       // Models Table
@@ -149,6 +153,42 @@
               var data = {}
               data[$('#prefixDrop option:selected').val() + $('#suffix').val()] = $('#permissions option:selected').val(); 
               rows.get(row).psave(data, {patch: true});        
+          });
+          var tableColumn = {header: "Table", getFormatted: function() {
+              return _.escape(base64.decode(this.get('row')));
+          }};
+          new RowsView({collection: rows, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
+          rows.fetch();
+      }
+    </script>
+
+    <script type="text/html" id="tpl_data_projects">
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span8">
+          <h3>Data Tables</h3>
+          <select id="prefixTable" class="input-small" hint="Table for the new prefix">
+          </select>
+          <h3>Modify Project</h3>
+          <input class="input-medium" type="text" placeholder="Project Name" hint="Project Name" id="projectName" value="">
+          <%=slicesSelect%>
+          <button class="btn" type="submit" id="modifyProjectButton" style="margin-bottom: 9px">Modify Project</button>
+        </div>
+      </div>
+      <div id="prefixes"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_data_projects() {
+          rows = new PicarusRows([], {'table': 'projects'});
+          rows_dropdown(rows, {el: $('#prefixTable'), text: function (x) {return x.pescaperow()}});
+          slices_selector();
+          $('#modifyProjectButton').click(function () {
+              var row = $('#prefixTable option:selected').val();
+              var data = {};
+              var slices = slices_selector_get(true);
+              var value = _.map(slices, function (x) {return x[0] + '/' + x[1]}).join(',');
+              data[$('#projectName').val()] = value;
+              rows.get(row).psave(data, {patch: true});
           });
           var tableColumn = {header: "Table", getFormatted: function() {
               return _.escape(base64.decode(this.get('row')));
@@ -280,63 +320,70 @@
 
     <script type="text/javascript">
       function render_crawl_flickr() {
-      row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
-      $('#runButton').click(function () {
-          button_running();
-          var demo_class = $('#democlass').val();
-          var demo_query = $('#demoquery').val();
-          var row_prefix = $('#rowPrefixDrop').val();
-          if (demo_class.length == 0 && row_prefix.length == 0) {
-              display_alert('Must specify class and prefix');
-              return;
-          }
-          var iters = parseInt($('#demoiters').val())
-          var simul = 10;
-          var done = 0;
-          if (isNaN(iters) || iters < 1 || iters > 20) {
-              display_alert('Iters must be 0 < x <= 20');
-              return;
-          }
-          $('#numRows').html('');
-          /* Check input */
-          //reset_state();
-          var min_time = 1232170610;
-          var auth = {email: $('#demouser').val(), auth: $('#demopass').val()};
-          var latitude = Number($('#demolat').val());
-          var longitude = Number($('#demolon').val());
-          function call_api() {
-              if (iters <= 0) {
-                  simul -= 1;
-                  if (simul == 0)
-                      button_reset();
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+          $('#runButton').click(function () {
+              button_running();
+              var demo_class = $('#democlass').val();
+              var demo_query = $('#demoquery').val();
+              var row_prefix = $('#rowPrefixDrop').val();
+              if (demo_query.length == 0 && row_prefix.length == 0) {
+                  display_alert('Must specify query and prefix');
                   return;
               }
-              iters -= 1;
-              var timeRadius = 60 * 60 * 24 * 30 * 6; // 6 months
-              var minUploadDate = parseInt((new Date().getTime() / 1000 - min_time) * Math.random() + min_time - timeRadius);
-              var maxUploadDate = parseInt(timeRadius + minUploadDate);
-              var p = {hasGeo: Number($('#demogeo').is(':checked')), className: demo_class, className: demo_query, minUploadDate: minUploadDate, maxUploadDate: maxUploadDate, action: 'o/crawl/flickr'};
-              if (latitude && longitude) {
-                  p.lat = String(latitude);
-                  p.lon = String(longitude);
+              queries = _.shuffle(demo_query.split(';'));
+              var iters = parseInt($('#demoiters').val())
+              var simul = 10;
+              if (isNaN(iters) || iters < 1 || iters > 20) {
+                  display_alert('Iters must be 0 < x <= 20');
+                  return;
               }
-              function success(xhr) {
-                  var response = JSON.parse(xhr.responseText);
-                  function etod(e) {
-                      var d = new Date(0);
-                      d.setUTCSeconds(e);
-                      return d.toString();
+              $('#numRows').html('');
+              /* Check input */
+              //reset_state();
+              var min_time = 1232170610;
+              var latitude = Number($('#demolat').val());
+              var longitude = Number($('#demolon').val());
+              var done = 0;
+
+              states = [];
+              _.each(queries, function (query) {
+                  var state = {query: query, className: demo_class};
+                  _.each(_.range(iters), function () {states.push(state)});
+              });
+              states = _.shuffle(states);
+              simul = Math.min(simul, states.length);
+              function call_api(state) {
+                  var timeRadius = 60 * 60 * 24 * 30 * 6; // 6 months
+                  var minUploadDate = parseInt((new Date().getTime() / 1000 - min_time) * Math.random() + min_time - timeRadius);
+                  var maxUploadDate = parseInt(timeRadius + minUploadDate);
+                  var p = {hasGeo: Number($('#demogeo').is(':checked')), query: state.query, minUploadDate: minUploadDate, maxUploadDate: maxUploadDate, action: 'o/crawl/flickr'};
+                  if (state.className.length)
+                      p.className = state.className;
+                  if (latitude && longitude) {
+                      p.lat = String(latitude);
+                      p.lon = String(longitude);
                   }
-                  var data = {minUploadDate: etod(minUploadDate), maxUploadDate: etod(maxUploadDate), numRows: response.numRows};
-                  $('#numRows').append('Crawl Finished : ' + JSON.stringify(data) + '<br>');
-                  call_api();
+                  function success(xhr) {
+                      var response = JSON.parse(xhr.responseText);
+                      function etod(e) {
+                          var d = new Date(0);
+                          d.setUTCSeconds(e);
+                          return d.toString();
+                      }
+                      var data = {minUploadDate: etod(minUploadDate), maxUploadDate: etod(maxUploadDate), numRows: response.numRows};
+                      $('#numRows').append('Crawl Finished : ' + state.query + ' '+ JSON.stringify(data) + '<br>');
+                      if (!states.length) {
+                          simul -= 1;
+                          if (!simul)
+                              button_reset();
+                          return;
+                      }
+                      call_api(states.pop());
+                  }
+                  picarus_api("/a1/slice/images/" + encode_id(row_prefix) + '/' + encode_id(prefix_to_stop_row(row_prefix)), "POST", {success: success, data: p});
               }
-              picarus_api("/a1/slice/images/" + encode_id(row_prefix) + '/' + encode_id(prefix_to_stop_row(row_prefix)), "POST", {success: success, data: p});
-          }
-          _.each(_.range(simul), call_api);
-      });
-
-
+              _.each(_.range(simul), function () {call_api(states.pop())});
+          });
       }
     </script>
 
@@ -356,38 +403,54 @@
         </div>
       </div>
     <div id="results" class="container"></div>
-    <div id="takeoutModal" class="modal hide fade" data-keyboard="false" tabindex="-1" role="dialog" aria-hidden="true">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-        <h3>Picarus Takeout</h3>
-      </div>
-      <div class="modal-body">
-        <div class="well">
-          <textarea rows="10" style="resize: none;width: 475px" id="takeoutText"></textarea>
-      </div>
     </div>
     </script>
     
     <script type="text/javascript">
       function render_models_list() {
-          var columns = ['data:name', 'data:input_type', 'data:output_type', 'data:model_type', 'row', 'data:creation_time', 'data:input', 'data:factory_info'];
-          var columns_model = ['data:name', 'data:input_type', 'data:output_type', 'data:tags', 'data:notes', 'data:model_type', 'data:creation_time', 'data:input', 'data:factory_info'];
+          var columns = ['meta:name', 'meta:input_type', 'meta:output_type', 'row', 'meta:creation_time', 'meta:input',
+                         'meta:model_link_size', 'meta:model_chain_size', 'meta:factory_info'];
+          var columns_model = ['meta:'];
           results = new PicarusRows([], {'table': 'models', columns: columns_model});
           var takeoutColumn = {header: "Takeout", getFormatted: function() {
               return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: this.escape('row')});
           }};
-          var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.pescape('data:tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + this.escape('row') + '">edit</a></span>'}};
-          var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.pescape('data:notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + this.escape('row') + '">edit</a></span>'}};
-          function takeoutSuccess(xhr) {
-              $('#takeoutText').val(xhr.responseText);
-              $('#takeoutModal').modal('show');
-          }
+          var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.pescape('meta:tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + this.escape('row') + '">edit</a></span>'}};
+          var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.pescape('meta:notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + this.escape('row') + '">edit</a></span>'}};
           function postRender() {
+              function process_takeout(row, model_chunks_column, model_column, model_type) {
+                  function takeoutSuccess(xhr) {
+                      var chunks = _.map(JSON.parse(xhr.responseText), function (v, k) {
+                          return [Number(decode_id(k).split('-')[1]), base64.decode(v)];
+                      }).sort();
+                      var model = _.map(chunks, function (v, k) {
+                          return v[1];
+                      }).join('');
+                      var curSha1 = CryptoJS.SHA1(CryptoJS.enc.Base64.parse(base64.encode(model))).toString();
+                      var trueSha1 = results.get(row).pescape('meta:model_' + model_type + '_sha1');
+                      if (curSha1 === trueSha1) {
+                          var modelByteArray = new Uint8Array(model.length);
+                          for (var i = 0; i < model.length; i++) {
+                              modelByteArray[i] = model.charCodeAt(i) & 0xff;
+                          }
+                          var blob = new Blob([modelByteArray]);
+                          saveAs(blob, 'picarus-model-' + row + '.sha1-' +  trueSha1 + '.' + model_type + '.msgpack');
+                      } else {
+                          alert("Model SHA1 doesn't match!");
+                      }
+                  }
+                  var num_chunks = Number(results.get(row).pescape(model_chunks_column));
+                  var columns = 'columns=' + _.map(_.range(num_chunks), function (x) {
+                      return encode_id(model_column + '-' + x);
+                  }).join('&');
+                  var url = '/a1/data/models/' + row + '?' + columns;
+                  picarus_api(url, "GET", {success: takeoutSuccess});
+              }
               $('.takeout_link').click(function (data) {
-                  picarus_api_row('models', $(data.target).attr('row'), 'POST', {data: {'action': 'i/takeout/link'}, success: takeoutSuccess})
+                  process_takeout($(data.target).attr('row'), 'meta:model_link_chunks', 'data:model_link', 'link');
               });
               $('.takeout_chain').click(function (data) {
-                  picarus_api_row('models', $(data.target).attr('row'), 'POST', {data: {'action': 'i/takeout/chain'}, success: takeoutSuccess})
+                  process_takeout($(data.target).attr('row'), 'meta:model_chain_chunks', 'data:model_chain', 'chain');
               });
 
               function setup_modal(links, col) {
@@ -405,8 +468,8 @@
                       $('#myModal').modal('show')
                   })
               }
-              setup_modal($('.modal_link_notes'), 'data:notes');
-              setup_modal($('.modal_link_tags'), 'data:tags');
+              setup_modal($('.modal_link_notes'), 'meta:notes');
+              setup_modal($('.modal_link_tags'), 'meta:tags');
           }
           new RowsView({collection: results, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn], postRender: postRender, deleteRows: true, columns: columns});
           results.fetch();
@@ -464,6 +527,22 @@
                           } else if (value.type == 'int') {
                               // TODO: Client-side data validation
                               cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
+                          } else if (value.type == 'float') {
+                              // TODO: Client-side data validation
+                              cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
+                          } else if (value.type == 'int_list') {
+                              // Create as many input boxes as the min # of boxes
+                              cur_el = $('<input>').attr('type', 'text').addClass('input-medium').val(value.min_size);
+                              var box_func = function () {
+                                  $("[name^=" + param_prefix + key +  "]").remove();
+                                  _.each(_.range(Number(cur_el.val())), function (x) {
+                                      var cur_el_num = $('<input>').attr('name', param_prefix + key + ':' + x).attr('type', 'text').addClass('input-mini');
+                                      $('#params').append(cur_el_num);
+                                      add_hint(cur_el_num, key + ':' + x);
+                                  });
+                              }
+                              box_func();
+                              cur_el.change(box_func);
                           } else if (value.type == 'str') {
                               // TODO: Client-side data validation
                               cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
@@ -496,7 +575,7 @@
                           add_hint(el, 'Metadata column (e.g., meta:class)');
                       } else {
                           $('#params').append($('<select>').attr('id', cur_id).attr('name', 'input-' + value).addClass('input-medium'));
-                          model_dropdown({modelFilter: function (x) {return x.pescape('data:output_type') === value},
+                          model_dropdown({modelFilter: function (x) {return x.pescape('meta:output_type') === value},
                                           change: function() {},
                                           el: $('#' + cur_id)});
                       }
@@ -564,10 +643,52 @@
 
     <script type="text/javascript">
       function render_models_single() {
+          function render_image_boxes(image_data, boxes, num_boxes, div) {
+              var image_id = _.uniqueId('image_');
+              var canvas_id = _.uniqueId('canvas_');
+              var image_tag = $('<img>').css('visibility', 'hidden').css('display', 'none').attr('id', image_id);
+              image_tag.load(function () {
+                  var h = image_tag.height();
+                  var w = image_tag.width();
+                  div.append($('<canvas>').attr('id', canvas_id).attr('height', h + 'px').attr('width', w + 'px'));
+                  var c = document.getElementById(canvas_id);
+                  var ctx = c.getContext("2d");
+                  ctx.strokeStyle = 'blue';
+                  var img = document.getElementById(image_id);
+                  ctx.drawImage(img, 0, 0);
+                  _.each(_.range(num_boxes), function (x) {
+                      var x0 = boxes[x * 4 + 2] * w;
+                      var x1 = boxes[x * 4 + 3] * w;
+                      var y0 = boxes[x * 4] * h;
+                      var y1 = boxes[x * 4 + 1] * h;
+                      ctx.moveTo(x0, y0);ctx.lineTo(x0, y1);ctx.stroke(); // TL->BL
+                      ctx.moveTo(x0, y1);ctx.lineTo(x1, y1);ctx.stroke(); // BL->BR
+                      ctx.moveTo(x1, y1);ctx.lineTo(x1, y0);ctx.stroke(); // BR->TR
+                      ctx.moveTo(x1, y0);ctx.lineTo(x0, y0);ctx.stroke(); // TR->TL
+                  })
+              });
+              div.append(image_tag.attr('src', image_data));
+          }
           var models = model_dropdown({modelFilter: function (x) {return true},
                                        change: function() {},
                                        el: $('#model_select')});
-          function fileChange() {
+          function handleFileSelect(func, evt) {
+              var files = evt.target.files;
+              for (var i = 0, f; f = files[i]; i++) {
+                  if (!f.type.match('image.*'))
+                      continue;
+                  var reader = new FileReader();
+                  reader.onload = (function(theFile) {
+                      return function(e) {
+                          func(e.target.result);
+                      };
+                  })(f);
+                  reader.readAsDataURL(f);
+              }
+          }
+          function fileChange(evt) {
+              imageData = undefined;
+              handleFileSelect(function (x) {imageData = x}, evt);
               $('#imagefile').wrap('<div />');
               if ($('#imagefile')[0].files.length != 1) {
                   display_alert('You must specify an image!');
@@ -578,16 +699,29 @@
                   $('#imagefile').parent().html($('#imagefile').parent().html());
                   $('#imagefile').change(fileChange);
                   result = JSON.parse(xhr.responseText);
-                  var outputType = models.get(modelKey).pescape('data:output_type');
+                  var outputType = models.get(modelKey).pescape('meta:output_type');
                   if (outputType == 'binary_class_confidence') {
                       $('#results').html($('<h3>').text('Classifier Confidence'));
                       $('#results').append(msgpack.unpack(base64.decode(result[modelKey])));
+                  } else if (outputType == 'binary_prediction') {
+                      $('#results').html($('<h3>').text('Binary Prediction'));
+                      $('#results').append(String(msgpack.unpack(base64.decode(result[modelKey]))));
                   } else if (outputType == 'processed_image') {
                       $('#results').html($('<h3>').text('Processed Image'));
                       $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + result[modelKey]));
+                  } else if (outputType == 'image_detections') {
+                      $('#results').html($('<h3>').text('Detections'));
+                      v = msgpack.unpack(base64.decode(result[modelKey]));
+                      render_image_boxes(imageData, v[0], v[1][0], $('#results'));
                   } else if (outputType == 'feature') {
                       $('#results').html($('<h3>').text('Feature'));
-                      $('#results').html(_.escape(JSON.stringify(msgpack.unpack(base64.decode(result[modelKey]))[0])));
+                      $('#results').append(_.escape(JSON.stringify(msgpack.unpack(base64.decode(result[modelKey]))[0])));
+                  } else if (outputType == 'multi_class_distance') {
+                      $('#results').html($('<h3>').text('Multi Class Distance'));
+                      var data = msgpack.unpack(base64.decode(result[modelKey]));
+                      _.each(data, function (x) {
+                          $('#results').append(x[1] + ' ' + x[0] + '<br>');
+                      });
                   } else {
                       alert('Unrecognized output type')
                   }
@@ -668,6 +802,39 @@
           });
       }
     </script>
+
+    <script type="text/html" id="tpl_process_garbage">
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span5">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <%=runButton%>
+        </div>
+      </div>
+      <div class="clearfix span12 skinny" id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_process_garbage() {
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+          $('#runButton').click(function () {
+              button_running();
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              function success(xhr) {
+                  response = JSON.parse(xhr.responseText);
+                  button_reset();
+                  _.each(response.columns, function (x) {
+                      $('#results').append(x + '<br>');
+                  });
+              }
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: button_reset, fail: button_error, data: {action: 'io/garbage'}});
+          });
+      }
+    </script>
+
 
     <script type="text/html" id="tpl_process_exif">
       <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
@@ -867,6 +1034,7 @@
         <div class="span5">
           <h3>Options</h3>
           <input class="input-small" type="text" placeholder="Query" id="query" value="">
+          <textarea id="instructions" rows="5" hint="Instructions shown to annotator">Determine if the images below fit the bolded category below.  You may either select images belonging to that category (Positive) or images that do not belong to the category (Negative).  To reduce the number of clicks you have to do, it helps to select the category with the fewest number of images.  Select all instances that belong to the category.  When you are done, select which category you annotated (Positive/Negative).  If you are unsure then skip.</textarea>
           <%=runButton%>
         </div>
       </div>
@@ -886,7 +1054,7 @@
                   response = JSON.parse(xhr.responseText);
                   $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
               }
-              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query_batch', imageColumn: imageColumn, entityColumn: entityColumn, query: query}});
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query_batch', imageColumn: imageColumn, entityColumn: entityColumn, query: query, instructions: $('#instructions').val()}});
           });
       }
     </script>
@@ -919,6 +1087,7 @@
               }
               $('#results').html('');
               function success(row, columns) {
+                  c = columns;
                   if (!_.has(columns, imageColumn))
                       return;
                   $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('title', row))
@@ -1517,12 +1686,12 @@
     </script>
     <script type="text/javascript">
       function render_evaluate_classifier() {
-          model_dropdown({modelFilter: function (x) {return x.pescape('data:output_type') === 'binary_class_confidence'},
+          model_dropdown({modelFilter: function (x) {return x.pescape('meta:output_type') === 'binary_class_confidence'},
                           change: function() {
                               var row = this.$el.find(":selected").val();
                               m = this.collection.get(row);
-                              $('#gtColumn').val(m.pescapejs('data:factory_info').inputs.meta);
-                              $('#posClass').val(m.pescapejs('data:factory_info').params.class_positive);
+                              $('#gtColumn').val(m.pescapejs('meta:factory_info').inputs.meta);
+                              $('#posClass').val(m.pescapejs('meta:factory_info').params.class_positive);
                               $('#modelKey').val(row);
                           },
                           el: $('#model_select')});

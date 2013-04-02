@@ -93,7 +93,10 @@ def parse_columns():
     if bottle.request.content_type == "application/json":
         columns = bottle.request.json['columns']
     else:
-        columns = bottle.request.params.getall('column')
+        try:
+            columns = bottle.request.params['columns'].split(',')
+        except KeyError:
+            columns = []
     return sorted((base64.urlsafe_b64decode(str(x)) for x in columns))
 
 
