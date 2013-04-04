@@ -9,11 +9,17 @@ function picarus_api(url, method, args) {
     var success;
     if (args.hasOwnProperty('success')) success = function(msg, text_status, xhr) {args.success(xhr)};
 
+    function param_encode(data) {
+        return _.map(data, function (v, k) {
+            return k + '=' + v;
+        }).join('&');
+    }
+
     var data = new FormData();
     if (method === 'GET') {
         data = undefined;
         if (args.hasOwnProperty('data')) {
-            data = args.data;
+            url += '?' + param_encode(args.data);
         }
     } else {
         if (args.hasOwnProperty('data')) {

@@ -25,8 +25,8 @@ PARAM_SCHEMAS.append({'type': 'model',
                       'kind': 'image_preprocessor',
                       'input_type': 'raw_image',
                       'output_type': 'processed_image',
-                      'params': {'compression': {'type': 'enum', 'values': ['jpg']},
-                                 'size': {'type': 'int', 'min': 32, 'max': 1025},
+                      'params': {'compression': {'type': 'enum', 'values': ['jpg', 'png']},
+                                 'size': {'type': 'int', 'min': 16, 'max': 1025},
                                  'method': {'type': 'enum', 'values': ['force_max_side', 'max_side', 'force_square']}}})
 
 PARAM_SCHEMAS.append({'type': 'model',
@@ -119,6 +119,13 @@ PARAM_SCHEMAS.append({'type': 'factory',
                                  'eps_m': {'type': 'float', 'min': 0., 'max': 1.},
                                  'eps_s': {'type': 'float', 'min': 0., 'max': 1.},
                                  'max_iters': {'type': 'int', 'min': 1, 'max': 101}}})
+
+PARAM_SCHEMAS.append({'type': 'factory',
+                      'name': 'spherical',
+                      'kind': 'index',
+                      'data': 'slices',
+                      'input_types': ['hash'],
+                      'params': {'max_results': {'type': 'int', 'min': 1, 'max': 101}}})
 
 PARAM_SCHEMAS.append({'type': 'factory',
                       'name': 'localnbnn',

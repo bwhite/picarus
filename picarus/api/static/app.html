@@ -722,6 +722,14 @@
                       _.each(data, function (x) {
                           $('#results').append(x[1] + ' ' + x[0] + '<br>');
                       });
+                  } else if (outputType == 'distance_image_rows') {
+                      $('#results').html($('<h3>').text('Image Search Results'));
+                      var data = msgpack.unpack(base64.decode(result[modelKey]));
+                      _.each(data, function (x) {
+                          var image_id = _.uniqueId('image_');
+                          $('#results').append('<img id="' + image_id + '">' + ' ' + x[0] + '<br>');
+                          imageThumbnail(encode_id(x[1]), image_id);
+                      });
                   } else {
                       alert('Unrecognized output type')
                   }

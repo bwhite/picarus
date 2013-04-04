@@ -370,7 +370,6 @@ class HBaseTable(object):
                 for x, y in result[0].columns.items()}
 
 
-
 class ImagesHBaseTable(HBaseTable):
 
     def __init__(self, _auth_user):
@@ -740,38 +739,6 @@ class ModelsHBaseTable(HBaseTable):
                             'input_type': 'multi_feature', 'output_type': 'multi_class_distance',
                             'email': self.owner, 'name': manager.model_to_name(model_link), 'factory_info': json.dumps(factory_info)}
 
-                def classifier_localnbnn(params, inputsub64, schema):
-                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
-                    features = []
-                    indeces = []
-                    num_features = 0
-                    feature_size = 0
-                    labels_dict = {}
-                    labels = []
-                    for start_row, stop_row in start_stop_rows:
-                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
-                                                         columns=[inputs['multi_feature'], inputs['meta']], start_row=start_row, stop_row=stop_row)
-                        for _, cols in row_cols:
-                            try:
-                                label = cols[inputs['meta']]
-                                f, s = msgpack.loads(cols[inputs['multi_feature']])
-                                if label not in labels_dict:
-                                    labels_dict[label] = len(labels_dict)
-                                    labels.append(label)
-                                feature_size = s[1]
-                                num_features += s[0]
-                                features += f
-                                indeces += [labels_dict[label]] * s[0]
-                            except KeyError:
-                                pass
-                    factory_info = {'slices': slices, 'data': 'slices', 'params': params, 'inputs': inputsub64}
-                    model_link = {'name': 'picarus.LocalNBNNClassifier', 'kw': {'features': features, 'indeces': indeces, 'labels': labels,
-                                                                                'feature_size': feature_size, 'max_results': params['max_results']}}
-                    model_chain = _takeout_model_chain_from_key(manager, inputs['multi_feature']) + [model_link]
-                    return {'input': inputsub64['multi_feature'], 'model_link': model_link, 'model_chain': model_chain,
-                            'input_type': 'multi_feature', 'output_type': 'multi_class_distance',
-                            'email': self.owner, 'name': manager.model_to_name(model_link), 'factory_info': json.dumps(factory_info)}
-
                 def feature_bovw_mask(params, inputsub64, schema):
                     inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
                     features = []
@@ -805,13 +772,36 @@ class ModelsHBaseTable(HBaseTable):
                         for row, cols in row_cols:
                             cur_feature = msgpack.loads(cols[inputs['feature']])
                             features.append(np.array(cur_feature[0]))
+                    print('num_features[%d]' % len(features))
                     features = np.asfarray(features)
-                    out = picarus.modules.spherical_hash.train_takeout(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
+                    out = picarus_takeout.spherical_hasher_train(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
+                    #out = picarus.modules.spherical_hash.train_takeout(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
                     factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
                     model_link = {'name': 'picarus.SphericalHasher', 'kw': out}
                     model_chain = _takeout_model_chain_from_key(manager, inputs['feature']) + [model_link]
                     return {'input': inputsub64['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
                             'output_type': 'hash', 'email': self.owner, 'name': manager.model_to_name(model_link),
+                            'factory_info': json.dumps(factory_info)}
+
+                def index_spherical(params, inputsub64, schema):
+                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
+                    hashes = []
+                    labels = []
+                    for start_row, stop_row in start_stop_rows:
+                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
+                                                         columns=[inputs['hash']],
+                                                         start_row=start_row, stop_row=stop_row)
+                        for row, cols in row_cols:
+                            hashes.append(cols[inputs['hash']])
+                            labels.append(row)
+                    hashes = ''.join(hashes)
+                    factory_info = {'slices': slices, 'num_hashes': len(labels), 'data': 'slices', 'params': params, 'inputs': inputsub64}
+                    model_link = {'name': 'picarus.SphericalHashIndex', 'kw': {'hashes': hashes,
+                                                                               'indeces': range(len(labels)), 'labels': labels,
+                                                                               'max_results': params['max_results']}}
+                    model_chain = _takeout_model_chain_from_key(manager, inputs['hash']) + [model_link]
+                    return {'input': inputsub64['hash'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'hash',
+                            'output_type': 'distance_image_rows', 'email': self.owner, 'name': manager.model_to_name(model_link),
                             'factory_info': json.dumps(factory_info)}
 
                 def hasher_train(model_dict, model_param, inputs):
@@ -851,6 +841,8 @@ class ModelsHBaseTable(HBaseTable):
                     return _create_model_from_factory(manager, self.owner, path, feature_bovw_mask, params)
                 elif path == 'factory/hasher/spherical':
                     return _create_model_from_factory(manager, self.owner, path, hasher_spherical, params)
+                elif path == 'factory/index/spherical':
+                    return _create_model_from_factory(manager, self.owner, path, index_spherical, params)
                 #elif path == 'hasher/rrmedian':
                 #    return _create_model_from_factory(manager, self.owner, path, hasher_train, params, start_row=start_row, stop_row=stop_row)
                 #elif path == 'index/linear':

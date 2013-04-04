@@ -93,7 +93,7 @@ class PicarusManager(object):
         return {x: get_version(x) for x in ['picarus', 'imfeat', 'imseg', 'hadoopy', 'impoint', 'hadoopy_hbase']}
 
     def output_type_to_prefix(self, output_type):
-        return {'feature': 'feat:', 'binary_prediction': 'pred:', 'image_detections': 'pred:', 'processed_image': 'data:', 'binary_class_confidence': 'pred:', 'mask_feature' : 'mask:', 'multi_class_distance': 'pred:', 'hash': 'hash:', 'index': 'srch:', 'multi_feature': 'mfeat:'}[output_type]
+        return {'feature': 'feat:', 'binary_prediction': 'pred:', 'image_detections': 'pred:', 'processed_image': 'data:', 'binary_class_confidence': 'pred:', 'mask_feature' : 'mask:', 'distance_image_rows': 'srch:', 'multi_class_distance': 'srch:', 'hash': 'hash:', 'multi_feature': 'mfeat:'}[output_type]
 
     def input_model_param_to_key(self, input, model_link, model_chain, input_type, output_type, email, name, notes='', tags='', factory_info=None):
         assert isinstance(input, str)

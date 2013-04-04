@@ -74,6 +74,15 @@ function login_get(func) {
     }
 }
 
+function imageThumbnail(row, id) {
+    var imageColumn = encode_id('thum:image_150sq');
+    function success(xhr) {
+        var columns = JSON.parse(xhr.responseText);
+        $('#' + id).attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('title', row)
+    }
+    picarus_api("/a1/data/images/" + row, "GET", {success: success, data: {columns: imageColumn}});
+}
+
 function button_confirm_click(button, fun) {
     button.unbind();
     button.click(function (data) {
@@ -299,7 +308,7 @@ function slices_selector() {
         }
     });
     addButton.click(function () {
-        slicesText.append($('<option>').text(startRow.val() + '/' + stopRow.val()).attr('value', encode_id(startRow.val()) + '/' + encode_id(stopRow.val())));
+        slicesText.append($('<option>').text(startRow.val() + '/' + stopRow.val()).attr('value', encode_id(unescape(startRow.val())) + '/' + encode_id(unescape(stopRow.val()))));
     });
     clearButton.click(function () {
         slicesText.html('');
