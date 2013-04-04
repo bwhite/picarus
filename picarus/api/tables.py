@@ -775,6 +775,8 @@ class ModelsHBaseTable(HBaseTable):
                     print('num_features[%d]' % len(features))
                     features = np.asfarray(features)
                     out = picarus_takeout.spherical_hasher_train(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
+                    out = {'pivots': out['pivots'].ravel().tolist(),
+                           'threshs': out['threshs'].tolist()}
                     #out = picarus.modules.spherical_hash.train_takeout(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
                     factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
                     model_link = {'name': 'picarus.SphericalHasher', 'kw': out}
