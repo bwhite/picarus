@@ -53,7 +53,7 @@ class PicarusManager(object):
         self.images_table = 'images'
         self.models_table = 'models'
         self.hb = thrift if thrift is not None else hadoopy_hbase.connect()
-        self.max_cell_size = 10 * 1024 * 1024  # 10MB
+        self.max_cell_size = 1024 * 1024  # 1MB
         # Feature Settings
         self.superpixel_column = 'feat:superpixel'
         # Feature Hasher settings
@@ -93,51 +93,51 @@ class PicarusManager(object):
         return {x: get_version(x) for x in ['picarus', 'imfeat', 'imseg', 'hadoopy', 'impoint', 'hadoopy_hbase']}
 
     def output_type_to_prefix(self, output_type):
-        return {'feature': 'feat:', 'binary_prediction': 'pred:', 'image_detections': 'pred:', 'processed_image': 'data:', 'binary_class_confidence': 'pred:', 'mask_feature' : 'mask:', 'distance_image_rows': 'srch:', 'multi_class_distance': 'srch:', 'hash': 'hash:', 'multi_feature': 'mfeat:'}[output_type]
+        return {'feature': 'feat:', 'feature2d_binary': 'feat:', 'binary_prediction': 'pred:', 'image_detections': 'pred:', 'processed_image': 'data:', 'binary_class_confidence': 'pred:', 'mask_feature' : 'mask:', 'distance_image_rows': 'srch:', 'multi_class_distance': 'srch:', 'hash': 'hash:', 'multi_feature': 'mfeat:'}[output_type]
 
     def input_model_param_to_key(self, input, model_link, model_chain, input_type, output_type, email, name, notes='', tags='', factory_info=None):
         assert isinstance(input, str)
         check_model = lambda x: isinstance(x, dict) and set(['name', 'kw']) == set(x.keys())
         dumps = lambda x: msgpack.dumps(x)
-        if check_model(model_link) and all(map(check_model, model_chain)):
-            model_chain_type = model_link_type = 'msgpack'
-            model_link_str = dumps(model_link)
-            model_chain_str = dumps(model_chain)
-        else:
-            raise ValueError('Model must be a dict!')
-        model_link_sha1 = hashlib.sha1(model_link_str).hexdigest()
-        model_chain_sha1 = hashlib.sha1(model_chain_str).hexdigest()
         prefix = self.output_type_to_prefix(output_type)
-        model_key = prefix + hashlib.sha1(model_chain_str).digest()[:8] + os.urandom(8)
+        model_key = prefix + os.urandom(16)
+        cols = []
 
-        cols = [hadoopy_hbase.Mutation(column=self.input_column, value=input),
-                hadoopy_hbase.Mutation(column=self.input_type_column, value=input_type),
-                hadoopy_hbase.Mutation(column=self.output_type_column, value=output_type),
-                hadoopy_hbase.Mutation(column=self.model_link_sha1_column, value=model_link_sha1),
-                hadoopy_hbase.Mutation(column=self.model_chain_sha1_column, value=model_chain_sha1),
-                hadoopy_hbase.Mutation(column=self.model_link_type_column, value=model_link_type),
-                hadoopy_hbase.Mutation(column=self.model_chain_type_column, value=model_chain_type),
-                hadoopy_hbase.Mutation(column=self.model_link_size_column, value=str(len(model_link_str))),
-                hadoopy_hbase.Mutation(column=self.model_chain_size_column, value=str(len(model_chain_str))),
-                hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time())),
-                hadoopy_hbase.Mutation(column=self.notes_column, value=notes),
-                hadoopy_hbase.Mutation(column=self.name_column, value=name),
-                hadoopy_hbase.Mutation(column=self.tags_column, value=tags),
-                hadoopy_hbase.Mutation(column='user:' + email, value='rw')]
-        if factory_info is not None:
-            cols.append(hadoopy_hbase.Mutation(column=self.factory_info_column, value=factory_info))
-
-        def save_model(model_str, model_column, model_chunks_column):
+        def save_model(model_str, model_column, model_chunks_column, model_sha1_column, model_size_column):
+            cols.append(hadoopy_hbase.Mutation(column=model_sha1_column, value=hashlib.sha1(model_str).hexdigest()))
+            cols.append(hadoopy_hbase.Mutation(column=model_size_column, value=str(len(model_str))))
             chunk_count = 0
             while model_str:
-                cols.append(hadoopy_hbase.Mutation(column=model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size]))
+                self.hb.mutateRow(self.models_table, model_key, [hadoopy_hbase.Mutation(column=model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size])])
                 model_str = model_str[self.max_cell_size:]
                 chunk_count += 1
             cols.append(hadoopy_hbase.Mutation(column=model_chunks_column, value=str(chunk_count)))
-        save_model(model_link_str, self.model_link_column, self.model_link_chunks_column)
-        save_model(model_chain_str, self.model_chain_column, self.model_chain_chunks_column)
-        self.hb.mutateRow(self.models_table, model_key, cols)
-        return model_key
+        try:
+            # Save the models ASAP chunk by chunk to reduce memory usage
+            if check_model(model_link) and all(map(check_model, model_chain)):
+                model_chain_type = model_link_type = 'msgpack'
+                save_model(dumps(model_link), self.model_link_column, self.model_link_chunks_column, self.model_link_sha1_column, self.model_link_size_column)
+                save_model(dumps(model_chain), self.model_chain_column, self.model_chain_chunks_column, self.model_chain_sha1_column, self.model_chain_size_column)
+            else:
+                raise ValueError('Model must be a dict!')
+            cols += [hadoopy_hbase.Mutation(column=self.input_column, value=input),
+                     hadoopy_hbase.Mutation(column=self.input_type_column, value=input_type),
+                     hadoopy_hbase.Mutation(column=self.output_type_column, value=output_type),
+                     hadoopy_hbase.Mutation(column=self.model_link_type_column, value=model_link_type),
+                     hadoopy_hbase.Mutation(column=self.model_chain_type_column, value=model_chain_type),
+                     hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time())),
+                     hadoopy_hbase.Mutation(column=self.notes_column, value=notes),
+                     hadoopy_hbase.Mutation(column=self.name_column, value=name),
+                     hadoopy_hbase.Mutation(column=self.tags_column, value=tags),
+                     hadoopy_hbase.Mutation(column='user:' + email, value='rw')]
+            if factory_info is not None:
+                cols.append(hadoopy_hbase.Mutation(column=self.factory_info_column, value=factory_info))
+            self.hb.mutateRow(self.models_table, model_key, cols)
+            return model_key
+        except:
+            print('Deleting model [%r] due to exception' % model_key)
+            self.hb.deleteAllRow(self.models_table, model_key)
+            raise
 
     def key_to_input_model_param(self, key):
         columns = self.hb.getRowWithColumns(self.models_table, key, [self.input_column, self.model_chunks_column, self.param_column])[0].columns
@@ -524,7 +524,13 @@ class PicarusManager(object):
     def model_to_name(self, model):
         args = list(model.get('args', []))
         for x, y in sorted(model.get('kw', {}).items()):
-            y = repr(y)
+            if isinstance(y, (dict, list, tuple, str)):
+                if len(y) > 20:
+                    y = '<...>'
+                else:
+                    y = repr(y)
+            else:
+                y = repr(y)
             if len(y) > 20:
                 y = 'sha1:' + repr(hashlib.sha1(y).hexdigest()[:4])
             args.append('%s=%s' % (x, y))

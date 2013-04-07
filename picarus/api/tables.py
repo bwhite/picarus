@@ -11,15 +11,14 @@ import picarus.api
 import numpy as np
 import crawlers
 import re
-import scipy.cluster.vq
-import scipy as sp
-import random
+import gipc
 import picarus_takeout
 import msgpack # TODO: Abstract these operations
 from driver import PicarusManager
 from picarus._importer import call_import
 from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
 from parameters import PARAM_SCHEMAS_SERVE
+from model_factories import FACTORIES
 
 # These need to be set before using this module
 thrift_lock = None
@@ -156,11 +155,14 @@ def _create_model_from_params(manager, email, path, params):
         bottle.abort(500)
 
 
-def _create_model_from_factory(manager, email, path, create_model, params):
+def _create_model_from_factory(manager, email, path, create_model, params, start_stop_rows, table):
     schema = PARAM_SCHEMAS_SERVE[path]
     model_params = _parse_params(params, schema)
     inputs = {x: _get_input(params, x) for x in schema['input_types']}
-    row = manager.input_model_param_to_key(**create_model(model_params, inputs, schema))
+    with gipc.pipe() as (reader, writer):
+        p = gipc.start_process(target=create_model, args=(writer, model_params, inputs, schema, start_stop_rows, table, email))
+        row = reader.get()
+        p.join()
     return {'row': base64.urlsafe_b64encode(row)}
 
 
@@ -679,177 +681,9 @@ class ModelsHBaseTable(HBaseTable):
                 data_table = get_table(self._auth_user, table)
                 for start_row, stop_row in start_stop_rows:
                     data_table._slice_validate(start_row, stop_row, 'r')
-
-                def classifier_sklearn(params, inputsub64, schema):
-                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
-                    label_features = {0: [], 1: []}
-                    for start_row, stop_row in start_stop_rows:
-                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
-                                                         columns=[inputs['feature'], inputs['meta']],
-                                                         start_row=start_row, stop_row=stop_row)
-                        for row, cols in row_cols:
-                            try:
-                                label = int(cols[inputs['meta']] == params['class_positive'])
-                                label_features[label].append(cols[inputs['feature']])
-                            except KeyError:
-                                continue
-                    labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
-                    features = label_features[0] + label_features[1]
-                    features = np.asfarray([msgpack.loads(x)[0] for x in features])
-                    import sklearn.svm
-                    classifier = sklearn.svm.LinearSVC()
-                    classifier.fit(features, np.asarray(labels))
-                    factory_info = {'slices': slices, 'num_rows': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
-                    model_link = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': classifier.coef_.tolist()[0],
-                                                                             'intercept': classifier.intercept_[0]}}
-                    model_chain = _takeout_model_chain_from_key(manager, inputs['feature']) + [model_link]
-                    return {'input': inputsub64['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
-                            'output_type': 'binary_class_confidence', 'email': self.owner, 'name': manager.model_to_name(model_link),
-                            'factory_info': json.dumps(factory_info)}
-
-                def classifier_localnbnn(params, inputsub64, schema):
-                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
-                    features = []
-                    indeces = []
-                    num_features = 0
-                    feature_size = 0
-                    labels_dict = {}
-                    labels = []
-                    for start_row, stop_row in start_stop_rows:
-                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
-                                                         columns=[inputs['multi_feature'], inputs['meta']], start_row=start_row, stop_row=stop_row)
-                        for _, cols in row_cols:
-                            try:
-                                label = cols[inputs['meta']]
-                                f, s = msgpack.loads(cols[inputs['multi_feature']])
-                                if label not in labels_dict:
-                                    labels_dict[label] = len(labels_dict)
-                                    labels.append(label)
-                                feature_size = s[1]
-                                num_features += s[0]
-                                features += f
-                                indeces += [labels_dict[label]] * s[0]
-                            except KeyError:
-                                pass
-                    factory_info = {'slices': slices, 'data': 'slices', 'params': params, 'inputs': inputsub64}
-                    model_link = {'name': 'picarus.LocalNBNNClassifier', 'kw': {'features': features, 'indeces': indeces, 'labels': labels,
-                                                                                'feature_size': feature_size, 'max_results': params['max_results']}}
-                    model_chain = _takeout_model_chain_from_key(manager, inputs['multi_feature']) + [model_link]
-                    return {'input': inputsub64['multi_feature'], 'model_link': model_link, 'model_chain': model_chain,
-                            'input_type': 'multi_feature', 'output_type': 'multi_class_distance',
-                            'email': self.owner, 'name': manager.model_to_name(model_link), 'factory_info': json.dumps(factory_info)}
-
-                def feature_bovw_mask(params, inputsub64, schema):
-                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
-                    features = []
-                    for start_row, stop_row in start_stop_rows:
-                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
-                                                         columns=[inputs['mask_feature']],
-                                                         start_row=start_row, stop_row=stop_row)
-                        for row, cols in row_cols:
-                            cur_feature = msgpack.loads(cols[inputs['mask_feature']])
-                            cur_feature = np.array(cur_feature[0]).reshape((-1, cur_feature[1][2]))
-                            features += random.sample(cur_feature, min(len(cur_feature), params['max_per_row']))
-                            print(len(features))
-                    features = np.asfarray(features)
-                    clusters = sp.cluster.vq.kmeans(features, params['num_clusters'])[0]
-                    num_clusters = clusters.shape[0]
-                    factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
-                    model_link = {'name': 'picarus.BOVWImageFeature', 'kw': {'clusters': clusters.ravel().tolist(), 'num_clusters': num_clusters,
-                                                                             'levels': params['levels']}}
-                    model_chain = _takeout_model_chain_from_key(manager, inputs['mask_feature']) + [model_link]
-                    return {'input': inputsub64['mask_feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
-                            'output_type': 'feature', 'email': self.owner, 'name': manager.model_to_name(model_link),
-                            'factory_info': json.dumps(factory_info)}
-
-                def hasher_spherical(params, inputsub64, schema):
-                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
-                    features = []
-                    for start_row, stop_row in start_stop_rows:
-                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
-                                                         columns=[inputs['feature']],
-                                                         start_row=start_row, stop_row=stop_row)
-                        for row, cols in row_cols:
-                            cur_feature = msgpack.loads(cols[inputs['feature']])
-                            features.append(np.array(cur_feature[0]))
-                    print('num_features[%d]' % len(features))
-                    features = np.asfarray(features)
-                    out = picarus_takeout.spherical_hasher_train(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
-                    out = {'pivots': out['pivots'].ravel().tolist(),
-                           'threshs': out['threshs'].tolist()}
-                    #out = picarus.modules.spherical_hash.train_takeout(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
-                    factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
-                    model_link = {'name': 'picarus.SphericalHasher', 'kw': out}
-                    model_chain = _takeout_model_chain_from_key(manager, inputs['feature']) + [model_link]
-                    return {'input': inputsub64['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
-                            'output_type': 'hash', 'email': self.owner, 'name': manager.model_to_name(model_link),
-                            'factory_info': json.dumps(factory_info)}
-
-                def index_spherical(params, inputsub64, schema):
-                    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
-                    hashes = []
-                    labels = []
-                    for start_row, stop_row in start_stop_rows:
-                        row_cols = hadoopy_hbase.scanner(thrift, data_table.table,
-                                                         columns=[inputs['hash']],
-                                                         start_row=start_row, stop_row=stop_row)
-                        for row, cols in row_cols:
-                            hashes.append(cols[inputs['hash']])
-                            labels.append(row)
-                    hashes = ''.join(hashes)
-                    factory_info = {'slices': slices, 'num_hashes': len(labels), 'data': 'slices', 'params': params, 'inputs': inputsub64}
-                    model_link = {'name': 'picarus.SphericalHashIndex', 'kw': {'hashes': hashes,
-                                                                               'indeces': range(len(labels)), 'labels': labels,
-                                                                               'max_results': params['max_results']}}
-                    model_chain = _takeout_model_chain_from_key(manager, inputs['hash']) + [model_link]
-                    return {'input': inputsub64['hash'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'hash',
-                            'output_type': 'distance_image_rows', 'email': self.owner, 'name': manager.model_to_name(model_link),
-                            'factory_info': json.dumps(factory_info)}
-
-                def hasher_train(model_dict, model_param, inputs):
-                    hasher = call_import(model_dict)
-                    features = hadoopy_hbase.scanner_column(thrift, self.table, inputs['feature'],
-                                                            start_row=start_row, stop_row=stop_row)
-                    return hasher.train(picarus.api.np_fromstring(x) for x in features)
-
-                def index_train(model_dict, model_param, inputs):
-                    index = call_import(model_dict)
-                    row_cols = hadoopy_hbase.scanner(thrift, self.table,
-                                                     columns=[inputs['hash'], inputs['meta']], start_row=start_row, stop_row=stop_row)
-                    metadata, hashes = zip(*[(json.dumps([cols[inputs['meta']], base64.urlsafe_b64encode(row)]), cols[inputs['hash']])
-                                             for row, cols in row_cols])
-                    hashes = np.ascontiguousarray(np.asfarray([np.fromstring(h, dtype=np.uint8) for h in hashes]))
-                    index = index.store_hashes(hashes, np.arange(len(metadata), dtype=np.uint64))
-                    index.metadata = metadata
-                    return index
-
-                def kmeans_cluster_mfeat(model_dict, model_param, inputs):
-                    # TODO: This needs to be finished, determine if we want quantizer level or cluster level
-                    clusterer = call_import(model_dict)
-                    features = []
-                    row_cols = hadoopy_hbase.scanner(thrift, self.table,
-                                                     columns=[inputs['multi_feature']], start_row=start_row, stop_row=stop_row)
-                    # TODO: We'll want to check that we aren't clustering too much data by placing constraints
-                    for row, columns in row_cols:
-                        features.append(picarus.api.np_fromstring(columns[inputs['multi_feature']]))
-                    features = np.vstack(features)
-                    return clusterer.cluster(features)
-
-                if path == 'factory/classifier/svmlinear':
-                    return _create_model_from_factory(manager, self.owner, path, classifier_sklearn, params)
-                elif path == 'factory/classifier/localnbnn':
-                    return _create_model_from_factory(manager, self.owner, path, classifier_localnbnn, params)
-                elif path == 'factory/feature/bovw':
-                    return _create_model_from_factory(manager, self.owner, path, feature_bovw_mask, params)
-                elif path == 'factory/hasher/spherical':
-                    return _create_model_from_factory(manager, self.owner, path, hasher_spherical, params)
-                elif path == 'factory/index/spherical':
-                    return _create_model_from_factory(manager, self.owner, path, index_spherical, params)
-                #elif path == 'hasher/rrmedian':
-                #    return _create_model_from_factory(manager, self.owner, path, hasher_train, params, start_row=start_row, stop_row=stop_row)
-                #elif path == 'index/linear':
-                #    return _create_model_from_factory(manager, self.owner, path, index_train, params, start_row=start_row, stop_row=stop_row)
-                else:
+                try:
+                    return _create_model_from_factory(manager, self.owner, path, FACTORIES[path], params, start_stop_rows, data_table.table)
+                except KeyError:
                     bottle.abort(400)
 
 

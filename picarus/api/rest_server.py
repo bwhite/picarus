@@ -53,7 +53,7 @@ if __name__ == "__main__":
     ARGS = parser.parse_args()
     THRIFT_POOL = gevent.queue.Queue()
     THRIFT_CONSTRUCTOR = lambda : hadoopy_hbase.connect(ARGS.thrift_server, ARGS.thrift_port)
-    for x in range(10):
+    for x in range(5):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     USERS = Users(ARGS.users_redis_host, ARGS.users_redis_port, ARGS.users_redis_db)
     YUBIKEY = Yubikey(ARGS.yubikey_redis_host, ARGS.yubikey_redis_port, ARGS.yubikey_redis_db)

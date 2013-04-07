@@ -72,6 +72,15 @@ PARAM_SCHEMAS.append({'type': 'model',
                       'output_type': 'binary_prediction',
                       'params': {'threshold': {'type': 'float', 'min': -sys.float_info.max, 'max': sys.float_info.max}}})
 
+PARAM_SCHEMAS.append({'type': 'model',
+                      'name': 'picarus.BRISKImageFeature2d',
+                      'kind': 'feature2d',
+                      'input_type': 'processed_image',
+                      'output_type': 'feature2d_binary',
+                      'params': {'thresh': {'type': 'int', 'min': 1, 'max': 64},
+                                 'octaves': {'type': 'int', 'min': 1, 'max': 6},
+                                 'pattern_scale': {'type': 'float', 'min': .1, 'max': 10.}}})
+
 
 PARAM_SCHEMAS.append({'type': 'model',
                       'name': 'picarus.FaceImageObjectDetector',
@@ -126,6 +135,16 @@ PARAM_SCHEMAS.append({'type': 'factory',
                       'data': 'slices',
                       'input_types': ['hash'],
                       'params': {'max_results': {'type': 'int', 'min': 1, 'max': 101}}})
+
+
+PARAM_SCHEMAS.append({'type': 'factory',
+                      'name': 'hamming_feature_2d',
+                      'kind': 'index',
+                      'data': 'slices',
+                      'input_types': ['feature2d_binary'],
+                      'params': {'max_results': {'type': 'int', 'min': 1, 'max': 101},
+                                 'max_keypoint_results': {'type': 'int', 'min': 1, 'max': 101},
+                                 'hamming_thresh': {'type': 'int', 'min': 1, 'max': 266}}})
 
 PARAM_SCHEMAS.append({'type': 'factory',
                       'name': 'localnbnn',
