@@ -221,13 +221,19 @@ def auth_yubikey(_auth_user):
 @bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/index.html')
 @check_version
 def annotate_index(task):
-    return ANNOTATORS.get_manager(task).index
+    try:
+        return ANNOTATORS.get_manager(task).index
+    except KeyError:
+        bottle.abort(404)
 
 
 @bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/static/:file_name')
 @check_version
 def annotation_static(task, file_name):
-    ANNOTATORS.get_manager(task)
+    try:
+        ANNOTATORS.get_manager(task)
+    except KeyError:
+        bottle.abort(404)
     root = mturk_vision.__path__[0] + '/static'
     return bottle.static_file(file_name, root)
 
@@ -235,19 +241,28 @@ def annotation_static(task, file_name):
 @bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/user.js')
 @check_version
 def annotation_user(task):
-    return ANNOTATORS.get_manager(task).user(bottle.request)
+    try:
+        return ANNOTATORS.get_manager(task).user(bottle.request)
+    except KeyError:
+        bottle.abort(404)
 
 
 @bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/config.js')
 @check_version
 def annotation_config(task):
-    return ANNOTATORS.get_manager(task).config
+    try:
+        return ANNOTATORS.get_manager(task).config
+    except KeyError:
+        bottle.abort(404)
 
 
 @bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/:user_id/data.js')
 @check_version
 def annotation_data(task, user_id):
-    return ANNOTATORS.get_manager(task).make_data(user_id)
+    try:
+        return ANNOTATORS.get_manager(task).make_data(user_id)
+    except KeyError:
+        bottle.abort(404)
 
 
 @bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/image/:image_key')
@@ -275,7 +290,10 @@ def annotation_data_get(task, data_key):
 @bottle.post('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/result')
 @check_version
 def annotation_result(task):
-    return ANNOTATORS.get_manager(task).result(**bottle.request.json)
+    try:
+        return ANNOTATORS.get_manager(task).result(**bottle.request.json)
+    except KeyError:
+        bottle.abort(404)
 
 
 if __name__ == '__main__':
