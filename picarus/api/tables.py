@@ -606,7 +606,7 @@ class ImagesHBaseTable(HBaseTable):
                 if 'instructions' in params:
                     p['instructions'] = params['instructions']
                 p['num_tasks'] = int(params['numTasks'])
-                assert 0 < p['numTasks']
+                assert 0 < p['num_tasks']
                 assert params['mode'] in ('standalone', 'mturk')
                 p['mode'] = params['mode']
                 try:
