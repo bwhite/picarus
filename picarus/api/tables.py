@@ -605,8 +605,10 @@ class ImagesHBaseTable(HBaseTable):
                     bottle.abort(400)
                 if 'instructions' in params:
                     p['instructions'] = params['instructions']
-                p['num_tasks'] = 100
-                p['mode'] = 'standalone'
+                p['num_tasks'] = int(params['numTasks'])
+                assert 0 < p['numTasks']
+                assert params['mode'] in ('standalone', 'mturk')
+                p['mode'] = params['mode']
                 try:
                     redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p).split(':')
                 except annotators.CapacityException:
