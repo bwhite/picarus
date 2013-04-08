@@ -1079,7 +1079,8 @@
         </div>
         <div class="span5">
           <h3>Options</h3>
-          <input class="input-small" type="text" placeholder="Query" id="query" value="">
+          <input class="input-small" type="text" placeholder="Query" id="query" value="" hint="Shown at the top of the images">
+          <input class="input-small" type="text" placeholder="Num Tasks" id="num_tasks" value="25" hint="User has to annotate this many times before finishing">
           <textarea id="instructions" rows="5" hint="Instructions shown to annotator">Determine if the images below fit the bolded category below.  You may either select images belonging to that category (Positive) or images that do not belong to the category (Negative).  To reduce the number of clicks you have to do, it helps to select the category with the fewest number of images.  Select all instances that belong to the category.  When you are done, select which category you annotated (Positive/Negative).  If you are unsure then skip.</textarea>
           <%=runButton%>
         </div>
@@ -1095,12 +1096,47 @@
               var stopRow = encode_id($('#stopRow').val());
               var imageColumn = encode_id('thum:image_150sq');
               var entityColumn = encode_id('meta:class');
+              var numTasks = Number($('#num_tasks').val());
               var query = $('#query').val();
               function success(xhr) {
                   response = JSON.parse(xhr.responseText);
                   $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
               }
-              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query_batch', imageColumn: imageColumn, entityColumn: entityColumn, query: query, instructions: $('#instructions').val()}});
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query_batch', imageColumn: imageColumn, query: query, instructions: $('#instructions').val(), numTasks: numTasks, mode: "amt"}});
+          });
+      }
+    </script>
+
+    <script type="text/html" id="tpl_annotate_entity">
+      <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+        <div class="span3">
+          <%=rowSelect%>
+        </div>
+        <div class="span5">
+          <h3>Options</h3>
+          <input class="input-small" type="text" placeholder="Entity Column" id="entity" value="meta:class" hint="Column to get image entity from">
+          <input class="input-small" type="text" placeholder="Num Tasks" id="num_tasks" value="25" hint="User has to annotate this many times before finishing">
+          <textarea id="instructions" rows="5" hint="Instructions shown to annotator">Determine if the image has the entity specified below.  Hotkeys are provided to allow you to select and submit results.  If you are unsure then skip.</textarea>
+          <%=runButton%>
+        </div>
+      </div>
+      <div class="clearfix span12 skinny" id="results"></div>
+    </script>
+
+    <script type="text/javascript">
+      function render_annotate_entity() {
+          row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+          $('#runButton').click(function () {
+              var startRow = encode_id($('#startRow').val());
+              var stopRow = encode_id($('#stopRow').val());
+              var imageColumn = encode_id('thum:image_150sq');
+              var numTasks = Number($('#num_tasks').val());
+              var entityColumn = encode_id($('#entity').val());
+              function success(xhr) {
+                  response = JSON.parse(xhr.responseText);
+                  $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
+              }
+              picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/entity', imageColumn: imageColumn, entityColumn: entityColumn, instructions: $('#instructions').val(), numTasks: numTasks, mode: "amt"}});
           });
       }
     </script>
