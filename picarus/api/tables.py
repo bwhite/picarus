@@ -189,9 +189,16 @@ class BaseTableSmall(object):
         else:
             return json.dumps(full_table)
 
+    def _get_row(self, row, columns):
+        for x in self._get_table():
+            if x['row'] == row:
+                x = dict(x)  # Ensures we aren't deleting anything
+                del x['row']
+                return x
+        bottle.abort(404)
+
     def get_row(self, row, columns):
-        table = self._get_row(row, columns)
-        column_values = table[row]
+        column_values = self._get_row(row, columns)
         if columns:
             columns = set(columns).intersection(column_values)
             return {base64.urlsafe_b64encode(x): base64.b64encode(column_values[x])
@@ -222,7 +229,7 @@ class RedisUsersTable(BaseTableSmall):
         return dod_to_lod_b64(self._table)
 
     def _get_row(self, row, columns):
-        return self._table
+        return self._table[row]
 
     def patch_row(self, row, params, files):
         if files:
@@ -280,6 +287,7 @@ class UsersTable(object):
         self._auth_user = _auth_user
 
     def get_row(self, row, columns):
+        # TODO: Use columns parameter
         if self._auth_user.email != row:
             bottle.abort(401)
         return _user_to_dict(self._auth_user)
