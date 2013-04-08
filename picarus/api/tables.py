@@ -587,17 +587,18 @@ class ImagesHBaseTable(HBaseTable):
                 image_column = base64.urlsafe_b64decode(params['imageColumn'])
                 if action == 'io/annotate/image/entity':
                     entity_column = base64.urlsafe_b64decode(params['entityColumn'])
+                    assert entity_column.startswith('meta:')
                     data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row),
-                                                                                       entity_column, image_column)
+                                                                                       base64.urlsafe_b64encode(entity_column), base64.urlsafe_b64encode(image_column))
                     p['type'] = 'image_entity'
                 elif action == 'io/annotate/image/query':
                     query = params['query']
-                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row), image_column)
+                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row), base64.urlsafe_b64encode(image_column))
                     p['type'] = 'image_query'
                     p['query'] = query
                 elif action == 'io/annotate/image/query_batch':
                     query = params['query']
-                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row), image_column)
+                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row), base64.urlsafe_b64encode(image_column))
                     p['type'] = 'image_query_batch'
                     p['query'] = query
                 else:
