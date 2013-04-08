@@ -607,7 +607,7 @@ class ImagesHBaseTable(HBaseTable):
                     p['instructions'] = params['instructions']
                 p['num_tasks'] = int(params['numTasks'])
                 assert 0 < p['num_tasks']
-                assert params['mode'] in ('standalone', 'mturk')
+                assert params['mode'] in ('standalone', 'amt')
                 p['mode'] = params['mode']
                 try:
                     redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p).split(':')
