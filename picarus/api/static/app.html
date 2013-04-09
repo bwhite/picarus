@@ -1594,6 +1594,8 @@
       <div id="other_samples"></div>
       <h3>Class Stats</h3>
       <div id="annotation-stats"></div>
+      <h3>Annotator Stats</h3>
+      <div id="annotator_time_graph" style="height:200px;width:600px"></div>
       <h3>Users Table</h3>
       <div id="annotation-users"></div>
       <h3>Results Table</h3>
@@ -1776,7 +1778,15 @@
                               annotation_times[y] = [t];
                       });
                   });
-                  
+                  var median_rows = _.map(annotation_times, function (x, y) {
+                      x.sort();
+                      return [y, x[x.length / 2]]
+                  });
+                  var data0 = to_google_data(median_rows, ['Iteration', 'Median Time']);
+                  var options = {title: 'Annotator Median Time vs Iteration',
+                                 hAxis: {title: 'Median Time'}};
+                  var chart0 = new google.visualization.LineChart(document.getElementById('annotator_time_graph'));
+                  chart0.draw(data0, options);
               }
               function class_select_change() {
                   var class_name = $('#class_select').find(":selected").val();
