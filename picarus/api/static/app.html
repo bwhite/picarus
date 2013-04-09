@@ -1668,37 +1668,36 @@
           }
           function image_entity_score(users, results) {
               // Only count explicit marks
-              scoresPos = {};
-              scoresNeg = {};
-              scoresTotal = {};
+              var scores = {};
 
               results.each(function (x) {
                   var annotation = x.pescapejs('user_data');
                   var image = x.pescape('image');
                   var entity = x.pescape('entity');
-                  if (!_.has(scoresTotal, entity)) {
-                      scoresPos[entity] = {};
-                      scoresNeg[entity] = {};
-                      scoresTotal[entity] = {};
+                  if (!_.has(scores, entity)) {
+                      scores[entity] = {scoresPos: {}, scoresNeg: {}, scoresTotal: {}};
                   }
-                  if (_.has(scoresTotal[entity], image))
-                      scoresTotal[entity][image] += 1;
+                  var scoresPos = scores[entity].scoresPos;
+                  var scoresNeg = scores[entity].scoresNeg;
+                  var scoresTotal = scores[entity].scoresTotal;
+                  if (_.has(scoresTotal, image))
+                      scoresTotal[image] += 1;
                   else
-                      scoresTotal[entity][image] = 1;
+                      scoresTotal[image] = 1;
                   if (annotation == 'true') {
-                      if (_.has(scoresPos[entity], image))
-                          scoresPos[entity][image] += 1;
+                      if (_.has(scoresPos, image))
+                          scoresPos[image] += 1;
                       else
-                          scoresPos[entity][image] = 1;
+                          scoresPos[image] = 1;
                   }
                   if (annotation == 'false') {
-                      if (_.has(scoresNeg[entity], image))
-                          scoresNeg[entity][image] += 1;
+                      if (_.has(scoresNeg, image))
+                          scoresNeg[image] += 1;
                       else
-                          scoresNeg[entity][image] = 1;
+                          scoresNeg[image] = 1;
                   }
               });
-              return {scoresPos: scoresPos, scoresNeg: scoresNeg, scoresTotal: scoresTotal};
+              return scores;
           }
           function display_annotation_task(task, get_classes, get_scores) {
               var task_dec = decode_id(task);
@@ -1720,7 +1719,7 @@
                   $('#class_select').change(class_select_change);
                   class_scores = get_scores(users, results, unclicked);
                   class_select_change();
-                  var scores = _.map(class_scores, function (s) {
+                  var scores = _.map(class_scores, function (s, class_name) {
                       var out = {pos: 0, neg: 0, total: 0, unique: _.size(s.scoresTotal)};
                       _.each(s.scoresPos, function (x) {
                           out.pos += x;
@@ -1731,7 +1730,7 @@
                       _.each(s.scoresTotal, function (x) {
                           out.total += x;
                       });
-                      out.class_name = x;
+                      out.class_name = class_name;
                       return out;
                   });
                   scores.sort(function (x, y) {return y.pos / (y.total + .0000001) - x.pos / (x.total + .0000001)})
