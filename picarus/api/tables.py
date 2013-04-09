@@ -576,6 +576,10 @@ class ImagesHBaseTable(HBaseTable):
                 except KeyError:
                     pass
                 try:
+                    p['max_rows'] = int(params['maxRows'])
+                except KeyError:
+                    pass
+                try:
                     p['max_upload_date'] = int(params['maxUploadDate'])
                 except KeyError:
                     pass
