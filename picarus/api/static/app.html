@@ -1563,6 +1563,7 @@
           <label class="checkbox" style="margin-bottom: 0px;" hint="Include 'unclicked' images" for="unclicked">
             <input type="checkbox" value="" id="unclicked">
           </label>
+          <select id="class_select"></select>
           </div>
           <div class="span8">
             <div class="span2">
@@ -1591,6 +1592,8 @@
       <div id="positive_samples"></div>
       <div id="negative_samples"></div>
       <div id="other_samples"></div>
+      <h3>Class Stats</h3>
+      <div id="annotation-stats"></div>
       <h3>Users Table</h3>
       <div id="annotation-users"></div>
       <h3>Results Table</h3>
@@ -1609,7 +1612,24 @@
                       hist[x] = inc;
               });
           }
-          function image_batch_score(users, results, scoreUnselected) {
+          function score_total(scoresPos, scoresNeg, scoresTotal) {
+              if (_.isUndefined(scoresTotal))
+                  scoresTotal = {};
+              _.each(scoresPos, function (y, x) {
+                  if (_.has(scoresTotal, x))
+                      scoresTotal[x] += y;
+                  else
+                      scoresTotal[x] = y;
+              });
+              _.each(scoresNeg, function (y, x) {
+                  if (_.has(scoresTotal, x))
+                      scoresTotal[x] += y;
+                  else
+                      scoresTotal[x] = y;
+              });
+              return scoresTotal;
+          }
+          function image_batch_score(users, results, unused_class_name, scoreUnselected) {
               // Only count explicit marks
               scoresPos = {};
               scoresNeg = {};
@@ -1623,46 +1643,64 @@
                   accumulate(scoresTotal, images, 0);  // Makes each image show up, even if not annotated
                   if (_.isUndefined(d))
                       return;
-                  if (d.polarity) {
+                  if (d.polarity)
                       accumulate(scoresPos, pick(d.selected, images), 1);
                       if (scoreUnselected)
                           accumulate(scoresNeg, pick(d.notSelected, images), 1);
-                  } else {
+                  else
                       accumulate(scoresNeg, pick(d.selected, images), 1);
                       if (scoreUnselected)
                           accumulate(scoresPos, pick(d.notSelected, images), 1);
-                  }
               });
               _.each(scoresPos, function (y, x) {
-                  if (_.has(scoresTotal, x)) {
+                  if (_.has(scoresTotal, x))
                       scoresTotal[x] += y;
-                  } else {
+                  else
                       scoresTotal[x] = y;
-                  }
               });
               _.each(scoresNeg, function (y, x) {
-                  if (_.has(scoresTotal, x)) {
+                  if (_.has(scoresTotal, x))
                       scoresTotal[x] += y;
-                  } else {
+                  else
                       scoresTotal[x] = y;
+              });
+              return {scoresPos: scoresPos, scoresNeg: scoresNeg, scoresTotal: score_total(scoresPos, scoresNeg, scoresTotal)};
+          }
+          function image_entity_score(users, results, class_name) {
+              // Only count explicit marks
+              scoresPos = {};
+              scoresNeg = {};
+              scoresTotal = {};
+
+              results.each(function (x) {
+                  var annotation = x.pescapejs('user_data');
+                  var image = x.pescape('image');
+                  if (x.pescape('entity') != class_name)
+                      return;
+                  if (_.has(scoresTotal, image))
+                      scoresTotal[image] += 1;
+                  else
+                      scoresTotal[image] = 1;
+                  if (annotation == 'true') {
+                      if (_.has(scoresPos, image))
+                          scoresPos[image] += 1;
+                      else
+                          scoresPos[image] = 1;
+                  }
+                  if (annotation == 'false') {
+                      if (_.has(scoresNeg, image))
+                          scoreNeg[image] += 1;
+                      else
+                          scoresNeg[image] = 1;
                   }
               });
               return {scoresPos: scoresPos, scoresNeg: scoresNeg, scoresTotal: scoresTotal};
           }
-          function change() {
-              var task = $('#annotator_select').find(":selected").val();
-              if (_.isUndefined(task)) {
-      return;
-              }
-              task = decode_id(task);
-              // TODO: Add dropdown to select annotator to query
-              // TODO: Histogram of annotation times, annotation time vs annotation iteration (scatter and median), histogram of image annotations
-              // TODO: Abstract functions for getting image annotations based on annotation type
-              // TODO: Filter rows and/or modify column based on annotation
-              // TODO: Add voting rules for neg/pos/unsure
-              // TODO: Add other annotation types
-              var results = new PicarusRows([], {'table': 'annotations-results-' + task});
-              var users = new PicarusRows([], {'table': 'annotations-users-' + task});
+          function display_annotation_task(task, get_classes, get_scores) {
+              var task_dec = decode_id(task);
+              /* TODO: Compute a dropdown list of available classes (new view for results model) */
+              results = new PicarusRows([], {'table': 'annotations-results-' + task_dec});
+              users = new PicarusRows([], {'table': 'annotations-users-' + task_dec});
               var imageColumn = encode_id('thum:image_150sq');
               $('#negPct').change(data_change);
               $('#posPct').change(data_change);
@@ -1670,12 +1708,39 @@
               $('#negCnt').change(data_change);
               $('#unclicked').change(data_change);
               function data_change() {
+                  var unclicked = $('#unclicked').is(':checked')
+                  var classes = get_classes(results);
+                  var select_template = "{{#classes}}<option value='{{.}}'>{{.}}</option>{{/classes}};"
+                  $('#class_select').html(Mustache.render(select_template, {classes: classes}));
+                  $('#class_select').unbind();
+                  $('#class_select').change(class_select_change);
+                  class_select_change();
+                  var scores = _.map(classes, function (x) {
+                      var s = get_scores(users, results, x, unclicked);
+                      var out = {pos: 0, neg: 0, total: 0, unique: _.size(s.scoresTotal)};
+                      _.each(s.scoresPos, function (x) {
+                          out.pos += x;
+                      });
+                      _.each(s.scoresNeg, function (x) {
+                          out.neg += x;
+                      });
+                      _.each(s.scoresTotal, function (x) {
+                          out.total += x;
+                      });
+                      out.class_name = x;
+                      return out;
+                  });
+                  var scores_template = "<table><tr><td>Name</td><td>Pos Annot.</td><td>Neg Annot.</td><td>Tot Annot.</td><td>Unique</td></tr>{{#scores}}<tr><td>{{class_name}}</td><td>{{pos}}</td><td>{{neg}}</td><td>{{total}}</td><td>{{unique}}</td></tr>{{/scores}}</table>";
+                  $('#annotation-stats').html(Mustache.render(scores_template, {scores: scores}));
+              }
+              function class_select_change() {
+                  var class_name = $('#class_select').find(":selected").val();
                   negPct = Number($('#negPct').val());
                   posPct = Number($('#posPct').val());
                   negCnt = Math.max(1, Number($('#negCnt').val()));
                   posCnt = Math.max(1, Number($('#posCnt').val()));
-                  unclicked = $('#unclicked').is(':checked')
-                  scores = image_batch_score(users, results, unclicked);
+                  unclicked = $('#unclicked').is(':checked');
+                  scores = get_scores(users, results, class_name, unclicked);
                   ts = scores.scoresTotal;
                   posScores = _.sortBy(_.filter(_.pairs(scores.scoresPos), function (x) {return x[1] >= posCnt && (x[1] / ts[x[0]]) >= posPct}), function (x) { return -x[1] });
                   negScores = _.sortBy(_.filter(_.pairs(scores.scoresNeg), function (x) {return x[1] >= negCnt && (x[1] / ts[x[0]]) >= negPct}), function (x) { return x[1] });
@@ -1684,9 +1749,9 @@
                   function display_samples(div, scores, title) {
                       div.html('');
                       div.append($('<h3>').text(title + ' ' + scores.length + ' / ' + _.size(ts)));
-
+                      
                       _.each(scores.slice(0, 24), function (x) {
-                      var id = _.uniqueId('image_');
+                          var id = _.uniqueId('image_');
                           div.append($('<img>').attr('id', id).attr('title', 'Row: ' + x[0] + ' Score: ' + x[1]).addClass('hide'));
                           function success(xhr) {
                               response = JSON.parse(xhr.responseText);
@@ -1700,7 +1765,7 @@
                   display_samples($('#positive_samples'), posScores, 'Positive Samples');
                   display_samples($('#negative_samples'), negScores, 'Negative Samples');
                   display_samples($('#other_samples'), otherScores, 'Other Samples (not pos/neg)');
-
+                  
                   // Hookup delete
                   function delete_row() {
                       action = $('#actionSplit').find(":selected").val();
@@ -1730,9 +1795,39 @@
 
               new RowsView({collection: results, el: $('#annotation-results'), postRender: _.debounce(data_change, 100)});
               results.fetch();
-
+              
               new RowsView({collection: users, el: $('#annotation-users'), postRender: _.debounce(data_change, 100)});
               users.fetch();
+          }
+          function change() {
+              var task = $('#annotator_select').find(":selected").val();
+              if (_.isUndefined(task)) {
+                  return;
+              }
+              function success_annotation(xhr) {
+                  annotation = JSON.parse(xhr.responseText);
+                  annotation_type = JSON.parse(base64.decode(annotation[encode_id('params')])).type;
+                  // Code is over nested, use partial application to flatten it
+                  if (annotation_type == 'image_entity') {
+                      get_classes = function (results) {
+                          return _.unique(results.map(function (x, y) {return x.pescape('entity')})).sort()
+                      }
+                      get_scores = image_entity_score;
+                      // TODO: Add function to get scores from results given a class
+                  } else if (annotation_type == 'image_query_batch') {
+                      
+                  } else {
+                      
+                  }
+                  display_annotation_task(task, get_classes, get_scores);
+              }
+              // TODO: Add dropdown to select annotator to query
+              // TODO: Histogram of annotation times, annotation time vs annotation iteration (scatter and median), histogram of image annotations
+              // TODO: Abstract functions for getting image annotations based on annotation type
+              // TODO: Filter rows and/or modify column based on annotation
+              // TODO: Add voting rules for neg/pos/unsure
+              // TODO: Add other annotation types
+              picarus_api("/a1/data/annotations/" + task, "GET", {success: success_annotation});
           }
           rows_dropdown(rows, {el: $('#annotator_select'), text: function (x) {return x.pescapejs('params').query}, change: change});
           rows.fetch();

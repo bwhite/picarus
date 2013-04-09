@@ -190,6 +190,7 @@ class BaseTableSmall(object):
             return json.dumps(full_table)
 
     def _get_row(self, row, columns):
+        row = base64.urlsafe_b64encode(row)
         for x in self._get_table():
             if x['row'] == row:
                 x = dict(x)  # Ensures we aren't deleting anything
@@ -198,14 +199,13 @@ class BaseTableSmall(object):
         bottle.abort(404)
 
     def get_row(self, row, columns):
-        column_values = self._get_row(row, columns)
-        if columns:
-            columns = set(columns).intersection(column_values)
-            return {base64.urlsafe_b64encode(x): base64.b64encode(column_values[x])
-                    for x in columns}
+        columns_b64 = set(map(base64.urlsafe_b64encode, columns))
+        column_values_b64 = self._get_row(row, columns)
+        if columns_b64:
+            columns_b64 = set(columns_b64).intersection(column_values_b64)
+            return {x: column_values_b64[x] for x in columns_b64}
         else:
-            return {base64.urlsafe_b64encode(x): base64.b64encode(y)
-                    for x, y in column_values.items()}
+            return column_values_b64
 
 
 class ParametersTable(BaseTableSmall):
@@ -227,9 +227,6 @@ class RedisUsersTable(BaseTableSmall):
 
     def _get_table(self):
         return dod_to_lod_b64(self._table)
-
-    def _get_row(self, row, columns):
-        return self._table[row]
 
     def patch_row(self, row, params, files):
         if files:
