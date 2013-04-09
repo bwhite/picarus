@@ -1730,10 +1730,11 @@
                       _.each(s.scoresTotal, function (x) {
                           out.total += x;
                       });
+                      out.quality = (out.pos - out.neg) / (out.total + .0000001);
                       out.class_name = class_name;
                       return out;
                   });
-                  scores.sort(function (x, y) {return y.pos / (y.total + .0000001) - x.pos / (x.total + .0000001)})
+                  scores.sort(function (x, y) {return y.quality - x.quality})
                   var scores_template = "<table><tr><td>Name</td><td>Pos Annot.</td><td>Neg Annot.</td><td>Tot Annot.</td><td>Unique</td></tr>{{#scores}}<tr><td>{{class_name}}</td><td>{{pos}}</td><td>{{neg}}</td><td>{{total}}</td><td>{{unique}}</td></tr>{{/scores}}</table>";
                   $('#annotation-stats').html(Mustache.render(scores_template, {scores: scores}));
               }
