@@ -1612,7 +1612,7 @@
           results.each(function (x) {
               var i = encode_id(x.pescape('user_id'));
               if (_.has(users_filtered, i) && (!onlyAnnotated || x.pescape('end_time'))) {
-                  users_filtered.push(x);
+                  users_filtered[i].push(x);
               }
           });
           _.each(users_filtered, function (x) {
