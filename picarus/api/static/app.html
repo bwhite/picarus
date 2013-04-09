@@ -1760,9 +1760,23 @@
                       out.class_name = class_name;
                       return out;
                   });
+                  // Update class annotations table
                   scores.sort(function (x, y) {return y.quality - x.quality})
                   var scores_template = "<table><tr><td>Name</td><td>Pos Annot.</td><td>Neg Annot.</td><td>Tot Annot.</td><td>Unique</td></tr>{{#scores}}<tr><td>{{class_name}}</td><td>{{pos}}</td><td>{{neg}}</td><td>{{total}}</td><td>{{unique}}</td></tr>{{/scores}}</table>";
                   $('#annotation-stats').html(Mustache.render(scores_template, {scores: scores}));
+                  // Update user annotation time vs iteration
+                  var user_annotations = collect_users(users, results, True, True);
+                  annotation_times = {};
+                  _.each(user_annotations, function (z) {
+                      _.each(z, function(x, y) {
+                          var t = Number(x.pescape('end_time')) - Number(x.pescape('start_time'));
+                          if (_.has(annotation_times, y))
+                              annotation_times[y].push(t)
+                          else
+                              annotation_times[y] = [t];
+                      });
+                  });
+                  
               }
               function class_select_change() {
                   var class_name = $('#class_select').find(":selected").val();
