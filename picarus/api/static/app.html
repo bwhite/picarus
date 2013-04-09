@@ -1745,6 +1745,8 @@
                   posCnt = Math.max(1, Number($('#posCnt').val()));
                   unclicked = $('#unclicked').is(':checked');
                   scores = class_scores[class_name];
+                  if (_.isUndefined(scores))
+                      return;
                   ts = scores.scoresTotal;
                   posScores = _.sortBy(_.filter(_.pairs(scores.scoresPos), function (x) {return x[1] >= posCnt && (x[1] / ts[x[0]]) >= posPct}), function (x) { return -x[1] });
                   negScores = _.sortBy(_.filter(_.pairs(scores.scoresNeg), function (x) {return x[1] >= negCnt && (x[1] / ts[x[0]]) >= negPct}), function (x) { return x[1] });
