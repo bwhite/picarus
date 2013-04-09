@@ -353,9 +353,9 @@
               states = _.shuffle(states);
               simul = Math.min(simul, states.length);
               function call_api(state) {
-                  var timeRadius = 60 * 60 * 24 * 30 * 6; // 6 months
+                  var timeRadius = 60 * 60 * 24 * 30 * 3; // 3 months
                   var minUploadDate = parseInt((new Date().getTime() / 1000 - min_time) * Math.random() + min_time - timeRadius);
-                  var maxUploadDate = parseInt(timeRadius + minUploadDate);
+                  var maxUploadDate = parseInt(timeRadius * 2 + minUploadDate);
                   var p = {hasGeo: Number($('#demogeo').is(':checked')), query: state.query, minUploadDate: minUploadDate, maxUploadDate: maxUploadDate, action: 'o/crawl/flickr'};
                   if (state.className.length)
                       p.className = state.className;
@@ -1611,6 +1611,32 @@
                   else
                       hist[x] = inc;
               });
+          }
+          function collect_users(users, results, onlyWorkers, onlyAnnotated) {
+              var users_filtered = {};
+              users.each(function(x) {
+                  if (x.pescape('workerId') || !onlyWorkers)
+                      users_filtered[x.get('row')] = [];
+              });
+              // TODO: Change mturk to put user id in results table UB64, just remove encode_id below
+              results.each(function (x) {
+                  var i = encode_id(x.pescape('user_id'));
+                  if (_.has(users_filtered, i) && (!onlyAnnotated || x.pescape('end_time'))) {
+                      users_filtered.push(x);
+                  }
+              });
+              _.each(users_filtered, function (x) {
+                  x.sort(function (a, b) {
+                      a = Number(a.pescape('start_time'));
+                      b = Number(b.pescape('start_time'));
+                      if (a < b)
+                          return -1;
+                      if (a > b)
+                          return 1;
+                      return 0;
+                  });
+              });
+              return users_filtered;
           }
           function score_total(scoresPos, scoresNeg, scoresTotal) {
               if (_.isUndefined(scoresTotal))
