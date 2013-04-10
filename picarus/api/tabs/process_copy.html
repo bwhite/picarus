@@ -1,0 +1,19 @@
+<script type="text/html" id="tpl_process_copy">
+  <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+    <div class="span5">
+      <%=rowSelect%>
+    </div>
+    <div class="span3">
+      <h3>Prefix</h3>
+      <select id="rowPrefixDrop2"></select>
+    </div>
+    <div class="span5">
+      <h3>Options</h3>
+      <input class="input-small" type="text" placeholder="Column" id="columnName" value="">
+      <input class="input-small" type="text" placeholder="Value" id="columnValue" value="">
+      <input class="input-small" type="text" placeholder="Max Rows" id="maxRows" value="">
+      <%=runButton%>
+    </div>
+  </div>
+  <div class="clearfix span12 skinny" id="results"></div>
+</script>

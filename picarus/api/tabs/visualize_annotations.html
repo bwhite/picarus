@@ -1,0 +1,51 @@
+<script type="text/html" id="tpl_visualize_annotations">
+  <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+    <div class="span12">
+      <h3>Options</h3>
+      <select id="annotator_select"></select>
+      <input class="input-mini" type="text" hint="Negative if: neg / total >=" id="negPct" value="1">
+      <input class="input-mini" type="text" hint="Negative if: neg >=" id="negCnt" value="1">
+      <input class="input-mini" type="text" hint="Positive if: pos / total >=" id="posPct" value="1">
+      <input class="input-mini" type="text" hint="Positive if: pos >=" id="posCnt" value="1">
+      <label class="checkbox" style="margin-bottom: 0px;" hint="Include 'unclicked' images" for="unclicked">
+        <input type="checkbox" value="" id="unclicked">
+      </label>
+      <select id="class_select"></select>
+    </div>
+    <div class="span8">
+      <div class="span2">
+        <h3>Split Actions</h3>
+        <select id="actionSplit" class="input-small" hint="Splits class to modify (defined by thresholds above)">
+          <option value='positive'>Positive</option>
+          <option value='negative'>Negative</option>
+          <option value='other'>Other</option>
+        </select>
+      </div>
+      <div class="span8 well">
+        <div class="span2">
+          <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px;margin-top: 9px" hint="Remove all rows in the split">Remove</button>
+        </div>
+        <div class="span1" style="margin-top: 12px">
+          <strong>OR</strong>
+        </div>
+        <div class="span4">
+          <input class="input-small" type="text" hint="Column Name" id="colName" value="meta:class">
+          <input class="input-small" type="text" hint="Column Value" id="colValue" value="">
+          <button class="btn" type="submit" id="modifyButton" style="margin-bottom: 9px" hint="Set a column to a value for all rows in the split">Modify</button>
+        </div>
+      </div>
+    </div>
+    <div class="clearfix span12 skinny" style="padding-left:20px; padding-right:20px" id="results">
+      <div id="positive_samples"></div>
+      <div id="negative_samples"></div>
+      <div id="other_samples"></div>
+      <h3>Class Stats</h3>
+      <div id="annotation-stats"></div>
+      <h3>Annotator Stats</h3>
+      <div id="annotator_time_graph" style="height:300px;width:900px"></div>
+      <h3>Users Table</h3>
+      <div id="annotation-users"></div>
+      <h3>Results Table</h3>
+      <div id="annotation-results"></div>
+    </div>
+</script>

@@ -1,0 +1,15 @@
+<script type="text/html" id="tpl_annotate_entity">
+  <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+    <div class="span3">
+      <%=rowSelect%>
+    </div>
+    <div class="span5">
+      <h3>Options</h3>
+      <input class="input-small" type="text" placeholder="Entity Column" id="entity" value="meta:class" hint="Column to get image entity from">
+      <input class="input-small" type="text" placeholder="Num Tasks" id="num_tasks" value="25" hint="User has to annotate this many times before finishing">
+      <textarea id="instructions" rows="5" hint="Instructions shown to annotator">Determine if the image has or is representative of the entity specified below.  The entity must be visible in the image.  Hotkeys are provided to allow you to select and submit results.  If you are unsure then skip.</textarea>
+      <%=runButton%>
+    </div>
+  </div>
+  <div class="clearfix span12 skinny" id="results"></div>
+</script>

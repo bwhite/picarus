@@ -1,0 +1,18 @@
+<script type="text/html" id="tpl_visualize_locations">
+  <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+    <div class="span5">
+      <%=rowSelect%>
+    </div>
+    <div class="span5">
+      <h3>Options</h3>
+      <%=filter%>
+      <input class="input-small" type="text" placeholder="Target Latitude" id="demolat" value="">
+      <input class="input-small" type="text" placeholder="Target Longitude" id="demolong" value="">
+      <input class="input-small" type="text" placeholder="Max Distance" id="demodist" value="5">
+      <input class="input-small" type="checkbox" id="filterInvert">
+      <%=runButton%>
+      <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
+    </div>
+  </div>
+  <div id="map_canvas" style="width:100%; height:500px"></div>
+</script>

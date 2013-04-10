@@ -1,0 +1,15 @@
+<script type="text/html" id="tpl_annotate_batch">
+  <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+    <div class="span3">
+      <%=rowSelect%>
+    </div>
+    <div class="span5">
+      <h3>Options</h3>
+      <input class="input-small" type="text" placeholder="Query" id="query" value="" hint="Shown at the top of the images">
+      <input class="input-small" type="text" placeholder="Num Tasks" id="num_tasks" value="25" hint="User has to annotate this many times before finishing">
+      <textarea id="instructions" rows="5" hint="Instructions shown to annotator">Determine if the images below fit the bolded category below.  You may either select images belonging to that category (Positive) or images that do not belong to the category (Negative).  To reduce the number of clicks you have to do, it helps to select the category with the fewest number of images.  Select all instances that belong to the category.  When you are done, select which category you annotated (Positive/Negative).  If you are unsure then skip.</textarea>
+      <%=runButton%>
+    </div>
+  </div>
+  <div class="clearfix span12 skinny" id="results"></div>
+</script>

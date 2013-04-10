@@ -74,6 +74,15 @@ function login_get(func) {
     }
 }
 
+function add_hint(el, text) {
+    el.wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', text));
+}
+function random_bytes(num) {
+    return _.map(_.range(10), function () {
+        return String.fromCharCode(_.random(255));
+    }).join('');
+}
+
 function imageThumbnail(row, id) {
     var imageColumn = encode_id('thum:image_150sq');
     function success(xhr) {

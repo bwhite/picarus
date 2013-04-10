@@ -1,0 +1,27 @@
+<script type="text/html" id="tpl_evaluate_classifier">
+  <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+    <div class="span3">
+      <h3>Model</h3>
+      <select id="model_select"></select>
+    </div>
+    <div class="span8">
+      <%=slicesSelect%>
+    </div>
+    <div class="span5">
+      <h3>Options</h3>
+      <input class="input-small" type="text" placeholder="Positive Class" id="posClass" value="" readonly="readonly">
+      <input class="input-small" type="text" placeholder="GT Column" id="gtColumn" readonly="readonly" value="" >
+      <input class="input-small" type="text" placeholder="Classifier Key" id="modelKey" value="" readonly="readonly">
+      <%=runButton%>
+    </div>
+  </div>
+  <div class="clearfix span12 skinny" id="results">
+    <div id="slicesTable" style="padding: 15px 35px 15px 35px"></div>
+    <div id="base" style="position:relative;top:-35px;"></div>
+    <div id="graph_confidence_scatter" style="height:200px;width:600px"></div>
+    <div id="graph_confidence_scatter_norm" style="height:200px;width:600px"></div>
+    <div id="graph_confidence_accuracy" style="height:200px;width:600px"></div>
+    <div id="graph_rps" style="height:300px;width:300px;float:left;"></div>
+    <div id="graph_roc" style="height:300px;width:300px;float:left;"></div>
+  </div>
+</script>
