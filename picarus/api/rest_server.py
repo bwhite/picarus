@@ -210,6 +210,10 @@ def static(name):
             bottle.response.headers["Content-type"] = "application/javascript"
         elif name.endswith('.css'):
             bottle.response.headers["Content-type"] = "text/css"
+        elif name.endswith('.png'):
+            bottle.response.headers["Content-type"] = "image/png"
+        elif name.endswith('.svg'):
+            bottle.response.headers["Content-type"] = "image/svg+xml"
         return SITE['static/' + name]
     except KeyError:
         bottle.abort(404)
