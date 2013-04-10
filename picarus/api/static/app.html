@@ -1778,12 +1778,13 @@
                               annotation_times[y] = [t];
                       });
                   });
+                  var mean = function (x) { return _.reduce(x, function(memo, num){ return memo + num; }, 0) / x.length};
                   var median_rows = _.map(annotation_times, function (x, y) {
                       x.sort();
-                      return [Number(y), x[x.length / 2]]
+                      return [Number(y), _.min(x), x[Math.round(x.length / 2), mean(x), _.max(x)]]
                   });
-                  var data0 = to_google_data(median_rows, ['Iteration', 'Median Time']);
-                  var options = {title: 'Annotator Median Time vs Iteration',
+                  var data0 = to_google_data(median_rows, ['Iteration', 'Min', 'Median', 'Mean', 'Max']);
+                  var options = {title: 'Annotation Time vs Iteration #',
                                  hAxis: {title: 'Iteration'}};
                   var chart0 = new google.visualization.LineChart(document.getElementById('annotator_time_graph'));
                   chart0.draw(data0, options);
