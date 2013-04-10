@@ -206,6 +206,10 @@ def data_slice(_auth_user, table_name, start_row, stop_row):
 @bottle.get('/static/<name:re:[^/]+>')
 def static(name):
     try:
+        if name.endswith('.js'):
+            bottle.response.headers["Content-type"] = "application/javascript"
+        elif name.endswith('.css'):
+            bottle.response.headers["Content-type"] = "text/css"
         return SITE['static/' + name]
     except KeyError:
         bottle.abort(404)
