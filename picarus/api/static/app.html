@@ -60,6 +60,47 @@
 
   <body>
     <div id="tpls">
+      <script type="text/html" id="bpl_login">
+        <input class="input-small" type="text" placeholder="Email" id="userEmail" value="">
+        <input class="input-small" type="password" placeholder="Auth" id="userAuth" value="">
+        <input class="input-small" type="checkbox" id="userSave">
+      </script>
+      
+      <script type="text/html" id="bpl_login_hidden">
+        <input type="hidden" id="userEmail" value="">
+        <input type="hidden" id="userAuth" value="">
+      </script>
+      
+      <script type="text/html" id="bpl_run_button">
+        <button class="btn" type="submit" data-loading-text="<i class='icon-time icon-white'></i>" data-error-text="<i class='icon-warning-sign icon-white'></i>" id="runButton" style="margin-bottom: 9px">Run</button>
+      </script>
+      
+      <script type="text/html" id="bpl_row_select">
+        <h3>Slice</h3>
+        <select id="rowPrefixDrop" class="input-small"></select>
+        <span class="hint hint--bottom" data-hint="Start row (inclusive, percent encode binary)"><input class="input-small" type="text" placeholder="Row start" id="startRow"></span>
+        <span class="hint hint--bottom" data-hint="Stop row (exclusive, percent encode binary)"><input class="input-small" type="text" placeholder="Row stop" id="stopRow"></span>
+      </script>
+      
+      <script type="text/html" id="bpl_slices_select">
+        <h3>Slices</h3>
+        <select id="slicesSelectorPrefixDrop" class="input-small" hint="Available row prefixes"></select>
+        <input class="input-small" type="text" placeholder="Row start" id="slicesSelectorStartRow" hint="Start row (inclusive, percent encode binary)">
+        <input class="input-small" type="text" placeholder="Row stop" id="slicesSelectorStopRow" hint="Stop row (exclusive, percent encode binary)">
+        <button class="btn" type="submit" id="slicesSelectorAddButton" style="margin-bottom: 9px">Add</button>
+        <button class="btn" type="submit" id="slicesSelectorClearButton" style="margin-bottom: 9px">Clear</button>
+        <select id="slicesSelectorSlices" hint="Slices selected for input"></select>
+      </script>
+      
+      
+      <script type="text/html" id="bpl_filter">
+        <span class="hint hint--bottom" data-hint="Filter (see Docs/Filters)"><input class="input-large" type="text" placeholder="Filter" id="filter" value=""></span>
+      </script>
+      
+      <script type="text/html" id="bpl_prefix_select">
+        <h3>Prefix</h3>
+        <select id="rowPrefixDrop"></select>
+      </script>
       
       <script type="text/html" id="tpl_data_prefixes">
   <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
