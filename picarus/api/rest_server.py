@@ -15,6 +15,7 @@ import annotators
 import logging
 import contextlib
 import tables
+import glob
 
 
 def check_version(func):
@@ -34,6 +35,30 @@ def thrift_lock():
         yield cur_thrift
     finally:
         THRIFT_POOL.put(cur_thrift)
+
+
+def render_app():
+    template_names = 'data_prefixes data_projects data_user data_uploads crawl_flickr models_list models_create models_single models_slice process_thumbnail process_garbage process_exif process_modify process_copy annotate_list annotate_batch annotate_entity visualize_thumbnails visualize_metadata visualize_exif visualize_locations visualize_times visualize_annotations evaluate_classifier'.split()
+
+    app_template = open('app_template.html').read()
+    templates = []
+    scripts = []
+    for template_name in template_names:
+        fn = 'tabs/%s.html' % template_name
+        templates.append(open(fn).read())
+        fn = 'tabs/%s.js' % template_name
+        scripts.append(open(fn).read())
+    return {'static/app.html': app_template.replace('{{ TEMPLATES }}', '\n'.join(templates)),
+            'static/tabs.js': '\n'.join(scripts)}
+
+
+def load_site():
+    site = {}
+    for x in glob.glob('static/*'):
+        site[x] = open(x).read()
+    site.update(render_app())
+    return site
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
@@ -58,6 +83,7 @@ if __name__ == "__main__":
     USERS = Users(ARGS.users_redis_host, ARGS.users_redis_port, ARGS.users_redis_db)
     YUBIKEY = Yubikey(ARGS.yubikey_redis_host, ARGS.yubikey_redis_port, ARGS.yubikey_redis_db)
     ANNOTATORS = annotators.Annotators(ARGS.annotations_redis_host, ARGS.annotations_redis_port, ARGS.annotations_redis_db)
+    SITE = load_site()
     # Set necessary globals in tables module
     tables.VERSION = VERSION = 'a1'
     tables.thrift_lock = thrift_lock
@@ -179,12 +205,18 @@ def data_slice(_auth_user, table_name, start_row, stop_row):
 
 @bottle.get('/static/<name:re:[^/]+>')
 def static(name):
-    return bottle.static_file(name, root=os.path.join(os.getcwd(), 'static'))
+    try:
+        return SITE['static/' + name]
+    except KeyError:
+        bottle.abort(404)
 
 
 @bottle.get('/')
 def index():
-    return bottle.static_file('app.html', root=os.path.join(os.getcwd(), 'static'))
+    try:
+        return SITE['static/app.html']
+    except KeyError:
+        bottle.abort(404)
 
 
 @bottle.get('/robots.txt')
