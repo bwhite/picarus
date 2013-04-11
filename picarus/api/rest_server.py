@@ -206,6 +206,7 @@ def data_slice(_auth_user, table_name, start_row, stop_row):
 @bottle.get('/static/<name:re:[^/]+>')
 def static(name):
     try:
+        bottle.response.headers['Cache-Control'] = 'public, max-age=3600, must-revalidate'
         if name.endswith('.js'):
             bottle.response.headers["Content-type"] = "application/javascript"
         elif name.endswith('.css'):
@@ -222,6 +223,7 @@ def static(name):
 @bottle.get('/')
 def index():
     try:
+        bottle.response.headers['Cache-Control'] = 'public, max-age=3600, must-revalidate'
         return SITE['static/app.html']
     except KeyError:
         bottle.abort(404)
