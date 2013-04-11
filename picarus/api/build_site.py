@@ -23,5 +23,6 @@ preinclude = ['js/' + x for x in preinclude]
 a = preinclude + list(set(glob.glob('js/*.js')) - set(preinclude))
 
 a= ' '.join(['--js %s' % x for x in a])
-cmd = 'java -jar compiler.jar --compilation_level ADVANCED_OPTIMIZATIONS %s --js_output_file static/compressed.js' % a
+# --compilation_level ADVANCED_OPTIMIZATIONS
+cmd = 'java -jar compiler.jar %s --js_output_file static/compressed.js' % a
 subprocess.call(cmd.split(' '))

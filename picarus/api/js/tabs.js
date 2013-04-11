@@ -1255,7 +1255,14 @@ function render_visualize_annotations_loaded() {
         // TODO: Add other annotation types
         picarus_api("/a1/data/annotations/" + task, "GET", {success: success_annotation});
     }
-    rows_dropdown(rows, {el: $('#annotator_select'), text: function (x) {return x.pescapejs('params').query}, change: change});
+    rows_dropdown(rows, {el: $('#annotator_select'), text: function (x) {
+        var p = x.pescapejs('params');
+        if (p.type == "image_entity")
+            return p.type + ' ' + p.num_tasks;
+        if (p.type == "image_query_batch")
+            return p.type + ' ' +  p.query + ' '+ p.num_tasks;
+        return p.type;
+    }, change: change});
     rows.fetch();
 }
 function render_evaluate_classifier() {
