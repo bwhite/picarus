@@ -14,6 +14,7 @@ def render_app():
         scripts.append(open(fn).read())
     open('static/app.html', 'w').write(app_template.replace('{{ TEMPLATES }}', '\n'.join(templates)))
     open('static/tabs.js', 'w').write('\n'.join(scripts))
+    open('static/style.css', 'w').write('\n'.join([open(x).read() for x in glob.glob('css/*')]))
 render_app()
 preinclude = ['jquery.min.js', 'underscore-min.js']
 preinclude = ['js/' + x for x in preinclude]
