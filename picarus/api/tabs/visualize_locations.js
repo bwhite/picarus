@@ -67,6 +67,9 @@ function render_visualize_locations() {
                 new google.maps.Marker({position: new google.maps.LatLng(lat, lon), map: map});
             });
         }
-        picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [latitude, longitude], {success: maps_success, done: maps_done});
+        function mapsLoaded() {
+            picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [latitude, longitude], {success: maps_success, done: maps_done});
+        }
+        google.load("maps", "2", {"callback" : mapsLoaded});
     })
 }
