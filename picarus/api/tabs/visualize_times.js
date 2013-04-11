@@ -1,4 +1,8 @@
 function render_visualize_times() {
+    google_visualization_load(render_visualize_times_loaded);
+}
+
+function render_visualize_times_loaded() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
     function drawYears(hist) {
         var data = google.visualization.arrayToDataTable([['Year', 'Count']].concat(hist));

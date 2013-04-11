@@ -74,6 +74,10 @@ function login_get(func) {
     }
 }
 
+function google_visualization_load(callback) {
+    google.load("visualization", "1", {packages:["corechart"], callback: callback});
+}
+
 function add_hint(el, text) {
     el.wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', text));
 }

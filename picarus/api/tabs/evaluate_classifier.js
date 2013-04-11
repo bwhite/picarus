@@ -1,4 +1,8 @@
 function render_evaluate_classifier() {
+    google_visualization_load(render_evaluate_classifier_loaded);
+}
+
+function render_evaluate_classifier_loaded() {
     model_dropdown({modelFilter: function (x) {return x.pescape('meta:output_type') === 'binary_class_confidence'},
                     change: function() {
                         var row = this.$el.find(":selected").val();

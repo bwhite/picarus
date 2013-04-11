@@ -903,6 +903,10 @@ function render_visualize_locations_loaded() {
     })
 }
 function render_visualize_times() {
+    google_visualization_load(render_visualize_times_loaded);
+}
+
+function render_visualize_times_loaded() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
     function drawYears(hist) {
         var data = google.visualization.arrayToDataTable([['Year', 'Count']].concat(hist));
@@ -965,6 +969,10 @@ function render_visualize_times() {
     })
 }
 function render_visualize_annotations() {
+    google_visualization_load(render_visualize_annotations_loaded);
+}
+
+function render_visualize_annotations_loaded() {
     var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
@@ -1251,6 +1259,10 @@ function render_visualize_annotations() {
     rows.fetch();
 }
 function render_evaluate_classifier() {
+    google_visualization_load(render_evaluate_classifier_loaded);
+}
+
+function render_evaluate_classifier_loaded() {
     model_dropdown({modelFilter: function (x) {return x.pescape('meta:output_type') === 'binary_class_confidence'},
                     change: function() {
                         var row = this.$el.find(":selected").val();

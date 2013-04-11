@@ -1,4 +1,8 @@
 function render_visualize_annotations() {
+    google_visualization_load(render_visualize_annotations_loaded);
+}
+
+function render_visualize_annotations_loaded() {
     var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
