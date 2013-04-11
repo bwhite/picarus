@@ -69,7 +69,7 @@ function render_visualize_locations_loaded() {
             });
             images.each(function (x) {
                 var lat = Number(base64.decode(x.get(latitude)));
-                var log = Number(base64.decode(x.get(longitude)));
+                var lon = Number(base64.decode(x.get(longitude)));
                 new google.maps.Marker({position: new google.maps.LatLng(lat, lon), map: map});
             });
         }

@@ -37,26 +37,10 @@ def thrift_lock():
         THRIFT_POOL.put(cur_thrift)
 
 
-def render_app():
-    template_names = 'data_prefixes data_projects data_user data_uploads crawl_flickr models_list models_create models_single models_slice process_thumbnail process_garbage process_exif process_modify process_copy annotate_list annotate_batch annotate_entity visualize_thumbnails visualize_metadata visualize_exif visualize_locations visualize_times visualize_annotations evaluate_classifier'.split()
-
-    app_template = open('app_template.html').read()
-    templates = []
-    scripts = []
-    for template_name in template_names:
-        fn = 'tabs/%s.html' % template_name
-        templates.append(open(fn).read())
-        fn = 'tabs/%s.js' % template_name
-        scripts.append(open(fn).read())
-    return {'static/app.html': app_template.replace('{{ TEMPLATES }}', '\n'.join(templates)),
-            'static/tabs.js': '\n'.join(scripts)}
-
-
 def load_site():
     site = {}
     for x in glob.glob('static/*'):
         site[x] = open(x).read()
-    site.update(render_app())
     return site
 
 
