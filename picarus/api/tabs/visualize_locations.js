@@ -53,7 +53,7 @@ function render_visualize_locations() {
             var mapOptions = {
                 zoom: 14,
                 center: new google.maps.LatLng(centerLat, centerLong),
-                mapTypeId: google.maps.MapTypeId.HYBRID
+                mapTypeId: google.maps.MapTypeId.HYBRID;
             };
             map = new google.maps.Map(document.getElementById("map_canvas"),
                                       mapOptions);
@@ -70,6 +70,6 @@ function render_visualize_locations() {
         function mapsLoaded() {
             picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [latitude, longitude], {success: maps_success, done: maps_done});
         }
-        google.load("maps", "2", {"callback" : mapsLoaded});
+        google.load("maps", "3", {"callback" : mapsLoaded});
     })
 }
