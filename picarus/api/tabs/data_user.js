@@ -16,7 +16,7 @@ function render_data_user() {
                     if (x === 'row')
                         return {header: 'email', getFormatted: function() { return _.escape(base64.decode(this.get(x)))}}
                     return {header: decode_id(x), getFormatted: function() { return _.escape(base64.decode(this.get(x)))}};
-                }),
+                })
             });
             this.$el.html(picarus_table.render().el);
         }

@@ -73,7 +73,7 @@ function render_data_user() {
                     if (x === 'row')
                         return {header: 'email', getFormatted: function() { return _.escape(base64.decode(this.get(x)))}}
                     return {header: decode_id(x), getFormatted: function() { return _.escape(base64.decode(this.get(x)))}};
-                }),
+                })
             });
             this.$el.html(picarus_table.render().el);
         }
@@ -839,14 +839,14 @@ function render_visualize_locations() {
         var d = R * c; // Distance in km
         return d;
     }
-    function filter_lat_long(lat, long) {
+    function filter_lat_long(lat, lon) {
         var targetLat = Number($('#demolat').val());
         var targetLong = Number($('#demolong').val());
         var targetDist = Number($('#demodist').val());
         var checked = $('#filterInvert').is(':checked');
         if (!targetLat || !targetLong)
             return checked;
-        if (getDistanceFromLatLonInKm(targetLat, targetLong, lat, long) > targetDist)
+        if (getDistanceFromLatLonInKm(targetLat, targetLong, lat, lon) > targetDist)
             return !checked;
         return checked;
     }
@@ -889,8 +889,8 @@ function render_visualize_locations() {
             });
             images.each(function (x) {
                 var lat = Number(base64.decode(x.get(latitude)));
-                var long = Number(base64.decode(x.get(longitude)));
-                new google.maps.Marker({position: new google.maps.LatLng(lat, long), map: map});
+                var log = Number(base64.decode(x.get(longitude)));
+                new google.maps.Marker({position: new google.maps.LatLng(lat, lon), map: map});
             });
         }
         picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [latitude, longitude], {success: maps_success, done: maps_done});

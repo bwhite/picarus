@@ -486,7 +486,7 @@ function app_main() {
             }).concat(this.extraColumns);
             picarus_table = new Backbone.Table({
                 collection: this.collection,
-                columns: table_columns,
+                columns: table_columns
             });
             if (this.collection.length) {
                 this.$el.html(picarus_table.render().el);
@@ -520,7 +520,7 @@ function app_main() {
     PicarusImage = Backbone.Model.extend({ // TODO: Switch over to PicarusRow
         idAttribute: "row",
         defaults : {
-        },
+        }
     });
     // TODO: We may want to add a few REST calls, not sure yet
     PicarusImages = Backbone.Collection.extend({
