@@ -14,7 +14,7 @@ def render_app():
         scripts.append(open(fn).read())
     open('static/app.html', 'w').write(app_template.replace('{{ TEMPLATES }}', '\n'.join(templates)))
     open('js/tabs.js', 'w').write('\n'.join(scripts))
-    preinclude_css = ['bootstrap_flat.css', 'flat-ui.css', 'hint.min.css']
+    preinclude_css = ['bootstrap_flat.css', 'flat-ui.css', 'hint.min.css', 'custom.css']
     open('static/style.css', 'w').write('\n'.join([open('css/' + x).read() for x in preinclude_css]))
 render_app()
 preinclude = ['jquery.min.js', 'underscore-min.js']
