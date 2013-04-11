@@ -59,7 +59,7 @@ function render_visualize_locations_loaded() {
             var mapOptions = {
                 zoom: 14,
                 center: new google.maps.LatLng(centerLat, centerLong),
-                mapTypeId: google.maps.MapTypeId.HYBRID;
+                mapTypeId: google.maps.MapTypeId.HYBRID
             };
             map = new google.maps.Map(document.getElementById("map_canvas"),
                                       mapOptions);
