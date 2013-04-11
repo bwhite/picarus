@@ -1,4 +1,10 @@
 function render_visualize_locations() {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyBBsKtzgLTIsaoxAFUvSNoJ8n3j4w9VZs0&sensor=false&callback=render_visualize_locations_loaded";
+    document.body.appendChild(script);
+}
+function render_visualize_locations_loaded() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
     function deg2rad(deg) {
         return deg * (Math.PI/180)
@@ -67,9 +73,6 @@ function render_visualize_locations() {
                 new google.maps.Marker({position: new google.maps.LatLng(lat, lon), map: map});
             });
         }
-        function mapsLoaded() {
-            picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [latitude, longitude], {success: maps_success, done: maps_done});
-        }
-        google.load("maps", "3", {"callback" : mapsLoaded});
+        picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [latitude, longitude], {success: maps_success, done: maps_done});
     })
 }
