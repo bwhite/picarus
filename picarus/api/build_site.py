@@ -16,9 +16,9 @@ def render_app():
     open('static/tabs.js', 'w').write('\n'.join(scripts))
 render_app()
 preinclude = ['jquery.min.js', 'underscore-min.js']
-preinclude = ['static/' + x for x in preinclude]
+preinclude = ['js/' + x for x in preinclude]
 
-a = preinclude + list(set(glob.glob('static/*.js')) - set(preinclude))
+a = preinclude + list(set(glob.glob('js/*.js')) - set(preinclude))
 
 a= ' '.join(['--js %s' % x for x in a])
 cmd = 'java -jar compiler.jar %s --js_output_file static/compressed.js' % a
