@@ -104,6 +104,7 @@ def parse_columns():
         columns = bottle.request.json['columns']
     else:
         try:
+            print(bottle.request.params['columns'])
             columns = bottle.request.params['columns'].split(',')
         except KeyError:
             columns = []
