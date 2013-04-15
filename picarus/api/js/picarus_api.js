@@ -58,7 +58,6 @@ function picarus_api_row(table, row, method, args) {
     picarus_api("/a1/data/" + table + "/" + row, method, args);
 }
 
-
 function picarus_api_upload(table, args) {
     picarus_api("/a1/data/" + table, "POST", args);
 }
@@ -126,7 +125,8 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
             return v.join('=');
         }).join('&');
     }
-    var column_suffix =  [['columns', _.map(columns, function (x) {return encode_id(x)}).join(',')]];
+    // Removed encode_id(x) below, should add it back after refactor that exposes unencoded data only
+    var column_suffix =  [['columns', _.map(columns, function (x) {return x}).join(',')]];
     var lastRow = undefined;
     var numRows = 0;
     if (typeof params.filter != "undefined") {
