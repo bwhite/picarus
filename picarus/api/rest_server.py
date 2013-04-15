@@ -108,8 +108,7 @@ def parse_columns():
             columns = bottle.request.params['columns'].split(',')
         except KeyError:
             columns = []
-    # NOTE(brandyn): Removed base64.urlsafe_b64decode() below, add back after refactor
-    return [str(x) for x in columns]
+    return [base64.urlsafe_b64decode(str(x)) for x in columns]
 
 
 def parse_params():

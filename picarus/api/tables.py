@@ -181,7 +181,7 @@ class BaseTableSmall(object):
 
     def get_table(self, columns):
         bottle.response.headers["Content-type"] = "application/json"
-        columns = set(map(base64.urlsafe_b64encode, columns))
+        columns = set(columns)
         full_table = self._get_table()
         if columns:
             columns.add('row')
@@ -189,21 +189,22 @@ class BaseTableSmall(object):
         else:
             return json.dumps(full_table)
 
-    def _get_row(self, row, columns):
-        row = base64.urlsafe_b64encode(row)
+    def _get_row(self, row, unused_columns):
+        # TODO: Remove unused_columns
+        row_ub64 = base64.urlsafe_b64encode(row)
         for x in self._get_table():
-            if x['row'] == row:
+            if x['row'] == row_ub64:
                 x = dict(x)  # Ensures we aren't deleting anything
                 del x['row']
                 return x
         bottle.abort(404)
 
     def get_row(self, row, columns):
-        columns_b64 = set(map(base64.urlsafe_b64encode, columns))
+        columns_ub64 = set(map(base64.urlsafe_b64encode, columns))
         column_values_b64 = self._get_row(row, columns)
-        if columns_b64:
-            columns_b64 = set(columns_b64).intersection(column_values_b64)
-            return {x: column_values_b64[x] for x in columns_b64}
+        if columns_ub64:
+            columns_ub64 = set(columns_ub64).intersection(column_values_b64)
+            return {x: column_values_b64[x] for x in columns_ub64}
         else:
             return column_values_b64
 
@@ -463,7 +464,6 @@ class ImagesHBaseTable(HBaseTable):
 
     def get_slice(self, start_row, stop_row, columns, params, files):
         self._slice_validate(start_row, stop_row, 'r')
-        columns = map(base64.urlsafe_b64decode, columns)
         max_rows = min(10000, int(params.get('maxRows', 1)))
         max_bytes = min(1048576, int(params.get('maxBytes', 1048576)))
         filter_string = params.get('filter')
