@@ -58,6 +58,13 @@ function PicarusClient(email, apiKey, server) {
             })));
         };
     };
+    this.test = function () {
+        var client = new PicarusClient()
+        client.get_table('parameters', {success: function (x) {console.log('Set debug_a'); debug_a=x}});
+        client.get_table('models', {success: function (x) {console.log('Set debug_b'); debug_b=x}, columns: ['meta:']});
+        client.get_slice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:class']});
+        client.get_row('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), {success: function (x) {console.log('Set debug_d'); debug_d=x}, columns: ['meta:class']});
+    };
 }
 /*
 
