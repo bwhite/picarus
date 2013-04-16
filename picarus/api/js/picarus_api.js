@@ -18,7 +18,7 @@ function PicarusClient(email, apiKey, server) {
     };
     this._wrap_decode_lod = function(f) {
         return function(msg, text_status, xhr) {
-            f(_.map(JSON.parse(xhr), function (x) {
+            f(_.map(JSON.parse(xhr.responseText), function (x) {
                 var row = base64.decode(x.row);
                 var columns = _.object(_.map(_.omit(x, 'row'), function (v, k) {
                     return [base64.decode(k), base64.decode(v)];
