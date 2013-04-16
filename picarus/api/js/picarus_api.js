@@ -59,15 +59,10 @@ function PicarusClient(email, apiKey, server) {
         };
     };
     this.test = function () {
-        console.log('1');
         this.get_table('parameters', {success: function (x) {console.log('Set debug_a'); debug_a=x}});
-        console.log('2');
         this.get_table('models', {success: function (x) {console.log('Set debug_b'); debug_b=x}, columns: ['meta:']});
-        console.log('3');
-        this.get_slice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:class']});
-        console.log('4');
-        this.get_row('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), {success: function (x) {console.log('Set debug_d'); debug_d=x}, columns: ['meta:class']});
-        console.log('5');
+        this.get_slice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:']});
+        this.get_row('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), {success: function (x) {console.log('Set debug_d'); debug_d=x}, columns: ['meta:']});
     };
 }
 /*
