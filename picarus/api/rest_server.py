@@ -143,7 +143,7 @@ def data_table(_auth_user, table_name):
 def data_row(_auth_user, table_name, row):
     table = tables.get_table(_auth_user, table_name)
     method = bottle.request.method.upper()
-    row = base64.b64decode(row)
+    row = base64.urlsafe_b64decode(row)
     method = bottle.request.method.upper()
     print_request()
     print('row')
@@ -165,8 +165,8 @@ def data_row(_auth_user, table_name, row):
 @check_version
 def data_column(_auth_user, table_name, row, column):
     table = tables.get_table(_auth_user, table_name)
-    row = base64.b64decode(row)
-    column = base64.b64decode(column)
+    row = base64.urlsafe_b64decode(row)
+    column = base64.urlsafe_b64decode(column)
     return table.delete_column(row, column)
 
 
@@ -178,8 +178,8 @@ def data_column(_auth_user, table_name, row, column):
 def data_slice(_auth_user, table_name, start_row, stop_row):
     table = tables.get_table(_auth_user, table_name)
     method = bottle.request.method.upper()
-    start_row = base64.b64decode(start_row)
-    stop_row = base64.b64decode(stop_row)
+    start_row = base64.urlsafe_b64decode(start_row)
+    stop_row = base64.urlsafe_b64decode(stop_row)
     print_request()
     if method == 'GET':
         return table.get_slice(start_row, stop_row, parse_columns(), *parse_params_files())
