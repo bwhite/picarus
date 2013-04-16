@@ -177,7 +177,7 @@ class BaseTableSmall(object):
     """Base class for tables that easily fit in memory"""
 
     def __init__(self):
-        pass
+        super(BaseTableSmall, self).__init__()
 
     def get_table(self, columns):
         bottle.response.headers["Content-type"] = "application/json"
@@ -212,6 +212,7 @@ class BaseTableSmall(object):
 class ParametersTable(BaseTableSmall):
 
     def __init__(self):
+        super(ParametersTable, self).__init__()
         self._params = dod_to_lod_b64(PARAM_SCHEMAS_SERVE)
 
     def _get_table(self):
@@ -221,6 +222,7 @@ class ParametersTable(BaseTableSmall):
 class RedisUsersTable(BaseTableSmall):
 
     def __init__(self, _auth_user, table, set_column, del_column):
+        super(RedisUsersTable, self).__init__()
         self._auth_user = _auth_user
         self._table = table
         self._set_column = set_column
@@ -288,12 +290,15 @@ class UsersTable(object):
         # TODO: Use columns parameter
         if self._auth_user.email != row:
             bottle.abort(401)
-        return _user_to_dict(self._auth_user)
+        out = dict(_user_to_dict(self._auth_user))
+        del out['row']
+        return out
 
 
 class AnnotationsTable(BaseTableSmall):
 
     def __init__(self, _auth_user):
+        super(AnnotationsTable, self).__init__()
         self.owner = _auth_user.email
 
     def _get_table(self):
@@ -311,6 +316,7 @@ class AnnotationsTable(BaseTableSmall):
 class AnnotationDataTable(BaseTableSmall):
 
     def __init__(self, _auth_user, table, task):
+        super(AnnotationsDataTable, self).__init__()
         self.owner = _auth_user.email
         self.table = table
         self.task = task
