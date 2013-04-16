@@ -1,9 +1,9 @@
-function encode_id(x) {
-    return base64.encode(x).replace(/\+/g , '-').replace(/\//g , '_');
+function encode_id(data) {
+    return base64.encode(data).replace(/\+/g , '-').replace(/\//g , '_');
 }
 
-function decode_id(x) {
-    return base64.decode(x.replace(/\-/g , '+').replace(/\_/g , '/'));
+function decode_id(data) {
+    return base64.decode(data.replace(/\-/g , '+').replace(/\_/g , '/'));
 }
 
 function PicarusClient(email, apiKey, server) {
