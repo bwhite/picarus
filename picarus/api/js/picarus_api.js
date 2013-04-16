@@ -111,6 +111,7 @@ function PicarusClient(email, apiKey, server) {
         function test_row(row) {
             this.patch_row('images', row, {success: function (x) {console.log('Set debug_f'); debug_f=x}, data: {'meta:class_0': 'test_data2'}});
         }
+        test_row = _.bind(test_row, this);
         this.post_table('images', {success: function (x) {console.log('Set debug_e');
                                                           debug_e=x;
                                                           test_row(x.row);
