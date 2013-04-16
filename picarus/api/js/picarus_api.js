@@ -10,11 +10,35 @@ function PicarusClient(email, apiKey, server) {
         path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
         $.ajax(path, {data: data, success: success}).fail(fail);
     };   
-    this.get_table = function (table, success, fail, columns) {
-        var data = {}
+
+    this.get_table = function (table, args) {
+        //args: success, fail, columns
+        args = this._args_defaults(args);
         if (!_.isUndefined(columns))
-            data.columns = _.map(args.columns, this.enc).join(',');
-        this.get(['data', table], data, this._wrap_decode_lod(success), fail);
+            args.data.columns = _.map(args.columns, this.enc).join(',');
+        this.get(['data', table], args.data, this._wrap_decode_lod(args.success), args.fail);
+    };
+    this.get_row = function (table, row, args) {
+        //args: success, fail, columns
+        args = this._args_defaults(args);
+        if (!_.has(args, 'columns'))
+            args.data.columns = _.map(args.columns, this.enc).join(',');
+        this.get(['data', table, base64.encode(row)], args.data, this._wrap_decode_dict(args.success), args.fail);
+    };
+    this.get_slice = function (table, startRow, stopRow, args) {
+        //args: success, fail, columns, data
+        args = this._args_defaults(args);
+        if (!_.isUndefined(columns))
+            args.data.columns = _.map(args.columns, this.enc).join(',');
+        this.get(['data', table, base64.encode(row)], args.data, this._wrap_decode_lod(args.success), args.fail);
+    };
+    this._args_defaults = function (args) {
+        if (!_.has(args, 'success'))
+            args.success = function () {};
+        if (!_.has(args, 'fail'))
+            args.fail = function () {};
+        if (!_.has(args, 'data'))
+            args.data = {};
     };
     this._wrap_decode_lod = function(f) {
         return function(msg, text_status, xhr) {
@@ -25,6 +49,13 @@ function PicarusClient(email, apiKey, server) {
                 }));
                 return [row, columns];
             }));
+        };
+    };
+    this._wrap_decode_dict = function(f) {
+        return function(msg, text_status, xhr) {
+            f(_.object(_.map(JSON.parse(xhr.responseText), function (v, k) {
+                    return [base64.decode(k), base64.decode(v)];
+            })));
         };
     };
 }
