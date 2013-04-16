@@ -37,8 +37,8 @@ def dod_to_lod_b64(dod):
     # lod: list of dicts
     outs = []
     for row, columns in sorted(dod.items(), key=lambda x: x[0]):
-        out = {'row': base64.urlsafe_b64encode(row)}
-        out.update({base64.urlsafe_b64encode(x): base64.b64encode(y) if isinstance(y, str) else base64.b64encode(json.dumps(y)) for x, y in columns.items()})
+        out = {'row': base64.b64encode(row)}
+        out.update({base64.b64encode(x): base64.b64encode(y) if isinstance(y, str) else base64.b64encode(json.dumps(y)) for x, y in columns.items()})
         outs.append(out)
     return outs
 
@@ -46,8 +46,8 @@ PARAM_SCHEMAS_B64 = dod_to_lod_b64(PARAM_SCHEMAS_SERVE)
 
 
 def encode_row(row, columns):
-    out = {base64.urlsafe_b64encode(k): base64.b64encode(v) for k, v in columns.items()}
-    out['row'] = base64.urlsafe_b64encode(row)
+    out = {base64.b64encode(k): base64.b64encode(v) for k, v in columns.items()}
+    out['row'] = base64.b64encode(row)
     return out
 
 
@@ -72,7 +72,7 @@ def _takeout_model_chain_from_key(manager, key):
     columns = key_to_model(manager, key)
     if columns['input_type'] == 'raw_image':
         return [_takeout_model_link_from_key(manager, key)]
-    return _takeout_model_chain_from_key(manager, base64.urlsafe_b64decode(columns['input'])) + [_takeout_model_link_from_key(manager, key)]
+    return _takeout_model_chain_from_key(manager, base64.b64decode(columns['input'])) + [_takeout_model_link_from_key(manager, key)]
 
 
 def _takeout_input_model_link_from_key(manager, key):
@@ -80,14 +80,14 @@ def _takeout_input_model_link_from_key(manager, key):
     model = msgpack.loads(model_binary)
     if not isinstance(model, dict):
         bottle.abort(400)
-    return base64.urlsafe_b64decode(columns['input']), model
+    return base64.b64decode(columns['input']), model
 
 
 def _takeout_input_model_chain_from_key(manager, key):
     columns = key_to_model(manager, key)
     if columns['input_type'] == 'raw_image':
         return [_takeout_input_model_link_from_key(manager, key)]
-    return _takeout_input_model_chain_from_key(manager, base64.urlsafe_b64decode(columns['input'])) + [_takeout_input_model_link_from_key(manager, key)]
+    return _takeout_input_model_chain_from_key(manager, base64.b64decode(columns['input'])) + [_takeout_input_model_link_from_key(manager, key)]
 
 
 def _parse_params(params, schema):
@@ -146,10 +146,10 @@ def _create_model_from_params(manager, email, path, params):
         model_params = _parse_params(params, schema)
         model_link = {'name': schema['name'], 'kw': model_params}
         input = _get_input(params, schema['input_type'])
-        model_chain = _takeout_model_chain_from_key(manager, base64.urlsafe_b64decode(input)) + [model_link]
+        model_chain = _takeout_model_chain_from_key(manager, base64.b64decode(input)) + [model_link]
         row = manager.input_model_param_to_key(input=input, model_link=model_link, model_chain=model_chain, input_type=schema['input_type'],
                                                output_type=schema['output_type'], email=email, name=manager.model_to_name(model_link))
-        return {'row': base64.urlsafe_b64encode(row)}
+        return {'row': base64.b64encode(row)}
     except ValueError:
         raise
         bottle.abort(500)
@@ -163,13 +163,13 @@ def _create_model_from_factory(manager, email, path, create_model, params, start
         p = gipc.start_process(target=create_model, args=(writer, model_params, inputs, schema, start_stop_rows, table, email))
         row = reader.get()
         p.join()
-    return {'row': base64.urlsafe_b64encode(row)}
+    return {'row': base64.b64encode(row)}
 
 
 def _user_to_dict(user):
     cols = {'stats': json.dumps(user.stats()), 'upload_row_prefix': user.upload_row_prefix, 'image_prefixes': json.dumps(user.image_prefixes)}
-    cols = {base64.urlsafe_b64encode(x) : base64.b64encode(y) for x, y in cols.items()}
-    cols['row'] = base64.urlsafe_b64encode(user.email)
+    cols = {base64.b64encode(x) : base64.b64encode(y) for x, y in cols.items()}
+    cols['row'] = base64.b64encode(user.email)
     return cols
 
 
@@ -191,7 +191,7 @@ class BaseTableSmall(object):
 
     def _get_row(self, row, unused_columns):
         # TODO: Remove unused_columns
-        row_ub64 = base64.urlsafe_b64encode(row)
+        row_ub64 = base64.b64encode(row)
         for x in self._get_table():
             if x['row'] == row_ub64:
                 x = dict(x)  # Ensures we aren't deleting anything
@@ -200,7 +200,7 @@ class BaseTableSmall(object):
         bottle.abort(404)
 
     def get_row(self, row, columns):
-        columns_ub64 = set(map(base64.urlsafe_b64encode, columns))
+        columns_ub64 = set(map(base64.b64encode, columns))
         column_values_b64 = self._get_row(row, columns)
         if columns_ub64:
             columns_ub64 = set(columns_ub64).intersection(column_values_b64)
@@ -233,7 +233,7 @@ class RedisUsersTable(BaseTableSmall):
         if files:
             bottle.abort(403)  # Files not allowed
         for x, y in params.items():
-            new_column = base64.urlsafe_b64decode(x)
+            new_column = base64.b64decode(x)
             new_value = base64.b64decode(y)
             self._row_column_value_validator(row, new_column, new_value)
             try:
@@ -340,12 +340,12 @@ class HBaseTable(object):
             self._row_validate(row, 'rw', thrift)
             mutations = []
             for x, y in files.items():
-                cur_column = base64.urlsafe_b64decode(x)
+                cur_column = base64.b64decode(x)
                 self._column_write_validate(cur_column)
                 v = y.file.read()
                 thrift.mutateRow(self.table, row, [hadoopy_hbase.Mutation(column=cur_column, value=v)])
             for x, y in params.items():
-                cur_column = base64.urlsafe_b64decode(x)
+                cur_column = base64.b64decode(x)
                 self._column_write_validate(cur_column)
                 mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=base64.b64decode(y)))
             if mutations:
@@ -374,7 +374,7 @@ class HBaseTable(object):
         if not result:
             bottle.abort(404)
         # TODO: Should this produce 'row' also?  Check backbone.js
-        return {base64.urlsafe_b64encode(x): base64.b64encode(y.value)
+        return {base64.b64encode(x): base64.b64encode(y.value)
                 for x, y in result[0].columns.items()}
 
 
@@ -425,13 +425,13 @@ class ImagesHBaseTable(HBaseTable):
     def post_table(self, params, files):
         row = self.upload_row_prefix + '%.10d%s' % (2147483648 - int(time.time()), uuid.uuid4().bytes)
         self.patch_row(row, params, files)
-        return {'row': base64.urlsafe_b64encode(row)}
+        return {'row': base64.b64encode(row)}
 
     def post_row(self, row, params, files):
         action = params['action']
         with thrift_lock() as thrift:
             manager = PicarusManager(thrift=thrift)
-            model_key = base64.urlsafe_b64decode(params['model'])
+            model_key = base64.b64decode(params['model'])
             # TODO: Allow io/ so that we can write back to the image too
             if action == 'i/link':
                 self._row_validate(row, 'r')
@@ -491,7 +491,7 @@ class ImagesHBaseTable(HBaseTable):
         # NOTE: Only parameters allowed, no "files" due to memory restrictions
         mutations = []
         for x, y in params.items():
-            mutations.append(hadoopy_hbase.Mutation(column=base64.urlsafe_b64decode(x), value=base64.b64decode(y)))
+            mutations.append(hadoopy_hbase.Mutation(column=base64.b64decode(x), value=base64.b64decode(y)))
         if mutations:
             with thrift_lock() as thrift:
                 for row, _ in hadoopy_hbase.scanner(thrift, self.table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()', columns=['data:image']):
@@ -512,13 +512,13 @@ class ImagesHBaseTable(HBaseTable):
                 return {}
             elif action == 'io/link':
                 self._slice_validate(start_row, stop_row, 'rw')
-                model_key = base64.urlsafe_b64decode(params['model'])
+                model_key = base64.b64decode(params['model'])
                 chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
                 manager.takeout_chain_job([model_link], chain_input, model_key, start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/chain':
                 self._slice_validate(start_row, stop_row, 'rw')
-                model_key = base64.urlsafe_b64decode(params['model'])
+                model_key = base64.b64decode(params['model'])
                 chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
                 manager.takeout_chain_job(list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row)
                 return {}
@@ -545,9 +545,9 @@ class ImagesHBaseTable(HBaseTable):
                 return {'columnsRemoved': list(columns_removed), 'columnsKept': list(columns_kept)}
             elif action == 'i/dedupe/identical':
                 self._slice_validate(start_row, stop_row, 'r')
-                col = base64.urlsafe_b64decode(params['column'])
+                col = base64.b64decode(params['column'])
                 features = {}
-                dedupe_feature = lambda x, y: features.setdefault(base64.b64encode(hashlib.md5(y).digest()), []).append(base64.urlsafe_b64encode(x))
+                dedupe_feature = lambda x, y: features.setdefault(base64.b64encode(hashlib.md5(y).digest()), []).append(base64.b64encode(x))
                 for cur_row, cur_col in hadoopy_hbase.scanner_row_column(thrift, self.table, column=col,
                                                                          start_row=start_row, per_call=10,
                                                                          stop_row=stop_row):
@@ -590,24 +590,24 @@ class ImagesHBaseTable(HBaseTable):
                 return {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name=class_name, query=query, **p)}
             elif action in ('io/annotate/image/query', 'io/annotate/image/entity', 'io/annotate/image/query_batch'):
                 self._slice_validate(start_row, stop_row, 'r')
-                secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
-                task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
+                secret = base64.b64encode(uuid.uuid4().bytes)[:-2]
+                task = base64.b64encode(uuid.uuid4().bytes)[:-2]
                 p = {}
-                image_column = base64.urlsafe_b64decode(params['imageColumn'])
+                image_column = base64.b64decode(params['imageColumn'])
                 if action == 'io/annotate/image/entity':
-                    entity_column = base64.urlsafe_b64decode(params['entityColumn'])
+                    entity_column = base64.b64decode(params['entityColumn'])
                     assert entity_column.startswith('meta:')
-                    data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row),
-                                                                                       base64.urlsafe_b64encode(entity_column), base64.urlsafe_b64encode(image_column))
+                    data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (base64.b64encode(start_row), base64.b64encode(stop_row),
+                                                                                       base64.b64encode(entity_column), base64.b64encode(image_column))
                     p['type'] = 'image_entity'
                 elif action == 'io/annotate/image/query':
                     query = params['query']
-                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row), base64.urlsafe_b64encode(image_column))
+                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.b64encode(start_row), base64.b64encode(stop_row), base64.b64encode(image_column))
                     p['type'] = 'image_query'
                     p['query'] = query
                 elif action == 'io/annotate/image/query_batch':
                     query = params['query']
-                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.urlsafe_b64encode(start_row), base64.urlsafe_b64encode(stop_row), base64.urlsafe_b64encode(image_column))
+                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.b64encode(start_row), base64.b64encode(stop_row), base64.b64encode(image_column))
                     p['type'] = 'image_query_batch'
                     p['query'] = query
                 else:
@@ -689,7 +689,7 @@ class ModelsHBaseTable(HBaseTable):
             elif path.startswith('factory/'):
                 table = params['table']
                 slices = parse_slices()
-                start_stop_rows = [map(base64.urlsafe_b64decode, s.split('/')) for s in slices]
+                start_stop_rows = [map(base64.b64decode, s.split('/')) for s in slices]
                 data_table = get_table(self._auth_user, table)
                 for start_row, stop_row in start_stop_rows:
                     data_table._slice_validate(start_row, stop_row, 'r')

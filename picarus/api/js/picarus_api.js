@@ -47,11 +47,11 @@ function picarus_api(url, method, args) {
 }
 
 function encode_id(data) {
-    return base64.encode(data).replace(/\+/g , '-').replace(/\//g , '_');
+    return base64.encode(data);
 }
 
 function decode_id(data) {
-    return base64.decode(data.replace(/\-/g , '+').replace(/\_/g , '/'));
+    return base64.decode(data);
 }
 
 function picarus_api_row(table, row, method, args) {

@@ -108,7 +108,7 @@ def parse_columns():
             columns = bottle.request.params['columns'].split(',')
         except KeyError:
             columns = []
-    return [base64.urlsafe_b64decode(str(x)) for x in columns]
+    return [base64.b64decode(str(x)) for x in columns]
 
 
 def parse_params():
@@ -143,7 +143,7 @@ def data_table(_auth_user, table_name):
 def data_row(_auth_user, table_name, row):
     table = tables.get_table(_auth_user, table_name)
     method = bottle.request.method.upper()
-    row = base64.urlsafe_b64decode(row)
+    row = base64.b64decode(row)
     method = bottle.request.method.upper()
     if method == 'GET':
         return table.get_row(row, parse_columns())
@@ -162,8 +162,8 @@ def data_row(_auth_user, table_name, row):
 @check_version
 def data_column(_auth_user, table_name, row, column):
     table = tables.get_table(_auth_user, table_name)
-    row = base64.urlsafe_b64decode(row)
-    column = base64.urlsafe_b64decode(column)
+    row = base64.b64decode(row)
+    column = base64.b64decode(column)
     return table.delete_column(row, column)
 
 
@@ -175,8 +175,8 @@ def data_column(_auth_user, table_name, row, column):
 def data_slice(_auth_user, table_name, start_row, stop_row):
     table = tables.get_table(_auth_user, table_name)
     method = bottle.request.method.upper()
-    start_row = base64.urlsafe_b64decode(start_row)
-    stop_row = base64.urlsafe_b64decode(stop_row)
+    start_row = base64.b64decode(start_row)
+    stop_row = base64.b64decode(stop_row)
     if method == 'GET':
         return table.get_slice(start_row, stop_row, parse_columns(), *parse_params_files())
     elif method == 'PATCH':
