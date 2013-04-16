@@ -30,7 +30,7 @@ function PicarusClient(email, apiKey, server) {
         this._args_defaults(args);
         if (!_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, this.enc).join(',');
-        this.get(['data', table, base64.encode(row)], args.data, this._wrap_decode_lod(args.success), args.fail);
+        this.get(['data', table, base64.encode(startRow), base64.encode(stopRow)], args.data, this._wrap_decode_lod(args.success), args.fail);
     };
     this._args_defaults = function (args) {
         if (!_.has(args, 'success'))
