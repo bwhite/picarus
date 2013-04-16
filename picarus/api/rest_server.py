@@ -177,6 +177,7 @@ def data_slice(_auth_user, table_name, start_row, stop_row):
     method = bottle.request.method.upper()
     start_row = base64.b64decode(start_row)
     stop_row = base64.b64decode(stop_row)
+    print_request()
     if method == 'GET':
         return table.get_slice(start_row, stop_row, parse_columns(), *parse_params_files())
     elif method == 'PATCH':
