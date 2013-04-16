@@ -316,7 +316,7 @@ class AnnotationsTable(BaseTableSmall):
 class AnnotationDataTable(BaseTableSmall):
 
     def __init__(self, _auth_user, table, task):
-        super(AnnotationsDataTable, self).__init__()
+        super(AnnotationDataTable, self).__init__()
         self.owner = _auth_user.email
         self.table = table
         self.task = task

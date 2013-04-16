@@ -14,7 +14,7 @@ function PicarusClient(email, apiKey, server) {
     this._ajax = function (path, data, success, fail, type) {
         path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
         var formData = new FormData();
-        _.each(data.data, function (v, k) {
+        _.each(data, function (v, k) {
             formData.append(k, v);
         });
         $.ajax(path, {type: type, data: formData, success: success, contentType: false, processData: false}).fail(fail);
