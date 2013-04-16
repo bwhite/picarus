@@ -1,3 +1,11 @@
+function encode_id(x) {
+    return base64.encode(x).replace(/\+/g , '-').replace(/\//g , '_');
+}
+
+function decode_id(x) {
+    return base64.decode(x.replace(/\-/g , '+').replace(/\_/g , '/'));
+}
+
 function PicarusClient(email, apiKey, server) {
     if (_.isUndefined(server))
         server = 'https://api.picar.us';
@@ -47,7 +55,7 @@ function PicarusClient(email, apiKey, server) {
     this.patch_row = function (table, row, args) {
         //args: success, fail, data
         this._args_defaults(args);
-        this.patch(['data', table, base64.encode(row)], this.encdict(args.data), this._wrap_decode_values(args.success), args.fail);
+        this.patch(['data', table, encode_id(row)], this.encdict(args.data), this._wrap_decode_values(args.success), args.fail);
     };
     this.encdict = function (d) {
         return _.object(_.map(d, function (v, k) {
@@ -61,14 +69,14 @@ function PicarusClient(email, apiKey, server) {
         this._args_defaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
-        this.get(['data', table, base64.encode(row)], args.data, this._wrap_decode_dict(args.success), args.fail);
+        this.get(['data', table, encode_id(row)], args.data, this._wrap_decode_dict(args.success), args.fail);
     };
     this.get_slice = function (table, startRow, stopRow, args) {
         //args: success, fail, columns, data
         this._args_defaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
-        this.get(['slice', table, base64.encode(startRow), base64.encode(stopRow)], args.data, this._wrap_decode_lod(args.success), args.fail);
+        this.get(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_decode_lod(args.success), args.fail);
     };
     this._args_defaults = function (args) {
         if (!_.has(args, 'success'))
@@ -290,14 +298,6 @@ function picarus_api(url, method, args) {
     }
     var request = $.ajax(options);
     if (args.hasOwnProperty('fail')) request.fail(function(xhr, text_status) {args.fail(xhr)});
-}
-
-function encode_id(data) {
-    return base64.encode(data);
-}
-
-function decode_id(data) {
-    return base64.decode(data);
 }
 
 function picarus_api_row(table, row, method, args) {
