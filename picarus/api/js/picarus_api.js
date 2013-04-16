@@ -1,3 +1,165 @@
+function PicarusClient(email, apiKey, server) {
+    if (_.isUndefined(server))
+        server = 'https://api.picar.us';
+    this.email = email;
+    this.apiKey = apiKey;
+    this.server = server;
+    this.version = 'a1';
+
+    this.get = function (path, data, success, fail) {
+        path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
+        $.ajax(path, {data: data}).fail(fail);
+    };
+
+    this.get = function (path, data, success, fail) {
+        path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
+        $.ajax(path, {data: data}).fail(fail);
+    };
+    
+    this.get_table = function (table, success, fail, columns) {
+        var data = {}
+        if (!_.isUndefined(columns))
+            data.columns = _.map(args.columns, this.enc).join(',');
+        this.get(['data', table], this._wrap_decode_lod(success), fail);
+    };
+    this._wrap_decode_lod = function(f) {
+        return function(msg, text_status, xhr) {
+            return _.map(JSON.parse(xhr), function (x) {
+                var row = base64.decode(x.row);
+                var columns = _.object(_.map(_.omit(x, 'row'), function (v, k) {
+                    return [base64.decode(k), base64.decode(v)];
+                }));
+                return [row, columns];
+            });
+        };
+    };
+}
+/*
+
+class PicarusClient(object):
+
+    def __init__(self, email, api_key, server="https://api.picar.us"):
+        self.email = email
+        self.api_key = api_key
+        self.server = server
+        self.version = 'a1'
+
+    def _check_status(self, response):
+        if response.status_code != 200:
+            raise RuntimeError('picarus_api: returned [%d]' % (response.status_code))
+        return json.loads(response.content)
+
+    def _decode_lod(self, lod):
+        row_columns = []
+        for x in lod:
+            row = self.dec(x['row'])
+            columns = {self.dec(x): self.dec(y) for x, y in x.items() if x != 'row'}
+            row_columns.append((row, columns))
+        return row_columns
+
+    def _decode_dict(self, d):
+        return {self.dec(x): self.dec(y) for x, y in d.items()}
+
+    # raw
+
+    def get(self, path, data=None):
+        path = '/'.join(map(urllib.quote_plus, path))
+        r = requests.get('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), params=data)
+        return self._check_status(r)
+
+    def post(self, path, data=None, files=None):
+        path = '/'.join(map(urllib.quote_plus, path))
+        r = requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data, files=files)
+        return self._check_status(r)
+
+    def delete(self, path, data=None):
+        path = '/'.join(map(urllib.quote_plus, path))
+        r = requests.delete('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data)
+        return self._check_status(r)
+
+    def patch(self, path, data=None, files=None):
+        path = '/'.join(map(urllib.quote_plus, path))
+        r = requests.patch('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data, files=files)
+        return self._check_status(r)
+
+    def _encode_columns(self, columns):
+        data = {}
+        if columns is not None:
+            data['columns'] = ','.join(map(self.enc, columns))
+        return data
+
+    # /data/:table
+
+    def get_table(self, table, columns=None):
+        return self._decode_lod(self.get(('data', table), data=self._encode_columns(columns)))
+
+    def post_table(self, table, data=None, files=None):
+        return self.decvalues(self.post(('data', table), data=self.encdict(data), files=self.enckeys(files)))
+
+    # /data/:table/:row
+
+    def get_row(self, table, row, columns=None):
+        return self.decdict(self.get(('data', table, self.enc(row)), data=self._encode_columns(columns)))
+
+    def post_row(self, table, row, data=None, files=None):
+        return self.post(('data', table, self.enc(row)), data=data, files=files)
+
+    def delete_row(self, table, row):
+        return self.delete(('data', table, self.enc(row)))
+
+    def patch_row(self, table, row, data=None, files=None):
+        return self.patch(('data', table, self.enc(row)), data=self.encdict(data), files=self.enckeys(files))
+
+    # /slice/:table/:start_row/:stop_row
+
+    def get_slice(self, table, start_row, stop_row, columns=None, data=None):
+        column_data = self._encode_columns(columns)
+        if data is not None:
+            column_data.update(data)
+        return self._decode_lod(self.get(('slice', table, self.enc(start_row), self.enc(stop_row)), data=column_data))
+
+    def post_slice(self, table, start_row, stop_row, action, data=None):
+        if data is None:
+            data = {}
+        data['action'] = action
+        return self.post(('slice', table, self.enc(start_row), self.enc(stop_row)), data=data)
+
+    def patch_slice(self, table, start_row, stop_row, data=None):
+        return self.patch(('slice', table, self.enc(start_row), self.enc(stop_row)), data=self.encdict(data))
+
+    def scanner(self, table, start_row, stop_row, columns=None):
+        max_rows_iter = 10000
+        data = {}
+        data['maxRows'] = max_rows_iter
+        while True:
+            row_columns = self.get_slice(table, start_row, stop_row, columns=columns, data=data)
+            if not row_columns:
+                break
+            for row, columns in row_columns:
+                yield row, columns
+            start_row = row
+            data['excludeStart'] = '1'
+
+    def enc(self, x):
+        return base64.b64encode(str(x))
+
+    def dec(self, x):
+        return base64.b64decode(str(x))
+
+    def encdict(self, d):
+        return {self.enc(x): self.enc(y) for x, y in d.items()}
+
+    def decdict(self, d):
+        return {self.dec(x): self.dec(y) for x, y in d.items()}
+
+    def enckeys(self, d):
+        return {self.enc(x): y for x, y in d.items()}
+
+    def decvalues(self, d):
+        return {x: self.dec(y) for x, y in d.items()}
+
+*/
+
 function prefix_to_stop_row(prefix) {
     // TODO: need to fix wrap around if last char is "255"
     return prefix.slice(0, -1) + String.fromCharCode(prefix.slice(-1).charCodeAt(0) + 1);
