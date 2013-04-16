@@ -9,7 +9,28 @@ function PicarusClient(email, apiKey, server) {
     this.get = function (path, data, success, fail) {
         path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
         $.ajax(path, {data: data, success: success}).fail(fail);
-    };   
+    };
+
+    this._ajax = function (path, data, success, fail, type) {
+        path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
+        var formData = new FormData();
+        _.each(data.data, function (v, k) {
+            formData.append(k, v);
+        });
+        $.ajax(path, {type: type, data: formData, success: success, contentType: false, processData: false}).fail(fail);
+    };
+    
+    this.post = function (path, data, success, fail) {
+        this._ajax(path, data, success, fail, 'POST');
+    };
+
+    this.patch = function (path, data, success, fail) {
+        this._ajax(path, data, success, fail, 'PATCH');
+    };
+
+    this.del = function (path, data, success, fail) {
+        this._ajax(path, data, success, fail, 'DELETE');
+    };
 
     this.get_table = function (table, args) {
         //args: success, fail, columns
@@ -17,6 +38,18 @@ function PicarusClient(email, apiKey, server) {
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
         this.get(['data', table], args.data, this._wrap_decode_lod(args.success), args.fail);
+    };
+    this.post_table = function (table, args) {
+        //args: success, fail, data
+        this._args_defaults(args);
+        this.post(['data', table], this.encdict(args.data), this._wrap_decode_values(args.success), args.fail);
+    };
+    this.encdict = function (d) {
+        return _.object(_.map(d, function (v, k) {
+            if (!_.isObject(v)) // NOTE(brandyn): The reason is that files are "object" type
+                v = base64.encode(v);
+            return [base64.encode(k), v];
+        }));
     };
     this.get_row = function (table, row, args) {
         //args: success, fail, columns
@@ -58,11 +91,19 @@ function PicarusClient(email, apiKey, server) {
             })));
         };
     };
+    this._wrap_decode_values = function(f) {
+        return function(msg, text_status, xhr) {
+            f(_.object(_.map(JSON.parse(xhr.responseText), function (v, k) {
+                    return [k, base64.decode(v)];
+            })));
+        };
+    };
     this.test = function () {
         this.get_table('parameters', {success: function (x) {console.log('Set debug_a'); debug_a=x}});
         this.get_table('models', {success: function (x) {console.log('Set debug_b'); debug_b=x}, columns: ['meta:']});
         this.get_slice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:']});
         this.get_row('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), {success: function (x) {console.log('Set debug_d'); debug_d=x}, columns: ['meta:']});
+        this.post_table('images', {success: function (x) {console.log('Set debug_e'); debug_e=x}, data: {'meta:class': 'test_data'}});
     };
 }
 /*
