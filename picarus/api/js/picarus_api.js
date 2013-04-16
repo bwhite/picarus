@@ -150,7 +150,7 @@ function PicarusClient(email, apiKey, server) {
         this.get_slice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:']});
         this.post_slice('images', 'automated_tests:', 'automated_tests;', 'io/thumbnail', {success: function (x) {console.log('Set debug_g'); debug_g=x}});
         function test_patch_row(row) {
-            this.patch_row('images', row, {success: function (x) {console.log('Set debug_f'); debug_f=x;test_get_row(row)}, data: {'meta:class_0': 'test_data2'}});
+            this.patch_row('images', row, {success: function (x) {console.log('Set debug_f'); debug_f=x;test_get_row(row);test_post_row(row)}, data: {'meta:class_0': 'test_data2'}});
         }
         function test_post_row(row) {
             this.post_row('images', row, 'i/chain', base64.decode('ZmVhdDpRhhxwtznn3dTyAfPRMSdO'), {success: function (x) {console.log('Set debug_g'); debug_g=x}});
@@ -159,6 +159,7 @@ function PicarusClient(email, apiKey, server) {
             this.get_row('images', row, {success: function (x) {console.log('Set debug_d'); debug_d=x}, columns: ['meta:']});
         }
         test_get_row = _.bind(test_get_row, this);
+        test_post_row = _.bind(test_post_row, this);
         test_patch_row = _.bind(test_patch_row, this);
         this.post_table('images', {success: function (x) {console.log('Set debug_e');debug_e=x;test_patch_row(x.row);}, data: {'meta:class': 'test_data'}});
         
