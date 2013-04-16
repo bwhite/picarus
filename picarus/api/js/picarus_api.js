@@ -14,21 +14,21 @@ function PicarusClient(email, apiKey, server) {
     this.get_table = function (table, args) {
         //args: success, fail, columns
         this._args_defaults(args);
-        if (!_.has(args, 'columns'))
+        if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, this.enc).join(',');
         this.get(['data', table], args.data, this._wrap_decode_lod(args.success), args.fail);
     };
     this.get_row = function (table, row, args) {
         //args: success, fail, columns
         this._args_defaults(args);
-        if (!_.has(args, 'columns'))
+        if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, this.enc).join(',');
         this.get(['data', table, base64.encode(row)], args.data, this._wrap_decode_dict(args.success), args.fail);
     };
     this.get_slice = function (table, startRow, stopRow, args) {
         //args: success, fail, columns, data
         this._args_defaults(args);
-        if (!_.has(args, 'columns'))
+        if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, this.enc).join(',');
         this.get(['slice', table, base64.encode(startRow), base64.encode(stopRow)], args.data, this._wrap_decode_lod(args.success), args.fail);
     };
