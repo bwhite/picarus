@@ -44,6 +44,11 @@ function PicarusClient(email, apiKey, server) {
         this._args_defaults(args);
         this.post(['data', table], this.encdict(args.data), this._wrap_decode_values(args.success), args.fail);
     };
+    this.patch_row = function (table, row, args) {
+        //args: success, fail, data
+        this._args_defaults(args);
+        this.patch(['data', table, base64.encode(row)], this.encdict(args.data), this._wrap_decode_values(args.success), args.fail);
+    };
     this.encdict = function (d) {
         return _.object(_.map(d, function (v, k) {
             if (!_.isObject(v)) // NOTE(brandyn): The reason is that files are "object" type
@@ -103,7 +108,10 @@ function PicarusClient(email, apiKey, server) {
         this.get_table('models', {success: function (x) {console.log('Set debug_b'); debug_b=x}, columns: ['meta:']});
         this.get_slice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:']});
         this.get_row('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), {success: function (x) {console.log('Set debug_d'); debug_d=x}, columns: ['meta:']});
-        this.post_table('images', {success: function (x) {console.log('Set debug_e'); debug_e=x}, data: {'meta:class': 'test_data'}});
+        this.post_table('images', {success: function (x) {console.log('Set debug_e');
+                                                          debug_e=x;
+                                                          this.patch_row('images', x.row, {success: function (x) {console.log('Set debug_f'); debug_f=x}, data: {'meta:class_0': 'test_data2'}});
+                                                         }, data: {'meta:class': 'test_data'}});
     };
 }
 /*
