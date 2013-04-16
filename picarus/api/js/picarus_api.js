@@ -14,7 +14,7 @@ function PicarusClient(email, apiKey, server) {
         var data = {}
         if (!_.isUndefined(columns))
             data.columns = _.map(args.columns, this.enc).join(',');
-        this.get(['data', table], this._wrap_decode_lod(success), fail);
+        this.get(['data', table], data, this._wrap_decode_lod(success), fail);
     };
     this._wrap_decode_lod = function(f) {
         return function(msg, text_status, xhr) {
