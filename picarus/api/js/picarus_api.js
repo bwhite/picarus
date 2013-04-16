@@ -13,21 +13,21 @@ function PicarusClient(email, apiKey, server) {
 
     this.get_table = function (table, args) {
         //args: success, fail, columns
-        args = this._args_defaults(args);
+        this._args_defaults(args);
         if (!_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, this.enc).join(',');
         this.get(['data', table], args.data, this._wrap_decode_lod(args.success), args.fail);
     };
     this.get_row = function (table, row, args) {
         //args: success, fail, columns
-        args = this._args_defaults(args);
+        this._args_defaults(args);
         if (!_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, this.enc).join(',');
         this.get(['data', table, base64.encode(row)], args.data, this._wrap_decode_dict(args.success), args.fail);
     };
     this.get_slice = function (table, startRow, stopRow, args) {
         //args: success, fail, columns, data
-        args = this._args_defaults(args);
+        this._args_defaults(args);
         if (!_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, this.enc).join(',');
         this.get(['data', table, base64.encode(row)], args.data, this._wrap_decode_lod(args.success), args.fail);
@@ -59,10 +59,15 @@ function PicarusClient(email, apiKey, server) {
         };
     };
     this.test = function () {
+        console.log('1');
         this.get_table('parameters', {success: function (x) {console.log('Set debug_a'); debug_a=x}});
+        console.log('2');
         this.get_table('models', {success: function (x) {console.log('Set debug_b'); debug_b=x}, columns: ['meta:']});
+        console.log('3');
         this.get_slice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:class']});
+        console.log('4');
         this.get_row('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), {success: function (x) {console.log('Set debug_d'); debug_d=x}, columns: ['meta:class']});
+        console.log('5');
     };
 }
 /*
