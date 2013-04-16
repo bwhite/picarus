@@ -113,7 +113,8 @@ function PicarusClient(email, apiKey, server) {
         function test_get_row(row) {
             this.get_row('images', row, {success: function (x) {console.log('Set debug_d'); debug_d=x}, columns: ['meta:']});
         }
-        test_row = _.bind(test_row, this);
+        test_get_row = _.bind(test_get_row, this);
+        test_patch_row = _.bind(test_patch_row, this);
         this.post_table('images', {success: function (x) {console.log('Set debug_e');debug_e=x;test_patch_row(x.row);}, data: {'meta:class': 'test_data'}});
     };
 }
