@@ -145,6 +145,9 @@ def data_row(_auth_user, table_name, row):
     method = bottle.request.method.upper()
     row = base64.b64decode(row)
     method = bottle.request.method.upper()
+    print_request()
+    print('row')
+    print(row)
     if method == 'GET':
         return table.get_row(row, parse_columns())
     elif method == 'PATCH':
