@@ -113,6 +113,7 @@ function PicarusClient(email, apiKey, server) {
                                                           this.patch_row('images', x.row, {success: function (x) {console.log('Set debug_f'); debug_f=x}, data: {'meta:class_0': 'test_data2'}});
                                                          }, data: {'meta:class': 'test_data'}});
     };
+    _.bindAll(this);
 }
 /*
 
