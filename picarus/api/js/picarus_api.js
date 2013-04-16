@@ -52,6 +52,34 @@ function PicarusClient(email, apiKey, server) {
         this._args_defaults(args);
         this.post(['data', table], this.encdict(args.data), this._wrap_decode_values(args.success), args.fail);
     };
+
+/*
+    def post_row(self, table, row, data=None, files=None):
+        return self.post(('data', table, self.encurl(row)), data=data, files=files)
+
+
+    def post_slice(self, table, start_row, stop_row, action, data=None):
+        if data is None:
+            data = {}
+        data['action'] = action
+        return self.post(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=data)
+*/
+
+    this.post_row = function (table, row, action, model, args) {
+        //args: success, fail, data
+        this._args_defaults(args);
+        args.data.action = action;
+        args.data.model = base64.encode(model);
+        this.post(['data', table, encode_id(row)], args.data, this._wrap_decode_dict(args.success), args.fail);
+    };
+
+    this.post_slice = function (table, startRow, stopRow, action, args) {
+        //args: success, fail, data
+        this._args_defaults(args);
+        args.data.action = action;
+        this.patch(['data', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_null(args.success), args.fail);
+    };
+
     this.patch_row = function (table, row, args) {
         //args: success, fail, data
         this._args_defaults(args);
@@ -97,6 +125,11 @@ function PicarusClient(email, apiKey, server) {
             }));
         };
     };
+    this._wrap_null = function(f) {
+        return function(msg, text_status, xhr) {
+            f();
+        };
+    };
     this._wrap_decode_dict = function(f) {
         return function(msg, text_status, xhr) {
             f(_.object(_.map(JSON.parse(xhr.responseText), function (v, k) {
@@ -115,8 +148,12 @@ function PicarusClient(email, apiKey, server) {
         this.get_table('parameters', {success: function (x) {console.log('Set debug_a'); debug_a=x}});
         this.get_table('models', {success: function (x) {console.log('Set debug_b'); debug_b=x}, columns: ['meta:']});
         this.get_slice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:']});
+        this.post_slice('images', 'automated_tests:', 'automated_tests;', 'io/thumbnail', {success: function (x) {console.log('Set debug_g'); debug_g=x}});
         function test_patch_row(row) {
             this.patch_row('images', row, {success: function (x) {console.log('Set debug_f'); debug_f=x;test_get_row(row)}, data: {'meta:class_0': 'test_data2'}});
+        }
+        function test_post_row(row) {
+            this.post_row('images', row, 'i/chain', base64.decode('ZmVhdDpRhhxwtznn3dTyAfPRMSdO'), {success: function (x) {console.log('Set debug_g'); debug_g=x}});
         }
         function test_get_row(row) {
             this.get_row('images', row, {success: function (x) {console.log('Set debug_d'); debug_d=x}, columns: ['meta:']});
@@ -124,6 +161,7 @@ function PicarusClient(email, apiKey, server) {
         test_get_row = _.bind(test_get_row, this);
         test_patch_row = _.bind(test_patch_row, this);
         this.post_table('images', {success: function (x) {console.log('Set debug_e');debug_e=x;test_patch_row(x.row);}, data: {'meta:class': 'test_data'}});
+        
     };
 }
 /*
