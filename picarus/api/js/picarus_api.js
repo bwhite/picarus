@@ -9,13 +9,7 @@ function PicarusClient(email, apiKey, server) {
     this.get = function (path, data, success, fail) {
         path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
         $.ajax(path, {data: data}).fail(fail);
-    };
-
-    this.get = function (path, data, success, fail) {
-        path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
-        $.ajax(path, {data: data}).fail(fail);
-    };
-    
+    };   
     this.get_table = function (table, success, fail, columns) {
         var data = {}
         if (!_.isUndefined(columns))
@@ -24,13 +18,13 @@ function PicarusClient(email, apiKey, server) {
     };
     this._wrap_decode_lod = function(f) {
         return function(msg, text_status, xhr) {
-            return _.map(JSON.parse(xhr), function (x) {
+            f(_.map(JSON.parse(xhr), function (x) {
                 var row = base64.decode(x.row);
                 var columns = _.object(_.map(_.omit(x, 'row'), function (v, k) {
                     return [base64.decode(k), base64.decode(v)];
                 }));
                 return [row, columns];
-            });
+            }));
         };
     };
 }
