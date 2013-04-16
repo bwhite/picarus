@@ -8,7 +8,7 @@ function PicarusClient(email, apiKey, server) {
 
     this.get = function (path, data, success, fail) {
         path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
-        $.ajax(path, {data: data}).fail(fail);
+        $.ajax(path, {data: data, success: success}).fail(fail);
     };   
     this.get_table = function (table, success, fail, columns) {
         var data = {}
