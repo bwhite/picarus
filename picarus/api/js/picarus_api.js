@@ -77,7 +77,7 @@ function PicarusClient(email, apiKey, server) {
         //args: success, fail, data
         this._args_defaults(args);
         args.data.action = action;
-        this.post(['data', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_null(args.success), args.fail);
+        this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_null(args.success), args.fail);
     };
 
     this.patch_row = function (table, row, args) {
@@ -150,7 +150,7 @@ function PicarusClient(email, apiKey, server) {
         this.get_slice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:']});
         this.post_slice('images', 'automated_tests:', 'automated_tests;', 'io/thumbnail', {success: function (x) {console.log('Set debug_g'); debug_g=x}});
         function test_patch_row(row) {
-            this.patch_row('images', row, {success: function (x) {console.log('Set debug_f'); debug_f=x;test_get_row(row);test_post_row(row)}, data: {'meta:class_0': 'test_data2'}});
+            this.patch_row('images', row, {success: function (x) {console.log('Set debug_f'); debug_f=x;test_get_row(row)}, data: {'meta:class_0': 'test_data2'}});
         }
         function test_post_row(row) {
             this.post_row('images', row, 'i/chain', base64.decode('ZmVhdDpRhhxwtznn3dTyAfPRMSdO'), {success: function (x) {console.log('Set debug_g'); debug_g=x}});
@@ -162,7 +162,7 @@ function PicarusClient(email, apiKey, server) {
         test_post_row = _.bind(test_post_row, this);
         test_patch_row = _.bind(test_patch_row, this);
         this.post_table('images', {success: function (x) {console.log('Set debug_e');debug_e=x;test_patch_row(x.row);}, data: {'meta:class': 'test_data'}});
-        
+        test_post_row(base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'));
     };
 }
 /*
