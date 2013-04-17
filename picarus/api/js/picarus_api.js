@@ -77,7 +77,7 @@ function PicarusClient(email, apiKey, server) {
         //args: success, fail, data
         this._args_defaults(args);
         args.data.action = action;
-        this.patch(['data', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_null(args.success), args.fail);
+        this.post(['data', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_null(args.success), args.fail);
     };
 
     this.patch_row = function (table, row, args) {
