@@ -42,38 +42,38 @@ function PicarusClient(email, apiKey, server) {
 
     this.get_table = function (table, args) {
         //args: success, fail, columns
-        this._args_defaults(args);
+        args = this._args_defaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
         this.get(['data', table], args.data, this._wrap_decode_lod(args.success), args.fail);
     };
     this.post_table = function (table, args) {
         //args: success, fail, data
-        this._args_defaults(args);
+        args = this._args_defaults(args);
         this.post(['data', table], this.encdict(args.data), this._wrap_decode_values(args.success), args.fail);
     };
     this.post_row = function (table, row, action, model, args) {
         //args: success, fail, data
-        this._args_defaults(args);
+        args = this._args_defaults(args);
         args.data.action = action;
         args.data.model = base64.encode(model);
         this.post(['data', table, encode_id(row)], args.data, this._wrap_decode_dict(args.success), args.fail);
     };
     this.delete_row = function (table, row, args) {
         //args: success, fail
-        this._args_defaults(args);
+        args = this._args_defaults(args);
         this.del(['data', table, encode_id(row)], args.data, this._wrap_null(args.success), args.fail);
     };
     this.post_slice = function (table, startRow, stopRow, action, args) {
         //args: success, fail, data
-        this._args_defaults(args);
+        args = this._args_defaults(args);
         args.data.action = action;
         this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_null(args.success), args.fail);
     };
 
     this.patch_row = function (table, row, args) {
         //args: success, fail, data
-        this._args_defaults(args);
+        args = this._args_defaults(args);
         this.patch(['data', table, encode_id(row)], this.encdict(args.data), this._wrap_decode_values(args.success), args.fail);
     };
     this.encdict = function (d) {
@@ -85,21 +85,21 @@ function PicarusClient(email, apiKey, server) {
     };
     this.get_row = function (table, row, args) {
         //args: success, fail, columns
-        this._args_defaults(args);
+        args = this._args_defaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
         this.get(['data', table, encode_id(row)], args.data, this._wrap_decode_dict(args.success), args.fail);
     };
     this.get_slice = function (table, startRow, stopRow, args) {
         //args: success, fail, columns, data
-        this._args_defaults(args);
+        args = this._args_defaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
         this.get(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_decode_lod(args.success), args.fail);
     };
     this.scanner = function (table, startRow, stopRow, args) {
         // args: success, fail, done, maxRows, maxRowsIter, filter, resume
-        this._args_defaults(args);
+        args = this._args_defaults(args);
         if (_.isUndefined(args.maxRows)) {
             args.maxRows = Infinity;
         }
@@ -109,20 +109,18 @@ function PicarusClient(email, apiKey, server) {
         if (_.isUndefined(args.maxBytes)) {
             args.maxBytes = 1048576;
         }
-        var iterArgs = {};
-        if (_.has(args, 'columns'))
-            iterArgs.columns = args.columns;
         var lastRow = undefined;
         var numRows = 0;
         if (!_.isUndefined(args.filter)) {
-            iterArgs.filter = args.filter;
+            iterArgs.data.filter = args.filter;
         }
         function innerSuccess(data) {
+            debug_data = data;
             var isdone = true;
-            iterArgs.maxRows -= data.length;
-            if (iterArgs.maxRows < 0) {
+            iterArgs.data.maxRows -= data.length;
+            if (iterArgs.data.maxRows < 0) {
                 // Truncates any excess rows we may have gotten
-                data = data.slice(0, iterArgs.maxRows);
+                data = data.slice(0, iterArgs.data.maxRows);
             }
             if (numRows == 0 && data.length && !_.isUndefined(args.first)) {
                 var firstRow = _.first(data);
@@ -140,11 +138,11 @@ function PicarusClient(email, apiKey, server) {
             // It's possible that this will make 1 extra call at the end that returns nothing,
             // but there are several trade-offs and that is the simplest implementation that doesn't
             // encode extra parameters, modify status codes (nonstandard), output fixed rows only, etc.
-            if (data.length && iterArgs.maxRows > 0) {
+            if (data.length && iterArgs.data.maxRows > 0) {
                 isdone = false;
                 function next_call() {
-                    iterArgs.excludeStart = 1;
-                    this.get_slice(table, _.last(data).row, stopRow, {data: iterArgs, success: innerSuccess, fail: args.fail});
+                    iterArgs.data.excludeStart = 1;
+                    this.get_slice(table, _.last(data).row, stopRow, iterArgs);
                 }
                 // This allows for pagination instead of immediately requesting the next chunk
                 if (_.isUndefined(args.resume))
@@ -155,10 +153,13 @@ function PicarusClient(email, apiKey, server) {
             if (isdone && !_.isUndefined(args.done))
                 args.done({lastRow: lastRow, numRows: numRows});
         }
-        iterArgs.maxRows = args.maxRowsIter;
-        this.get_slice(table, startRow, stopRow, {data: iterArgs, success: innerSuccess, fail: args.fail});
+        var iterArgs = {data: {maxRows: args.maxRowsIter}, success: innerSuccess, fail: args.fail};
+        if (_.has(args, 'columns'))
+            iterArgs.columns = args.columns;
+        this.get_slice(table, startRow, stopRow, iterArgs);
     };
     this._args_defaults = function (args) {
+        args = _.clone(args);
         if (!_.has(args, 'success'))
             args.success = function () {};
         if (!_.has(args, 'fail'))
@@ -171,6 +172,7 @@ function PicarusClient(email, apiKey, server) {
             args.first = function () {};
         if (!_.has(args, 'data'))
             args.data = {};
+        return args;
     };
     this._wrap_decode_lod = function(f) {
         return function(msg, text_status, xhr) {
