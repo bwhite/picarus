@@ -1268,12 +1268,12 @@ function render_evaluate_classifier_loaded() {
                 $('#progress').css('width', (100 * (confs.pos_confs.length + confs.neg_confs.length) / 19850.) + '%')
                 c = columns;
                 if (_.has(columns, conf_column) && _.has(columns, gt_column)) {
-                    if (base64.decode(columns[gt_column]) == posClass) {
+                    if (columns[gt_column] == posClass) {
                         sliceStats[curSlice].numPos += 1;
-                        confs.pos_confs.push(msgpack.unpack(base64.decode(columns[conf_column])));
+                        confs.pos_confs.push(msgpack.unpack(columns[conf_column]));
                     } else {
                         sliceStats[curSlice].numNeg += 1;
-                        confs.neg_confs.push(msgpack.unpack(base64.decode(columns[conf_column])));
+                        confs.neg_confs.push(msgpack.unpack(columns[conf_column]));
                     }
                 } else {
                     if (!_.has(columns, conf_column))
@@ -1295,7 +1295,7 @@ function render_evaluate_classifier_loaded() {
                 }
             else
                 success_confs = function () {}
-            picarus_api_data_scanner("images", start_stop_row[0], start_stop_row[1], [gt_column, conf_column], {success: success, done: success_confs});
+            PICARUS.scanner("images", decode_id(start_stop_row[0]), decode_id(start_stop_row[1]), {success: success, done: success_confs, columns: [gt_column, conf_column]});
         });
     })
 }
