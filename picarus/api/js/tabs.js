@@ -451,7 +451,7 @@ function render_models_single() {
             console.log('Blah');
             $('#imagefile').parent().html($('#imagefile').parent().html());
             $('#imagefile').change(fileChange);
-            var outputType = models.get(modelKey).pescape('meta:output_type');
+            var outputType = models.get(encode_id(modelKey)).pescape('meta:output_type');
             if (outputType == 'binary_class_confidence') {
                 $('#results').html($('<h3>').text('Classifier Confidence'));
                 $('#results').append(msgpack.unpack(result[modelKey]));
