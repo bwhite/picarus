@@ -152,6 +152,7 @@ function PicarusClient(email, apiKey, server) {
             if (isdone && !_.isUndefined(args.done))
                 args.done({lastRow: lastRow, numRows: numRows});
         }
+        innerSuccess = _.bind(innerSuccess, this);
         var iterArgs = {data: {maxRows: args.maxRowsIter}, success: innerSuccess, fail: args.fail};
         if (_.has(args, 'columns'))
             iterArgs.columns = args.columns;
