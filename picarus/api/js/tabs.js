@@ -1255,8 +1255,8 @@ function render_evaluate_classifier_loaded() {
     $('#runButton').click(function () {
         button_running();
         confs = {pos_confs: [], neg_confs: []};
-        var gt_column = $('#gtColumn').val();
-        var conf_column = $('#modelKey').val();
+        var gt_column = decode_id($('#gtColumn').val());
+        var conf_column = decode_id($('#modelKey').val());
         var posClass = $('#posClass').val();
         
         sliceStats = {}; // [startRow/stopRow] = {# pos, # neg, # noconf, #nometa, #noconfmeta}
