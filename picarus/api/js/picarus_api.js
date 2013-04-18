@@ -124,11 +124,11 @@ function PicarusClient(email, apiKey, server) {
             }
             if (numRows == 0 && data.length && !_.isUndefined(args.first)) {
                 var firstRow = _.first(data);
-                args.first(firstRow.row, _.omit(firstRow, 'row'));
+                args.first(firstRow[0], firstRow[1]);
             }
             _.each(data, function (v) {
-                lastRow = v.row;
-                args.success(v.row, _.omit(v, 'row'));
+                lastRow = v[0];
+                args.success(v[0], v[1]);
             });
             numRows += data.length;
             console.log(numRows);
@@ -141,7 +141,7 @@ function PicarusClient(email, apiKey, server) {
                 console.log('Not Done');
                 function next_call() {
                     iterArgs.data.excludeStart = 1;
-                    this.get_slice(table, _.last(data).row, stopRow, iterArgs);
+                    this.get_slice(table, _.last(data)[0], stopRow, iterArgs);
                 }
                 next_call = _.bind(next_call, this);
                 // This allows for pagination instead of immediately requesting the next chunk
