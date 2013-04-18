@@ -130,7 +130,7 @@ function render_models_single() {
         var table = 'images';
         var data = {};
         data['data:image'] = $('#imagefile')[0].files[0];
-        PICARUS.postTable(table, data, {success: upload_func})
+        PICARUS.postTable(table, {success: upload_func, data: data})
         $('#results').html('');
     }
     $('#imagefile').change(fileChange);
