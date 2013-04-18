@@ -143,6 +143,7 @@ function PicarusClient(email, apiKey, server) {
                     iterArgs.data.excludeStart = 1;
                     this.get_slice(table, _.last(data).row, stopRow, iterArgs);
                 }
+                next_call = _.bind(next_call, this);
                 // This allows for pagination instead of immediately requesting the next chunk
                 if (_.isUndefined(args.resume))
                     next_call();
