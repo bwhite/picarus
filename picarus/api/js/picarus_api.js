@@ -65,11 +65,12 @@ function PicarusClient(email, apiKey, server) {
         drow = row;
         this.del(['data', table, encode_id(row)], args.data, this._wrapNull(args.success), args.fail);
     };
-    this.postSlice = function (table, startRow, stopRow, action, model, args) {
+    this.postSlice = function (table, startRow, stopRow, action, args) {
         //args: success, fail, data
         args = this._argsDefaults(args);
         args.data.action = action;
-        args.data.model = base64.encode(model);
+        if (_.has(args.data, 'model'))
+            args.data.model = base64.encode(args.data.model);
         this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapNull(args.success), args.fail);
     };
 
