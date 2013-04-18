@@ -437,7 +437,9 @@ class ImagesHBaseTable(HBaseTable):
         action = params['action']
         with thrift_lock() as thrift:
             manager = PicarusManager(thrift=thrift)
+            print(params)
             model_key = base64.b64decode(params['model'])
+            print('ModelKey[%r]' % model_key)
             # TODO: Allow io/ so that we can write back to the image too
             if action == 'i/link':
                 self._row_validate(row, 'r')
