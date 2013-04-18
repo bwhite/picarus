@@ -112,9 +112,6 @@ function PicarusClient(email, apiKey, server) {
         }
         var lastRow = undefined;
         var numRows = 0;
-        if (!_.isUndefined(args.filter)) {
-            iterArgs.data.filter = args.filter;
-        }
         function innerSuccess(data) {
             debug_data = data;
             var isdone = true;
@@ -155,6 +152,8 @@ function PicarusClient(email, apiKey, server) {
                 args.done({lastRow: lastRow, numRows: numRows});
         }
         var iterArgs = {data: {maxRows: args.maxRowsIter}, success: _.bind(innerSuccess, this), fail: args.fail};
+        if (_.has(args, 'filter'))
+            iterArgs.data.filter = args.filter;
         if (_.has(args, 'columns'))
             iterArgs.columns = args.columns;
         this.getSlice(table, startRow, stopRow, iterArgs);
