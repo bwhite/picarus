@@ -40,41 +40,41 @@ function PicarusClient(email, apiKey, server) {
         this._ajax(path, data, success, fail, 'DELETE');
     };
 
-    this.get_table = function (table, args) {
+    this.getTable = function (table, args) {
         //args: success, fail, columns
-        args = this._args_defaults(args);
+        args = this._argsDefaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
-        this.get(['data', table], args.data, this._wrap_decode_lod(args.success), args.fail);
+        this.get(['data', table], args.data, this._wrapDecodeLod(args.success), args.fail);
     };
-    this.post_table = function (table, args) {
+    this.postTable = function (table, args) {
         //args: success, fail, data
-        args = this._args_defaults(args);
-        this.post(['data', table], this.encdict(args.data), this._wrap_decode_values(args.success), args.fail);
+        args = this._argsDefaults(args);
+        this.post(['data', table], this.encdict(args.data), this._wrapDecodeValues(args.success), args.fail);
     };
-    this.post_row = function (table, row, action, model, args) {
+    this.postRow = function (table, row, action, model, args) {
         //args: success, fail, data
-        args = this._args_defaults(args);
+        args = this._argsDefaults(args);
         args.data.action = action;
         args.data.model = base64.encode(model);
-        this.post(['data', table, encode_id(row)], args.data, this._wrap_decode_dict(args.success), args.fail);
+        this.post(['data', table, encode_id(row)], args.data, this._wrapDecodeDict(args.success), args.fail);
     };
-    this.delete_row = function (table, row, args) {
+    this.deleteRow = function (table, row, args) {
         //args: success, fail
-        args = this._args_defaults(args);
-        this.del(['data', table, encode_id(row)], args.data, this._wrap_null(args.success), args.fail);
+        args = this._argsDefaults(args);
+        this.del(['data', table, encode_id(row)], args.data, this._wrapNull(args.success), args.fail);
     };
-    this.post_slice = function (table, startRow, stopRow, action, args) {
+    this.postSlice = function (table, startRow, stopRow, action, args) {
         //args: success, fail, data
-        args = this._args_defaults(args);
+        args = this._argsDefaults(args);
         args.data.action = action;
-        this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_null(args.success), args.fail);
+        this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapNull(args.success), args.fail);
     };
 
-    this.patch_row = function (table, row, args) {
+    this.patchRow = function (table, row, args) {
         //args: success, fail, data
-        args = this._args_defaults(args);
-        this.patch(['data', table, encode_id(row)], this.encdict(args.data), this._wrap_decode_values(args.success), args.fail);
+        args = this._argsDefaults(args);
+        this.patch(['data', table, encode_id(row)], this.encdict(args.data), this._wrapDecodeValues(args.success), args.fail);
     };
     this.encdict = function (d) {
         return _.object(_.map(d, function (v, k) {
@@ -83,23 +83,23 @@ function PicarusClient(email, apiKey, server) {
             return [base64.encode(k), v];
         }));
     };
-    this.get_row = function (table, row, args) {
+    this.getRow = function (table, row, args) {
         //args: success, fail, columns
-        args = this._args_defaults(args);
+        args = this._argsDefaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
-        this.get(['data', table, encode_id(row)], args.data, this._wrap_decode_dict(args.success), args.fail);
+        this.get(['data', table, encode_id(row)], args.data, this._wrapDecodeDict(args.success), args.fail);
     };
-    this.get_slice = function (table, startRow, stopRow, args) {
+    this.getSlice = function (table, startRow, stopRow, args) {
         //args: success, fail, columns, data
-        args = this._args_defaults(args);
+        args = this._argsDefaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
-        this.get(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_decode_lod(args.success), args.fail);
+        this.get(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapDecodeLod(args.success), args.fail);
     };
     this.scanner = function (table, startRow, stopRow, args) {
         // args: success, fail, done, maxRows, maxRowsIter, filter, resume
-        args = this._args_defaults(args);
+        args = this._argsDefaults(args);
         if (_.isUndefined(args.maxRows)) {
             args.maxRows = Infinity;
         }
@@ -139,16 +139,16 @@ function PicarusClient(email, apiKey, server) {
             if (data.length && args.maxRows > 0) {
                 isdone = false;
                 console.log('Not Done');
-                function next_call() {
+                function nextCall() {
                     iterArgs.data.excludeStart = 1;
-                    this.get_slice(table, _.last(data)[0], stopRow, iterArgs);
+                    this.getSlice(table, _.last(data)[0], stopRow, iterArgs);
                 }
-                next_call = _.bind(next_call, this);
+                nextCall = _.bind(nextCall, this);
                 // This allows for pagination instead of immediately requesting the next chunk
                 if (_.isUndefined(args.resume))
-                    next_call();
+                    nextCall();
                 else
-                    args.resume(next_call);
+                    args.resume(nextCall);
             }
             if (isdone && !_.isUndefined(args.done))
                 args.done({lastRow: lastRow, numRows: numRows});
@@ -156,9 +156,9 @@ function PicarusClient(email, apiKey, server) {
         var iterArgs = {data: {maxRows: args.maxRowsIter}, success: _.bind(innerSuccess, this), fail: args.fail};
         if (_.has(args, 'columns'))
             iterArgs.columns = args.columns;
-        this.get_slice(table, startRow, stopRow, iterArgs);
+        this.getSlice(table, startRow, stopRow, iterArgs);
     };
-    this._args_defaults = function (args) {
+    this._argsDefaults = function (args) {
         args = _.clone(args);
         if (!_.has(args, 'success'))
             args.success = function () {};
@@ -168,7 +168,7 @@ function PicarusClient(email, apiKey, server) {
             args.data = {};
         return args;
     };
-    this._wrap_decode_lod = function(f) {
+    this._wrapDecodeLod = function(f) {
         return function(msg, text_status, xhr) {
             f(_.map(JSON.parse(xhr.responseText), function (x) {
                 var row = base64.decode(x.row);
@@ -179,19 +179,19 @@ function PicarusClient(email, apiKey, server) {
             }));
         };
     };
-    this._wrap_null = function(f) {
+    this._wrapNull = function(f) {
         return function(msg, text_status, xhr) {
             f();
         };
     };
-    this._wrap_decode_dict = function(f) {
+    this._wrapDecodeDict = function(f) {
         return function(msg, text_status, xhr) {
             f(_.object(_.map(JSON.parse(xhr.responseText), function (v, k) {
                     return [base64.decode(k), base64.decode(v)];
             })));
         };
     };
-    this._wrap_decode_values = function(f) {
+    this._wrapDecodeValues = function(f) {
         return function(msg, text_status, xhr) {
             f(_.object(_.map(JSON.parse(xhr.responseText), function (v, k) {
                     return [k, base64.decode(v)];
@@ -199,24 +199,25 @@ function PicarusClient(email, apiKey, server) {
         };
     };
     this.test = function () {
-        this.get_table('parameters', {success: function (x) {console.log('Set debug_a'); debug_a=x}});
-        this.get_table('models', {success: function (x) {console.log('Set debug_b'); debug_b=x}, columns: ['meta:']});
-        this.get_slice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:']});
-        this.post_slice('images', 'automated_tests:', 'automated_tests;', 'io/thumbnail', {success: function (x) {console.log('Set debug_g'); debug_g=x}});
-        function test_patch_row(row) {
-            this.patch_row('images', row, {success: function (x) {console.log('Set debug_f'); debug_f=x;test_get_row(row)}, data: {'meta:class_0': 'test_data2'}});
+        this.getTable('parameters', {success: function (x) {console.log('Set debug_a'); debug_a=x}});
+        this.getTable('models', {success: function (x) {console.log('Set debug_b'); debug_b=x}, columns: ['meta:']});
+        this.getSlice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:']});
+        this.scanner('images', 'sun397:', 'sun397;', {columns: ['meta:'], maxRows: 10, success: function (x) {console.log('Set debug_i'); debug_i=x}})
+        this.postSlice('images', 'automated_tests:', 'automated_tests;', 'io/thumbnail', {success: function (x) {console.log('Set debug_g'); debug_g=x}});
+        function test_patchRow(row) {
+            this.patchRow('images', row, {success: function (x) {console.log('Set debug_f'); debug_f=x;test_getRow(row)}, data: {'meta:class_0': 'test_data2'}});
         }
-        function test_delete_row(row) {
-            this.delete_row('images', row, {success: function (x) {console.log('Set debug_h'); debug_h=x}});
+        function test_deleteRow(row) {
+            this.deleteRow('images', row, {success: function (x) {console.log('Set debug_h'); debug_h=x}});
         }
-        function test_get_row(row) {
-            this.get_row('images', row, {success: function (x) {console.log('Set debug_d'); debug_d=x;test_delete_row(row)}, columns: ['meta:']});
+        function test_getRow(row) {
+            this.getRow('images', row, {success: function (x) {console.log('Set debug_d'); debug_d=x;test_deleteRow(row)}, columns: ['meta:']});
         }
-        test_get_row = _.bind(test_get_row, this);
-        test_delete_row = _.bind(test_delete_row, this);
-        test_patch_row = _.bind(test_patch_row, this);
-        this.post_table('images', {success: function (x) {console.log('Set debug_e');debug_e=x;test_patch_row(x.row);}, data: {'meta:class': 'test_data'}});
-        this.post_row('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), 'i/chain', base64.decode('ZmVhdDpRhhxwtznn3dTyAfPRMSdO'), {success: function (x) {console.log('Set debug_g'); debug_g=x}});
+        test_getRow = _.bind(test_getRow, this);
+        test_deleteRow = _.bind(test_deleteRow, this);
+        test_patchRow = _.bind(test_patchRow, this);
+        this.postTable('images', {success: function (x) {console.log('Set debug_e');debug_e=x;test_patchRow(x.row);}, data: {'meta:class': 'test_data'}});
+        this.postRow('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), 'i/chain', base64.decode('ZmVhdDpRhhxwtznn3dTyAfPRMSdO'), {success: function (x) {console.log('Set debug_g'); debug_g=x}});
     };
 }
 /*
@@ -275,35 +276,35 @@ class PicarusClient(object):
 
     # /data/:table
 
-    def get_table(self, table, columns=None):
+    def getTable(self, table, columns=None):
         return self._decode_lod(self.get(('data', table), data=self._encode_columns(columns)))
 
-    def post_table(self, table, data=None, files=None):
+    def postTable(self, table, data=None, files=None):
         return self.decvalues(self.post(('data', table), data=self.encdict(data), files=self.enckeys(files)))
 
     # /data/:table/:row
 
-    def get_row(self, table, row, columns=None):
+    def getRow(self, table, row, columns=None):
         return self.decdict(self.get(('data', table, self.enc(row)), data=self._encode_columns(columns)))
 
-    def post_row(self, table, row, data=None, files=None):
+    def postRow(self, table, row, data=None, files=None):
         return self.post(('data', table, self.enc(row)), data=data, files=files)
 
-    def delete_row(self, table, row):
+    def deleteRow(self, table, row):
         return self.delete(('data', table, self.enc(row)))
 
-    def patch_row(self, table, row, data=None, files=None):
+    def patchRow(self, table, row, data=None, files=None):
         return self.patch(('data', table, self.enc(row)), data=self.encdict(data), files=self.enckeys(files))
 
     # /slice/:table/:start_row/:stop_row
 
-    def get_slice(self, table, start_row, stop_row, columns=None, data=None):
+    def getSlice(self, table, start_row, stop_row, columns=None, data=None):
         column_data = self._encode_columns(columns)
         if data is not None:
             column_data.update(data)
         return self._decode_lod(self.get(('slice', table, self.enc(start_row), self.enc(stop_row)), data=column_data))
 
-    def post_slice(self, table, start_row, stop_row, action, data=None):
+    def postSlice(self, table, start_row, stop_row, action, data=None):
         if data is None:
             data = {}
         data['action'] = action
@@ -317,7 +318,7 @@ class PicarusClient(object):
         data = {}
         data['maxRows'] = max_rows_iter
         while True:
-            row_columns = self.get_slice(table, start_row, stop_row, columns=columns, data=data)
+            row_columns = self.getSlice(table, start_row, stop_row, columns=columns, data=data)
             if not row_columns:
                 break
             for row, columns in row_columns:
@@ -497,16 +498,16 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
         // encode extra parameters, modify status codes (nonstandard), output fixed rows only, etc.
         if (data.length && params.maxRows > 0) {
             isdone = false;
-            function next_call() {
+            function nextCall() {
                 var dd = _.pairs({maxRows: String(params.maxRowsIter), excludeStart: "1"}).concat(column_suffix);
                 var url = "/a1/slice/" + table + "/" + _.last(data).row + "/" + stopRow + '?' + param_encode(dd);
                 picarus_api(url, "GET", {success: map_success});
             }
             // This allows for pagination instead of immediately requesting the next chunk
             if (typeof params.resume == "undefined") {
-                next_call();
+                nextCall();
             } else {
-                params.resume(next_call);
+                params.resume(nextCall);
             }
         }
         if (isdone && typeof params.done != "undefined") {
