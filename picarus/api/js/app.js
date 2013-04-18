@@ -437,7 +437,7 @@ function app_main() {
             if (options.deleteRows) {
                 this.deleteRows = true;
                 function delete_row(data) {
-                    var row = data.target.getAttribute('row');
+                    var row = _.unescape(data.target.getAttribute('row'));
                     this.collection.get(row).destroy({wait: true});
                 }
                 delete_row = _.bind(delete_row, this);
@@ -449,8 +449,8 @@ function app_main() {
             if (options.deleteValues) {
                 this.deleteValues = true;
                 function delete_value(data) {
-                    var row = data.target.getAttribute('row');
-                    var column = data.target.getAttribute('column');
+                    var row = _.unescape(data.target.getAttribute('row'));
+                    var column = _.unescape(data.target.getAttribute('column'));
                     this.collection.get(row).punset(column);
                 }
                 delete_value = _.bind(delete_value, this);
