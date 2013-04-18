@@ -19,11 +19,10 @@ function render_data_uploads(email_auth) {
                 $('#images').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('width', '150px'));
                 //$('#images').append($('<br>'));
             }
-            picarus_api_data_scanner("images", encode_id(startRow), encode_id(prefix_to_stop_row(startRow)), [imageColumn], {success: success, maxRows: 24});
+            PICARUS.scanner("images", startRow, prefix_to_stop_row(startRow), {success: success, maxRows: 24})
         }
     });
     var model = new PicarusUser({row: encode_id(email_auth.email)});
     new AppView({ model: model });
     model.fetch();
-    //picarus_api("/a1/data/users/" + encode_id(email_auth.email), "GET", {success: success_user});
 }

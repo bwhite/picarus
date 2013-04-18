@@ -665,4 +665,5 @@ function app_main() {
     //We will get a routing event with the initial URL fragment
     Backbone.history.start();
     window.onbeforeunload = function() {return "Leaving Picarus..."};
+    PICARUS = new PicarusClient();
 }
