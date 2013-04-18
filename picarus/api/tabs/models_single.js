@@ -48,12 +48,6 @@ function render_models_single() {
                 ctx.beginPath();
                 ctx.arc(x, y,sz,0,2*Math.PI);
                 ctx.stroke();
-                //ctx.fillRect(x, y, sz, sz);
-                /*ctx.beginPath();
-                  ctx.arc(x, y, sz / 2, 0, 2 * Math.PI, false);
-                  ctx.lineWidth = 2;
-                  ctx.strokeStyle = '#003300';
-                  ctx.stroke();*/
             })
                 });
     }
@@ -84,6 +78,7 @@ function render_models_single() {
         }
         var modelKey = $('#model_select').find(":selected").val();
         function success_func(result) {
+            console.log('Blah');
             $('#imagefile').parent().html($('#imagefile').parent().html());
             $('#imagefile').change(fileChange);
             var outputType = models.get(modelKey).pescape('meta:output_type');
@@ -128,6 +123,8 @@ function render_models_single() {
             }
         }
         function upload_func(response) {
+            console.log('Blah3');
+            debug_response = response;
             PICARUS.postRow(table, response.row, 'i/chain', modelKey, {success: success_func})
         }
         var table = 'images';
