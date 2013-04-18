@@ -37,10 +37,10 @@ function render_models_list() {
             PICARUS.getRow('models', decode_id('row'), {columns: columns, success: takeoutSuccess})
         }
         $('.takeout_link').click(function (data) {
-            process_takeout($(data.target).attr('row'), 'meta:model_link_chunks', 'data:model_link', 'link');
+            process_takeout(_.unescape($(data.target).attr('row')), 'meta:model_link_chunks', 'data:model_link', 'link');
         });
         $('.takeout_chain').click(function (data) {
-            process_takeout($(data.target).attr('row'), 'meta:model_chain_chunks', 'data:model_chain', 'chain');
+            process_takeout(_.unescape($(data.target).attr('row')), 'meta:model_chain_chunks', 'data:model_chain', 'chain');
         });
 
         function setup_modal(links, col) {
