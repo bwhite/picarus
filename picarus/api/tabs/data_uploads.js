@@ -1,8 +1,4 @@
 function render_data_uploads(email_auth) {
-    function success_user(xhr) {
-        response = JSON.parse(xhr.responseText);
-
-    }
     var AppView = Backbone.View.extend({
         el: $('#container'),
         initialize: function() {

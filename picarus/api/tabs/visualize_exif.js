@@ -1,21 +1,18 @@
 function render_visualize_exif() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
-    // TODO: Fix for exif
     $('#runButton').click(function () {
-        var startRow = encode_id(unescape($('#startRow').val()));
-        var stopRow = encode_id(unescape($('#stopRow').val()));
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         var max_size = Number($('#maxSize').val());
-        var metaCF = encode_id('meta:');
+        var exif_column = 'meta:exif';
         if (startRow.length == 0 || stopRow.length == 0) {
             display_alert('Must specify rows');
             return;
         }
         button_confirm_click_reset($('#removeButton'));
-        // Setup table
         images = new PicarusImages();
-        var exif_column = encode_id('meta:exif');
         function remove_rows() {
-            // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
+            // NOTE: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
             var rows = _.map(images.models, function (x) {return x.id})
             picarus_api_delete_rows(rows, progressModal());
         }
@@ -69,11 +66,10 @@ function render_visualize_exif() {
             if (columns[exif_column] != 'e30=')
                 images.add(columns);
         }
-        var params = {success: success, maxRows: 1000, done: done};
+        var params = {success: success, maxRows: 1000, done: done, columns: [exif_column]};
         var filter = unescape($('#filter').val());
-        if (filter.length > 0) {
+        if (filter.length > 0)
             params.filter = filter;
-        }
-        picarus_api_data_scanner("images", startRow, stopRow, [metaCF], params)
+        PICARUS.scanner("images", startRow, stopRow, params)
     });
 }
