@@ -146,7 +146,7 @@ def _create_model_from_params(manager, email, path, params):
         model_params = _parse_params(params, schema)
         model_link = {'name': schema['name'], 'kw': model_params}
         input = _get_input(params, schema['input_type'])
-        model_chain = _takeout_model_chain_from_key(manager, base64.b64decode(input)) + [model_link]
+        model_chain = _takeout_model_chain_from_key(manager, input) + [model_link]
         row = manager.input_model_param_to_key(input=input, model_link=model_link, model_chain=model_chain, input_type=schema['input_type'],
                                                output_type=schema['output_type'], email=email, name=manager.model_to_name(model_link))
         return {'row': base64.b64encode(row)}
@@ -689,6 +689,9 @@ class ModelsHBaseTable(HBaseTable):
         return json.dumps(outs)
 
     def post_table(self, params, files):
+        if not files:
+            bottle.abort(400)
+        params = {base64.decode(k): base64.decode(v) for k, v in params.items()}
         path = params['path']
         with thrift_lock() as thrift:
             manager = PicarusManager(thrift=thrift)

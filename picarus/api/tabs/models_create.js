@@ -69,7 +69,7 @@ function render_models_create() {
                 var cur_el;
                 var cur_id = _.uniqueId('model_select_');          
                 if (value === 'raw_image') {
-                    $('#params').append($('<input>').attr('name', 'input-' + value).attr('type', 'hidden').val(encode_id('data:image')));
+                    $('#params').append($('<input>').attr('name', 'input-' + value).attr('type', 'hidden').val('data:image'));
                 } else if (value === 'meta') {
                     var cur_id = _.uniqueId('model_select_');
                     var el = $('<input>').attr('id', cur_id).attr('name', 'input-' +  value).attr('type', 'text').addClass('input-medium');
@@ -103,7 +103,7 @@ function render_models_create() {
     $('#runButton').click(function () {
         var params = _.object($('#params :input').map(function () {return [[$(this).attr('name'), $(this).val()]]}));
         if (!_.isUndefined(params['input-meta']))
-            params['input-meta'] = encode_id(params['input-meta']);
+            params['input-meta'] = params['input-meta'];
         function success(xhr) {
             response = JSON.parse(xhr.responseText);
             $('#results').html(response.row);
@@ -120,9 +120,9 @@ function render_models_create() {
             params.table = 'images';
             params.slices = slices_selector_get().join(',');
             p = params;
-            picarus_api("/a1/data/models", "POST", {success: success, data: params});
+            PICARUS.postTable('models', {success: success, data: params});
         } else {
-            picarus_api("/a1/data/models", "POST", {success: success, data: params});
+            PICARUS.postTable('models', {success: success, data: params});
         }
     });
 }

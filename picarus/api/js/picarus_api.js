@@ -52,11 +52,12 @@ function PicarusClient(email, apiKey, server) {
         args = this._argsDefaults(args);
         this.post(['data', table], this.encdict(args.data), this._wrapDecodeValues(args.success), args.fail);
     };
-    this.postRow = function (table, row, action, model, args) {
+    this.postRow = function (table, row, action, args) {
         //args: success, fail, data
         args = this._argsDefaults(args);
         args.data.action = action;
-        args.data.model = base64.encode(model);
+        if (_.has(args.data, 'model'))
+            args.data.model = base64.encode(args.data.model);
         this.post(['data', table, encode_id(row)], args.data, this._wrapDecodeDict(args.success), args.fail);
     };
     this.deleteRow = function (table, row, args) {
@@ -229,7 +230,7 @@ function PicarusClient(email, apiKey, server) {
         test_deleteRow = _.bind(test_deleteRow, this);
         test_patchRow = _.bind(test_patchRow, this);
         this.postTable('images', {success: function (x) {console.log('Set debug_e');debug_e=x;test_patchRow(x.row);}, data: {'meta:class': 'test_data'}});
-        this.postRow('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), 'i/chain', base64.decode('ZmVhdDpRhhxwtznn3dTyAfPRMSdO'), {success: function (x) {console.log('Set debug_g'); debug_g=x}});
+        this.postRow('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), 'i/chain', {data: {model: base64.decode('ZmVhdDpRhhxwtznn3dTyAfPRMSdO')}, success: function (x) {console.log('Set debug_g'); debug_g=x}});
     };
 }
 /*
