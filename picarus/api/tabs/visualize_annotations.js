@@ -207,8 +207,7 @@ function render_visualize_annotations_loaded() {
                 _.each(scores.slice(0, 24), function (x) {
                     var id = _.uniqueId('image_');
                     div.append($('<img>').attr('id', id).attr('title', 'Row: ' + x[0] + ' Score: ' + x[1]).addClass('hide'));
-                    function success(xhr) {
-                        response = JSON.parse(xhr.responseText);
+                    function success(response) {
                         if (_.isUndefined(response[imageColumn]))
                             return;
                         $('#' + id).attr('src', 'data:image/jpeg;base64,' + base64.encode(response[imageColumn])).attr('width', '150px').removeClass('hide');
