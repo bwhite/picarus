@@ -691,7 +691,7 @@ class ModelsHBaseTable(HBaseTable):
     def post_table(self, params, files):
         if files:
             bottle.abort(400)
-        params = {base64.decode(k): base64.decode(v) for k, v in params.items()}
+        params = {base64.b64decode(k): base64.b64decode(v) for k, v in params.items()}
         path = params['path']
         with thrift_lock() as thrift:
             manager = PicarusManager(thrift=thrift)
