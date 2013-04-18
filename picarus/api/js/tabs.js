@@ -769,7 +769,7 @@ function render_visualize_exif() {
                 render: function() {
                     var cur_images = this.collection.filter(function (x) {return x.get(exif_column) != '{}' && !_.isUndefined(x.get(exif_column))});
                     columns = _.uniq(_.flatten(_.map(cur_images, function (x) {
-                        return _.keys(JSON.parse(base64.decode(x.get(exif_column))));
+                        return _.keys(JSON.parse(x.get(exif_column)));
                     }))).concat(['row']);
                     picarus_table = new Backbone.Table({
                         collection: this.collection,
