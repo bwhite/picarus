@@ -209,7 +209,7 @@ function render_models_list() {
             var columns =  _.map(_.range(num_chunks), function (x) {
                 return model_column + '-' + x;
             });
-            PICARUS.getRow('models', decode_id('row'), {columns: columns, success: takeoutSuccess})
+            PICARUS.getRow('models', base64.decode('row'), {columns: columns, success: takeoutSuccess})
         }
         $('.takeout_link').click(function (data) {
             process_takeout(_.unescape($(data.target).attr('row')), 'meta:model_link_chunks', 'data:model_link', 'link');
