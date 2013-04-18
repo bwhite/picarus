@@ -35,7 +35,7 @@ function render_visualize_times_loaded() {
         return _.map(_.pairs(dataToHist(data)), function (x) {return [Number(x[0]), x[1]]}).sort();
     }
     $('#runButton').click(function () {
-        var timeColumn = encode_id('meta:dateupload');
+        var timeColumn = 'meta:dateupload';
         images = new PicarusImages();
         function time_success(row, columns) {
             columns.row = row;
@@ -48,7 +48,7 @@ function render_visualize_times_loaded() {
             days = [];
             // TODO: FInish visual
             images.each(function (x) {
-                var curTime = Number(base64.decode(x.get(timeColumn)));
+                var curTime = Number(x.get(timeColumn));
                 var curDate = new Date(0);
                 curDate.setUTCSeconds(curTime);
                 years.push(curDate.getFullYear());
@@ -61,6 +61,6 @@ function render_visualize_times_loaded() {
             drawHours(dataToListHist(hours));
             drawDays(dataToListHist(days));
         }
-        picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [timeColumn], {success: time_success, done: time_done});
+        PICARUS.scanner("images", unescape($('#startRow').val()), unescape($('#stopRow').val()), [timeColumn], {success: time_success, done: time_done});
     })
 }
