@@ -521,16 +521,16 @@ function picarus_api_data_scanner(table, startRow, stopRow, columns, params) {
 
 function picarus_api_delete_rows(rows, params) {
     function action(row, s) {
-        picarus_api_row('images', row, "DELETE", {success: s});
+        PICARUS.deleteRow('images', row, {success: s})
     }
     picarus_api_row_action(rows, action, params);
 }
 
 function picarus_api_modify_rows(rows, column, value, params) {
+    var data = {};
+    data[column] = value;
     function action(row, s) {
-        var data = {};
-        data[encode_id(column)] = base64.encode(value);
-        picarus_api_row('images', row, "PATCH", {success: s, data: data});
+        PICARUS.patchRow('images', row, {success: s, data: data})
     }
     picarus_api_row_action(rows, action, params);
 }
