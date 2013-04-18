@@ -2,8 +2,8 @@ function render_process_garbage() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
     $('#runButton').click(function () {
         button_running();
-        var startRow = encode_id($('#startRow').val());
-        var stopRow = encode_id($('#stopRow').val());
+        var startRow = $('#startRow').val();
+        var stopRow = $('#stopRow').val();
         function success(xhr) {
             response = JSON.parse(xhr.responseText);
             button_reset();
@@ -11,6 +11,6 @@ function render_process_garbage() {
                 $('#results').append(x + '<br>');
             });
         }
-        picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: button_reset, fail: button_error, data: {action: 'io/garbage'}});
+        PICARUS.postSlice('images', startRow, stopRow, 'io/garbage', {success: button_reset, fail: button_error})
     });
 }

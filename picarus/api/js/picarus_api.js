@@ -98,6 +98,11 @@ function PicarusClient(email, apiKey, server) {
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
         this.get(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapDecodeLod(args.success), args.fail);
     };
+    this.patchSlice = function (table, startRow, stopRow, args) {
+        //args: success, fail, columns, data
+        args = this._argsDefaults(args);
+        this.patch(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapNull(args.success), args.fail);
+    };
     this.scanner = function (table, startRow, stopRow, args) {
         // args: success, fail, done, maxRows, maxRowsIter, filter, resume
         args = this._argsDefaults(args);
