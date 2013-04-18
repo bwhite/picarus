@@ -117,28 +117,26 @@ function PicarusClient(email, apiKey, server) {
         function innerSuccess(data) {
             debug_data = data;
             var isdone = true;
-            iterArgs.data.maxRows -= data.length;
-            if (iterArgs.data.maxRows < 0) {
+            args.maxRows -= data.length;
+            if (args.maxRows < 0) {
                 // Truncates any excess rows we may have gotten
-                data = data.slice(0, iterArgs.data.maxRows);
+                data = data.slice(0, args.maxRows);
             }
             if (numRows == 0 && data.length && !_.isUndefined(args.first)) {
                 var firstRow = _.first(data);
                 args.first(firstRow.row, _.omit(firstRow, 'row'));
             }
-            if (!_.isUndefined(args.success)) {
-                _.each(data, function (v) {
-                    lastRow = v.row;
-                    args.success(v.row, _.omit(v, 'row'));
-                });
-            }
+            _.each(data, function (v) {
+                lastRow = v.row;
+                args.success(v.row, _.omit(v, 'row'));
+            });
             numRows += data.length;
             console.log(numRows);
             // If there is more data left to get, and we want more data
             // It's possible that this will make 1 extra call at the end that returns nothing,
             // but there are several trade-offs and that is the simplest implementation that doesn't
             // encode extra parameters, modify status codes (nonstandard), output fixed rows only, etc.
-            if (data.length && iterArgs.data.maxRows > 0) {
+            if (data.length && args.maxRows > 0) {
                 isdone = false;
                 function next_call() {
                     iterArgs.data.excludeStart = 1;
