@@ -138,6 +138,7 @@ function PicarusClient(email, apiKey, server) {
             // encode extra parameters, modify status codes (nonstandard), output fixed rows only, etc.
             if (data.length && args.maxRows > 0) {
                 isdone = false;
+                console.log('Not Done');
                 function next_call() {
                     iterArgs.data.excludeStart = 1;
                     this.get_slice(table, _.last(data).row, stopRow, iterArgs);
@@ -162,12 +163,6 @@ function PicarusClient(email, apiKey, server) {
             args.success = function () {};
         if (!_.has(args, 'fail'))
             args.fail = function () {};
-        if (!_.has(args, 'done'))
-            args.done = function () {};
-        if (!_.has(args, 'resume'))
-            args.resume = function () {};
-        if (!_.has(args, 'first'))
-            args.first = function () {};
         if (!_.has(args, 'data'))
             args.data = {};
         return args;
