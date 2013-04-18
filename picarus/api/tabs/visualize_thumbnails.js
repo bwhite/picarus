@@ -1,10 +1,9 @@
 function render_visualize_thumbnails() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
     $('#runButton').click(function () {
-        var startRow = encode_id(unescape($('#startRow').val()));
-        var stopRow = encode_id(unescape($('#stopRow').val()));
-        var imageColumn = encode_id('thum:image_150sq');
-        var metaCF = encode_id('meta:');
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
+        var imageColumn = 'thum:image_150sq';
         if (startRow.length == 0 || stopRow.length == 0) {
             display_alert('Must specify rows');
             return;
@@ -14,14 +13,13 @@ function render_visualize_thumbnails() {
             c = columns;
             if (!_.has(columns, imageColumn))
                 return;
-            $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('title', row))
-            //$('#results').append($('<br>'));
+            $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row))
         }
-        var params = {success: success, maxRows: 100};
+        var params = {success: success, maxRows: 100, columns: [imageColumn]};
         var filter = unescape($('#filter').val());
         if (filter.length > 0) {
             params.filter = filter;
         }
-        picarus_api_data_scanner("images", startRow, stopRow, [imageColumn, metaCF], params)
+        PICARUS.scanner("images", startRow, stopRow, params)
     });
 }
