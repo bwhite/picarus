@@ -97,11 +97,78 @@ function PicarusClient(email, apiKey, server) {
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
         this.get(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrap_decode_lod(args.success), args.fail);
     };
+    this.scanner = function (table, startRow, stopRow, args) {
+        // args: success, fail, done, maxRows, maxRowsIter, filter, resume
+        this._args_defaults(args);
+        if (_.isUndefined(args.maxRows)) {
+            args.maxRows = Infinity;
+        }
+        if (_.isUndefined(args.maxRowsIter)) {
+            args.maxRowsIter = Math.min(10000, args.maxRows);
+        }
+        if (_.isUndefined(args.maxBytes)) {
+            args.maxBytes = 1048576;
+        }
+        var iterArgs = {};
+        if (_.has(args, 'columns'))
+            iterArgs.columns = args.columns;
+        var lastRow = undefined;
+        var numRows = 0;
+        if (!_.isUndefined(args.filter)) {
+            iterArgs.filter = args.filter;
+        }
+        function innerSuccess(data) {
+            var isdone = true;
+            iterArgs.maxRows -= data.length;
+            if (iterArgs.maxRows < 0) {
+                // Truncates any excess rows we may have gotten
+                data = data.slice(0, iterArgs.maxRows);
+            }
+            if (numRows == 0 && data.length && !_.isUndefined(args.first)) {
+                var firstRow = _.first(data);
+                args.first(firstRow.row, _.omit(firstRow, 'row'));
+            }
+            if (!_.isUndefined(args.success)) {
+                _.each(data, function (v) {
+                    lastRow = v.row;
+                    args.success(v.row, _.omit(v, 'row'));
+                });
+            }
+            numRows += data.length;
+            console.log(numRows);
+            // If there is more data left to get, and we want more data
+            // It's possible that this will make 1 extra call at the end that returns nothing,
+            // but there are several trade-offs and that is the simplest implementation that doesn't
+            // encode extra parameters, modify status codes (nonstandard), output fixed rows only, etc.
+            if (data.length && iterArgs.maxRows > 0) {
+                isdone = false;
+                function next_call() {
+                    iterArgs.excludeStart = 1;
+                    this.get_slice(table, _.last(data).row, stopRow, {data: iterArgs, success: innerSuccess, fail: args.fail});
+                }
+                // This allows for pagination instead of immediately requesting the next chunk
+                if (_.isUndefined(args.resume))
+                    next_call();
+                else
+                    args.resume(next_call);
+            }
+            if (isdone && !_.isUndefined(args.done))
+                args.done({lastRow: lastRow, numRows: numRows});
+        }
+        iterArgs.maxRows = args.maxRowsIter;
+        this.get_slice(table, startRow, stopRow, {data: iterArgs, success: innerSuccess, fail: args.fail});
+    };
     this._args_defaults = function (args) {
         if (!_.has(args, 'success'))
             args.success = function () {};
         if (!_.has(args, 'fail'))
             args.fail = function () {};
+        if (!_.has(args, 'done'))
+            args.done = function () {};
+        if (!_.has(args, 'resume'))
+            args.resume = function () {};
+        if (!_.has(args, 'first'))
+            args.first = function () {};
         if (!_.has(args, 'data'))
             args.data = {};
     };
