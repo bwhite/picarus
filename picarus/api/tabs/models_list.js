@@ -10,9 +10,9 @@ function render_models_list() {
     var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.pescape('meta:notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + this.escape('row') + '">edit</a></span>'}};
     function postRender() {
         function process_takeout(row, model_chunks_column, model_column, model_type) {
-            function takeoutSuccess(xhr) {
-                var chunks = _.map(JSON.parse(xhr.responseText), function (v, k) {
-                    return [Number(decode_id(k).split('-')[1]), base64.decode(v)];
+            function takeoutSuccess(response) {
+                var chunks = _.map(response, function (v, k) {
+                    return [Number(k.split('-')[1]), v];
                 }).sort();
                 var model = _.map(chunks, function (v, k) {
                     return v[1];
