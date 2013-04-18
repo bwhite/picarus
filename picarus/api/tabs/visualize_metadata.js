@@ -1,10 +1,10 @@
 function render_visualize_metadata() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
     $('#runButton').click(function () {
-        var startRow = encode_id(unescape($('#startRow').val()));
-        var stopRow = encode_id(unescape($('#stopRow').val()));
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         var max_size = Number($('#maxSize').val());
-        var metaCF = encode_id('meta:');
+        var metaCF = 'meta:';
         if (startRow.length == 0 || stopRow.length == 0) {
             display_alert('Must specify rows');
             return;
@@ -37,10 +37,9 @@ function render_visualize_metadata() {
                         columns: _.map(columns, function (v) {
                             if (v === "row")
                                 return [v, v];
-                            return {header: base64.decode(v), getFormatted: function() {
+                            return {header: v, getFormatted: function() {
                                 var out = this.get(v);
                                 if (typeof out !== 'undefined') {
-                                    out = base64.decode(out);
                                     if (out.length <= max_size)
                                         return out;
                                     else
@@ -58,15 +57,14 @@ function render_visualize_metadata() {
             button_confirm_click($('#removeButton'), remove_rows);
         }
         function success(row, columns) {
-            c=columns;
             columns.row = row;
             images.add(columns);
         }
-        var params = {success: success, maxRows: 1000, done: done};
+        var params = {success: success, maxRows: 1000, done: done, columns: [metaCF]};
         var filter = unescape($('#filter').val());
         if (filter.length > 0) {
             params.filter = filter;
         }
-        picarus_api_data_scanner("images", startRow, stopRow, [metaCF], params)
+        PICARUS.scanner("images", startRow, stopRow, params)
     });
 }
