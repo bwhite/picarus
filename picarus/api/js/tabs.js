@@ -144,15 +144,14 @@ function render_crawl_flickr() {
             var timeRadius = 60 * 60 * 24 * 30 * 3; // 3 months
             var minUploadDate = parseInt((new Date().getTime() / 1000 - min_time) * Math.random() + min_time - timeRadius);
             var maxUploadDate = parseInt(timeRadius * 2 + minUploadDate);
-            var p = {hasGeo: Number($('#demogeo').is(':checked')), query: state.query, minUploadDate: minUploadDate, maxUploadDate: maxUploadDate, action: 'o/crawl/flickr'};
+            var p = {hasGeo: Number($('#demogeo').is(':checked')), query: state.query, minUploadDate: minUploadDate, maxUploadDate: maxUploadDate};
             if (state.className.length)
                 p.className = state.className;
             if (latitude && longitude) {
                 p.lat = String(latitude);
                 p.lon = String(longitude);
             }
-            function success(xhr) {
-                var response = JSON.parse(xhr.responseText);
+            function success(response) {
                 function etod(e) {
                     var d = new Date(0);
                     d.setUTCSeconds(e);
@@ -168,7 +167,7 @@ function render_crawl_flickr() {
                 }
                 call_api(states.pop());
             }
-            picarus_api("/a1/slice/images/" + encode_id(row_prefix) + '/' + encode_id(prefix_to_stop_row(row_prefix)), "POST", {success: success, data: p});
+            PICARUS.postSlice('images', row_prefix, prefix_to_stop_row(row_prefix), 'o/crawl/flickr', {success: success, data: p});
         }
         _.each(_.range(simul), function () {call_api(states.pop())});
     });
@@ -615,16 +614,15 @@ function render_annotate_batch() {
 function render_annotate_entity() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
     $('#runButton').click(function () {
-        var startRow = encode_id($('#startRow').val());
-        var stopRow = encode_id($('#stopRow').val());
-        var imageColumn = encode_id('thum:image_150sq');
+        var startRow = $('#startRow').val();
+        var stopRow = $('#stopRow').val();
+        var imageColumn = 'thum:image_150sq';
         var numTasks = Number($('#num_tasks').val());
-        var entityColumn = encode_id($('#entity').val());
-        function success(xhr) {
-            response = JSON.parse(xhr.responseText);
+        var entityColumn = $('#entity').val();
+        function success(response) {
             $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
         }
-        picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/entity', imageColumn: imageColumn, entityColumn: entityColumn, instructions: $('#instructions').val(), numTasks: numTasks, mode: "amt"}});
+        PICARUS.postSlice('images', startRow, stopRow, 'io/annotate/image/entity', {success: success, data: {imageColumn: imageColumn, entityColumn: entityColumn, instructions: $('#instructions').val(), numTasks: numTasks, mode: "amt"}});
     });
 }
 function render_visualize_thumbnails() {
