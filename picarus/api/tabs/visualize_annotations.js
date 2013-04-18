@@ -163,7 +163,7 @@ function render_visualize_annotations_loaded() {
             var scores_template = "<table><tr><td>Name</td><td>Pos Annot.</td><td>Neg Annot.</td><td>Tot Annot.</td><td>Unique</td></tr>{{#scores}}<tr><td>{{class_name}}</td><td>{{pos}}</td><td>{{neg}}</td><td>{{total}}</td><td>{{unique}}</td></tr>{{/scores}}</table>";
             $('#annotation-stats').html(Mustache.render(scores_template, {scores: scores}));
             // Update user annotation time vs iteration
-            var user_annotations = collect_users(users, results, true, true);
+            user_annotations = collect_users(users, results, true, true);
             annotation_times = {};
             _.each(user_annotations, function (z) {
                 _.each(z, function(x, y) {
