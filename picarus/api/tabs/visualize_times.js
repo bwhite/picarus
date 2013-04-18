@@ -61,6 +61,6 @@ function render_visualize_times_loaded() {
             drawHours(dataToListHist(hours));
             drawDays(dataToListHist(days));
         }
-        PICARUS.scanner("images", unescape($('#startRow').val()), unescape($('#stopRow').val()), [timeColumn], {success: time_success, done: time_done});
+        PICARUS.scanner("images", unescape($('#startRow').val()), unescape($('#stopRow').val()), {success: time_success, done: time_done, columns: [timeColumn]});
     })
 }
