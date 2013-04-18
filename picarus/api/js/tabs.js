@@ -955,9 +955,8 @@ function render_visualize_annotations_loaded() {
             if (x.pescape('workerId') || !onlyWorkers)
                 users_filtered[x.get('row')] = [];
         });
-        // TODO: Change mturk to put user id in results table UB64, just remove encode_id below
         results.each(function (x) {
-            var i = encode_id(x.pescape('user_id'));
+            var i = x.pescape('user_id');
             if (_.has(users_filtered, i) && (!onlyAnnotated || x.pescape('end_time'))) {
                 users_filtered[i].push(x);
             }
@@ -1075,7 +1074,7 @@ function render_visualize_annotations_loaded() {
         /* TODO: Compute a dropdown list of available classes (new view for results model) */
         results = new PicarusRows([], {'table': 'annotations-results-' + task_dec});
         users = new PicarusRows([], {'table': 'annotations-users-' + task_dec});
-        var imageColumn = encode_id('thum:image_150sq');
+        var imageColumn = 'thum:image_150sq';
         $('#negPct').change(data_change);
         $('#posPct').change(data_change);
         $('#posCnt').change(data_change);
@@ -1158,9 +1157,9 @@ function render_visualize_annotations_loaded() {
                         response = JSON.parse(xhr.responseText);
                         if (_.isUndefined(response[imageColumn]))
                             return;
-                        $('#' + id).attr('src', 'data:image/jpeg;base64,' + response[imageColumn]).attr('width', '150px').removeClass('hide');
+                        $('#' + id).attr('src', 'data:image/jpeg;base64,' + base64.encode(response[imageColumn])).attr('width', '150px').removeClass('hide');
                     }
-                    picarus_api("/a1/data/images/" + x[0], "GET", {success: success, data: {columns: imageColumn}});
+                    PICARUS.getRow("images", x[0], {success: success, columns: [imageColumn]});
                 });
             }
             display_samples($('#positive_samples'), posScores, 'Positive Samples');
@@ -1207,7 +1206,7 @@ function render_visualize_annotations_loaded() {
         }
         function success_annotation(xhr) {
             annotation = JSON.parse(xhr.responseText);
-            annotation_type = JSON.parse(base64.decode(annotation[encode_id('params')])).type;
+            annotation_type = JSON.parse(annotation['params']).type;
             // Code is over nested, use partial application to flatten it
             if (annotation_type == 'image_entity') {
                 get_classes = function (results) {
@@ -1228,7 +1227,7 @@ function render_visualize_annotations_loaded() {
         // TODO: Filter rows and/or modify column based on annotation
         // TODO: Add voting rules for neg/pos/unsure
         // TODO: Add other annotation types
-        picarus_api("/a1/data/annotations/" + task, "GET", {success: success_annotation});
+        PICARUS.getRow("annotations", task, {success: success_annotation});
     }
     rows_dropdown(rows, {el: $('#annotator_select'), text: function (x) {
         var p = x.pescapejs('params');
