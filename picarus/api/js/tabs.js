@@ -556,7 +556,7 @@ function render_process_exif() {
         button_running();
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
-        PICARUS.postSlice('images', startRow, stopRow, 'io/exif', {success: button_reset, fail: button_error)
+        PICARUS.postSlice('images', startRow, stopRow, 'io/exif', {success: button_reset, fail: button_error})
     });
 }
 function render_process_modify() {
