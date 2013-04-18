@@ -220,7 +220,7 @@ function render_models_list() {
 
         function setup_modal(links, col) {
             links.click(function (data) {
-                var row = data.target.getAttribute('row');
+                var row = _.unescape(data.target.getAttribute('row'));
                 var model = results.get(row);
                 $('#modal_content').val(model.pescape(col));
                 $('#save_button').unbind();
