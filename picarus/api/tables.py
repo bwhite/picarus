@@ -689,7 +689,7 @@ class ModelsHBaseTable(HBaseTable):
         return json.dumps(outs)
 
     def post_table(self, params, files):
-        if not files:
+        if files:
             bottle.abort(400)
         params = {base64.decode(k): base64.decode(v) for k, v in params.items()}
         path = params['path']
