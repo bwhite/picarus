@@ -767,7 +767,7 @@ function render_visualize_exif() {
                     this.collection.bind('add', this.render);
                 },
                 render: function() {
-                    var cur_images = this.collection.filter(function (x) {return x.get(exif_column) != 'e30=' && !_.isUndefined(x.get(exif_column))});
+                    var cur_images = this.collection.filter(function (x) {return x.get(exif_column) != '{}' && !_.isUndefined(x.get(exif_column))});
                     columns = _.uniq(_.flatten(_.map(cur_images, function (x) {
                         return _.keys(JSON.parse(base64.decode(x.get(exif_column))));
                     }))).concat(['row']);
@@ -777,12 +777,11 @@ function render_visualize_exif() {
                             if (v === "row")
                                 return [v, v];
                             return {header: v, getFormatted: function() {
-                                var cur_exif = JSON.parse(base64.decode(this.get(exif_column)));
+                                var cur_exif = JSON.parse(this.get(exif_column));
                                 var out = cur_exif[v];
                                 if (typeof out !== 'undefined') {
                                     if (!_.isString(out))
                                         return _.escape(JSON.stringify(out));
-                                    out = base64.decode(out);
                                     if (typeof out.length <= max_size)
                                         return _.escape(out);
                                     else
@@ -800,9 +799,8 @@ function render_visualize_exif() {
             button_confirm_click($('#removeButton'), remove_rows);
         }
         function success(row, columns) {
-            c=columns;
             columns.row = row;
-            if (columns[exif_column] != 'e30=')
+            if (columns[exif_column] != '{}')
                 images.add(columns);
         }
         var params = {success: success, maxRows: 1000, done: done, columns: [exif_column]};
