@@ -104,8 +104,7 @@ function render_models_create() {
         var params = _.object($('#params :input').map(function () {return [[$(this).attr('name'), $(this).val()]]}));
         if (!_.isUndefined(params['input-meta']))
             params['input-meta'] = params['input-meta'];
-        function success(xhr) {
-            response = JSON.parse(xhr.responseText);
+        function success(response) {
             $('#results').html(response.row);
         }
         var model_kind = $('#kind_select option:selected').val();
