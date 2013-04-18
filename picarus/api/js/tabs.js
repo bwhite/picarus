@@ -832,14 +832,14 @@ function render_visualize_locations_loaded() {
         return checked;
     }
     $('#runButton').click(function () {
-        var latitude = encode_id('meta:latitude');
-        var longitude = encode_id('meta:longitude');
+        var latitude = 'meta:latitude';
+        var longitude = 'meta:longitude';
         button_confirm_click_reset($('#removeButton'));
         images = new PicarusImages();
         function maps_success(row, columns) {
             columns.row = row;
-            var curLat = base64.decode(columns[latitude]);
-            var curLong = base64.decode(columns[longitude]);
+            var curLat = columns[latitude];
+            var curLong = columns[longitude];
             if (filter_lat_long(Number(curLat), Number(curLong))) {
                 return;
             }
@@ -854,8 +854,8 @@ function render_visualize_locations_loaded() {
             });
             $('#removeButton').removeAttr('disabled');
             if (!centerLat || !centerLat) {
-                centerLat = Number(base64.decode(images.at(0).get(latitude)));
-                centerLong = Number(base64.decode(images.at(0).get(longitude)));
+                centerLat = Number(images.at(0).get(latitude));
+                centerLong = Number(images.at(0).get(longitude));
             }
             var mapOptions = {
                 zoom: 14,
@@ -869,12 +869,12 @@ function render_visualize_locations_loaded() {
                 $('#demolong').val(event.latLng.lng());
             });
             images.each(function (x) {
-                var lat = Number(base64.decode(x.get(latitude)));
-                var lon = Number(base64.decode(x.get(longitude)));
+                var lat = Number(x.get(latitude));
+                var lon = Number(x.get(longitude));
                 new google.maps.Marker({position: new google.maps.LatLng(lat, lon), map: map});
             });
         }
-        picarus_api_data_scanner("images", encode_id(unescape($('#startRow').val())), encode_id(unescape($('#stopRow').val())), [latitude, longitude], {success: maps_success, done: maps_done});
+        PICARUS.scanner("images", unescape($('#startRow').val()), unescape($('#stopRow').val()), {success: maps_success, done: maps_done, columns: [latitude, longitude]});
     })
 }
 function render_visualize_times() {
