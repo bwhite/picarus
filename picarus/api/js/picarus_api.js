@@ -101,7 +101,7 @@ function PicarusClient(email, apiKey, server) {
     this.patchSlice = function (table, startRow, stopRow, args) {
         //args: success, fail, columns, data
         args = this._argsDefaults(args);
-        this.patch(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapNull(args.success), args.fail);
+        this.patch(['slice', table, encode_id(startRow), encode_id(stopRow)], this.encdict(args.data), this._wrapNull(args.success), args.fail);
     };
     this.scanner = function (table, startRow, stopRow, args) {
         // args: success, fail, done, maxRows, maxRowsIter, filter, resume
