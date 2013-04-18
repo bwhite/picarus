@@ -748,13 +748,7 @@ function render_visualize_exif() {
             display_alert('Must specify rows');
             return;
         }
-        button_confirm_click_reset($('#removeButton'));
         images = new PicarusImages();
-        function remove_rows() {
-            // NOTE: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
-            var rows = _.map(images.models, function (x) {return x.id})
-            picarus_api_delete_rows(rows, progressModal());
-        }
         function done() {
             $('#results').html('');
             if (!images.length)
@@ -777,7 +771,7 @@ function render_visualize_exif() {
                             if (v === "row")
                                 return [v, v];
                             return {header: v, getFormatted: function() {
-                                var cur_exif = JSON.parse(this.get(exif_column));
+                                var cur_exif = JSON.parse(base64.decode(this.get(exif_column)));
                                 var out = cur_exif[v];
                                 if (typeof out !== 'undefined') {
                                     if (!_.isString(out))
@@ -795,8 +789,6 @@ function render_visualize_exif() {
             });
             av = new AppView({collection: images, el: $('#results')});
             av.render();
-            $('#removeButton').removeAttr('disabled');
-            button_confirm_click($('#removeButton'), remove_rows);
         }
         function success(row, columns) {
             columns.row = row;
