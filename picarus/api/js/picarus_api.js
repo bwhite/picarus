@@ -71,7 +71,7 @@ function PicarusClient(email, apiKey, server) {
         args.data.action = action;
         if (_.has(args.data, 'model'))
             args.data.model = base64.encode(args.data.model);
-        this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapDecodeDict(args.success), args.fail);
+        this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapParseJSON(args.success), args.fail);
     };
 
     this.patchRow = function (table, row, args) {
@@ -196,6 +196,11 @@ function PicarusClient(email, apiKey, server) {
             f(_.object(_.map(JSON.parse(xhr.responseText), function (v, k) {
                     return [base64.decode(k), base64.decode(v)];
             })));
+        };
+    };
+    this._wrapParseJSON = function(f) {
+        return function(msg, text_status, xhr) {
+            f(JSON.parse(xhr.responseText));
         };
     };
     this._wrapDecodeValues = function(f) {
