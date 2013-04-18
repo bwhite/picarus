@@ -32,11 +32,12 @@ function render_visualize_exif() {
                             if (v === "row")
                                 return [v, v];
                             return {header: v, getFormatted: function() {
-                                var cur_exif = JSON.parse(base64.decode(this.get(exif_column)));
+                                var cur_exif = JSON.parse(this.get(exif_column));
                                 var out = cur_exif[v];
                                 if (typeof out !== 'undefined') {
                                     if (!_.isString(out))
                                         return _.escape(JSON.stringify(out));
+                                    out = base64.decode(out);
                                     if (typeof out.length <= max_size)
                                         return _.escape(out);
                                     else
