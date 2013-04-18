@@ -1200,12 +1200,11 @@ function render_visualize_annotations_loaded() {
         users.fetch();
     }
     function change() {
-        var task = $('#annotator_select').find(":selected").val();
+        var task = decode_id($('#annotator_select').find(":selected").val());
         if (_.isUndefined(task)) {
             return;
         }
-        function success_annotation(xhr) {
-            annotation = JSON.parse(xhr.responseText);
+        function success_annotation(annotation) {
             annotation_type = JSON.parse(annotation['params']).type;
             // Code is over nested, use partial application to flatten it
             if (annotation_type == 'image_entity') {
