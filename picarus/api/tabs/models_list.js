@@ -31,11 +31,10 @@ function render_models_list() {
                 }
             }
             var num_chunks = Number(results.get(row).pescape(model_chunks_column));
-            var columns = 'columns=' + _.map(_.range(num_chunks), function (x) {
-                return encode_id(model_column + '-' + x);
-            }).join('&');
-            var url = '/a1/data/models/' + row + '?' + columns;
-            picarus_api(url, "GET", {success: takeoutSuccess});
+            var columns =  _.map(_.range(num_chunks), function (x) {
+                return model_column + '-' + x;
+            });
+            PICARUS.getRow('models', decode_id('row'), {columns: columns, success: takeoutSuccess})
         }
         $('.takeout_link').click(function (data) {
             process_takeout($(data.target).attr('row'), 'meta:model_link_chunks', 'data:model_link', 'link');

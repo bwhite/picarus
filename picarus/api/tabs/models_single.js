@@ -44,7 +44,6 @@ function render_models_single() {
                 var sz = Math.max(h, w) * points[x * 6 + 5] / 2;
                 var y = points[x * 6 + 0] * h;
                 var x = points[x * 6 + 1] * w;
-                console.log(sz);
                 ctx.beginPath();
                 ctx.arc(x, y,sz,0,2*Math.PI);
                 ctx.stroke();
@@ -78,7 +77,6 @@ function render_models_single() {
         }
         var modelKey = decode_id($('#model_select').find(":selected").val());
         function success_func(result) {
-            console.log('Blah');
             $('#imagefile').parent().html($('#imagefile').parent().html());
             $('#imagefile').change(fileChange);
             var outputType = models.get(encode_id(modelKey)).pescape('meta:output_type');
@@ -123,8 +121,6 @@ function render_models_single() {
             }
         }
         function upload_func(response) {
-            console.log('Blah3');
-            debug_response = response;
             PICARUS.postRow(table, response.row, 'i/chain', modelKey, {success: success_func});
         }
         var table = 'images';

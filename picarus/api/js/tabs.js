@@ -206,11 +206,10 @@ function render_models_list() {
                 }
             }
             var num_chunks = Number(results.get(row).pescape(model_chunks_column));
-            var columns = 'columns=' + _.map(_.range(num_chunks), function (x) {
-                return encode_id(model_column + '-' + x);
-            }).join('&');
-            var url = '/a1/data/models/' + row + '?' + columns;
-            picarus_api(url, "GET", {success: takeoutSuccess});
+            var columns =  _.map(_.range(num_chunks), function (x) {
+                return model_column + '-' + x;
+            });
+            PICARUS.getRow('models', decode_id('row'), {columns: columns, success: takeoutSuccess})
         }
         $('.takeout_link').click(function (data) {
             process_takeout($(data.target).attr('row'), 'meta:model_link_chunks', 'data:model_link', 'link');
@@ -414,7 +413,6 @@ function render_models_single() {
                 var sz = Math.max(h, w) * points[x * 6 + 5] / 2;
                 var y = points[x * 6 + 0] * h;
                 var x = points[x * 6 + 1] * w;
-                console.log(sz);
                 ctx.beginPath();
                 ctx.arc(x, y,sz,0,2*Math.PI);
                 ctx.stroke();
@@ -448,7 +446,6 @@ function render_models_single() {
         }
         var modelKey = decode_id($('#model_select').find(":selected").val());
         function success_func(result) {
-            console.log('Blah');
             $('#imagefile').parent().html($('#imagefile').parent().html());
             $('#imagefile').change(fileChange);
             var outputType = models.get(encode_id(modelKey)).pescape('meta:output_type');
@@ -493,8 +490,6 @@ function render_models_single() {
             }
         }
         function upload_func(response) {
-            console.log('Blah3');
-            debug_response = response;
             PICARUS.postRow(table, response.row, 'i/chain', modelKey, {success: success_func});
         }
         var table = 'images';
@@ -605,17 +600,16 @@ function render_annotate_list() {
 function render_annotate_batch() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
     $('#runButton').click(function () {
-        var startRow = encode_id($('#startRow').val());
-        var stopRow = encode_id($('#stopRow').val());
-        var imageColumn = encode_id('thum:image_150sq');
-        var entityColumn = encode_id('meta:class');
+        var startRow = $('#startRow').val();
+        var stopRow = $('#stopRow').val();
+        var imageColumn = 'thum:image_150sq';
+        var entityColumn = 'meta:class';
         var numTasks = Number($('#num_tasks').val());
         var query = $('#query').val();
-        function success(xhr) {
-            response = JSON.parse(xhr.responseText);
+        function success(response) {
             $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
         }
-        picarus_api("/a1/slice/images/" + startRow + '/' + stopRow, "POST", {success: success, data: {action: 'io/annotate/image/query_batch', imageColumn: imageColumn, query: query, instructions: $('#instructions').val(), numTasks: numTasks, mode: "amt"}});
+        PICARUS.postSlice('images', startRow, stopRow, 'io/annotate/image/query_batch', {success: success, data: {imageColumn: imageColumn, query: query, instructions: $('#instructions').val(), numTasks: numTasks, mode: "amt"}});
     });
 }
 function render_annotate_entity() {
