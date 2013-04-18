@@ -11,7 +11,8 @@ function render_visualize_annotations_loaded() {
                 users_filtered[x.get('row')] = [];
         });
         results.each(function (x) {
-            var i = x.pescape('user_id');
+            // TODO: Fix this encoding mismatch
+            var i = encode_id(x.pescape('user_id'));
             if (_.has(users_filtered, i) && (!onlyAnnotated || x.pescape('end_time'))) {
                 users_filtered[i].push(x);
             }
