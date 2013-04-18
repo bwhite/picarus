@@ -76,7 +76,7 @@ function render_models_single() {
             display_alert('You must specify an image!');
             return;
         }
-        var modelKey = $('#model_select').find(":selected").val();
+        var modelKey = decode_id($('#model_select').find(":selected").val());
         function success_func(result) {
             console.log('Blah');
             $('#imagefile').parent().html($('#imagefile').parent().html());
@@ -125,7 +125,7 @@ function render_models_single() {
         function upload_func(response) {
             console.log('Blah3');
             debug_response = response;
-            PICARUS.postRow(table, response.row, 'i/chain', modelKey, {success: success_func})
+            PICARUS.postRow(table, response.row, 'i/chain', modelKey, {success: success_func});
         }
         var table = 'images';
         var data = {};
