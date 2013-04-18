@@ -213,7 +213,7 @@ function render_visualize_annotations_loaded() {
                             return;
                         $('#' + id).attr('src', 'data:image/jpeg;base64,' + base64.encode(response[imageColumn])).attr('width', '150px').removeClass('hide');
                     }
-                    PICARUS.getRow("images", x[0], {success: success, columns: [imageColumn]});
+                    PICARUS.getRow("images", decode_id(x[0]), {success: success, columns: [imageColumn]});
                 });
             }
             display_samples($('#positive_samples'), posScores, 'Positive Samples');
