@@ -14,7 +14,7 @@ function render_visualize_metadata() {
         images = new PicarusImages();
         function remove_rows() {
             // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
-            var rows = _.map(images.models, function (x) {return x.id})
+            var rows = _.map(images.models, function (x) {return x.id});
             picarus_api_delete_rows(rows, progressModal());
         }
         function done() {

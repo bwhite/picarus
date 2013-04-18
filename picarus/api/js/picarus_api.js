@@ -62,6 +62,7 @@ function PicarusClient(email, apiKey, server) {
     this.deleteRow = function (table, row, args) {
         //args: success, fail
         args = this._argsDefaults(args);
+        drow = row;
         this.del(['data', table, encode_id(row)], args.data, this._wrapNull(args.success), args.fail);
     };
     this.postSlice = function (table, startRow, stopRow, action, args) {
