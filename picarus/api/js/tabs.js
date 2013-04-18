@@ -453,44 +453,43 @@ function render_models_single() {
             return;
         }
         var modelKey = $('#model_select').find(":selected").val();
-        function success_func(xhr) {
+        function success_func(result) {
             $('#imagefile').parent().html($('#imagefile').parent().html());
             $('#imagefile').change(fileChange);
-            result = JSON.parse(xhr.responseText);
             var outputType = models.get(modelKey).pescape('meta:output_type');
             if (outputType == 'binary_class_confidence') {
                 $('#results').html($('<h3>').text('Classifier Confidence'));
-                $('#results').append(msgpack.unpack(base64.decode(result[modelKey])));
+                $('#results').append(msgpack.unpack(result[modelKey]));
             } else if (outputType == 'binary_prediction') {
                 $('#results').html($('<h3>').text('Binary Prediction'));
-                $('#results').append(String(msgpack.unpack(base64.decode(result[modelKey]))));
+                $('#results').append(String(msgpack.unpack(result[modelKey])));
             } else if (outputType == 'processed_image') {
                 $('#results').html($('<h3>').text('Processed Image'));
-                $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + result[modelKey]));
+                $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(result[modelKey])));
             } else if (outputType == 'image_detections') {
                 $('#results').html($('<h3>').text('Detections'));
-                v = msgpack.unpack(base64.decode(result[modelKey]));
+                v = msgpack.unpack(result[modelKey]);
                 render_image_boxes(imageData, v[0], v[1][0], $('#results'));
             } else if (outputType == 'feature') {
                 $('#results').html($('<h3>').text('Feature'));
-                $('#results').append(_.escape(JSON.stringify(msgpack.unpack(base64.decode(result[modelKey]))[0])));
+                $('#results').append(_.escape(JSON.stringify(msgpack.unpack(result[modelKey])[0])));
             } else if (outputType == 'multi_class_distance') {
                 $('#results').html($('<h3>').text('Multi Class Distance'));
-                var data = msgpack.unpack(base64.decode(result[modelKey]));
+                var data = msgpack.unpack(result[modelKey]);
                 _.each(data, function (x) {
                     $('#results').append(x[1] + ' ' + x[0] + '<br>');
                 });
             } else if (outputType == 'distance_image_rows') {
                 $('#results').html($('<h3>').text('Image Search Results'));
-                var data = msgpack.unpack(base64.decode(result[modelKey]));
-                debug_data = msgpack.unpack(base64.decode(result[modelKey]));
+                var data = msgpack.unpack(result[modelKey]);
+                debug_data = msgpack.unpack(result[modelKey]);
                 _.each(data, function (x) {
                     var image_id = _.uniqueId('image_');
                     $('#results').append('<img id="' + image_id + '">' + ' ' + x[0] + '<br>');
                     imageThumbnail(x[1], image_id);
                 });
             } else if (outputType == 'feature2d_binary') {
-                var data = msgpack.unpack(base64.decode(result[modelKey]));
+                var data = msgpack.unpack(result[modelKey]);
                 debug_data = data;
                 render_image_points(imageData, data[1], data[2][0], $('#results'));
             } else {
@@ -498,14 +497,13 @@ function render_models_single() {
                 alert('Unrecognized output type');
             }
         }
-        function upload_func(xhr) {
-            var response = JSON.parse(xhr.responseText);
-            picarus_api_row(table, response.row, "POST", {data: {action: 'i/chain', model: modelKey}, success: success_func})
+        function upload_func(response) {
+            PICARUS.postRow(table, response.row, 'i/chain', modelKey, {success: success_func})
         }
         var table = 'images';
         var data = {};
-        data[encode_id('data:image')] = $('#imagefile')[0].files[0];
-        picarus_api_upload(table, {data: data, success: upload_func})
+        data['data:image'] = $('#imagefile')[0].files[0];
+        PICARUS.post(table, data, {success: upload_func})
         $('#results').html('');
     }
     $('#imagefile').change(fileChange);
