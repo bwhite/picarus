@@ -1070,10 +1070,9 @@ function render_visualize_annotations_loaded() {
         return scores;
     }
     function display_annotation_task(task, get_classes, get_scores) {
-        var task_dec = decode_id(task);
         /* TODO: Compute a dropdown list of available classes (new view for results model) */
-        results = new PicarusRows([], {'table': 'annotations-results-' + task_dec});
-        users = new PicarusRows([], {'table': 'annotations-users-' + task_dec});
+        results = new PicarusRows([], {'table': 'annotations-results-' + task});
+        users = new PicarusRows([], {'table': 'annotations-users-' + task});
         var imageColumn = 'thum:image_150sq';
         $('#negPct').change(data_change);
         $('#posPct').change(data_change);
