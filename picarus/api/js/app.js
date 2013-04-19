@@ -293,7 +293,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
         }
     });
     var auth = login_get(function (email_auth) {
-        user = new PicarusUser({row: encode_id(email_auth.email)});
+        user = new Picarus2Row({row: email_auth.email}, {'table': 'users'});
         new AppView({model: user, el: prefixDrop});
         user.fetch();
     });
@@ -340,7 +340,7 @@ function slices_selector() {
         slicesText.html('');
     });
     var auth = login_get(function (email_auth) {
-        user = new PicarusUser({row: encode_id(email_auth.email)});
+        user = new Picarus2Row({row: email_auth.email}, {'table': 'users'});
         new AppView({model: user, el: prefixDrop});
         user.fetch();
     });
