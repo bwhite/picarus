@@ -12,6 +12,9 @@ function login_get(func) {
     if (typeof EMAIL_AUTH === 'undefined') {
         function get_auth() {
             function success(response) {
+                $.ajaxSetup({'beforeSend': function (xhr) {
+                    xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email + ":" + response.apiKey));
+                }});
                 use_api(response.apiKey);
             }
             function fail() {
