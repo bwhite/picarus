@@ -14,7 +14,7 @@ function PicarusClient(server) {
 
     this.get = function (path, data, success, fail) {
         path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
-        $.ajax(path, {data: data, success: success}).fail(fail);
+        return $.ajax(path, {data: data, success: success}).fail(fail);
     };
 
     this._ajax = function (path, data, success, fail, type) {
@@ -23,29 +23,29 @@ function PicarusClient(server) {
         _.each(data, function (v, k) {
             formData.append(k, v);
         });
-        $.ajax(path, {type: type, data: formData, success: success, contentType: false, processData: false}).fail(fail);
+        return $.ajax(path, {type: type, data: formData, success: success, contentType: false, processData: false}).fail(fail);
     };
     
     this.post = function (path, data, success, fail) {
-        this._ajax(path, data, success, fail, 'POST');
+        return this._ajax(path, data, success, fail, 'POST');
     };
 
     this.patch = function (path, data, success, fail) {
-        this._ajax(path, data, success, fail, 'PATCH');
+        return this._ajax(path, data, success, fail, 'PATCH');
     };
 
     this.del = function (path, data, success, fail) {
-        this._ajax(path, data, success, fail, 'DELETE');
+        return this._ajax(path, data, success, fail, 'DELETE');
     };
 
     this.authEmailAPIKey = function (email, loginKey, args) {
         args = this._argsDefaults(args);
-        this.post(["auth", "email"], {email: email, auth: loginKey}, this._wrapNull(args.success), args.fail);
+        return this.post(["auth", "email"], {email: email, auth: loginKey}, this._wrapNull(args.success), args.fail);
     };
 
     this.authYubikey = function (otp, args) {
         args = this._argsDefaults(args);
-        this.post(["auth", "yubikey"], {otp: otp}, this._wrapParseJSON(args.success), args.fail);
+        return this.post(["auth", "yubikey"], {otp: otp}, this._wrapParseJSON(args.success), args.fail);
     };
 
     this.getTable = function (table, args) {
@@ -53,12 +53,12 @@ function PicarusClient(server) {
         args = this._argsDefaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
-        this.get(['data', table], args.data, this._wrapDecodeLod(args.success), args.fail);
+        return this.get(['data', table], args.data, this._wrapDecodeLod(args.success), args.fail);
     };
     this.postTable = function (table, args) {
         //args: success, fail, data
         args = this._argsDefaults(args);
-        this.post(['data', table], this.encdict(args.data), this._wrapDecodeValues(args.success), args.fail);
+        return this.post(['data', table], this.encdict(args.data), this._wrapDecodeValues(args.success), args.fail);
     };
     this.postRow = function (table, row, action, args) {
         //args: success, fail, data
@@ -66,17 +66,17 @@ function PicarusClient(server) {
         args.data.action = action;
         if (_.has(args.data, 'model'))
             args.data.model = base64.encode(args.data.model);
-        this.post(['data', table, encode_id(row)], args.data, this._wrapDecodeDict(args.success), args.fail);
+        return this.post(['data', table, encode_id(row)], args.data, this._wrapDecodeDict(args.success), args.fail);
     };
     this.deleteRow = function (table, row, args) {
         //args: success, fail
         args = this._argsDefaults(args);
-        this.del(['data', table, encode_id(row)], args.data, this._wrapNull(args.success), args.fail);
+        return this.del(['data', table, encode_id(row)], args.data, this._wrapNull(args.success), args.fail);
     };
     this.deleteColumn = function (table, row, column, args) {
         //args: success, fail
         args = this._argsDefaults(args);
-        this.del(['data', table, encode_id(row), encode_id(column)], args.data, this._wrapNull(args.success), args.fail);
+        return this.del(['data', table, encode_id(row), encode_id(column)], args.data, this._wrapNull(args.success), args.fail);
     };
     this.postSlice = function (table, startRow, stopRow, action, args) {
         //args: success, fail, data
@@ -84,13 +84,13 @@ function PicarusClient(server) {
         args.data.action = action;
         if (_.has(args.data, 'model'))
             args.data.model = base64.encode(args.data.model);
-        this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapParseJSON(args.success), args.fail);
+        return this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapParseJSON(args.success), args.fail);
     };
 
     this.patchRow = function (table, row, args) {
         //args: success, fail, data
         args = this._argsDefaults(args);
-        this.patch(['data', table, encode_id(row)], this.encdict(args.data), this._wrapDecodeValues(args.success), args.fail);
+        return this.patch(['data', table, encode_id(row)], this.encdict(args.data), this._wrapDecodeValues(args.success), args.fail);
     };
     this.encdict = function (d) {
         return _.object(_.map(d, function (v, k) {
@@ -104,19 +104,19 @@ function PicarusClient(server) {
         args = this._argsDefaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
-        this.get(['data', table, encode_id(row)], args.data, this._wrapDecodeDict(args.success), args.fail);
+        return this.get(['data', table, encode_id(row)], args.data, this._wrapDecodeDict(args.success), args.fail);
     };
     this.getSlice = function (table, startRow, stopRow, args) {
         //args: success, fail, columns, data
         args = this._argsDefaults(args);
         if (_.has(args, 'columns'))
             args.data.columns = _.map(args.columns, function(x) {return base64.encode(x)}).join(',');
-        this.get(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapDecodeLod(args.success), args.fail);
+        return this.get(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapDecodeLod(args.success), args.fail);
     };
     this.patchSlice = function (table, startRow, stopRow, args) {
         //args: success, fail, columns, data
         args = this._argsDefaults(args);
-        this.patch(['slice', table, encode_id(startRow), encode_id(stopRow)], this.encdict(args.data), this._wrapNull(args.success), args.fail);
+        return this.patch(['slice', table, encode_id(startRow), encode_id(stopRow)], this.encdict(args.data), this._wrapNull(args.success), args.fail);
     };
     this.scanner = function (table, startRow, stopRow, args) {
         // args: success, fail, done, maxRows, maxRowsIter, filter, resume
