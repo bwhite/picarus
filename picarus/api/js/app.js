@@ -431,11 +431,11 @@ function app_main() {
             opt = options;
             console.log(method);
             var success = _.bind(options.success, this);
-            var fail = _.bind(options.fail, this);
+            // TODO: Failure case too
             if (method == 'create') {
                 PICARUS.postTable(this.table, model, {})
             } else if (method == 'read') {
-                PICARUS.getRow(this.table, model.id, {success: success, fail: fail});
+                PICARUS.getRow(this.table, model.id, {success: success});
             }
 
         }
