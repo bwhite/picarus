@@ -430,10 +430,12 @@ function app_main() {
         sync: function (method, model, options) {
             opt = options;
             console.log(method);
+            var success = _.bind(options.success, this);
+            var fail = _.bind(options.fail, this);
             if (method == 'create') {
                 PICARUS.postTable(this.table, model, {})
             } else if (method == 'read') {
-                PICARUS.getRow(this.table, model.id, {success: options.success, fail: options.fail})
+                PICARUS.getRow(this.table, model.id, {success: success, fail: fail});
             }
 
         }
