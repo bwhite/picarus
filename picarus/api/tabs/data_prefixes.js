@@ -2,7 +2,7 @@ function render_data_prefixes() {
     rows = new Picarus2Rows([], {'table': 'prefixes'});
     function prefixChange() {
         var row = decode_id($('#prefixTable option:selected').val());
-        var permissions = decode_id(rows.get(row).get(decode_id($('#prefixDrop option:selected').val())));
+        var permissions = rows.get(row).get(decode_id($('#prefixDrop option:selected').val()));
         ps = permissions;
         var perms = ['r'];
         if (permissions == 'rw')
