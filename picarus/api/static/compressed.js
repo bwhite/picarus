@@ -503,16 +503,16 @@ code.google.com/p/crypto-js/wiki/License
 e;d++)if(d%4){var g=f.indexOf(b.charAt(d-1))<<2*(d%4),h=f.indexOf(b.charAt(d))>>>6-2*(d%4);c[a>>>2]|=(g|h)<<24-8*(a%4);a++}return j.create(c,a)},_map:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="}})();
 ;
 function render_data_prefixes() {
-    rows = new PicarusRows([], {'table': 'prefixes'});
+    rows = new Picarus2Rows([], {'table': 'prefixes'});
     function prefixChange() {
-        var row = $('#prefixTable option:selected').val();
-        var permissions = rows.get(row).pescape($('#prefixDrop option:selected').val());
+        var row = decode_id($('#prefixTable option:selected').val());
+        var permissions = rows.get(row).escape($('#prefixDrop option:selected').val());
         ps = permissions;
         var perms = ['r'];
         if (permissions == 'rw')
             perms = ['rw', 'r'];
-        var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
-        $('#permissions').html(Mustache.render(select_template, {prefixes: perms}));
+        var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
+        $('#permissions').html(Mustache.render(select_template, {prefixes: _.map(perms, function (x) {return {text: x, value: encode_id(x)}})}));
     }
     function change() {
         var row = $('#prefixTable option:selected').val();
@@ -523,20 +523,20 @@ function render_data_prefixes() {
             prefixes.push(decode_id(key));
         });
         prefixes.sort();
-        var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
-        $('#prefixDrop').html(Mustache.render(select_template, {prefixes: prefixes}));
+        var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
+        $('#prefixDrop').html(Mustache.render(select_template, {prefixes: _.map(prefixes, function (x) {return {text: x, value: encode_id(x)}})}));
         $('#prefixDrop').change(prefixChange); // TODO: Redo this in backbone
         prefixChange();
     }
-    rows_dropdown(rows, {el: $('#prefixTable'), text: function (x) {return x.pescaperow()}, change: change});
+    rows_dropdown(rows, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}, change: change});
     $('#createButton').click(function () {
-        var row = $('#prefixTable option:selected').val();
+        var row = decode_id($('#prefixTable option:selected').val());
         var data = {}
-        data[$('#prefixDrop option:selected').val() + $('#suffix').val()] = $('#permissions option:selected').val(); 
-        rows.get(row).psave(data, {patch: true});        
+        data[decode_id($('#prefixDrop option:selected').val()) + unescape($('#suffix').val())] = $('#permissions option:selected').val(); 
+        rows.get(row).save(data, {patch: true});        
     });
     var tableColumn = {header: "Table", getFormatted: function() {
-        return _.escape(base64.decode(this.get('row')));
+        return this.escape('row');
     }};
     new RowsView({collection: rows, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
     rows.fetch();
