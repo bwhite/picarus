@@ -520,7 +520,7 @@ function render_data_prefixes() {
         _.each(rows.get(row).attributes, function (val, key) {
             if (key == 'row')
                 return;
-            prefixes.push(decode_id(key));
+            prefixes.push(key);
         });
         prefixes.sort();
         var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
