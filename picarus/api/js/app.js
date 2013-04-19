@@ -421,7 +421,7 @@ function app_main() {
 
     Picarus2Row = Backbone.Model.extend({
         idAttribute: "row",
-        initialize: function(models, options) {
+        initialize: function(attributes, options) {
             this.table = options.table;
             if (_.isArray(options.columns)) {
                 this.columns = options.columns;
@@ -429,10 +429,11 @@ function app_main() {
         },
         sync: function (method, model, options) {
             opt = options;
+            console.log(method);
             if (method == 'create') {
                 PICARUS.postTable(this.table, model, {})
             } else if (method == 'read') {
-                PICARUS.postTable(this.table, model.id, {success: options.success, fail: options.fail})
+                PICARUS.getRow(this.table, model.id, {success: options.success, fail: options.fail})
             }
 
         }
