@@ -95,7 +95,7 @@ function render_data_uploads(email_auth) {
             this.model.bind('change', this.render);
         },
         render: function() {
-            var startRow = _.unescape(this.model.pescape('upload_row_prefix'));
+            var startRow = this.model.get('upload_row_prefix');
             var imageColumn = 'thum:image_150sq';
             function success(row, columns) {
                 $('#images').append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('width', '150px'));
@@ -103,7 +103,7 @@ function render_data_uploads(email_auth) {
             PICARUS.scanner("images", startRow, prefix_to_stop_row(startRow), {success: success, maxRows: 24, columns: [imageColumn]})
         }
     });
-    var model = new PicarusUser({row: encode_id(email_auth.email)});
+    var model = new Picarus2Row({row: email_auth.email});
     new AppView({ model: model });
     model.fetch();
 }
