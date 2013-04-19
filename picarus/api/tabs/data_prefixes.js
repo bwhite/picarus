@@ -11,7 +11,7 @@ function render_data_prefixes() {
         $('#permissions').html(Mustache.render(select_template, {prefixes: _.map(perms, function (x) {return {text: x, value: encode_id(x)}})}));
     }
     function change() {
-        var row = $('#prefixTable option:selected').val();
+        var row = decode_id($('#prefixTable option:selected').val());
         var prefixes = [];
         _.each(rows.get(row).attributes, function (val, key) {
             if (key == 'row')
