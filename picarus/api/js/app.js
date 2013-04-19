@@ -427,6 +427,9 @@ function app_main() {
                 this.columns = options.columns;
             }
         },
+        parse: function (resp, options) {
+            return resp;
+        },
         sync: function (method, model, options) {
             opt = options;
             console.log(method);
