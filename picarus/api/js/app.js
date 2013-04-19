@@ -429,7 +429,7 @@ function app_main() {
         },
         sync: function (method, model, options) {
             opt = options;
-            console.log(method);
+            console.log('row:' + method);
             mod = model;
             var out;
             var success = function (x) {return options.success(model, x, options)};
@@ -444,6 +444,10 @@ function app_main() {
                 out = PICARUS.deleteRow(this.table, model.id, params);
             } else if (method == 'patch') {
                 out = PICARUS.patchRow(this.table, model.id, params);
+            } else if (method == 'create') {
+                if (_.has(this, 'columns'))
+                    params.columns = this.columns;
+                out = PICARUS.postTable(this.table, params);
             }
             debug_out = out;
             model.trigger('request', model, out, options);
@@ -466,18 +470,14 @@ function app_main() {
         },
         sync: function (method, model, options) {
             opt = options;
-            console.log(method);
+            console.log('rows:' + method);
             mod = model;
             var out;
             var success = function (x) {return options.success(model, x, options)};
             var params = {success: success};
             if (_.has(options, 'attrs'))
                 params.data = options.attrs;
-            if (method == 'create') {
-                if (_.has(this, 'columns'))
-                    params.columns = this.columns;
-                out = PICARUS.postTable(this.table, params);
-            } else if (method == 'read') {
+            if (method == 'read') {
                 if (_.has(this, 'columns'))
                     params.columns = this.columns;
                 params.success = function (lod) {
