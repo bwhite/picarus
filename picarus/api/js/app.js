@@ -431,22 +431,24 @@ function app_main() {
             opt = options;
             console.log(method);
             mod = model;
+            var out;
             var success = function (x) {return options.success(model, x, options)};
             if (method == 'read') {
-                PICARUS.getRow(this.table, model.id, {success: success});
+                out = PICARUS.getRow(this.table, model.id, {success: success});
             } else if (method == 'delete') {
-                PICARUS.deleteRow(this.table, model.id, {success: success});
+                out = PICARUS.deleteRow(this.table, model.id, {success: success});
             } else if (method == 'patch') {
-                PICARUS.patchRow(this.table, model.id, {success: success, data: options.attrs});
+                out = PICARUS.patchRow(this.table, model.id, {success: success, data: options.attrs});
             }
             model.trigger('request', model, xhr, options);
+            return out;
         },
         unset: function (attr, options) {
             function s() {
                 return this.set(attr, void 0, _.extend({}, options, {unset: true}));
             }
             s = _.bind(s, this);
-            PICARUS.deleteColumn(this.table, this.id, attr, {success: s});
+            return PICARUS.deleteColumn(this.table, this.id, attr, {success: s});
         }
     });
 
