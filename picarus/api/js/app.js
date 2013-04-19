@@ -505,10 +505,10 @@ function app_main() {
     function deleteValueFunc(row, column) {
         if (column == 'row')
             return '';
-        return Mustache.render('<a class="value_delete" style="padding-left: 5px" row="{{row}}" column="{{column}}">Delete</a>', {row: row, column: column});
+        return Mustache.render('<a class="value_delete" style="padding-left: 5px" row="{{row}}" column="{{column}}">Delete</a>', {row: encode_id(row), column: encode_id(column)});
     }
     function deleteRowFunc(row) {
-        return Mustache.render('<button class="btn row_delete" type="submit" row="{{row}}"">Delete</button>', {row: row});
+        return Mustache.render('<button class="btn row_delete" type="submit" row="{{row}}"">Delete</button>', {row: encode_id(row)});
     }
 
     RowsView = Backbone.View.extend({
@@ -541,8 +541,8 @@ function app_main() {
             if (options.deleteValues) {
                 this.deleteValues = true;
                 function delete_value(data) {
-                    var row = _.unescape(data.target.getAttribute('row'));
-                    var column = _.unescape(data.target.getAttribute('column'));
+                    var row = decode_id(data.target.getAttribute('row'));
+                    var column = decode_id(data.target.getAttribute('column'));
                     this.collection.get(row).unset(column);
                 }
                 delete_value = _.bind(delete_value, this);
@@ -550,13 +550,8 @@ function app_main() {
                     button_confirm_click($('.value_delete'), delete_value);
                 });
             }
-            if (options.columns) {
-                this.columns = _.map(options.columns, function (x) {
-                    if (x == 'row')
-                        return x;
-                    return x;
-                });
-            }
+            if (options.columns)
+                this.columns = options.columns;
         },
         render: function() {
             

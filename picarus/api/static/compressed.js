@@ -682,7 +682,7 @@ function render_models_list() {
     var columns_model = ['meta:'];
     results = new Picarus2Rows([], {'table': 'models', columns: columns_model});
     var takeoutColumn = {header: "Takeout", getFormatted: function() {
-        return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: this.escape('row')});
+        return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: encode_id('row')});
     }};
     var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('meta:tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + this.escape('row') + '">edit</a></span>'}};
     var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('meta:notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + this.escape('row') + '">edit</a></span>'}};
@@ -716,15 +716,15 @@ function render_models_list() {
             PICARUS.getRow('models', row, {columns: columns, success: takeoutSuccess})
         }
         $('.takeout_link').click(function (data) {
-            process_takeout(_.unescape($(data.target).attr('row')), 'meta:model_link_chunks', 'data:model_link', 'link');
+            process_takeout(decode_id($(data.target).attr('row')), 'meta:model_link_chunks', 'data:model_link', 'link');
         });
         $('.takeout_chain').click(function (data) {
-            process_takeout(_.unescape($(data.target).attr('row')), 'meta:model_chain_chunks', 'data:model_chain', 'chain');
+            process_takeout(decode_id($(data.target).attr('row')), 'meta:model_chain_chunks', 'data:model_chain', 'chain');
         });
 
         function setup_modal(links, col) {
             links.click(function (data) {
-                var row = _.unescape(data.target.getAttribute('row'));
+                var row = decode_id(data.target.getAttribute('row'));
                 var model = results.get(row);
                 $('#modal_content').val(model.escape(col));
                 $('#save_button').unbind();
@@ -3763,10 +3763,10 @@ function app_main() {
     function deleteValueFunc(row, column) {
         if (column == 'row')
             return '';
-        return Mustache.render('<a class="value_delete" style="padding-left: 5px" row="{{row}}" column="{{column}}">Delete</a>', {row: row, column: column});
+        return Mustache.render('<a class="value_delete" style="padding-left: 5px" row="{{row}}" column="{{column}}">Delete</a>', {row: encode_id(row), column: encode_id(column)});
     }
     function deleteRowFunc(row) {
-        return Mustache.render('<button class="btn row_delete" type="submit" row="{{row}}"">Delete</button>', {row: row});
+        return Mustache.render('<button class="btn row_delete" type="submit" row="{{row}}"">Delete</button>', {row: encode_id(row)});
     }
 
     RowsView = Backbone.View.extend({
@@ -3799,8 +3799,8 @@ function app_main() {
             if (options.deleteValues) {
                 this.deleteValues = true;
                 function delete_value(data) {
-                    var row = _.unescape(data.target.getAttribute('row'));
-                    var column = _.unescape(data.target.getAttribute('column'));
+                    var row = decode_id(data.target.getAttribute('row'));
+                    var column = decode_id(data.target.getAttribute('column'));
                     this.collection.get(row).unset(column);
                 }
                 delete_value = _.bind(delete_value, this);
@@ -3808,13 +3808,8 @@ function app_main() {
                     button_confirm_click($('.value_delete'), delete_value);
                 });
             }
-            if (options.columns) {
-                this.columns = _.map(options.columns, function (x) {
-                    if (x == 'row')
-                        return x;
-                    return x;
-                });
-            }
+            if (options.columns)
+                this.columns = options.columns;
         },
         render: function() {
             
