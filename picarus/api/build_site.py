@@ -29,7 +29,7 @@ def main():
     preinclude = ['js/' + x for x in preinclude]
     a = preinclude + list(set(glob.glob('js/*.js')) - set(preinclude))
     if args.debug:
-        open('static/compressed.js', 'w').write('\n\n\n'.join([open(x).read() for x in a]))
+        open('static/compressed.js', 'wb').write('\n'.join([open(x, 'rb').read() for x in a]))
     else:
         a= ' '.join(['--js %s' % x for x in a])
         cmd = 'java -jar compiler.jar %s --js_output_file static/compressed.js' % a
