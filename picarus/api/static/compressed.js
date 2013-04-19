@@ -682,7 +682,7 @@ function render_models_list() {
     var columns_model = ['meta:'];
     results = new Picarus2Rows([], {'table': 'models', columns: columns_model});
     var takeoutColumn = {header: "Takeout", getFormatted: function() {
-        return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: encode_id('row')});
+        return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: encode_id(this.get('row'))});
     }};
     var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('meta:tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + encode_id(this.get('row')) + '">edit</a></span>'}};
     var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('meta:notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + encode_id(this.get('row')) + '">edit</a></span>'}};
