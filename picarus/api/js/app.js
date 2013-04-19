@@ -431,6 +431,7 @@ function app_main() {
             opt = options;
             console.log('row:' + method);
             mod = model;
+            var table = model.get_table();
             var out;
             var success = function (x) {return options.success(model, x, options)};
             var params = {success: success};
@@ -439,17 +440,23 @@ function app_main() {
             if (method == 'read') {
                 if (_.has(this, 'columns'))
                     params.columns = this.columns;
-                out = PICARUS.getRow(this.table, model.id, params);
+                out = PICARUS.getRow(table, model.id, params);
             } else if (method == 'delete') {
-                out = PICARUS.deleteRow(this.table, model.id, params);
+                out = PICARUS.deleteRow(table, model.id, params);
             } else if (method == 'patch') {
-                out = PICARUS.patchRow(this.table, model.id, params);
+                out = PICARUS.patchRow(table, model.id, params);
             } else if (method == 'create') {
-                out = PICARUS.postTable(this.table, params);
+                out = PICARUS.postTable(table, params);
             }
             debug_out = out;
             model.trigger('request', model, out, options);
             return out;
+        },
+        get_table: function () {
+            var table = this.table;
+            if (_.isUndefined(table))
+                table = this.collection.table;
+            return table;
         },
         unset: function (attr, options) {
             function s() {
