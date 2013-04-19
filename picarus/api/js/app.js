@@ -430,6 +430,7 @@ function app_main() {
         sync: function (method, model, options) {
             opt = options;
             console.log(method);
+            mod = model;
             var success = _.bind(options.success, model);
             // TODO: Failure case too
             if (method == 'create') {
