@@ -176,7 +176,7 @@ function render_models_list() {
     var columns = ['meta:name', 'meta:input_type', 'meta:output_type', 'row', 'meta:creation_time', 'meta:input',
                    'meta:model_link_size', 'meta:model_chain_size', 'meta:factory_info'];
     var columns_model = ['meta:'];
-    results = new PicarusRows([], {'table': 'models', columns: columns_model});
+    results = new Picarus2Rows([], {'table': 'models', columns: columns_model});
     var takeoutColumn = {header: "Takeout", getFormatted: function() {
         return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: this.escape('row')});
     }};
@@ -192,7 +192,7 @@ function render_models_list() {
                     return v[1];
                 }).join('');
                 var curSha1 = CryptoJS.SHA1(CryptoJS.enc.Base64.parse(base64.encode(model))).toString();
-                var trueSha1 = results.get(row).pescape('meta:model_' + model_type + '_sha1');
+                var trueSha1 = results.get(row).escape('meta:model_' + model_type + '_sha1');
                 if (curSha1 === trueSha1) {
                     var modelByteArray = new Uint8Array(model.length);
                     for (var i = 0; i < model.length; i++) {
@@ -204,11 +204,12 @@ function render_models_list() {
                     alert("Model SHA1 doesn't match!");
                 }
             }
-            var num_chunks = Number(results.get(row).pescape(model_chunks_column));
+            var num_chunks = Number(results.get(row).escape(model_chunks_column));
             var columns =  _.map(_.range(num_chunks), function (x) {
                 return model_column + '-' + x;
             });
-            PICARUS.getRow('models', base64.decode(row), {columns: columns, success: takeoutSuccess})
+            console.log(row)
+            PICARUS.getRow('models', row, {columns: columns, success: takeoutSuccess})
         }
         $('.takeout_link').click(function (data) {
             process_takeout(_.unescape($(data.target).attr('row')), 'meta:model_link_chunks', 'data:model_link', 'link');
