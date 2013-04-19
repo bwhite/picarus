@@ -755,7 +755,7 @@ function project_selector(projectsDrop) {
         }
     });
     var auth = login_get(function (email_auth) {
-        user = new PicarusUser({row: encode_id(email_auth.email)});
+        user = new Picarus2Row({row: email_auth.email}, {'table': 'users'});
         new AppView({model: user, el: projectsDrop});
         user.fetch();
     });
@@ -1024,26 +1024,6 @@ function app_main() {
                 this.$el.html('<div class="alert alert-info">Table Empty</div>');
             }
         }
-    });
-
-    PicarusUser = Backbone.Model.extend({ // TODO: Switch over to PicarusRow
-        idAttribute: "row",
-        defaults : {
-        },
- 
-        url : function() {
-            return this.id ? '/a1/data/users/' + this.id  : '/a1/data/users'; 
-        },
-        pescape: function (x) {
-            return _.escape(base64.decode(this.escape(encode_id(x))));
-        },
-        pescapejs: function (x) {
-            return JSON.parse(base64.decode(this.escape(encode_id(x))));
-        }
-    });
-    PicarusUsers = Backbone.Collection.extend({
-        model : PicarusUser,
-        url : "/a1/data/users"
     });
 
     PicarusImage = Backbone.Model.extend({ // TODO: Switch over to PicarusRow
