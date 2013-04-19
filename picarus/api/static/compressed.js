@@ -857,7 +857,8 @@ function app_main() {
     Picarus2Row = Backbone.Model.extend({
         idAttribute: "row",
         initialize: function(attributes, options) {
-            this.table = options.table;
+            if (_.has(options, 'table'))
+                this.table = options.table;
             if (_.isArray(options.columns)) {
                 this.columns = options.columns;
             }
