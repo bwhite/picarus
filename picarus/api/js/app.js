@@ -465,7 +465,7 @@ function app_main() {
                 return this.set(attr, void 0, _.extend({}, options, {unset: true}));
             }
             s = _.bind(s, this);
-            return PICARUS.deleteColumn(this.table, this.id, attr, {success: s});
+            return PICARUS.deleteColumn(this.get_table(), this.id, attr, {success: s});
         }
     });
     Picarus2Rows = Backbone.Collection.extend({
