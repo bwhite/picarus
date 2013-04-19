@@ -324,6 +324,7 @@ function slices_selector() {
             // TODO: Check permissions and accept perissions as argument
             console.log(this.model.get('image_prefixes'));
             ip = this.model.get('image_prefixes');
+            m = this.model;
             var prefixes = _.keys(JSON.parse(this.model.get('image_prefixes')));
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
