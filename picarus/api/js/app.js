@@ -232,7 +232,7 @@ function rows_dropdown(rows, args) {
             n = this.$el;
             this.$el.empty();
             var select_template = "{{#models}}<option value='{{row}}'>{{text}}</option>{{/models}};"
-            var models_filt = _.map(rows.filter(args.filter), function (data) {return {row: data.escape('row'), text: args.text(data)}});
+            var models_filt = _.map(rows.filter(args.filter), function (data) {return {row: encode_id(data.get('row')), text: args.text(data)}});
             models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
             this.$el.append(Mustache.render(select_template, {models: models_filt}));
             this.renderDrop();
