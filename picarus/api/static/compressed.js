@@ -807,7 +807,7 @@ function slices_selector() {
         },
         events: {'change': 'renderDrop'},
         renderDrop: function () {
-            var prefix = prefixDrop.children().filter('option:selected').val();
+            var prefix = decode_id(prefixDrop.children().filter('option:selected').val());
             if (typeof startRow !== 'undefined')
                 startRow.val(prefix);
             // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
