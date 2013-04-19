@@ -457,6 +457,43 @@ function app_main() {
             return PICARUS.deleteColumn(this.table, this.id, attr, {success: s});
         }
     });
+    Picarus2Rows = Backbone.Collection.extend({
+        model : Picarus2Row,
+        initialize: function(models, options) {
+            this.table = options.table;
+            if (_.isArray(options.columns))
+                this.columns = options.columns;
+        },
+        sync: function (method, model, options) {
+            opt = options;
+            console.log(method);
+            mod = model;
+            var out;
+            var success = function (x) {return options.success(model, x, options)};
+            var params = {success: success};
+            if (_.has(options, 'attrs'))
+                params.data = options.attrs;
+            if (method == 'create') {
+                if (_.has(this, 'columns'))
+                    params.columns = this.columns;
+                out = PICARUS.postTable(this.table, params);
+            } else if (method == 'read') {
+                if (_.has(this, 'columns'))
+                    params.columns = this.columns;
+                params.success = function (lod) {
+                    lod = _.map(lod, function (v) {
+                        v[1].row = v[0];
+                        return v[1];
+                    });
+                    success(lod);
+                };
+                out = PICARUS.getTable(this.table, params);
+            }
+            model.trigger('request', model, out, options);
+            return out;
+        }
+    });
+
 
     function deleteValueFunc(row, column) {
         if (column == 'row')
