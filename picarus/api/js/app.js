@@ -529,14 +529,14 @@ function app_main() {
             if (options.deleteRows) {
                 this.deleteRows = true;
                 function delete_row(data) {
-                    var row = _.unescape(data.target.getAttribute('row'));
+                    var row = decode_id(data.target.getAttribute('row'));
                     this.collection.get(row).destroy({wait: true});
                 }
                 delete_row = _.bind(delete_row, this);
                 this.postRender = _.compose(this.postRender, function () {
                     button_confirm_click($('.row_delete'), delete_row);
                 });
-                this.extraColumns.push({header: "Delete", getFormatted: function() { return deleteRowFunc(this.escape('row'))}});
+                this.extraColumns.push({header: "Delete", getFormatted: function() { return deleteRowFunc(this.get('row'))}});
             }
             if (options.deleteValues) {
                 this.deleteValues = true;

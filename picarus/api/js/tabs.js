@@ -180,8 +180,8 @@ function render_models_list() {
     var takeoutColumn = {header: "Takeout", getFormatted: function() {
         return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: encode_id('row')});
     }};
-    var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('meta:tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + this.escape('row') + '">edit</a></span>'}};
-    var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('meta:notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + this.escape('row') + '">edit</a></span>'}};
+    var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('meta:tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + encode_id(this.get('row')) + '">edit</a></span>'}};
+    var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('meta:notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + encode_id(this.get('row')) + '">edit</a></span>'}};
     function postRender() {
         function process_takeout(row, model_chunks_column, model_column, model_type) {
             function takeoutSuccess(response) {
