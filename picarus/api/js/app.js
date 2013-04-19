@@ -427,14 +427,11 @@ function app_main() {
                 this.columns = options.columns;
             }
         },
-        parse: function (resp, options) {
-            return resp;
-        },
         sync: function (method, model, options) {
             opt = options;
             console.log(method);
             mod = model;
-            var success = _.bind(options.success, model);
+            var success = function (x) {return options.success(model, x, options)};
             // TODO: Failure case too
             if (method == 'create') {
                 PICARUS.postTable(this.table, model, {})
