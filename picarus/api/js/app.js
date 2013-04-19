@@ -12,9 +12,6 @@ function login_get(func) {
     if (typeof EMAIL_AUTH === 'undefined') {
         function get_auth() {
             function success(response) {
-                $.ajaxSetup({'beforeSend': function (xhr) {
-                    xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email + ":" + response.apiKey));
-                }});
                 use_api(response.apiKey);
             }
             function fail() {
@@ -416,6 +413,25 @@ function app_main() {
         },
         url : function() {
             return this.id ? '/a1/data/' + this.table + '/' + this.id : '/a1/data/' + this.table + this.params; 
+        }
+    });
+
+    Picarus2Row = Backbone.Model.extend({
+        idAttribute: "row",
+        initialize: function(models, options) {
+            this.table = options.table;
+            if (_.isArray(options.columns)) {
+                this.columns = options.columns;
+            }
+        },
+        sync: function (method, model, options) {
+            opt = options;
+            if (method == 'create') {
+                PICARUS.postTable(this.table, model, {})
+            } else if (method == 'read') {
+                PICARUS.postTable(this.table, model.id, {success: options.success, fail: options.fail})
+            }
+
         }
     });
 
