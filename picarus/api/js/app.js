@@ -440,7 +440,8 @@ function app_main() {
             } else if (method == 'patch') {
                 out = PICARUS.patchRow(this.table, model.id, {success: success, data: options.attrs});
             }
-            model.trigger('request', model, xhr, options);
+            debug_out = out;
+            model.trigger('request', model, out, options);
             return out;
         },
         unset: function (attr, options) {
