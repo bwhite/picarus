@@ -2,7 +2,7 @@ function render_data_prefixes() {
     rows = new Picarus2Rows([], {'table': 'prefixes'});
     function prefixChange() {
         var row = decode_id($('#prefixTable option:selected').val());
-        var permissions = rows.get(row).escape($('#prefixDrop option:selected').val());
+        var permissions = decode_id(rows.get(row).get($('#prefixDrop option:selected').val()));
         ps = permissions;
         var perms = ['r'];
         if (permissions == 'rw')
@@ -28,7 +28,7 @@ function render_data_prefixes() {
     $('#createButton').click(function () {
         var row = decode_id($('#prefixTable option:selected').val());
         var data = {}
-        data[decode_id($('#prefixDrop option:selected').val()) + unescape($('#suffix').val())] = $('#permissions option:selected').val(); 
+        data[decode_id($('#prefixDrop option:selected').val()) + unescape($('#suffix').val())] = decode_id($('#permissions option:selected').val());
         rows.get(row).save(data, {patch: true});        
     });
     var tableColumn = {header: "Table", getFormatted: function() {
