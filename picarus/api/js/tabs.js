@@ -56,7 +56,7 @@ function render_data_projects() {
     rows.fetch();
 }
 function render_data_user() {
-    users = new PicarusUsers();
+    users = new Picarus2Rows([], {'table': 'users'});
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
@@ -71,8 +71,8 @@ function render_data_user() {
                 collection: this.collection,
                 columns: _.map(columns, function (x) {
                     if (x === 'row')
-                        return {header: 'email', getFormatted: function() { return _.escape(base64.decode(this.get(x)))}}
-                    return {header: decode_id(x), getFormatted: function() { return _.escape(base64.decode(this.get(x)))}};
+                        return {header: 'email', getFormatted: function() {return this.escape(x)}};
+                    return {header: x, getFormatted: function() {return this.escape(x)}};
                 })
             });
             this.$el.html(picarus_table.render().el);
@@ -80,7 +80,7 @@ function render_data_user() {
     });
     new AppView({collection: users, el: $('#users')});
     login_get(function (email_auth) {
-        var user = new PicarusUser({row: encode_id(email_auth.email)});
+        var user = new Picarus2Row({row: email_auth.email});
         users.add(user);
         user.fetch();
         
