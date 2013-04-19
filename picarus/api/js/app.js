@@ -543,7 +543,7 @@ function app_main() {
                 function delete_value(data) {
                     var row = _.unescape(data.target.getAttribute('row'));
                     var column = _.unescape(data.target.getAttribute('column'));
-                    this.collection.get(row).punset(column);
+                    this.collection.get(row).unset(column);
                 }
                 delete_value = _.bind(delete_value, this);
                 this.postRender = _.compose(this.postRender, function () {
@@ -554,7 +554,7 @@ function app_main() {
                 this.columns = _.map(options.columns, function (x) {
                     if (x == 'row')
                         return x;
-                    return encode_id(x);
+                    return x;
                 });
             }
         },
@@ -572,11 +572,11 @@ function app_main() {
                 if (x === 'row')
                     return {header: 'row', getFormatted: function() { return _.escape(this.get(x))}};
                 outExtra = '';
-                return {header: decode_id(x), getFormatted: function() {
+                return {header: x, getFormatted: function() {
                     var val = this.get(x);
                     if (_.isUndefined(val))
                         return '';
-                    return _.escape(base64.decode(val)) + deleteValueFuncLocal(this.get('row'), x);
+                    return _.escape(val) + deleteValueFuncLocal(this.get('row'), x);
                 }
                 };
             }).concat(this.extraColumns);
