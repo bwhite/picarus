@@ -430,7 +430,7 @@ function app_main() {
         sync: function (method, model, options) {
             opt = options;
             console.log(method);
-            var success = _.bind(options.success, this);
+            var success = _.bind(options.success, model);
             // TODO: Failure case too
             if (method == 'create') {
                 PICARUS.postTable(this.table, model, {})
