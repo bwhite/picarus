@@ -227,7 +227,7 @@ function render_models_list() {
                 $('#save_button').click(function () {
                     var attributes = {};
                     attributes[col] = $('#modal_content').val();
-                    model.psave(attributes, {patch: true});
+                    model.save(attributes, {patch: true});
                     $('#myModal').modal('hide');
                 });
                 $('#myModal').modal('show')
