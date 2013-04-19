@@ -433,12 +433,17 @@ function app_main() {
             mod = model;
             var out;
             var success = function (x) {return options.success(model, x, options)};
+            var params = {success: success};
+            if (_.has(options, 'attrs'))
+                params.data = options.attrs;
             if (method == 'read') {
-                out = PICARUS.getRow(this.table, model.id, {success: success});
+                if (_.has(this, 'columns'))
+                    params.columns = this.columns;
+                out = PICARUS.getRow(this.table, model.id, params);
             } else if (method == 'delete') {
-                out = PICARUS.deleteRow(this.table, model.id, {success: success});
+                out = PICARUS.deleteRow(this.table, model.id, params);
             } else if (method == 'patch') {
-                out = PICARUS.patchRow(this.table, model.id, {success: success, data: options.attrs});
+                out = PICARUS.patchRow(this.table, model.id, params);
             }
             debug_out = out;
             model.trigger('request', model, out, options);
