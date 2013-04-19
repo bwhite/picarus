@@ -322,6 +322,8 @@ function slices_selector() {
         render: function() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
+            console.log(this.model.get('image_prefixes'));
+            ip = this.model.get('image_prefixes');
             var prefixes = _.keys(JSON.parse(this.model.get('image_prefixes')));
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
@@ -331,7 +333,7 @@ function slices_selector() {
         }
     });
     addButton.click(function () {
-        slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', base64.encode(unescape(startRow.val())) + ',' + base64.encode(unescape(stopRow.val()))));
+        slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', encode_id(unescape(startRow.val())) + '/' + encode_id(unescape(stopRow.val()))));
     });
     clearButton.click(function () {
         slicesText.html('');
@@ -347,7 +349,7 @@ function slices_selector_get(split) {
     var out = _.map($('#slicesSelectorSlices').children(), function (x) {return $(x).attr('value')});
     if (split)
         return _.map(out, function (x) {
-            return x.split(',')
+            return x.split('/');
         });
     return out;
 }
@@ -359,67 +361,6 @@ function app_main() {
             return v.join('=');
         }).join('&');
     }
-    PicarusRow = Backbone.Model.extend({
-        idAttribute: "row",
-        initialize: function(models, options) {
-            this.table = options.table;
-            if (_.isArray(options.columns)) {
-                this.params = '?columns=' + _.map(options.columns, function (x) {return encode_id(x)}).join(',');
-            } else {
-                this.params = '';
-            }
-        },
-        pescape: function (x) {
-            return _.escape(base64.decode(this.escape(encode_id(x))));
-        },
-        pescaperow: function () {
-            return _.escape(base64.decode(this.escape('row')));
-        },
-        pescapejs: function (x) {
-            var val = this.get(encode_id(x));
-            if (_.isUndefined(val))
-                return;
-            return JSON.parse(base64.decode(val));
-        },
-        psave: function (attributes, options) {
-            return this.save(object_ub64_b64_enc(attributes), options);
-        },
-        get_table: function () {
-            var table = this.table;
-            if (_.isUndefined(table))
-                table = this.collection.table;
-            return table;
-        },
-        punset: function (column) {
-            function s() {
-                this.unset(column);
-            }
-            s = _.bind(s, this);
-            PICARUS.deleteColumn(this.get_table(), this.id, column, {success: s});
-        },
-        url : function() {
-            return '/a1/data/' + this.get_table() + '/' + this.id;
-        }
-    });
-
-    PicarusRows = Backbone.Collection.extend({
-        model : PicarusRow,
-        initialize: function(models, options) {
-            this.table = options.table;
-            if (_.isArray(options.columns)) {
-                this.params = '?columns=' + _.map(options.columns, function (x) {return encode_id(x)}).join(',');
-            } else {
-                this.params = '';
-            }
-        },
-        pget: function(x) {
-            return this.get(encode_id(x));
-        },
-        url : function() {
-            return this.id ? '/a1/data/' + this.table + '/' + this.id : '/a1/data/' + this.table + this.params; 
-        }
-    });
-
     Picarus2Row = Backbone.Model.extend({
         idAttribute: "row",
         initialize: function(attributes, options) {
