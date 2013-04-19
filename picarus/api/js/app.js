@@ -435,8 +435,10 @@ function app_main() {
             var out;
             var success = function (x) {return options.success(model, x, options)};
             var params = {success: success};
-            if (_.has(options, 'attrs'))
+            params.data = model.attributes;
+            if (_.has(options, 'attrs')) {
                 params.data = options.attrs;
+            }
             if (method == 'read') {
                 if (_.has(this, 'columns'))
                     params.columns = this.columns;
