@@ -817,15 +817,16 @@ function slices_selector() {
         render: function() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
-            var prefixes = _.keys(this.model.pescapejs('image_prefixes'));
+            var prefixes = _.keys(JSON.parse(this.model.get('image_prefixes')));
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
-            var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
-            this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
+            var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
+            var prefixes_render = _.map(prefixes, function (x) {return {value: encode_id(x), text: x}});
+            this.$el.append(Mustache.render(select_template, {prefixes: prefixes_render}));
             this.renderDrop();
         }
     });
     addButton.click(function () {
-        slicesText.append($('<option>').text(startRow.val() + '/' + stopRow.val()).attr('value', encode_id(unescape(startRow.val())) + '/' + encode_id(unescape(stopRow.val()))));
+        slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', base64.encode(unescape(startRow.val())) + ',' + base64.encode(unescape(stopRow.val()))));
     });
     clearButton.click(function () {
         slicesText.html('');
@@ -841,7 +842,7 @@ function slices_selector_get(split) {
     var out = _.map($('#slicesSelectorSlices').children(), function (x) {return $(x).attr('value')});
     if (split)
         return _.map(out, function (x) {
-            return x.split('/')
+            return x.split(',')
         });
     return out;
 }
