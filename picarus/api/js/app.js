@@ -3,15 +3,16 @@ function login_get(func) {
     var apiKey = $('#apiKey');
     var modal = $('#authModal');
     var emailKeys = $('#emailKeys');
+    PICARUS = new PicarusClient();
     emailKeys.click(function () {
         var email = $('#email').val();
         var loginKey = $('#loginKey').val();
-        picarus_api("/a1/auth/email", "POST", {email: email, auth: loginKey});
+        PICARUS.authEmailAPIKey(email, loginKey);
     });
     if (typeof EMAIL_AUTH === 'undefined') {
         function get_auth() {
-            function success(xhr) {
-                use_api(JSON.parse(xhr.responseText).apiKey);
+            function success(response) {
+                use_api(response.apiKey);
             }
             function fail() {
                 $('#secondFactorAuth').addClass('error');
@@ -19,12 +20,15 @@ function login_get(func) {
             var otp_val = otp.val();
             var email = $('#email').val();
             var loginKey = $('#loginKey').val();
-            picarus_api("/a1/auth/yubikey", "POST", {data: {otp: otp_val}, success: success, email: email, auth: loginKey, fail: fail});
+            $.ajaxSetup({'beforeSend': function (xhr) {
+                xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email + ":" + loginKey));
+            }});
+            PICARUS.authYubikey(otp_val, {success: success, fail: fail});
         }
         function get_api() {
             var email = $('#email').val();
             var apiKey = $('#apiKey').val();
-            function success(xhr) {
+            function success() {
                 use_api(apiKey);
             }
             function fail() {
@@ -32,7 +36,10 @@ function login_get(func) {
             }
             $('#secondFactorAuth').addClass('info');
             $('#secondFactorAuth').removeClass('error');
-            picarus_api("/a1/data/users/" + encode_id(email), "GET", {success: success, email: email, auth: apiKey, fail: fail});
+            $.ajaxSetup({'beforeSend': function (xhr) {
+                xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email + ":" + apiKey));
+            }});
+            PICARUS.getRow('users', email, {success: success, fail: fail});
         }
         function use_api(apiKey) {
             var email = $('#email').val();
@@ -88,12 +95,11 @@ function random_bytes(num) {
 }
 
 function imageThumbnail(row, id) {
-    var imageColumn = encode_id('thum:image_150sq');
-    function success(xhr) {
-        var columns = JSON.parse(xhr.responseText);
-        $('#' + id).attr('src', 'data:image/jpeg;base64,' + columns[imageColumn]).attr('title', row)
+    var imageColumn = 'thum:image_150sq';
+    function success(columns) {
+        $('#' + id).attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row)
     }
-    picarus_api("/a1/data/images/" + row, "GET", {success: success, data: {columns: imageColumn}});
+    PICARUS.getRow('images', row, {success: success, data: {columns: imageColumn}});
 }
 
 function button_confirm_click(button, fun) {
@@ -385,7 +391,7 @@ function app_main() {
                 this.unset(column);
             }
             s = _.bind(s, this);
-            picarus_api("/a1/data/" + this.get_table() + "/" + this.id + "/" + column, 'DELETE', {success: s});
+            PICARUS.deleteColumn(this.get_table(), this.id, column, {success: s});
         },
         url : function() {
             return '/a1/data/' + this.get_table() + '/' + this.id;
@@ -665,5 +671,4 @@ function app_main() {
     //We will get a routing event with the initial URL fragment
     Backbone.history.start();
     window.onbeforeunload = function() {return "Leaving Picarus..."};
-    PICARUS = new PicarusClient();
 }
