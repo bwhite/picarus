@@ -445,8 +445,6 @@ function app_main() {
             } else if (method == 'patch') {
                 out = PICARUS.patchRow(this.table, model.id, params);
             } else if (method == 'create') {
-                if (_.has(this, 'columns'))
-                    params.columns = this.columns;
                 out = PICARUS.postTable(this.table, params);
             }
             debug_out = out;
