@@ -432,13 +432,21 @@ function app_main() {
             console.log(method);
             mod = model;
             var success = function (x) {return options.success(model, x, options)};
-            // TODO: Failure case too
-            if (method == 'create') {
-                PICARUS.postTable(this.table, model, {})
-            } else if (method == 'read') {
+            if (method == 'read') {
                 PICARUS.getRow(this.table, model.id, {success: success});
+            } else if (method == 'delete') {
+                PICARUS.deleteRow(this.table, model.id, {success: success});
+            } else if (method == 'patch') {
+                PICARUS.patchRow(this.table, model.id, {success: success, data: options.attrs});
             }
-
+            model.trigger('request', model, xhr, options);
+        },
+        unset: function (attr, options) {
+            function s() {
+                return this.set(attr, void 0, _.extend({}, options, {unset: true}));
+            }
+            s = _.bind(s, this);
+            PICARUS.deleteColumn(this.table, this.id, attr, {success: s});
         }
     });
 
