@@ -3,24 +3,24 @@ function render_visualize_annotations() {
 }
 
 function render_visualize_annotations_loaded() {
-    var rows = new PicarusRows([], {'table': 'annotations'});
+    var rows = new Picarus2Rows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
         users.each(function(x) {
-            if (x.pescape('workerId') || !onlyWorkers)
+            if (x.escape('workerId') || !onlyWorkers)
                 users_filtered[x.get('row')] = [];
         });
         results.each(function (x) {
             // TODO: Fix this encoding mismatch
-            var i = encode_id(x.pescape('user_id'));
-            if (_.has(users_filtered, i) && (!onlyAnnotated || x.pescape('end_time'))) {
+            var i = encode_id(x.escape('user_id'));
+            if (_.has(users_filtered, i) && (!onlyAnnotated || x.escape('end_time'))) {
                 users_filtered[i].push(x);
             }
         });
         _.each(users_filtered, function (x) {
             x.sort(function (a, b) {
-                a = Number(a.pescape('start_time'));
-                b = Number(b.pescape('start_time'));
+                a = Number(a.escape('start_time'));
+                b = Number(b.escape('start_time'));
                 if (a < b)
                     return -1;
                 if (a > b)
@@ -64,8 +64,8 @@ function render_visualize_annotations_loaded() {
         pick = function (s, l) { return _.map(s, function (x) {return l[x]});}
 
         results.each(function (x) {
-            d = x.pescapejs('user_data');
-            images = x.pescapejs('images');
+            d = JSON.parse(x.get('user_data'));
+            images = JSON.parse(x.get('images'));
             accumulate(scoresTotal, images, 0);  // Makes each image show up, even if not annotated
             if (_.isUndefined(d))
                 return;
@@ -97,9 +97,9 @@ function render_visualize_annotations_loaded() {
         var scores = {};
 
         results.each(function (x) {
-            var annotation = x.pescapejs('user_data');
-            var image = x.pescape('image');
-            var entity = x.pescape('entity');
+            var annotation = JSON.parse(x.get('user_data'));
+            var image = x.escape('image');
+            var entity = x.escape('entity');
             if (!_.has(scores, entity)) {
                 scores[entity] = {scoresPos: {}, scoresNeg: {}, scoresTotal: {}};
             }
@@ -127,8 +127,8 @@ function render_visualize_annotations_loaded() {
     }
     function display_annotation_task(task, get_classes, get_scores) {
         /* TODO: Compute a dropdown list of available classes (new view for results model) */
-        results = new PicarusRows([], {'table': 'annotations-results-' + task});
-        users = new PicarusRows([], {'table': 'annotations-users-' + task});
+        results = new Picarus2Rows([], {'table': 'annotations-results-' + task});
+        users = new Picarus2Rows([], {'table': 'annotations-users-' + task});
         var imageColumn = 'thum:image_150sq';
         $('#negPct').change(data_change);
         $('#posPct').change(data_change);
@@ -168,7 +168,7 @@ function render_visualize_annotations_loaded() {
             annotation_times = {};
             _.each(user_annotations, function (z) {
                 _.each(z, function(x, y) {
-                    var t = Number(x.pescape('end_time')) - Number(x.pescape('start_time'));
+                    var t = Number(x.escape('end_time')) - Number(x.escape('start_time'));
                     if (_.has(annotation_times, y))
                         annotation_times[y].push(t)
                     else
@@ -263,7 +263,7 @@ function render_visualize_annotations_loaded() {
             // Code is over nested, use partial application to flatten it
             if (annotation_type == 'image_entity') {
                 get_classes = function (results) {
-                    return _.unique(results.map(function (x, y) {return x.pescape('entity')})).sort()
+                    return _.unique(results.map(function (x, y) {return x.escape('entity')})).sort()
                 }
                 get_scores = image_entity_score;
                 // TODO: Add function to get scores from results given a class
