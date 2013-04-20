@@ -2096,6 +2096,7 @@ function render_visualize_times_loaded() {
 }
 function render_visualize_annotations() {
     console.log('032222');
+    return;
     google_visualization_load(render_visualize_annotations_loaded);
 }
 
