@@ -196,7 +196,7 @@ function model_dropdown(args) {
             n = this.$el;
             this.$el.empty();
             var select_template = "{{#models}}<option value='{{row}}'>{{{text}}}</option>{{/models}};" // text is escaped already
-            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.pescape('meta:tags') + ' ' + data.pescape('meta:name')}});
+            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.escape('meta:tags') + ' ' + data.escape('meta:name')}});
             models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
             this.$el.append(Mustache.render(select_template, {models: models_filt}));
             this.renderDrop();
