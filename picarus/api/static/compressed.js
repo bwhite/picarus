@@ -688,6 +688,7 @@ function model_dropdown(args) {
             _.bindAll(this, 'renderDrop');
             this.$el.bind('reset', this.renderDrop);
             this.$el.bind('change', this.renderDrop);
+            this.collection.bind('set', this.render);
             this.collection.bind('reset', this.render);
             this.collection.bind('change', this.render);
         },
@@ -772,7 +773,6 @@ function row_selector(prefixDrop, startRow, stopRow) {
         initialize: function() {
             _.bindAll(this, 'render');
             this.model.bind('reset', this.render);
-            this.model.bind('set', this.render);
             this.model.bind('change', this.render);
         },
         events: {'change': 'renderDrop'},
