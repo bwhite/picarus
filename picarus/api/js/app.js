@@ -375,7 +375,7 @@ function app_main() {
             mod = model;
             var table = model.get_table();
             var out;
-            var success = function (x) {return options.success(model, x, options)};
+            var success = options.success;
             var params = {success: success};
             params.data = model.attributes;
             if (_.has(options, 'attrs')) {
