@@ -938,6 +938,7 @@ function render_visualize_annotations() {
 
 function render_visualize_annotations_loaded() {
     console.log('0');
+    return;
     var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
