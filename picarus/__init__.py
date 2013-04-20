@@ -3,6 +3,7 @@ from picarus import api, modules
 from picarus_takeout import *
 import base64
 import urllib
+import json
 
 
 class PicarusClient(object):
