@@ -12,7 +12,7 @@ function render_visualize_annotations_loaded() {
         });
         results.each(function (x) {
             // TODO: Fix this encoding mismatch
-            var i = encode_id(x.escape('user_id'));
+            var i = x.escape('user_id');
             if (_.has(users_filtered, i) && (!onlyAnnotated || x.escape('end_time'))) {
                 users_filtered[i].push(x);
             }
