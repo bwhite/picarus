@@ -34,7 +34,13 @@ def thrift_lock():
         # TODO: When using thrift connection, detect if it is broken if so try one more time by making a new one
         yield cur_thrift
     finally:
-        gevent.spawn_later(0., lambda : THRIFT_POOL.put(THRIFT_CONSTRUCTOR()))
+        THRIFT_POOL.put(cur_thrift)
+        #gevent.spawn_later(0., lambda : THRIFT_POOL.put(THRIFT_CONSTRUCTOR()))
+
+
+@contextlib.contextmanager
+def thrift_new():
+    yield THRIFT_CONSTRUCTOR()
 
 
 def load_site():
@@ -62,7 +68,7 @@ if __name__ == "__main__":
     ARGS = parser.parse_args()
     THRIFT_POOL = gevent.queue.Queue()
     THRIFT_CONSTRUCTOR = lambda : hadoopy_hbase.connect(ARGS.thrift_server, ARGS.thrift_port)
-    for x in range(5):
+    for x in range(3):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     USERS = Users(ARGS.users_redis_host, ARGS.users_redis_port, ARGS.users_redis_db)
     YUBIKEY = Yubikey(ARGS.yubikey_redis_host, ARGS.yubikey_redis_port, ARGS.yubikey_redis_db)
@@ -71,6 +77,7 @@ if __name__ == "__main__":
     # Set necessary globals in tables module
     tables.VERSION = VERSION = 'a1'
     tables.thrift_lock = thrift_lock
+    tables.thrift_new = thrift_new
     tables.ANNOTATORS = ANNOTATORS
 
 

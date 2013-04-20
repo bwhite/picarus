@@ -22,6 +22,7 @@ from model_factories import FACTORIES
 
 # These need to be set before using this module
 thrift_lock = None
+thrift_new = None
 VERSION = None
 ANNOTATORS = None
 
@@ -478,10 +479,10 @@ class ImagesHBaseTable(HBaseTable):
         filter_string = params.get('filter')
         print('filter string[%s]' % filter_string)
         exclude_start = bool(int(params.get('excludeStart', 0)))
+        out = []
         with thrift_lock() as thrift:
             scanner = hadoopy_hbase.scanner(thrift, self.table, per_call=10, columns=columns,
                                             start_row=start_row, stop_row=stop_row, filter=filter_string)
-            out = []
             cur_row = start_row
             byte_count = 0
             for row_num, (cur_row, cur_columns) in enumerate(scanner, 1):
@@ -509,7 +510,7 @@ class ImagesHBaseTable(HBaseTable):
 
     def post_slice(self, start_row, stop_row, params, files):
         action = params['action']
-        with thrift_lock() as thrift:
+        with thrift_new() as thrift:
             manager = PicarusManager(thrift=thrift)
             if action == 'io/thumbnail':
                 self._slice_validate(start_row, stop_row, 'rw')
