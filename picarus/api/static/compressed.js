@@ -753,7 +753,7 @@ function project_selector(projectsDrop) {
         },
         render: function() {
             this.$el.empty();
-            var projects = _.keys(this.model.pescapejs('image_projects'));
+            var projects = _.keys(JSON.parse(this.model.get('image_projects')));
             projects.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#projects}}<option value='{{.}}'>{{.}}</option>{{/projects}};"
             this.$el.append(Mustache.render(select_template, {projects: projects}));
