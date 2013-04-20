@@ -422,7 +422,7 @@ function app_main() {
             console.log('rows:' + method);
             mod = model;
             var out;
-            var success = function (x) {return options.success(model, x, options)};
+            var success = options.success;
             var params = {success: success};
             var table = this.table;
             if (_.has(options, 'attrs'))
