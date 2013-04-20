@@ -2358,6 +2358,7 @@ function render_visualize_annotations_loaded() {
         
         //new RowsView({collection: users, el: $('#annotation-users'), postRender: _.debounce(data_change, 100)});
         users.fetch();
+        debug_dc = data_change;
     }
     function change() {
         console.log('3');
