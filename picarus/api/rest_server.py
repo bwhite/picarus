@@ -104,7 +104,6 @@ def parse_columns():
         columns = bottle.request.json['columns']
     else:
         try:
-            print(bottle.request.params['columns'])
             columns = bottle.request.params['columns'].split(',')
         except KeyError:
             columns = []
@@ -128,7 +127,6 @@ def data_table(_auth_user, table_name):
     if method == 'GET':
         return table.get_table(columns=parse_columns())
     elif method == 'POST':
-        print_request()
         return table.post_table(*parse_params_files())
     else:
         bottle.abort(403)
@@ -145,9 +143,6 @@ def data_row(_auth_user, table_name, row):
     method = bottle.request.method.upper()
     row = base64.urlsafe_b64decode(row)
     method = bottle.request.method.upper()
-    print_request()
-    print('row')
-    print(row)
     if method == 'GET':
         return table.get_row(row, parse_columns())
     elif method == 'PATCH':
@@ -180,13 +175,11 @@ def data_slice(_auth_user, table_name, start_row, stop_row):
     method = bottle.request.method.upper()
     start_row = base64.urlsafe_b64decode(start_row)
     stop_row = base64.urlsafe_b64decode(stop_row)
-    print_request()
     if method == 'GET':
         return table.get_slice(start_row, stop_row, parse_columns(), *parse_params_files())
     elif method == 'PATCH':
         return table.patch_slice(start_row, stop_row, *parse_params_files())
     elif method == 'POST':
-        print_request()
         return table.post_slice(start_row, stop_row, *parse_params_files())
     else:
         bottle.abort(403)
