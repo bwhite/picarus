@@ -1,4 +1,5 @@
 function render_visualize_annotations() {
+    console.log('032222');
     google_visualization_load(render_visualize_annotations_loaded);
 }
 
@@ -57,6 +58,7 @@ function render_visualize_annotations_loaded() {
         return scoresTotal;
     }
     function image_batch_score(users, results, unused_class_name, scoreUnselected) {
+        console.log('034');
         // Only count explicit marks
         scoresPos = {};
         scoresNeg = {};
@@ -95,6 +97,7 @@ function render_visualize_annotations_loaded() {
         return {scoresPos: scoresPos, scoresNeg: scoresNeg, scoresTotal: score_total(scoresPos, scoresNeg, scoresTotal)};
     }
     function image_entity_score(users, results) {
+        console.log('033');
         // Only count explicit marks
         var scores = {};
 
@@ -131,6 +134,7 @@ function render_visualize_annotations_loaded() {
         return scores;
     }
     function display_annotation_task(task, get_classes, get_scores) {
+        console.log('032');
         /* TODO: Compute a dropdown list of available classes (new view for results model) */
         results = new PicarusRows([], {'table': 'annotations-results-' + task});
         users = new PicarusRows([], {'table': 'annotations-users-' + task});
@@ -300,4 +304,5 @@ function render_visualize_annotations_loaded() {
         return p.type;
     }, change: change});
     rows.fetch();
+    console.log('031');
 }
