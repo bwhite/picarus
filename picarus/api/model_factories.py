@@ -12,17 +12,16 @@ import os
 from driver import PicarusManager
 
 
-def _setup(start_stop_rows, inputsub64):
+def _setup(start_stop_rows, inputs):
     thrift = hadoopy_hbase.connect()  # TODO: Need to pass in thrift server/port
     manager = PicarusManager(thrift=thrift)
     slices = [base64.urlsafe_b64encode(start_row) + '/' + base64.urlsafe_b64encode(stop_row) for start_row, stop_row in start_stop_rows]
-    inputs = {x: base64.urlsafe_b64decode(y) for x, y in inputsub64.items()}
     os.nice(5)  # These are background tasks, don't let the CPU get too crazy
-    return thrift, manager, slices, inputs
+    return thrift, manager, slices, map(base64.b64encode, inputs)
 
 
-def classifier_sklearn(queue, params, inputsub64, schema, start_stop_rows, table, owner):
-    thrift, manager, slices, inputs = _setup(start_stop_rows, inputsub64)
+def classifier_sklearn(queue, params, inputs, schema, start_stop_rows, table, owner):
+    thrift, manager, slices, inputsb64 = _setup(start_stop_rows, inputs)
     label_features = {0: [], 1: []}
     for start_row, stop_row in start_stop_rows:
         row_cols = hadoopy_hbase.scanner(thrift, table,
@@ -40,17 +39,17 @@ def classifier_sklearn(queue, params, inputsub64, schema, start_stop_rows, table
     import sklearn.svm
     classifier = sklearn.svm.LinearSVC()
     classifier.fit(features, np.asarray(labels))
-    factory_info = {'slices': slices, 'num_rows': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
+    factory_info = {'slices': slices, 'num_rows': len(features), 'data': 'slices', 'params': params, 'inputs': inputsb64}
     model_link = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': classifier.coef_.tolist()[0],
                                                              'intercept': classifier.intercept_[0]}}
     model_chain = tables._takeout_model_chain_from_key(manager, inputs['feature']) + [model_link]
-    queue.put(manager.input_model_param_to_key(**{'input': inputsub64['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
+    queue.put(manager.input_model_param_to_key(**{'input': inputs['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
                                                   'output_type': 'binary_class_confidence', 'email': owner, 'name': manager.model_to_name(model_link),
                                                   'factory_info': json.dumps(factory_info)}))
 
 
-def classifier_localnbnn(queue, params, inputsub64, schema, start_stop_rows, table, owner):
-    thrift, manager, slices, inputs = _setup(start_stop_rows, inputsub64)
+def classifier_localnbnn(queue, params, inputs, schema, start_stop_rows, table, owner):
+    thrift, manager, slices, inputsb64 = _setup(start_stop_rows, inputs)
     features = []
     indeces = []
     num_features = 0
@@ -73,17 +72,17 @@ def classifier_localnbnn(queue, params, inputsub64, schema, start_stop_rows, tab
                 indeces += [labels_dict[label]] * s[0]
             except KeyError:
                 pass
-    factory_info = {'slices': slices, 'data': 'slices', 'params': params, 'inputs': inputsub64}
+    factory_info = {'slices': slices, 'data': 'slices', 'params': params, 'inputs': inputsb64}
     model_link = {'name': 'picarus.LocalNBNNClassifier', 'kw': {'features': features, 'indeces': indeces, 'labels': labels,
                                                                 'feature_size': feature_size, 'max_results': params['max_results']}}
     model_chain = tables._takeout_model_chain_from_key(manager, inputs['multi_feature']) + [model_link]
-    queue.put(manager.input_model_param_to_key(**{'input': inputsub64['multi_feature'], 'model_link': model_link, 'model_chain': model_chain,
+    queue.put(manager.input_model_param_to_key(**{'input': inputs['multi_feature'], 'model_link': model_link, 'model_chain': model_chain,
                                                   'input_type': 'multi_feature', 'output_type': 'multi_class_distance',
                                                   'email': owner, 'name': manager.model_to_name(model_link), 'factory_info': json.dumps(factory_info)}))
 
 
-def feature_bovw_mask(queue, params, inputsub64, schema, start_stop_rows, table, owner):
-    thrift, manager, slices, inputs = _setup(start_stop_rows, inputsub64)
+def feature_bovw_mask(queue, params, inputs, schema, start_stop_rows, table, owner):
+    thrift, manager, slices, inputsb64 = _setup(start_stop_rows, inputs)
     features = []
     for start_row, stop_row in start_stop_rows:
         row_cols = hadoopy_hbase.scanner(thrift, table,
@@ -97,17 +96,17 @@ def feature_bovw_mask(queue, params, inputsub64, schema, start_stop_rows, table,
     features = np.asfarray(features)
     clusters = sp.cluster.vq.kmeans(features, params['num_clusters'])[0]
     num_clusters = clusters.shape[0]
-    factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
+    factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsb64}
     model_link = {'name': 'picarus.BOVWImageFeature', 'kw': {'clusters': clusters.ravel().tolist(), 'num_clusters': num_clusters,
                                                              'levels': params['levels']}}
     model_chain = tables._takeout_model_chain_from_key(manager, inputs['mask_feature']) + [model_link]
-    queue.put(manager.input_model_param_to_key(**{'input': inputsub64['mask_feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
+    queue.put(manager.input_model_param_to_key(**{'input': inputs['mask_feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
                                                   'output_type': 'feature', 'email': owner, 'name': manager.model_to_name(model_link),
                                                   'factory_info': json.dumps(factory_info)}))
 
 
-def hasher_spherical(queue, params, inputsub64, schema, start_stop_rows, table, owner):
-    thrift, manager, slices, inputs = _setup(start_stop_rows, inputsub64)
+def hasher_spherical(queue, params, inputs, schema, start_stop_rows, table, owner):
+    thrift, manager, slices, inputsb64 = _setup(start_stop_rows, inputs)
     features = []
     for start_row, stop_row in start_stop_rows:
         row_cols = hadoopy_hbase.scanner(thrift, table,
@@ -122,16 +121,16 @@ def hasher_spherical(queue, params, inputsub64, schema, start_stop_rows, table, 
     out = {'pivots': out['pivots'].ravel().tolist(),
            'threshs': out['threshs'].tolist()}
     #out = picarus.modules.spherical_hash.train_takeout(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
-    factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsub64}
+    factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsb64}
     model_link = {'name': 'picarus.SphericalHasher', 'kw': out}
     model_chain = tables._takeout_model_chain_from_key(manager, inputs['feature']) + [model_link]
-    queue.put(manager.input_model_param_to_key(**{'input': inputsub64['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
+    queue.put(manager.input_model_param_to_key(**{'input': inputs['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
                                                   'output_type': 'hash', 'email': owner, 'name': manager.model_to_name(model_link),
                                                   'factory_info': json.dumps(factory_info)}))
 
 
-def index_spherical(queue, params, inputsub64, schema, start_stop_rows, table, owner):
-    thrift, manager, slices, inputs = _setup(start_stop_rows, inputsub64)
+def index_spherical(queue, params, inputs, schema, start_stop_rows, table, owner):
+    thrift, manager, slices, inputsb64 = _setup(start_stop_rows, inputs)
     hashes = []
     labels = []
     for start_row, stop_row in start_stop_rows:
@@ -142,18 +141,18 @@ def index_spherical(queue, params, inputsub64, schema, start_stop_rows, table, o
             hashes.append(cols[inputs['hash']])
             labels.append(base64.urlsafe_b64encode(row))
     hashes = ''.join(hashes)
-    factory_info = {'slices': slices, 'num_hashes': len(labels), 'data': 'slices', 'params': params, 'inputs': inputsub64}
+    factory_info = {'slices': slices, 'num_hashes': len(labels), 'data': 'slices', 'params': params, 'inputs': inputsb64}
     model_link = {'name': 'picarus.SphericalHashIndex', 'kw': {'hashes': hashes,
                                                                'indeces': range(len(labels)), 'labels': labels,
                                                                'max_results': params['max_results']}}
     model_chain = tables._takeout_model_chain_from_key(manager, inputs['hash']) + [model_link]
-    queue.put(manager.input_model_param_to_key(**{'input': inputsub64['hash'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'hash',
+    queue.put(manager.input_model_param_to_key(**{'input': inputs['hash'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'hash',
                                                   'output_type': 'distance_image_rows', 'email': owner, 'name': manager.model_to_name(model_link),
                                                   'factory_info': json.dumps(factory_info)}))
 
 
-def index_hamming_feature2d(queue, params, inputsub64, schema, start_stop_rows, table, owner):
-    thrift, manager, slices, inputs = _setup(start_stop_rows, inputsub64)
+def index_hamming_feature2d(queue, params, inputs, schema, start_stop_rows, table, owner):
+    thrift, manager, slices, inputsb64 = _setup(start_stop_rows, inputs)
     hashes = []
     #keypoints = []
     labels = []
@@ -171,7 +170,7 @@ def index_hamming_feature2d(queue, params, inputsub64, schema, start_stop_rows, 
             labels.append(base64.urlsafe_b64encode(row))
             print(len(labels))
     hashes = ''.join(hashes)
-    factory_info = {'slices': slices, 'num_hashes': len(indeces), 'num_images': len(labels), 'data': 'slices', 'params': params, 'inputs': inputsub64}
+    factory_info = {'slices': slices, 'num_hashes': len(indeces), 'num_images': len(labels), 'data': 'slices', 'params': params, 'inputs': inputsb64}
     #'keypoints': keypoints,
     model_link = {'name': 'picarus.HammingFeature2dHashIndex', 'kw': {'hashes': hashes,
                                                                       'indeces': indeces, 'labels': labels,
@@ -179,7 +178,7 @@ def index_hamming_feature2d(queue, params, inputsub64, schema, start_stop_rows, 
                                                                       'max_keypoint_results': params['max_keypoint_results'],
                                                                       'hamming_thresh': params['hamming_thresh']}}
     model_chain = tables._takeout_model_chain_from_key(manager, inputs['feature2d_binary']) + [model_link]
-    queue.put(manager.input_model_param_to_key(**{'input': inputsub64['feature2d_binary'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature2d_binary',
+    queue.put(manager.input_model_param_to_key(**{'input': inputs['feature2d_binary'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature2d_binary',
                                                   'output_type': 'distance_image_rows', 'email': owner, 'name': manager.model_to_name(model_link),
                                                   'factory_info': json.dumps(factory_info)}))
 

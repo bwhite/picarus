@@ -73,7 +73,7 @@ def _takeout_model_chain_from_key(manager, key):
     columns = key_to_model(manager, key)
     if columns['input_type'] == 'raw_image':
         return [_takeout_model_link_from_key(manager, key)]
-    return _takeout_model_chain_from_key(manager, base64.b64decode(columns['input'])) + [_takeout_model_link_from_key(manager, key)]
+    return _takeout_model_chain_from_key(manager, columns['input']) + [_takeout_model_link_from_key(manager, key)]
 
 
 def _takeout_input_model_link_from_key(manager, key):
@@ -81,14 +81,14 @@ def _takeout_input_model_link_from_key(manager, key):
     model = msgpack.loads(model_binary)
     if not isinstance(model, dict):
         bottle.abort(400)
-    return base64.b64decode(columns['input']), model
+    return columns['input'], model
 
 
 def _takeout_input_model_chain_from_key(manager, key):
     columns = key_to_model(manager, key)
     if columns['input_type'] == 'raw_image':
         return [_takeout_input_model_link_from_key(manager, key)]
-    return _takeout_input_model_chain_from_key(manager, base64.b64decode(columns['input'])) + [_takeout_input_model_link_from_key(manager, key)]
+    return _takeout_input_model_chain_from_key(manager, columns['input']) + [_takeout_input_model_link_from_key(manager, key)]
 
 
 def _parse_params(params, schema):
