@@ -117,7 +117,7 @@ function render_models_create() {
         params.path = path;
         if (model.escape('type') === 'factory') {
             params.table = 'images';
-            params.slices = slices_selector_get().join(',');
+            params.slices = slices_selector_get().join(';');
             p = params;
             PICARUS.postTable('models', {success: success, data: params});
         } else {

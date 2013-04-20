@@ -648,7 +648,7 @@ def parse_slices():
     else:
         if not bottle.request.params['slices']:
             return []
-        return bottle.request.params['slices'].split(',')
+        return bottle.request.params['slices'].split(';')
 
 
 class ModelsHBaseTable(HBaseTable):
@@ -701,7 +701,7 @@ class ModelsHBaseTable(HBaseTable):
             elif path.startswith('factory/'):
                 table = params['table']
                 slices = parse_slices()
-                start_stop_rows = [map(base64.b64decode, s.split('/')) for s in slices]
+                start_stop_rows = [map(base64.b64decode, s.split(',')) for s in slices]
                 data_table = get_table(self._auth_user, table)
                 for start_row, stop_row in start_stop_rows:
                     data_table._slice_validate(start_row, stop_row, 'r')

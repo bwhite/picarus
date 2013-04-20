@@ -331,7 +331,7 @@ function slices_selector() {
         }
     });
     addButton.click(function () {
-        slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', encode_id(unescape(startRow.val())) + '/' + encode_id(unescape(stopRow.val()))));
+        slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', base64.encode(unescape(startRow.val())) + ',' + base64.encode(unescape(stopRow.val()))));
     });
     clearButton.click(function () {
         slicesText.html('');
@@ -347,7 +347,7 @@ function slices_selector_get(split) {
     var out = _.map($('#slicesSelectorSlices').children(), function (x) {return $(x).attr('value')});
     if (split)
         return _.map(out, function (x) {
-            return x.split('/');
+            return x.split(',');
         });
     return out;
 }

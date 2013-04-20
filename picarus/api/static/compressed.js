@@ -832,7 +832,7 @@ function slices_selector() {
         }
     });
     addButton.click(function () {
-        slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', encode_id(unescape(startRow.val())) + '/' + encode_id(unescape(stopRow.val()))));
+        slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', base64.encode(unescape(startRow.val())) + ',' + base64.encode(unescape(stopRow.val()))));
     });
     clearButton.click(function () {
         slicesText.html('');
@@ -848,7 +848,7 @@ function slices_selector_get(split) {
     var out = _.map($('#slicesSelectorSlices').children(), function (x) {return $(x).attr('value')});
     if (split)
         return _.map(out, function (x) {
-            return x.split('/');
+            return x.split(',');
         });
     return out;
 }
@@ -1221,7 +1221,7 @@ function render_data_projects() {
         var row = decode_id($('#prefixTable option:selected').val());
         var data = {};
         var slices = slices_selector_get(true);
-        var value = _.map(slices, function (x) {return x[0] + '/' + x[1]}).join(',');
+        var value = _.map(slices, function (x) {return x[0] + ',' + x[1]}).join(';');
         data[$('#projectName').val()] = value;
         rows.get(row).save(data, {patch: true});
     });
@@ -1375,7 +1375,7 @@ function render_models_list() {
                         modelByteArray[i] = model.charCodeAt(i) & 0xff;
                     }
                     var blob = new Blob([modelByteArray]);
-                    saveAs(blob, 'picarus-model-' + row + '.sha1-' +  trueSha1 + '.' + model_type + '.msgpack');
+                    saveAs(blob, 'picarus-model-' + encode_id(row) + '.sha1-' +  trueSha1 + '.' + model_type + '.msgpack');
                 } else {
                     alert("Model SHA1 doesn't match!");
                 }
@@ -1534,7 +1534,7 @@ function render_models_create() {
         params.path = path;
         if (model.escape('type') === 'factory') {
             params.table = 'images';
-            params.slices = slices_selector_get().join(',');
+            params.slices = slices_selector_get().join(';');
             p = params;
             PICARUS.postTable('models', {success: success, data: params});
         } else {

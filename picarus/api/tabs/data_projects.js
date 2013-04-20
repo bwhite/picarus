@@ -6,7 +6,7 @@ function render_data_projects() {
         var row = decode_id($('#prefixTable option:selected').val());
         var data = {};
         var slices = slices_selector_get(true);
-        var value = _.map(slices, function (x) {return x[0] + '/' + x[1]}).join(',');
+        var value = _.map(slices, function (x) {return x[0] + ',' + x[1]}).join(';');
         data[$('#projectName').val()] = value;
         rows.get(row).save(data, {patch: true});
     });

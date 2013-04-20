@@ -45,7 +45,7 @@ function render_data_projects() {
         var row = decode_id($('#prefixTable option:selected').val());
         var data = {};
         var slices = slices_selector_get(true);
-        var value = _.map(slices, function (x) {return x[0] + '/' + x[1]}).join(',');
+        var value = _.map(slices, function (x) {return x[0] + ',' + x[1]}).join(';');
         data[$('#projectName').val()] = value;
         rows.get(row).save(data, {patch: true});
     });
@@ -199,7 +199,7 @@ function render_models_list() {
                         modelByteArray[i] = model.charCodeAt(i) & 0xff;
                     }
                     var blob = new Blob([modelByteArray]);
-                    saveAs(blob, 'picarus-model-' + row + '.sha1-' +  trueSha1 + '.' + model_type + '.msgpack');
+                    saveAs(blob, 'picarus-model-' + encode_id(row) + '.sha1-' +  trueSha1 + '.' + model_type + '.msgpack');
                 } else {
                     alert("Model SHA1 doesn't match!");
                 }
@@ -358,7 +358,7 @@ function render_models_create() {
         params.path = path;
         if (model.escape('type') === 'factory') {
             params.table = 'images';
-            params.slices = slices_selector_get().join(',');
+            params.slices = slices_selector_get().join(';');
             p = params;
             PICARUS.postTable('models', {success: success, data: params});
         } else {
