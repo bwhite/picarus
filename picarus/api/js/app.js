@@ -184,7 +184,6 @@ function model_dropdown(args) {
         el: $('#container'),
         initialize: function() {
             _.bindAll(this, 'render');
-            _.bindAll(this, 'renderDrop');
             this.collection.bind('sync', this.render);
         },
         renderDrop: args.change,
@@ -218,11 +217,7 @@ function rows_dropdown(rows, args) {
         el: $('#container'),
         initialize: function() {
             _.bindAll(this, 'render');
-            _.bindAll(this, 'renderDrop');
-            this.$el.bind('reset', this.renderDrop);
-            this.$el.bind('change', this.renderDrop);
-            this.collection.bind('reset', this.render);
-            this.collection.bind('change', this.render);
+            this.collection.bind('sync', this.render);
         },
         renderDrop: args.change,
         render: function() {
@@ -244,8 +239,7 @@ function project_selector(projectsDrop) {
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
-            this.model.bind('reset', this.render);
-            this.model.bind('change', this.render);
+            this.model.bind('sync', this.render);
         },
         render: function() {
             this.$el.empty();
@@ -253,7 +247,7 @@ function project_selector(projectsDrop) {
             projects.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#projects}}<option value='{{.}}'>{{.}}</option>{{/projects}};"
             this.$el.append(Mustache.render(select_template, {projects: projects}));
-            this.renderDrop();
+            this.renderDrop(); // TODO: This needs to be setup somewhere
         }
     });
     var auth = login_get(function (email_auth) {
@@ -267,8 +261,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
-            this.model.bind('reset', this.render);
-            this.model.bind('change', this.render);
+            this.model.bind('sync', this.render);
         },
         events: {'change': 'renderDrop'},
         renderDrop: function () {
@@ -304,8 +297,7 @@ function slices_selector() {
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
-            this.model.bind('reset', this.render);
-            this.model.bind('change', this.render);
+            this.model.bind('sync', this.render);
         },
         events: {'change': 'renderDrop'},
         renderDrop: function () {
@@ -449,6 +441,8 @@ function app_main() {
     RowsView = Backbone.View.extend({
         initialize: function(options) {
             _.bindAll(this, 'render');
+            this.collection.bind('add', this.render);
+            this.collection.bind('sync', this.render);
             this.collection.bind('reset', this.render);
             this.collection.bind('change', this.render);
             this.collection.bind('remove', this.render);
