@@ -271,6 +271,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
         initialize: function() {
             _.bindAll(this, 'render');
             this.model.bind('reset', this.render);
+            this.model.bind('set', this.render);
             this.model.bind('change', this.render);
         },
         events: {'change': 'renderDrop'},
