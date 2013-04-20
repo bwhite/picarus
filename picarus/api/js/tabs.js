@@ -663,7 +663,7 @@ function render_visualize_metadata() {
         }
         button_confirm_click_reset($('#removeButton'));
         // Setup table
-        images = new PicarusImages();
+        images = new PicarusRows();
         function remove_rows() {
             // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
             var rows = _.map(images.models, function (x) {return x.id});
@@ -731,7 +731,7 @@ function render_visualize_exif() {
             display_alert('Must specify rows');
             return;
         }
-        images = new PicarusImages();
+        images = new PicarusRows();
         function done() {
             $('#results').html('');
             if (!images.length)
@@ -822,7 +822,7 @@ function render_visualize_locations_loaded() {
         var latitude = 'meta:latitude';
         var longitude = 'meta:longitude';
         button_confirm_click_reset($('#removeButton'));
-        images = new PicarusImages();
+        images = new PicarusRows();
         function maps_success(row, columns) {
             columns.row = row;
             var curLat = columns[latitude];
@@ -830,7 +830,7 @@ function render_visualize_locations_loaded() {
             if (filter_lat_long(Number(curLat), Number(curLong))) {
                 return;
             }
-            images.add(new PicarusImage(columns));
+            images.add(new PicarusRow(columns));
         }
         function maps_done() {
             var centerLat = Number($('#demolat').val());
@@ -902,10 +902,10 @@ function render_visualize_times_loaded() {
     }
     $('#runButton').click(function () {
         var timeColumn = 'meta:dateupload';
-        images = new PicarusImages();
+        images = new PicarusRows();
         function time_success(row, columns) {
             columns.row = row;
-            images.add(new PicarusImage(columns));
+            images.add(new PicarusRows(columns));
         }
         function time_done() {
             years = [];

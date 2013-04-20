@@ -36,10 +36,10 @@ function render_visualize_times_loaded() {
     }
     $('#runButton').click(function () {
         var timeColumn = 'meta:dateupload';
-        images = new PicarusImages();
+        images = new PicarusRows();
         function time_success(row, columns) {
             columns.row = row;
-            images.add(new PicarusImage(columns));
+            images.add(new PicarusRows(columns));
         }
         function time_done() {
             years = [];

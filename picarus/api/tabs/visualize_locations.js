@@ -34,7 +34,7 @@ function render_visualize_locations_loaded() {
         var latitude = 'meta:latitude';
         var longitude = 'meta:longitude';
         button_confirm_click_reset($('#removeButton'));
-        images = new PicarusImages();
+        images = new PicarusRows();
         function maps_success(row, columns) {
             columns.row = row;
             var curLat = columns[latitude];
@@ -42,7 +42,7 @@ function render_visualize_locations_loaded() {
             if (filter_lat_long(Number(curLat), Number(curLong))) {
                 return;
             }
-            images.add(new PicarusImage(columns));
+            images.add(new PicarusRow(columns));
         }
         function maps_done() {
             var centerLat = Number($('#demolat').val());

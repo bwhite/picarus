@@ -11,7 +11,7 @@ function render_visualize_metadata() {
         }
         button_confirm_click_reset($('#removeButton'));
         // Setup table
-        images = new PicarusImages();
+        images = new PicarusRows();
         function remove_rows() {
             // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
             var rows = _.map(images.models, function (x) {return x.id});
