@@ -30,8 +30,8 @@ def check_version(func):
 @contextlib.contextmanager
 def thrift_lock():
     try:
+        # TODO: Need to find a way of determining when a thrift connection is broken, then add a new one to the pool
         cur_thrift = THRIFT_POOL.get()
-        # TODO: When using thrift connection, detect if it is broken if so try one more time by making a new one
         yield cur_thrift
     finally:
         THRIFT_POOL.put(cur_thrift)
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     ARGS = parser.parse_args()
     THRIFT_POOL = gevent.queue.Queue()
     THRIFT_CONSTRUCTOR = lambda : hadoopy_hbase.connect(ARGS.thrift_server, ARGS.thrift_port)
-    for x in range(3):
+    for x in range(25):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     USERS = Users(ARGS.users_redis_host, ARGS.users_redis_port, ARGS.users_redis_db)
     YUBIKEY = Yubikey(ARGS.yubikey_redis_host, ARGS.yubikey_redis_port, ARGS.yubikey_redis_db)
