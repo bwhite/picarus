@@ -925,6 +925,7 @@ function app_main() {
             var out;
             var success = function (x) {return options.success(model, x, options)};
             var params = {success: success};
+            var table = this.table;
             if (_.has(options, 'attrs'))
                 params.data = options.attrs;
             if (method == 'read') {
@@ -933,7 +934,7 @@ function app_main() {
                 params.success = function (lod) {
                     lod = _.map(lod, function (v) {
                         v[1].row = v[0];
-                        return v[1];
+                        return new PicarusRow(v[1], {table: table});
                     });
                     success(lod);
                 };
