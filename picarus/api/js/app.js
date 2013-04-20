@@ -530,7 +530,7 @@ function app_main() {
         }
     });
 
-    PicarusImage = Backbone.Model.extend({ // TODO: Switch over to PicarusRow
+    PicarusImage = Backbone.Model.extend({
         idAttribute: "row",
         defaults : {
         }
