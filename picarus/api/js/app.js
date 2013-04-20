@@ -185,16 +185,11 @@ function model_dropdown(args) {
         initialize: function() {
             _.bindAll(this, 'render');
             _.bindAll(this, 'renderDrop');
-            this.$el.bind('reset', this.renderDrop);
-            this.$el.bind('change', this.renderDrop);
-            this.collection.bind('all', this.render);
-            this.collection.bind('reset', this.render);
-            this.collection.bind('change', this.render);
+            this.collection.bind('sync', this.render);
         },
         renderDrop: args.change,
         modelFilter: args.modelFilter,
-        render: function(evt) {
-            console.log(evt);
+        render: function() {
             n = this.$el;
             this.$el.empty();
             var select_template = "{{#models}}<option value='{{row}}'>{{{text}}}</option>{{/models}};" // text is escaped already
