@@ -2183,11 +2183,12 @@ function render_visualize_annotations_loaded() {
         pick = function (s, l) { return _.map(s, function (x) {return l[x]});}
 
         results.each(function (x) {
-            d = JSON.parse(x.get('user_data'));
-            images = JSON.parse(x.get('images'));
-            accumulate(scoresTotal, images, 0);  // Makes each image show up, even if not annotated
+            d = x.get('user_data');
             if (_.isUndefined(d))
                 return;
+            d = JSON.parse(d);
+            images = JSON.parse(x.get('images'));
+            accumulate(scoresTotal, images, 0);  // Makes each image show up, even if not annotated
             if (d.polarity)
                 accumulate(scoresPos, pick(d.selected, images), 1);
             if (scoreUnselected)
