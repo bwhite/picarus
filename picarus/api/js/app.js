@@ -285,7 +285,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
         render: function() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
-            var prefixes = _.keys(this.model.pescapejs('image_prefixes'));
+            var prefixes = _.keys(JSON.parse(this.model.get('image_prefixes')));
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
             this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
