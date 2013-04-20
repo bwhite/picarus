@@ -98,7 +98,6 @@ function render_visualize_annotations_loaded() {
     }
     function image_entity_score(users, results) {
         console.log('033');
-        return;
         // Only count explicit marks
         var scores = {};
 
@@ -147,7 +146,6 @@ function render_visualize_annotations_loaded() {
         $('#unclicked').change(data_change);
         function data_change() {
             console.log('2');
-            return;
             var unclicked = $('#unclicked').is(':checked')
             var classes = get_classes(results);
             var select_template = "{{#classes}}<option value='{{.}}'>{{.}}</option>{{/classes}};"
@@ -259,11 +257,10 @@ function render_visualize_annotations_loaded() {
                 button_confirm_click($('#modifyButton'), modify_row);
             }
         }
-
-        new RowsView({collection: results, el: $('#annotation-results'), postRender: _.debounce(data_change, 100)});
+        //new RowsView({collection: results, el: $('#annotation-results'), postRender: _.debounce(data_change, 100)});
         results.fetch();
         
-        new RowsView({collection: users, el: $('#annotation-users'), postRender: _.debounce(data_change, 100)});
+        //new RowsView({collection: users, el: $('#annotation-users'), postRender: _.debounce(data_change, 100)});
         users.fetch();
     }
     function change() {
@@ -287,7 +284,6 @@ function render_visualize_annotations_loaded() {
             } else {
                 
             }
-            return;
             display_annotation_task(task, get_classes, get_scores);
         }
         // TODO: Add dropdown to select annotator to query
