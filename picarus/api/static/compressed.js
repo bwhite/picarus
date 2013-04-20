@@ -691,7 +691,7 @@ function model_dropdown(args) {
             n = this.$el;
             this.$el.empty();
             var select_template = "{{#models}}<option value='{{row}}'>{{{text}}}</option>{{/models}};" // text is escaped already
-            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: data.escape('row'), text: data.escape('meta:tags') + ' ' + data.escape('meta:name')}});
+            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: encode_id(data.get('row')), text: data.escape('meta:tags') + ' ' + data.escape('meta:name')}});
             models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
             this.$el.append(Mustache.render(select_template, {models: models_filt}));
             this.renderDrop();
@@ -1624,7 +1624,7 @@ function render_models_single() {
             display_alert('You must specify an image!');
             return;
         }
-        var modelKey = $('#model_select').find(":selected").val();
+        var modelKey = decode_id($('#model_select').find(":selected").val());
         function success_func(result) {
             $('#imagefile').parent().html($('#imagefile').parent().html());
             $('#imagefile').change(fileChange);
