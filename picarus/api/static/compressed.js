@@ -933,7 +933,7 @@ function app_main() {
                 params.success = function (lod) {
                     lod = _.map(lod, function (v) {
                         v[1].row = v[0];
-                        return v[1];
+                        return new PicarusRow(v[1]);
                     });
                     success(lod);
                 };
