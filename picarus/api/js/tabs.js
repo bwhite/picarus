@@ -663,7 +663,7 @@ function render_visualize_metadata() {
         }
         button_confirm_click_reset($('#removeButton'));
         // Setup table
-        images = new PicarusRows();
+        images = new PicarusRows([], {'table': 'images'});
         function remove_rows() {
             // TODO: Since there is a maxRows setting, this won't remove all rows, just the ones we have available
             var rows = _.map(images.models, function (x) {return x.id});
@@ -731,7 +731,7 @@ function render_visualize_exif() {
             display_alert('Must specify rows');
             return;
         }
-        images = new PicarusRows();
+        images = new PicarusRows([], {'table': 'images'});
         function done() {
             $('#results').html('');
             if (!images.length)
@@ -822,7 +822,7 @@ function render_visualize_locations_loaded() {
         var latitude = 'meta:latitude';
         var longitude = 'meta:longitude';
         button_confirm_click_reset($('#removeButton'));
-        images = new PicarusRows();
+        images = new PicarusRows([], {'table': 'images'});
         function maps_success(row, columns) {
             columns.row = row;
             var curLat = columns[latitude];
@@ -902,10 +902,10 @@ function render_visualize_times_loaded() {
     }
     $('#runButton').click(function () {
         var timeColumn = 'meta:dateupload';
-        images = new PicarusRows();
+        images = new PicarusRows([], {'table': 'images'});
         function time_success(row, columns) {
             columns.row = row;
-            images.add(new PicarusRows(columns));
+            images.add(new PicarusRow(columns));
         }
         function time_done() {
             years = [];

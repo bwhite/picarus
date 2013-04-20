@@ -9,7 +9,7 @@ function render_visualize_exif() {
             display_alert('Must specify rows');
             return;
         }
-        images = new PicarusRows();
+        images = new PicarusRows([], {'table': 'images'});
         function done() {
             $('#results').html('');
             if (!images.length)

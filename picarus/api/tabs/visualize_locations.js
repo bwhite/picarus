@@ -34,7 +34,7 @@ function render_visualize_locations_loaded() {
         var latitude = 'meta:latitude';
         var longitude = 'meta:longitude';
         button_confirm_click_reset($('#removeButton'));
-        images = new PicarusRows();
+        images = new PicarusRows([], {'table': 'images'});
         function maps_success(row, columns) {
             columns.row = row;
             var curLat = columns[latitude];
