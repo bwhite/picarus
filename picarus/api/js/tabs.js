@@ -1215,7 +1215,7 @@ function render_visualize_annotations_loaded() {
         PICARUS.getRow("annotations", task, {success: success_annotation});
     }
     rows_dropdown(rows, {el: $('#annotator_select'), text: function (x) {
-        var p = x.pescapejs('params');
+        var p = JSON.parse(x.get('params'));
         if (p.type == "image_entity")
             return p.type + ' ' + p.num_tasks;
         if (p.type == "image_query_batch")
