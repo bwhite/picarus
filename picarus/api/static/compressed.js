@@ -2424,7 +2424,7 @@ function render_evaluate_classifier_loaded() {
                     change: function() {
                         var row = decode_id(this.$el.find(":selected").val());
                         m = this.collection.get(row);
-                        $('#gtColumn').val(encode_id(JSON.parse(m.get('meta:factory_info')).inputs.meta));
+                        $('#gtColumn').val(JSON.parse(m.get('meta:factory_info')).inputs.meta);
                         $('#posClass').val(JSON.parse(m.get('meta:factory_info')).params.class_positive);
                         $('#modelKey').val(encode_id(row));
                     },
