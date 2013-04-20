@@ -689,6 +689,7 @@ function model_dropdown(args) {
         },
         renderDrop: args.change,
         modelFilter: args.modelFilter,
+        events: {'change': 'renderDrop'},
         render: function() {
             n = this.$el;
             this.$el.empty();
@@ -720,6 +721,7 @@ function rows_dropdown(rows, args) {
             _.bindAll(this, 'render');
             this.collection.bind('sync', this.render);
         },
+        events: {'change': 'renderDrop'},
         renderDrop: args.change,
         render: function() {
             n = this.$el;
@@ -742,6 +744,7 @@ function project_selector(projectsDrop) {
             _.bindAll(this, 'render');
             this.model.bind('sync', this.render);
         },
+        events: {'change': 'renderDrop'},
         render: function() {
             this.$el.empty();
             var projects = _.keys(JSON.parse(this.model.get('image_projects')));
@@ -2095,12 +2098,10 @@ function render_visualize_times_loaded() {
     })
 }
 function render_visualize_annotations() {
-    console.log('032222');
     google_visualization_load(render_visualize_annotations_loaded);
 }
 
 function render_visualize_annotations_loaded() {
-    console.log('0');
     var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
@@ -2154,7 +2155,6 @@ function render_visualize_annotations_loaded() {
         return scoresTotal;
     }
     function image_batch_score(users, results, unused_class_name, scoreUnselected) {
-        console.log('034');
         // Only count explicit marks
         scoresPos = {};
         scoresNeg = {};
@@ -2193,7 +2193,6 @@ function render_visualize_annotations_loaded() {
         return {scoresPos: scoresPos, scoresNeg: scoresNeg, scoresTotal: score_total(scoresPos, scoresNeg, scoresTotal)};
     }
     function image_entity_score(users, results) {
-        console.log('033');
         // Only count explicit marks
         var scores = {};
 
@@ -2230,7 +2229,6 @@ function render_visualize_annotations_loaded() {
         return scores;
     }
     function display_annotation_task(task, get_classes, get_scores) {
-        console.log('032');
         /* TODO: Compute a dropdown list of available classes (new view for results model) */
         results = new PicarusRows([], {'table': 'annotations-results-' + task});
         users = new PicarusRows([], {'table': 'annotations-users-' + task});
@@ -2241,7 +2239,6 @@ function render_visualize_annotations_loaded() {
         $('#negCnt').change(data_change);
         $('#unclicked').change(data_change);
         function data_change() {
-            console.log('2');
             var unclicked = $('#unclicked').is(':checked')
             var classes = get_classes(results);
             var select_template = "{{#classes}}<option value='{{.}}'>{{.}}</option>{{/classes}};"
@@ -2293,7 +2290,6 @@ function render_visualize_annotations_loaded() {
             chart0.draw(data0, options);
         }
         function class_select_change() {
-            console.log('1');
             var class_name = $('#class_select').find(":selected").val();
             negPct = Number($('#negPct').val());
             posPct = Number($('#posPct').val());
@@ -2361,13 +2357,11 @@ function render_visualize_annotations_loaded() {
         debug_dc = data_change;
     }
     function change() {
-        console.log('3');
         var task = decode_id($('#annotator_select').find(":selected").val());
         if (_.isUndefined(task)) {
             return;
         }
         function success_annotation(annotation) {
-            console.log('4');
             annotation_type = JSON.parse(annotation['params']).type;
             // Code is over nested, use partial application to flatten it
             if (annotation_type == 'image_entity') {
@@ -2400,7 +2394,6 @@ function render_visualize_annotations_loaded() {
         return p.type;
     }, change: change});
     rows.fetch();
-    console.log('031');
 }
 function render_evaluate_classifier() {
     google_visualization_load(render_evaluate_classifier_loaded);

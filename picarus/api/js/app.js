@@ -188,6 +188,7 @@ function model_dropdown(args) {
         },
         renderDrop: args.change,
         modelFilter: args.modelFilter,
+        events: {'change': 'renderDrop'},
         render: function() {
             n = this.$el;
             this.$el.empty();
@@ -219,6 +220,7 @@ function rows_dropdown(rows, args) {
             _.bindAll(this, 'render');
             this.collection.bind('sync', this.render);
         },
+        events: {'change': 'renderDrop'},
         renderDrop: args.change,
         render: function() {
             n = this.$el;
@@ -241,6 +243,7 @@ function project_selector(projectsDrop) {
             _.bindAll(this, 'render');
             this.model.bind('sync', this.render);
         },
+        events: {'change': 'renderDrop'},
         render: function() {
             this.$el.empty();
             var projects = _.keys(JSON.parse(this.model.get('image_projects')));
