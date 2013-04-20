@@ -938,7 +938,6 @@ function render_visualize_annotations() {
 
 function render_visualize_annotations_loaded() {
     console.log('0');
-    return;
     var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
@@ -1221,6 +1220,7 @@ function render_visualize_annotations_loaded() {
             } else {
                 
             }
+            return;
             display_annotation_task(task, get_classes, get_scores);
         }
         // TODO: Add dropdown to select annotator to query
