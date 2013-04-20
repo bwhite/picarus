@@ -35,7 +35,7 @@ function render_crawl_flickr() {
             var timeRadius = 60 * 60 * 24 * 30 * 3; // 3 months
             var minUploadDate = parseInt((new Date().getTime() / 1000 - min_time) * Math.random() + min_time - timeRadius);
             var maxUploadDate = parseInt(timeRadius * 2 + minUploadDate);
-            var p = {hasGeo: Number($('#demogeo').is(':checked')), query: state.query, minUploadDate: minUploadDate, maxUploadDate: maxUploadDate};
+            var p = {action: 'o/crawl/flickr', hasGeo: Number($('#demogeo').is(':checked')), query: state.query, minUploadDate: minUploadDate, maxUploadDate: maxUploadDate};
             if (state.className.length)
                 p.className = state.className;
             if (latitude && longitude) {
@@ -58,7 +58,7 @@ function render_crawl_flickr() {
                 }
                 call_api(states.pop());
             }
-            PICARUS.postSlice('images', row_prefix, prefix_to_stop_row(row_prefix), 'o/crawl/flickr', {success: success, data: p});
+            PICARUS.postSlice('images', row_prefix, prefix_to_stop_row(row_prefix), {success: success, data: p});
         }
         _.each(_.range(simul), function () {call_api(states.pop())});
     });

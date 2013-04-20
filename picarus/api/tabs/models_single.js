@@ -121,7 +121,7 @@ function render_models_single() {
             }
         }
         function upload_func(response) {
-            PICARUS.postRow(table, response.row, 'i/chain', {success: success_func, data: {model: modelKey}});
+            PICARUS.postRow(table, response.row, {success: success_func, data: {model: modelKey, action: 'i/chain'}});
         }
         var table = 'images';
         var data = {};

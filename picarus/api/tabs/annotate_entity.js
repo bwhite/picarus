@@ -9,6 +9,6 @@ function render_annotate_entity() {
         function success(response) {
             $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
         }
-        PICARUS.postSlice('images', startRow, stopRow, 'io/annotate/image/entity', {success: success, data: {imageColumn: imageColumn, entityColumn: entityColumn, instructions: $('#instructions').val(), numTasks: numTasks, mode: "amt"}});
+        PICARUS.postSlice('images', startRow, stopRow, {success: success, data: {action: 'io/annotate/image/entity', imageColumn: imageColumn, entityColumn: entityColumn, instructions: $('#instructions').val(), numTasks: numTasks, mode: "amt"}});
     });
 }

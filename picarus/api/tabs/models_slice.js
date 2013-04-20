@@ -10,6 +10,6 @@ function render_models_slice() {
         if ($('#chainCheck').is(':checked'))
             action = 'io/chain';
         var model = decode_id($('#model_select').find(":selected").val());
-        PICARUS.postSlice('images', startRow, stopRow, action, {success: button_reset, fail: button_error, data: {}});
+        PICARUS.postSlice('images', startRow, stopRow, {success: button_reset, fail: button_error, data: {action: action, model: model}});
     });
 }

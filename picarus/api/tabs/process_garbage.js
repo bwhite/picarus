@@ -11,6 +11,6 @@ function render_process_garbage() {
                 $('#results').append(x + '<br>');
             });
         }
-        PICARUS.postSlice('images', startRow, stopRow, 'io/garbage', {success: button_reset, fail: button_error})
+        PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/garbage'}, success: button_reset, fail: button_error})
     });
 }

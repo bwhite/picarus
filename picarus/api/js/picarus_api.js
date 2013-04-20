@@ -60,12 +60,15 @@ function PicarusClient(server) {
         args = this._argsDefaults(args);
         return this.post(['data', table], this.encdict(args.data), this._wrapDecodeValues(args.success), args.fail);
     };
-    this.postRow = function (table, row, action, args) {
+    this.postRow = function (table, row, args) {
         //args: success, fail, data
         args = this._argsDefaults(args);
-        args.data.action = action;
-        if (_.has(args.data, 'model'))
-            args.data.model = base64.encode(args.data.model);
+        if (!_.isUndefined(args)) {
+            if (_.has(args.data, 'model'))
+                args.data.model = base64.encode(args.data.model);
+            if (_.has(args.data, 'action'))
+                args.data.action = base64.encode(args.data.action);
+        }
         return this.post(['data', table, encode_id(row)], args.data, this._wrapDecodeDict(args.success), args.fail);
     };
     this.deleteRow = function (table, row, args) {
@@ -78,12 +81,15 @@ function PicarusClient(server) {
         args = this._argsDefaults(args);
         return this.del(['data', table, encode_id(row), encode_id(column)], args.data, this._wrapNull(args.success), args.fail);
     };
-    this.postSlice = function (table, startRow, stopRow, action, args) {
+    this.postSlice = function (table, startRow, stopRow, args) {
         //args: success, fail, data
         args = this._argsDefaults(args);
-        args.data.action = action;
-        if (_.has(args.data, 'model'))
-            args.data.model = base64.encode(args.data.model);
+        if (!_.isUndefined(args)) {
+            if (_.has(args.data, 'model'))
+                args.data.model = base64.encode(args.data.model);
+            if (_.has(args.data, 'action'))
+                args.data.action = base64.encode(args.data.action);
+        }
         return this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapParseJSON(args.success), args.fail);
     };
 
@@ -228,7 +234,7 @@ function PicarusClient(server) {
         this.getTable('models', {success: function (x) {console.log('Set debug_b'); debug_b=x}, columns: ['meta:']});
         this.getSlice('images', 'sun397:', 'sun397;', {success: function (x) {console.log('Set debug_c'); debug_c=x}, columns: ['meta:']});
         this.scanner('images', 'sun397:', 'sun397;', {columns: ['meta:'], maxRows: 10, success: function (x) {console.log('Set debug_i'); debug_i=x}})
-        this.postSlice('images', 'automated_tests:', 'automated_tests;', 'io/thumbnail', {success: function (x) {console.log('Set debug_g'); debug_g=x}});
+        this.postSlice('images', 'automated_tests:', 'automated_tests;', {data: {action: 'io/thumbnail'}, success: function (x) {console.log('Set debug_g'); debug_g=x}});
         function test_patchRow(row) {
             this.patchRow('images', row, {success: function (x) {console.log('Set debug_f'); debug_f=x;test_getRow(row)}, data: {'meta:class_0': 'test_data2'}});
         }
@@ -242,7 +248,7 @@ function PicarusClient(server) {
         test_deleteRow = _.bind(test_deleteRow, this);
         test_patchRow = _.bind(test_patchRow, this);
         this.postTable('images', {success: function (x) {console.log('Set debug_e');debug_e=x;test_patchRow(x.row);}, data: {'meta:class': 'test_data'}});
-        this.postRow('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), 'i/chain', {data: {model: base64.decode('ZmVhdDpRhhxwtznn3dTyAfPRMSdO')}, success: function (x) {console.log('Set debug_g'); debug_g=x}});
+        this.postRow('images', base64.decode('c3VuMzk3OnRlc3QAC2nfc3VuX2F4dndzZHd5cW1waG5hcGIuanBn'), {data: {action: 'i/chain', model: base64.decode('ZmVhdDpRhhxwtznn3dTyAfPRMSdO')}, success: function (x) {console.log('Set debug_g'); debug_g=x}});
     };
 }
 
