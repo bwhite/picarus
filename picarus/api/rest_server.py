@@ -34,7 +34,7 @@ def thrift_lock():
         # TODO: When using thrift connection, detect if it is broken if so try one more time by making a new one
         yield cur_thrift
     finally:
-        THRIFT_POOL.put(cur_thrift)
+        gevent.spawn_later(0., lambda : THRIFT_POOL.put(THRIFT_CONSTRUCTOR()))
 
 
 def load_site():
