@@ -3,6 +3,7 @@ function render_visualize_annotations() {
 }
 
 function render_visualize_annotations_loaded() {
+    console.log('0');
     var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
@@ -140,6 +141,7 @@ function render_visualize_annotations_loaded() {
         $('#negCnt').change(data_change);
         $('#unclicked').change(data_change);
         function data_change() {
+            console.log('2');
             var unclicked = $('#unclicked').is(':checked')
             var classes = get_classes(results);
             var select_template = "{{#classes}}<option value='{{.}}'>{{.}}</option>{{/classes}};"
@@ -191,6 +193,7 @@ function render_visualize_annotations_loaded() {
             chart0.draw(data0, options);
         }
         function class_select_change() {
+            console.log('1');
             var class_name = $('#class_select').find(":selected").val();
             negPct = Number($('#negPct').val());
             posPct = Number($('#posPct').val());
@@ -258,11 +261,13 @@ function render_visualize_annotations_loaded() {
         users.fetch();
     }
     function change() {
+        console.log('3');
         var task = decode_id($('#annotator_select').find(":selected").val());
         if (_.isUndefined(task)) {
             return;
         }
         function success_annotation(annotation) {
+            console.log('4');
             annotation_type = JSON.parse(annotation['params']).type;
             // Code is over nested, use partial application to flatten it
             if (annotation_type == 'image_entity') {
@@ -293,6 +298,6 @@ function render_visualize_annotations_loaded() {
         if (p.type == "image_query_batch")
             return p.type + ' ' +  p.query + ' '+ p.num_tasks;
         return p.type;
-    }});//, change: change
+    }, change: change});
     rows.fetch();
 }
