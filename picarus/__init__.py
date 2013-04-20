@@ -1,6 +1,8 @@
 __all__ = ['api', 'modules']
 from picarus import api, modules
 from picarus_takeout import *
+import base64
+import urllib
 
 
 class PicarusClient(object):
@@ -10,6 +12,8 @@ class PicarusClient(object):
         self.api_key = api_key
         self.server = server
         self.version = 'a1'
+        import requests
+        self.requests = requests
 
     def _check_status(self, response):
         if response.status_code != 200:
@@ -31,22 +35,22 @@ class PicarusClient(object):
 
     def get(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = requests.get('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), params=data)
+        r = self.requests.get('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), params=data)
         return self._check_status(r)
 
     def post(self, path, data=None, files=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data, files=files)
+        r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data, files=files)
         return self._check_status(r)
 
     def delete(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = requests.delete('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data)
+        r = self.requests.delete('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data)
         return self._check_status(r)
 
     def patch(self, path, data=None, files=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = requests.patch('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data, files=files)
+        r = self.requests.patch('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data, files=files)
         return self._check_status(r)
 
     def _encode_columns(self, columns):
