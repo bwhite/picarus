@@ -217,7 +217,7 @@ class PicarusManager(object):
                    'HBASE_OUTPUT_COLUMN': base64.b64encode('meta:exif')}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_exif.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=['data:image'], single_value=True,
-                             cmdenvs=cmdenvs, **kw)
+                             cmdenvs=cmdenvs, check_script=False, make_executable=False, **kw)
 
     def image_preprocessor(self, model_key, **kw):
         model, columns = self.key_to_model(model_key)
@@ -227,7 +227,7 @@ class PicarusManager(object):
                    'MODEL_FN': os.path.basename(model_fp.name)}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_preprocess.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, files=[model_fp.name], columns=[base64.urlsafe_b64decode(columns['input'])], single_value=True,
-                             cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
+                             cmdenvs=cmdenvs, dummy_fp=model_fp, check_script=False, make_executable=False, **kw)
 
     def image_to_feature(self, model_key, **kw):
         model, columns = self.key_to_model(model_key)
@@ -237,7 +237,7 @@ class PicarusManager(object):
                    'MODEL_FN': os.path.basename(model_fp.name)}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_to_feature.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, files=[model_fp.name], columns=[base64.urlsafe_b64decode(columns['input'])], single_value=True,
-                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
+                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, check_script=False, make_executable=False, **kw)
 
     def takeout_chain_job(self, model, input_column, output_column, **kw):
         model_fp = picarus.api.model_tofile(model)
@@ -246,7 +246,7 @@ class PicarusManager(object):
                    'MODEL_FN': os.path.basename(model_fp.name)}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
-                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, **kw)
+                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, check_script=False, make_executable=False, **kw)
 
     def features_to_hasher(self, feature_key, hasher, **kw):
         features = hadoopy_hbase.scanner_column(self.hb, self.images_table, feature_key, **kw)
@@ -263,7 +263,7 @@ class PicarusManager(object):
                    'HASHER_FN': os.path.basename(hasher_fp.name)}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/feature_to_hash.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_dict['feature']], files=[hasher_fp.name], single_value=True,
-                             cmdenvs=cmdenvs, dummy_fp=hasher_fp, **kw)
+                             cmdenvs=cmdenvs, dummy_fp=hasher_fp, check_script=False, make_executable=False, **kw)
 
     def features_to_classifier_class_distance_list(self, feature_key, metadata_column, classifier, **kw):
         row_cols = hadoopy_hbase.scanner(self.hb, self.images_table,
@@ -311,7 +311,7 @@ class PicarusManager(object):
                    'CLASSIFIER_TYPE': classifier_type}
         hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/feature_to_prediction.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_dict['feature']], files=[classifier_fp.name], single_value=True,
-                             cmdenvs=cmdenvs, dummy_fp=classifier_fp, **kw)
+                             cmdenvs=cmdenvs, dummy_fp=classifier_fp, check_script=False, make_executable=False, **kw)
 
     def hashes_to_index(self, hasher_key, metadata_column, index, **kw):
         hasher_input, hasher, _ = self.key_to_input_model_param(hasher_key)
@@ -519,7 +519,7 @@ class PicarusManager(object):
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column)}
         hadoopy_hbase.launch(input_table, output_hdfs + str(random.random()), 'hadoop/image_to_superpixels.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=[input_column], single_value=True,
-                             cmdenvs=cmdenvs, jobconfs={'mapred.task.timeout': '6000000'}, **kw)
+                             cmdenvs=cmdenvs, jobconfs={'mapred.task.timeout': '6000000'}, check_script=False, make_executable=False, **kw)
 
     def model_to_name(self, model):
         args = list(model.get('args', []))
