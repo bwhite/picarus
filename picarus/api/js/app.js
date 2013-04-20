@@ -530,17 +530,6 @@ function app_main() {
         }
     });
 
-    PicarusImage = Backbone.Model.extend({
-        idAttribute: "row",
-        defaults : {
-        }
-    });
-    // TODO: We may want to add a few REST calls, not sure yet
-    PicarusImages = Backbone.Collection.extend({
-        model : PicarusImage,
-        url : "/a1/users/images"
-    });
-
     $.ajaxSetup({
         'beforeSend': function (xhr) {
             login_get(function (email_auth) {
