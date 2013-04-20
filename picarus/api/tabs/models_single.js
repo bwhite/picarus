@@ -75,11 +75,11 @@ function render_models_single() {
             display_alert('You must specify an image!');
             return;
         }
-        var modelKey = decode_id($('#model_select').find(":selected").val());
+        var modelKey = $('#model_select').find(":selected").val();
         function success_func(result) {
             $('#imagefile').parent().html($('#imagefile').parent().html());
             $('#imagefile').change(fileChange);
-            var outputType = models.get(encode_id(modelKey)).pescape('meta:output_type');
+            var outputType = models.get(modelKey).escape('meta:output_type');
             if (outputType == 'binary_class_confidence') {
                 $('#results').html($('<h3>').text('Classifier Confidence'));
                 $('#results').append(msgpack.unpack(result[modelKey]));
