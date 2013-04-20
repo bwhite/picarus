@@ -66,8 +66,6 @@ function PicarusClient(server) {
         if (!_.isUndefined(args)) {
             if (_.has(args.data, 'model'))
                 args.data.model = base64.encode(args.data.model);
-            if (_.has(args.data, 'action'))
-                args.data.action = args.data.action;
         }
         return this.post(['data', table, encode_id(row)], args.data, this._wrapDecodeDict(args.success), args.fail);
     };
@@ -87,8 +85,6 @@ function PicarusClient(server) {
         if (!_.isUndefined(args)) {
             if (_.has(args.data, 'model'))
                 args.data.model = base64.encode(args.data.model);
-            if (_.has(args.data, 'action'))
-                args.data.action = args.data.action;
         }
         return this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapParseJSON(args.success), args.fail);
     };
