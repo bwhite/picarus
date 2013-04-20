@@ -59,6 +59,7 @@ def key_to_model(manager, *args, **kw):
 
 
 def _takeout_model_link_from_key(manager, key):
+    print('Manager key[%r]' % key)
     model_binary, columns = key_to_model(manager, key, 'link')
     model = msgpack.loads(model_binary)
     if not isinstance(model, dict):
