@@ -1774,9 +1774,9 @@ function render_process_copy() {
     });
 }
 function render_annotate_list() {
-    results = new PicarusRows([], {'table': 'annotations'});
+    results = new Picarus2Rows([], {'table': 'annotations'});
     var workerColumn = {header: "Worker", getFormatted: function() {
-        return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.pescape('task')});
+        return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.escape('task')});
     }};
     function postRender() {
     }
