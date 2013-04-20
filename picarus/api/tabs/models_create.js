@@ -1,5 +1,5 @@
 function render_models_create() {
-    results = new Picarus2Rows([], {'table': 'parameters'});
+    results = new PicarusRows([], {'table': 'parameters'});
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'renderKind');

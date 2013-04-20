@@ -176,7 +176,7 @@ function button_error() {
 
 function model_dropdown(args) {
     var columns_model = ['meta:'];
-    var models = new Picarus2Rows([], {'table': 'models', columns: columns_model});
+    var models = new PicarusRows([], {'table': 'models', columns: columns_model});
     if (typeof args.change === 'undefined') {
         args.change = function () {};
     }
@@ -260,7 +260,7 @@ function project_selector(projectsDrop) {
         }
     });
     var auth = login_get(function (email_auth) {
-        user = new Picarus2Row({row: email_auth.email}, {'table': 'users'});
+        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
         new AppView({model: user, el: projectsDrop});
         user.fetch();
     });
@@ -293,7 +293,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
         }
     });
     var auth = login_get(function (email_auth) {
-        user = new Picarus2Row({row: email_auth.email}, {'table': 'users'});
+        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
         new AppView({model: user, el: prefixDrop});
         user.fetch();
     });
@@ -337,7 +337,7 @@ function slices_selector() {
         slicesText.html('');
     });
     var auth = login_get(function (email_auth) {
-        user = new Picarus2Row({row: email_auth.email}, {'table': 'users'});
+        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
         new AppView({model: user, el: prefixDrop});
         user.fetch();
     });
@@ -359,7 +359,7 @@ function app_main() {
             return v.join('=');
         }).join('&');
     }
-    Picarus2Row = Backbone.Model.extend({
+    PicarusRow = Backbone.Model.extend({
         idAttribute: "row",
         initialize: function(attributes, options) {
             if (!_.isUndefined(options)) {
@@ -410,8 +410,8 @@ function app_main() {
             return PICARUS.deleteColumn(this.get_table(), this.id, attr, {success: s});
         }
     });
-    Picarus2Rows = Backbone.Collection.extend({
-        model : Picarus2Row,
+    PicarusRows = Backbone.Collection.extend({
+        model : PicarusRow,
         initialize: function(models, options) {
             this.table = options.table;
             if (_.isArray(options.columns))

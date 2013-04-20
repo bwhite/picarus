@@ -2,7 +2,7 @@ function render_models_list() {
     var columns = ['meta:name', 'meta:input_type', 'meta:output_type', 'row', 'meta:creation_time', 'meta:input',
                    'meta:model_link_size', 'meta:model_chain_size', 'meta:factory_info'];
     var columns_model = ['meta:'];
-    results = new Picarus2Rows([], {'table': 'models', columns: columns_model});
+    results = new PicarusRows([], {'table': 'models', columns: columns_model});
     var takeoutColumn = {header: "Takeout", getFormatted: function() {
         return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: encode_id(this.get('row'))});
     }};

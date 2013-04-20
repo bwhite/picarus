@@ -1,5 +1,5 @@
 function render_data_user() {
-    users = new Picarus2Rows([], {'table': 'users'});
+    users = new PicarusRows([], {'table': 'users'});
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
@@ -23,7 +23,7 @@ function render_data_user() {
     });
     new AppView({collection: users, el: $('#users')});
     login_get(function (email_auth) {
-        var user = new Picarus2Row({row: email_auth.email});
+        var user = new PicarusRow({row: email_auth.email});
         users.add(user);
         user.fetch();
         

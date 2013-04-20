@@ -3,7 +3,7 @@ function render_visualize_annotations() {
 }
 
 function render_visualize_annotations_loaded() {
-    var rows = new Picarus2Rows([], {'table': 'annotations'});
+    var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
         users.each(function(x) {
@@ -131,8 +131,8 @@ function render_visualize_annotations_loaded() {
     }
     function display_annotation_task(task, get_classes, get_scores) {
         /* TODO: Compute a dropdown list of available classes (new view for results model) */
-        results = new Picarus2Rows([], {'table': 'annotations-results-' + task});
-        users = new Picarus2Rows([], {'table': 'annotations-users-' + task});
+        results = new PicarusRows([], {'table': 'annotations-results-' + task});
+        users = new PicarusRows([], {'table': 'annotations-users-' + task});
         var imageColumn = 'thum:image_150sq';
         $('#negPct').change(data_change);
         $('#posPct').change(data_change);

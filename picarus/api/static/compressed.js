@@ -677,7 +677,7 @@ function button_error() {
 
 function model_dropdown(args) {
     var columns_model = ['meta:'];
-    var models = new Picarus2Rows([], {'table': 'models', columns: columns_model});
+    var models = new PicarusRows([], {'table': 'models', columns: columns_model});
     if (typeof args.change === 'undefined') {
         args.change = function () {};
     }
@@ -761,7 +761,7 @@ function project_selector(projectsDrop) {
         }
     });
     var auth = login_get(function (email_auth) {
-        user = new Picarus2Row({row: email_auth.email}, {'table': 'users'});
+        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
         new AppView({model: user, el: projectsDrop});
         user.fetch();
     });
@@ -794,7 +794,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
         }
     });
     var auth = login_get(function (email_auth) {
-        user = new Picarus2Row({row: email_auth.email}, {'table': 'users'});
+        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
         new AppView({model: user, el: prefixDrop});
         user.fetch();
     });
@@ -838,7 +838,7 @@ function slices_selector() {
         slicesText.html('');
     });
     var auth = login_get(function (email_auth) {
-        user = new Picarus2Row({row: email_auth.email}, {'table': 'users'});
+        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
         new AppView({model: user, el: prefixDrop});
         user.fetch();
     });
@@ -860,7 +860,7 @@ function app_main() {
             return v.join('=');
         }).join('&');
     }
-    Picarus2Row = Backbone.Model.extend({
+    PicarusRow = Backbone.Model.extend({
         idAttribute: "row",
         initialize: function(attributes, options) {
             if (!_.isUndefined(options)) {
@@ -911,8 +911,8 @@ function app_main() {
             return PICARUS.deleteColumn(this.get_table(), this.id, attr, {success: s});
         }
     });
-    Picarus2Rows = Backbone.Collection.extend({
-        model : Picarus2Row,
+    PicarusRows = Backbone.Collection.extend({
+        model : PicarusRow,
         initialize: function(models, options) {
             this.table = options.table;
             if (_.isArray(options.columns))
@@ -1186,7 +1186,7 @@ code.google.com/p/crypto-js/wiki/License
 e;d++)if(d%4){var g=f.indexOf(b.charAt(d-1))<<2*(d%4),h=f.indexOf(b.charAt(d))>>>6-2*(d%4);c[a>>>2]|=(g|h)<<24-8*(a%4);a++}return j.create(c,a)},_map:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="}})();
 ;
 function render_data_prefixes() {
-    rows = new Picarus2Rows([], {'table': 'prefixes'});
+    rows = new PicarusRows([], {'table': 'prefixes'});
     function prefixChange() {
         var row = decode_id($('#prefixTable option:selected').val());
         var permissions = rows.get(row).get(decode_id($('#prefixDrop option:selected').val()));
@@ -1225,7 +1225,7 @@ function render_data_prefixes() {
     rows.fetch();
 }
 function render_data_projects() {
-    rows = new Picarus2Rows([], {'table': 'projects'});
+    rows = new PicarusRows([], {'table': 'projects'});
     rows_dropdown(rows, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}});
     slices_selector();
     $('#modifyProjectButton').click(function () {
@@ -1243,7 +1243,7 @@ function render_data_projects() {
     rows.fetch();
 }
 function render_data_user() {
-    users = new Picarus2Rows([], {'table': 'users'});
+    users = new PicarusRows([], {'table': 'users'});
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
@@ -1267,7 +1267,7 @@ function render_data_user() {
     });
     new AppView({collection: users, el: $('#users')});
     login_get(function (email_auth) {
-        var user = new Picarus2Row({row: email_auth.email});
+        var user = new PicarusRow({row: email_auth.email});
         users.add(user);
         user.fetch();
         
@@ -1290,7 +1290,7 @@ function render_data_uploads(email_auth) {
             PICARUS.scanner("images", startRow, prefix_to_stop_row(startRow), {success: success, maxRows: 24, columns: [imageColumn]})
         }
     });
-    var model = new Picarus2Row({row: email_auth.email}, {table: 'users'});
+    var model = new PicarusRow({row: email_auth.email}, {table: 'users'});
     new AppView({model: model});
     model.fetch();
 }
@@ -1363,7 +1363,7 @@ function render_models_list() {
     var columns = ['meta:name', 'meta:input_type', 'meta:output_type', 'row', 'meta:creation_time', 'meta:input',
                    'meta:model_link_size', 'meta:model_chain_size', 'meta:factory_info'];
     var columns_model = ['meta:'];
-    results = new Picarus2Rows([], {'table': 'models', columns: columns_model});
+    results = new PicarusRows([], {'table': 'models', columns: columns_model});
     var takeoutColumn = {header: "Takeout", getFormatted: function() {
         return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: encode_id(this.get('row'))});
     }};
@@ -1427,7 +1427,7 @@ function render_models_list() {
     results.fetch();
 }
 function render_models_create() {
-    results = new Picarus2Rows([], {'table': 'parameters'});
+    results = new PicarusRows([], {'table': 'parameters'});
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'renderKind');
@@ -1774,7 +1774,7 @@ function render_process_copy() {
     });
 }
 function render_annotate_list() {
-    results = new Picarus2Rows([], {'table': 'annotations'});
+    results = new PicarusRows([], {'table': 'annotations'});
     var workerColumn = {header: "Worker", getFormatted: function() {
         return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.escape('task')});
     }};
@@ -2122,7 +2122,7 @@ function render_visualize_annotations() {
 }
 
 function render_visualize_annotations_loaded() {
-    var rows = new Picarus2Rows([], {'table': 'annotations'});
+    var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
         users.each(function(x) {
@@ -2250,8 +2250,8 @@ function render_visualize_annotations_loaded() {
     }
     function display_annotation_task(task, get_classes, get_scores) {
         /* TODO: Compute a dropdown list of available classes (new view for results model) */
-        results = new Picarus2Rows([], {'table': 'annotations-results-' + task});
-        users = new Picarus2Rows([], {'table': 'annotations-users-' + task});
+        results = new PicarusRows([], {'table': 'annotations-results-' + task});
+        users = new PicarusRows([], {'table': 'annotations-users-' + task});
         var imageColumn = 'thum:image_150sq';
         $('#negPct').change(data_change);
         $('#posPct').change(data_change);

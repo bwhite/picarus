@@ -1,5 +1,5 @@
 function render_data_prefixes() {
-    rows = new Picarus2Rows([], {'table': 'prefixes'});
+    rows = new PicarusRows([], {'table': 'prefixes'});
     function prefixChange() {
         var row = decode_id($('#prefixTable option:selected').val());
         var permissions = rows.get(row).get(decode_id($('#prefixDrop option:selected').val()));
@@ -38,7 +38,7 @@ function render_data_prefixes() {
     rows.fetch();
 }
 function render_data_projects() {
-    rows = new Picarus2Rows([], {'table': 'projects'});
+    rows = new PicarusRows([], {'table': 'projects'});
     rows_dropdown(rows, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}});
     slices_selector();
     $('#modifyProjectButton').click(function () {
@@ -56,7 +56,7 @@ function render_data_projects() {
     rows.fetch();
 }
 function render_data_user() {
-    users = new Picarus2Rows([], {'table': 'users'});
+    users = new PicarusRows([], {'table': 'users'});
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
@@ -80,7 +80,7 @@ function render_data_user() {
     });
     new AppView({collection: users, el: $('#users')});
     login_get(function (email_auth) {
-        var user = new Picarus2Row({row: email_auth.email});
+        var user = new PicarusRow({row: email_auth.email});
         users.add(user);
         user.fetch();
         
@@ -103,7 +103,7 @@ function render_data_uploads(email_auth) {
             PICARUS.scanner("images", startRow, prefix_to_stop_row(startRow), {success: success, maxRows: 24, columns: [imageColumn]})
         }
     });
-    var model = new Picarus2Row({row: email_auth.email}, {table: 'users'});
+    var model = new PicarusRow({row: email_auth.email}, {table: 'users'});
     new AppView({model: model});
     model.fetch();
 }
@@ -176,7 +176,7 @@ function render_models_list() {
     var columns = ['meta:name', 'meta:input_type', 'meta:output_type', 'row', 'meta:creation_time', 'meta:input',
                    'meta:model_link_size', 'meta:model_chain_size', 'meta:factory_info'];
     var columns_model = ['meta:'];
-    results = new Picarus2Rows([], {'table': 'models', columns: columns_model});
+    results = new PicarusRows([], {'table': 'models', columns: columns_model});
     var takeoutColumn = {header: "Takeout", getFormatted: function() {
         return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: encode_id(this.get('row'))});
     }};
@@ -240,7 +240,7 @@ function render_models_list() {
     results.fetch();
 }
 function render_models_create() {
-    results = new Picarus2Rows([], {'table': 'parameters'});
+    results = new PicarusRows([], {'table': 'parameters'});
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'renderKind');
@@ -587,7 +587,7 @@ function render_process_copy() {
     });
 }
 function render_annotate_list() {
-    results = new Picarus2Rows([], {'table': 'annotations'});
+    results = new PicarusRows([], {'table': 'annotations'});
     var workerColumn = {header: "Worker", getFormatted: function() {
         return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.escape('task')});
     }};
@@ -935,7 +935,7 @@ function render_visualize_annotations() {
 }
 
 function render_visualize_annotations_loaded() {
-    var rows = new Picarus2Rows([], {'table': 'annotations'});
+    var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
         users.each(function(x) {
@@ -1063,8 +1063,8 @@ function render_visualize_annotations_loaded() {
     }
     function display_annotation_task(task, get_classes, get_scores) {
         /* TODO: Compute a dropdown list of available classes (new view for results model) */
-        results = new Picarus2Rows([], {'table': 'annotations-results-' + task});
-        users = new Picarus2Rows([], {'table': 'annotations-users-' + task});
+        results = new PicarusRows([], {'table': 'annotations-results-' + task});
+        users = new PicarusRows([], {'table': 'annotations-users-' + task});
         var imageColumn = 'thum:image_150sq';
         $('#negPct').change(data_change);
         $('#posPct').change(data_change);

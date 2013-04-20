@@ -1,5 +1,5 @@
 function render_data_projects() {
-    rows = new Picarus2Rows([], {'table': 'projects'});
+    rows = new PicarusRows([], {'table': 'projects'});
     rows_dropdown(rows, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}});
     slices_selector();
     $('#modifyProjectButton').click(function () {

@@ -15,7 +15,7 @@ function render_data_uploads(email_auth) {
             PICARUS.scanner("images", startRow, prefix_to_stop_row(startRow), {success: success, maxRows: 24, columns: [imageColumn]})
         }
     });
-    var model = new Picarus2Row({row: email_auth.email}, {table: 'users'});
+    var model = new PicarusRow({row: email_auth.email}, {table: 'users'});
     new AppView({model: model});
     model.fetch();
 }
