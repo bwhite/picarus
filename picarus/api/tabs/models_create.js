@@ -1,5 +1,5 @@
 function render_models_create() {
-    results = new PicarusRows([], {'table': 'parameters'});
+    results = new Picarus2Rows([], {'table': 'parameters'});
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'renderKind');
@@ -16,7 +16,7 @@ function render_models_create() {
             var model_kind = $('#kind_select option:selected').val();
             var name = $('#name_select option:selected').val();
             model = results.filter(function (x) {
-                if (x.pescape('kind') == model_kind && x.pescape('name') == name)
+                if (x.escape('kind') == model_kind && x.escape('name') == name)
                     return true;
             })[0];
 
@@ -55,16 +55,16 @@ function render_models_create() {
                     }
                 });
             }
-            add_param_selections(model.pescapejs('params'), 'param-');
-            if (model.pescape('data') === 'slices') {
+            add_param_selections(JSON.parse(model.get('params')), 'param-');
+            if (model.escape('data') === 'slices') {
                 $('#slices_select').append(document.getElementById('bpl_slices_select').innerHTML);
                 slices_selector();
             }
             var inputs;
-            if (model.pescape('type') == 'model')
-                inputs = [model.pescape('input_type')];
+            if (model.escape('type') == 'model')
+                inputs = [model.escape('input_type')];
             else
-                inputs = model.pescapejs('input_types');
+                inputs = JSON.parse(model.get('input_types'));
             _.each(inputs, function (value) {
                 var cur_el;
                 var cur_id = _.uniqueId('model_select_');          
@@ -77,7 +77,7 @@ function render_models_create() {
                     add_hint(el, 'Metadata column (e.g., meta:class)');
                 } else {
                     $('#params').append($('<select>').attr('id', cur_id).attr('name', 'input-' + value).addClass('input-medium'));
-                    model_dropdown({modelFilter: function (x) {return x.pescape('meta:output_type') === value},
+                    model_dropdown({modelFilter: function (x) {return x.escape('meta:output_type') === value},
                                     change: function() {},
                                     el: $('#' + cur_id)});
                 }
@@ -85,15 +85,15 @@ function render_models_create() {
         },
         renderKind: function() {
             var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
-            var models_filt = _.uniq(_.map(this.collection.models, function (data) {return data.pescape('kind')}));
+            var models_filt = _.uniq(_.map(this.collection.models, function (data) {return data.escape('kind')}));
             $('#kind_select').html(Mustache.render(select_template, {models: models_filt}));
             this.renderName();
         },
         renderName: function () {
             var model_kind = $('#kind_select option:selected').val();
-            var cur_models = this.collection.filter(function (x) { return x.pescape('kind') == model_kind});
+            var cur_models = this.collection.filter(function (x) { return x.escape('kind') == model_kind});
             var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
-            var models_filt = _.map(cur_models, function (data) {return data.pescape('name')});
+            var models_filt = _.map(cur_models, function (data) {return data.escape('name')});
             $('#name_select').html(Mustache.render(select_template, {models: models_filt}));
             this.renderParam();
         }
@@ -110,12 +110,12 @@ function render_models_create() {
         var model_kind = $('#kind_select option:selected').val();
         var name = $('#name_select option:selected').val();
         var model = results.filter(function (x) {
-            if (x.pescape('kind') == model_kind && x.pescape('name') == name)
+            if (x.escape('kind') == model_kind && x.escape('name') == name)
                 return true;
         })[0];
         var path = model.get('row');
         params.path = decode_id(path);
-        if (model.pescape('type') === 'factory') {
+        if (model.escape('type') === 'factory') {
             params.table = 'images';
             params.slices = slices_selector_get().join(',');
             p = params;
