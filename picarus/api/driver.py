@@ -61,8 +61,8 @@ class PicarusManager(object):
         # Feature Classifier settings
         self.feature_classifier_row = self.images_table
         # Mask Hasher settings
-        self.texton_classes = json.load(open('class_colors.js'))
-        self.texton_num_classes = len(self.texton_classes)
+        #self.texton_classes = json.load(open('class_colors.js'))
+        #self.texton_num_classes = len(self.texton_classes)
         # Index Settings
         self.class_column = 'meta:class_2'
         self.indoor_class_column = 'meta:class_0'
@@ -536,7 +536,7 @@ class PicarusManager(object):
             args.append('%s=%s' % (x, y))
         return model['name'] + '(%s)' % ', '.join(args)
 
-if __name__ == '__main__':
+if 0 and __name__ == '__main__':
     image_retrieval = PicarusManager()
     image_retrieval.create_tables()
 
