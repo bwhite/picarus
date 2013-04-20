@@ -481,16 +481,16 @@ class ImagesHBaseTable(HBaseTable):
         with thrift_lock() as thrift:
             scanner = hadoopy_hbase.scanner(thrift, self.table, per_call=10, columns=columns,
                                             start_row=start_row, stop_row=stop_row, filter=filter_string)
-        out = []
-        cur_row = start_row
-        byte_count = 0
-        for row_num, (cur_row, cur_columns) in enumerate(scanner, 1):
-            if exclude_start and row_num == 1:
-                continue
-            out.append(encode_row(cur_row, cur_columns))
-            byte_count += self._byte_count_rows(out[-1:])
-            if len(out) >= max_rows or byte_count >= max_bytes:
-                break
+            out = []
+            cur_row = start_row
+            byte_count = 0
+            for row_num, (cur_row, cur_columns) in enumerate(scanner, 1):
+                if exclude_start and row_num == 1:
+                    continue
+                out.append(encode_row(cur_row, cur_columns))
+                byte_count += self._byte_count_rows(out[-1:])
+                if len(out) >= max_rows or byte_count >= max_bytes:
+                    break
         bottle.response.headers["Content-type"] = "application/json"
         return json.dumps(out)
 
