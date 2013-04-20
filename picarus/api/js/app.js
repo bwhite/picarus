@@ -187,7 +187,7 @@ function model_dropdown(args) {
             _.bindAll(this, 'renderDrop');
             this.$el.bind('reset', this.renderDrop);
             this.$el.bind('change', this.renderDrop);
-            this.collection.bind('set', this.render);
+            this.collection.bind('all', this.render);
             this.collection.bind('reset', this.render);
             this.collection.bind('change', this.render);
         },
