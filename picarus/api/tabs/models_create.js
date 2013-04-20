@@ -114,7 +114,7 @@ function render_models_create() {
                 return true;
         })[0];
         var path = model.get('row');
-        params.path = decode_id(path);
+        params.path = path;
         if (model.escape('type') === 'factory') {
             params.table = 'images';
             params.slices = slices_selector_get().join(',');
