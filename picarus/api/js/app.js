@@ -193,7 +193,8 @@ function model_dropdown(args) {
         },
         renderDrop: args.change,
         modelFilter: args.modelFilter,
-        render: function() {
+        render: function(evt) {
+            console.log(evt);
             n = this.$el;
             this.$el.empty();
             var select_template = "{{#models}}<option value='{{row}}'>{{{text}}}</option>{{/models}};" // text is escaped already
