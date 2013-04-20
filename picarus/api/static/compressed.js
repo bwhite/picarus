@@ -2194,6 +2194,7 @@ function render_visualize_annotations_loaded() {
     }
     function image_entity_score(users, results) {
         console.log('033');
+        return;
         // Only count explicit marks
         var scores = {};
 
@@ -2242,6 +2243,7 @@ function render_visualize_annotations_loaded() {
         $('#unclicked').change(data_change);
         function data_change() {
             console.log('2');
+            return;
             var unclicked = $('#unclicked').is(':checked')
             var classes = get_classes(results);
             var select_template = "{{#classes}}<option value='{{.}}'>{{.}}</option>{{/classes}};"
@@ -2294,7 +2296,6 @@ function render_visualize_annotations_loaded() {
         }
         function class_select_change() {
             console.log('1');
-            return;
             var class_name = $('#class_select').find(":selected").val();
             negPct = Number($('#negPct').val());
             posPct = Number($('#posPct').val());
