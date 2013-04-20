@@ -923,8 +923,7 @@ function app_main() {
             console.log('rows:' + method);
             mod = model;
             var out;
-            var success = options.success;
-            var params = {success: success};
+            var params = {};
             var table = this.table;
             if (_.has(options, 'attrs'))
                 params.data = options.attrs;
@@ -932,12 +931,7 @@ function app_main() {
                 if (_.has(this, 'columns'))
                     params.columns = this.columns;
                 params.success = function (lod) {
-                    lod = _.map(lod, function (v) {
-                        v[1].row = v[0];
-                        debug_row = new PicarusRow(v[1], {table: table});
-                        return debug_row;
-                    });
-                    success(lod);
+                    options.success(_.map(lod, function (v) {v[1].row = v[0]; return v[1]}));
                 };
                 out = PICARUS.getTable(this.table, params);
             }
