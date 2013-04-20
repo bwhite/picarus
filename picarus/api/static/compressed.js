@@ -671,7 +671,7 @@ function button_error() {
 
 function model_dropdown(args) {
     var columns_model = ['meta:'];
-    var models = new PicarusRows([], {'table': 'models', columns: columns_model});
+    var models = new Picarus2Rows([], {'table': 'models', columns: columns_model});
     if (typeof args.change === 'undefined') {
         args.change = function () {};
     }
