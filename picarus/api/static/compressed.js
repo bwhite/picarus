@@ -2217,7 +2217,10 @@ function render_visualize_annotations_loaded() {
         var scores = {};
 
         results.each(function (x) {
-            var annotation = JSON.parse(x.get('user_data'));
+            var annotation = x.get('user_data');
+            if (_.isUndefined(annotation))
+                return;
+            annotation = JSON.parse(annotation);
             var image = x.escape('image');
             var entity = x.escape('entity');
             if (!_.has(scores, entity)) {
