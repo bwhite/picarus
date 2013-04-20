@@ -2420,13 +2420,13 @@ function render_evaluate_classifier() {
 }
 
 function render_evaluate_classifier_loaded() {
-    model_dropdown({modelFilter: function (x) {return x.pescape('meta:output_type') === 'binary_class_confidence'},
+    model_dropdown({modelFilter: function (x) {return x.escape('meta:output_type') === 'binary_class_confidence'},
                     change: function() {
-                        var row = _.unescape(this.$el.find(":selected").val());
+                        var row = decode_id(this.$el.find(":selected").val());
                         m = this.collection.get(row);
-                        $('#gtColumn').val(m.pescapejs('meta:factory_info').inputs.meta);
-                        $('#posClass').val(m.pescapejs('meta:factory_info').params.class_positive);
-                        $('#modelKey').val(row);
+                        $('#gtColumn').val(encode_id(JSON.parse(m.get('meta:factory_info')).inputs.meta));
+                        $('#posClass').val(JSON.parse(m.get('meta:factory_info')).params.class_positive);
+                        $('#modelKey').val(encode_id(row));
                     },
                     el: $('#model_select')});
     slices_selector();
