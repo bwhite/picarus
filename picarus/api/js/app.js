@@ -482,7 +482,7 @@ function app_main() {
             if (options.columns)
                 this.columns = options.columns;
         },
-        render: function() {
+        render: _.debounce(function() {
             
             var columns = this.columns;
             if (_.isUndefined(columns))
@@ -514,7 +514,7 @@ function app_main() {
             } else {
                 this.$el.html('<div class="alert alert-info">Table Empty</div>');
             }
-        }
+        }, 100)
     });
 
     $.ajaxSetup({

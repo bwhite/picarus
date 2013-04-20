@@ -983,7 +983,7 @@ function app_main() {
             if (options.columns)
                 this.columns = options.columns;
         },
-        render: function() {
+        render: _.debounce(function() {
             
             var columns = this.columns;
             if (_.isUndefined(columns))
@@ -1015,7 +1015,7 @@ function app_main() {
             } else {
                 this.$el.html('<div class="alert alert-info">Table Empty</div>');
             }
-        }
+        }, 100)
     });
 
     $.ajaxSetup({
@@ -2353,10 +2353,10 @@ function render_visualize_annotations_loaded() {
                 button_confirm_click($('#modifyButton'), modify_row);
             }
         }
-        //new RowsView({collection: results, el: $('#annotation-results'), postRender: _.debounce(data_change, 100)});
+        new RowsView({collection: results, el: $('#annotation-results'), postRender: _.debounce(data_change, 100)});
         results.fetch();
         
-        //new RowsView({collection: users, el: $('#annotation-users'), postRender: _.debounce(data_change, 100)});
+        new RowsView({collection: users, el: $('#annotation-users'), postRender: _.debounce(data_change, 100)});
         users.fetch();
         debug_dc = data_change;
     }
