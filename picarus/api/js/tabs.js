@@ -1131,6 +1131,7 @@ function render_visualize_annotations_loaded() {
         }
         function class_select_change() {
             console.log('1');
+            return;
             var class_name = $('#class_select').find(":selected").val();
             negPct = Number($('#negPct').val());
             posPct = Number($('#posPct').val());
