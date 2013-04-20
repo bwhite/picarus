@@ -679,6 +679,7 @@ function render_visualize_metadata() {
                     this.collection.bind('reset', this.render);
                     this.collection.bind('change', this.render);
                     this.collection.bind('add', this.render);
+                    this.collection.bind('sync', this.render);
                 },
                 render: function() {
                     var columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
@@ -1225,7 +1226,7 @@ function render_visualize_annotations_loaded() {
         if (p.type == "image_query_batch")
             return p.type + ' ' +  p.query + ' '+ p.num_tasks;
         return p.type;
-    }, change: change});
+    }});//, change: change
     rows.fetch();
 }
 function render_evaluate_classifier() {

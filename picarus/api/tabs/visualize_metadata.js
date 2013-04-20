@@ -27,6 +27,7 @@ function render_visualize_metadata() {
                     this.collection.bind('reset', this.render);
                     this.collection.bind('change', this.render);
                     this.collection.bind('add', this.render);
+                    this.collection.bind('sync', this.render);
                 },
                 render: function() {
                     var columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {

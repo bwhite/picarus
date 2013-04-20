@@ -293,6 +293,6 @@ function render_visualize_annotations_loaded() {
         if (p.type == "image_query_batch")
             return p.type + ' ' +  p.query + ' '+ p.num_tasks;
         return p.type;
-    }, change: change});
+    }});//, change: change
     rows.fetch();
 }
