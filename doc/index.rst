@@ -10,6 +10,24 @@ Who
 ---
 Picarus is developed by `Dapper Vision, Inc. <http://dappervision.com>`_ (`Brandyn White <http://brandynwhite.com>`_ and `Andrew Miller <http://blog.soc1024.com/pages/about-andrew-miller>`_).  We are PhD students at UMD and UCF respectively and are interested in Computer Vision, Web-Scale Machine Learning, HCI, Cryptography, and Social Networks.
 
+Contents
+--------
+
+..  toctree::
+    :maxdepth: 2
+
+    overview
+    algorithms
+    architecture
+    hbase
+    redis
+    basictables
+    api
+    app
+    takeout
+    examples
+    install
+
 History
 ----------
 
@@ -43,21 +61,3 @@ Philosophy
        Hadoop's not easy                                        Privacy is key
    Abstraction lowers the bar                          What we don't know can't hurt you
       REST is for humans                                       Ignorance is safe
-
-Contents
---------
-
-..  toctree::
-    :maxdepth: 2
-
-    overview
-    algorithms
-    architecture
-    hbase
-    redis
-    basictables
-    api
-    app
-    takeout
-    examples
-    install
