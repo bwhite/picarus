@@ -5,6 +5,7 @@ Picarus
 ..  toctree::
     :maxdepth: 2
 
+    index
     api
     app
     takeout
