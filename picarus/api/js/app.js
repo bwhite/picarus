@@ -3,11 +3,11 @@ function login_get(func) {
     var apiKey = $('#apiKey');
     var modal = $('#authModal');
     var emailKeys = $('#emailKeys');
-    PICARUS = new PicarusClient();
     emailKeys.click(function () {
         var email = $('#email').val();
         var loginKey = $('#loginKey').val();
-        PICARUS.authEmailAPIKey(email, loginKey);
+        PICARUS.setAuth(email, loginKey);
+        PICARUS.authEmailAPIKey();
     });
     if (typeof EMAIL_AUTH === 'undefined') {
         function get_auth() {
@@ -339,6 +339,7 @@ function slices_selector_get(split) {
 }
 
 function app_main() {
+    PICARUS = new PicarusClient();
     // Setup models
     function param_encode(dd) {
         return _.map(dd, function (v) {
@@ -513,9 +514,9 @@ function app_main() {
             }
         }, 100)
     });
-    login_get(function (email_auth) {
+    /*login_get(function (email_auth) {
         PICARUS.setAuth(email_auth.email, email_auth.auth);
-    });
+    });*/
 
     // Based on: https://gist.github.com/2711454
     var all_view = _.map($('#tpls [id*=tpl]'), function (v) {
