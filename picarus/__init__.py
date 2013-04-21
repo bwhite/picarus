@@ -4,6 +4,7 @@ from picarus_takeout import *
 import base64
 import urllib
 import json
+import cStringIO as StringIO
 
 
 class PicarusClient(object):
