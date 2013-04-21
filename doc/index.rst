@@ -1,23 +1,6 @@
 Picarus
 ========
 
-
-..  toctree::
-    :maxdepth: 2
-
-    overview
-    algorithms
-    architecture
-    hbase
-    redis
-    basictables
-    api
-    app
-    takeout
-    examples
-    install
-
-
 About
 --------
 
@@ -61,3 +44,20 @@ Philosophy
    Abstraction lowers the bar                          What we don't know can't hurt you
       REST is for humans                                       Ignorance is safe
 
+Contents
+--------
+
+..  toctree::
+    :maxdepth: 2
+
+    overview
+    algorithms
+    architecture
+    hbase
+    redis
+    basictables
+    api
+    app
+    takeout
+    examples
+    install
