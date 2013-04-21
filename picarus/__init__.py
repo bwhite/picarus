@@ -41,8 +41,6 @@ class PicarusClient(object):
         for k, v in data.items():
             if hasattr(v, 'read'):
                 files_out[k] = v
-            elif len(v) > 1024 * 8:
-                files_out[k] = StringIO.StringIO(v)
             else:
                 data_out[k] = v
         return {'data': data_out, 'files': files_out}
@@ -143,8 +141,17 @@ class PicarusClient(object):
     def encdict(self, d):
         if d is None:
             return {}
-        return {self.enc(x): self.enc(y) if isinstance(y, (unicode, str)) else y
-                for x, y in d.items()}
+        out = {}
+        for k, v in d.items():
+            k = self.enc(k)
+            if isinstance(v, (str, unicode)):
+                if len(v) > 1024 * 8:
+                    out[k] = StringIO.StringIO(v)
+                else:
+                    out[k] = self.enc(v)
+            else:
+                out[k] = v
+        return out
 
     def decdict(self, d):
         if d is None:
