@@ -7,6 +7,8 @@ Picarus
 
     overview
     api
+    hbase
+    redis
     app
     takeout
     examples
