@@ -126,13 +126,21 @@ class PicarusClient(object):
         return base64.urlsafe_b64decode(str(x))
 
     def encdict(self, d):
+        if d is None:
+            return {}
         return {self.enc(x): self.enc(y) for x, y in d.items()}
 
     def decdict(self, d):
+        if d is None:
+            return {}
         return {self.dec(x): self.dec(y) for x, y in d.items()}
 
     def enckeys(self, d):
+        if d is None:
+            return {}
         return {self.enc(x): y for x, y in d.items()}
 
     def decvalues(self, d):
+        if d is None:
+            return {}
         return {x: self.dec(y) for x, y in d.items()}
