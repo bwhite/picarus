@@ -9,9 +9,10 @@ import cStringIO as StringIO
 
 class PicarusClient(object):
 
-    def __init__(self, email, api_key, server="https://api.picar.us"):
+    def __init__(self, email, api_key=None, login_key=None, server="https://api.picar.us"):
         self.email = email
         self.api_key = api_key
+        self.login_key = login_key
         self.server = server
         self.version = 'a1'
         import requests
@@ -46,7 +47,6 @@ class PicarusClient(object):
         return {'data': data_out, 'files': files_out}
 
     # raw
-
     def get(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
         r = self.requests.get('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), params=data)
@@ -55,6 +55,11 @@ class PicarusClient(object):
     def post(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
         r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), **self._split_data(data))
+        return self._check_status(r)
+
+    def post_login(self, path, data=None):
+        path = '/'.join(map(urllib.quote_plus, path))
+        r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.login_key), **self._split_data(data))
         return self._check_status(r)
 
     def delete(self, path, data=None):
@@ -72,6 +77,10 @@ class PicarusClient(object):
         if columns is not None:
             data['columns'] = ','.join(map(self.enc, columns))
         return data
+
+    # /auth/
+    def auth_email_api_key(self):
+        self.post_login(['auth', 'email'])
 
     # /data/:table
 

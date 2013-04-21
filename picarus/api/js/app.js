@@ -12,9 +12,7 @@ function login_get(func) {
     if (typeof EMAIL_AUTH === 'undefined') {
         function get_auth() {
             function success(response) {
-                $.ajaxSetup({'beforeSend': function (xhr) {
-                    xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email + ":" + response.apiKey));
-                }});
+                PICARUS.setAuth(email, response.apiKey);
                 use_api(response.apiKey);
             }
             function fail() {
@@ -23,9 +21,7 @@ function login_get(func) {
             var otp_val = otp.val();
             var email = $('#email').val();
             var loginKey = $('#loginKey').val();
-            $.ajaxSetup({'beforeSend': function (xhr) {
-                xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email + ":" + loginKey));
-            }});
+            PICARUS.setAuth(email, loginKey);
             PICARUS.authYubikey(otp_val, {success: success, fail: fail});
         }
         function get_api() {
@@ -39,9 +35,7 @@ function login_get(func) {
             }
             $('#secondFactorAuth').addClass('info');
             $('#secondFactorAuth').removeClass('error');
-            $.ajaxSetup({'beforeSend': function (xhr) {
-                xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email + ":" + apiKey));
-            }});
+            PICARUS.setAuth(email, apiKey);
             PICARUS.getRow('users', email, {success: success, fail: fail});
         }
         function use_api(apiKey) {
@@ -519,13 +513,8 @@ function app_main() {
             }
         }, 100)
     });
-
-    $.ajaxSetup({
-        'beforeSend': function (xhr) {
-            login_get(function (email_auth) {
-                xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email_auth.email + ":" + email_auth.auth));
-            });
-        }
+    login_get(function (email_auth) {
+        PICARUS.setAuth(email_auth.email, email_auth.auth);
     });
 
     // Based on: https://gist.github.com/2711454

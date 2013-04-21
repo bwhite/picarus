@@ -6,11 +6,22 @@ function decode_id(data) {
     return base64.decode(data.replace(/\-/g , '+').replace(/\_/g , '/'));
 }
 
-function PicarusClient(server) {
-    if (_.isUndefined(server))
-        server = 'https://api.picar.us';
-    this.server = server;
+function PicarusClient(args) {
     this.version = 'a1';
+
+    this.setAuth = function (email, key) {
+        $.ajaxSetup({'beforeSend': function (xhr) {
+            xhr.setRequestHeader("Authorization", "Basic " + base64.encode(email + ":" + key));
+        }});
+    };
+
+    if (_.isUndefined(args) || _.isUndefined(args.server))
+        this.server = 'https://api.picar.us';
+    else
+        this.server = args.server;
+
+    if (_.isUndefined(args) || _.isUndefined(args.email) || _.isUndefined(args.apiKey))
+        this.setAuth(args.email, args.apiKey);
 
     this.get = function (path, data, success, fail) {
         path = [this.server, this.version].concat(_.map(path, encodeURIComponent)).join('/');
@@ -38,9 +49,9 @@ function PicarusClient(server) {
         return this._ajax(path, data, success, fail, 'DELETE');
     };
 
-    this.authEmailAPIKey = function (email, loginKey, args) {
+    this.authEmailAPIKey = function (args) {
         args = this._argsDefaults(args);
-        return this.post(["auth", "email"], {email: email, auth: loginKey}, this._wrapNull(args.success), args.fail);
+        return this.post(["auth", "email"], {}, this._wrapNull(args.success), args.fail);
     };
 
     this.authYubikey = function (otp, args) {

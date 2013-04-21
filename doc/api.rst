@@ -32,6 +32,21 @@ EXAMPLE RESPONSE
 
     {}
 
+EXAMPLE: Python
+""""""""""""""""
+.. code-block:: python
+
+    r = picarus.PicarusClient(email=email, login_key=login_key).auth_email_api_key()
+    test_passed() if r == {} else test_failed()
+
+EXAMPLE: Javascript
+"""""""""""""""""""
+.. code-block:: javascript
+
+    p = new PicarusClient()
+    p.setAuth(email, loginKey)
+    p.authEmailAPIKey({success: testPassed, fail: testFailed})
+
 Get an API Key (yubikey)
 ^^^^^^^^^^^^^^^^^^^^^^^
 Return an API Key given a Yubikey One-Time Password (OTP).
