@@ -74,7 +74,6 @@ class PicarusClient(object):
         return self.decdict(self.get(('data', table, self.encurl(row)), data=self._encode_columns(columns)))
 
     def post_row(self, table, row, data=None):
-        data = {}
         if data and 'model' in data:
             data['model'] = base64.b64encode(data['model'])
         return self.decdict(self.post(('data', table, self.encurl(row)), data=data))
@@ -94,8 +93,6 @@ class PicarusClient(object):
         return self._decode_lod(self.get(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=column_data))
 
     def post_slice(self, table, start_row, stop_row, data=None):
-        if data is None:
-            data = {}
         if data and 'model' in data:
             data['model'] = base64.b64encode(data['model'])
         return self.post(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=data)
