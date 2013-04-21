@@ -6,9 +6,12 @@ Picarus
     :maxdepth: 2
 
     overview
-    api
+    algorithms
+    architecture
     hbase
     redis
+    basictables
+    api
     app
     takeout
     examples
