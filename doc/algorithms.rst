@@ -26,6 +26,7 @@ Brisk           Matrix     Ok
 Texton Forest   Mask       Integrating
 =============   ======     ===========
 
+
 Classifiers
 ------------
 
@@ -34,6 +35,7 @@ Classifiers
 Name            Type         Status
 =============   ======       ==========
 Linear SVM      binary       Ok
+Kernel SVM      binary       TODO
 LocalNBNN       multi        Ok
 =============   ======       ==========
 
