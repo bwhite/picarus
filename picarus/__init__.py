@@ -80,7 +80,7 @@ class PicarusClient(object):
 
     # /auth/
     def auth_email_api_key(self):
-        self.post_login(['auth', 'email'])
+        return self.post_login(['auth', 'email'])
 
     # /data/:table
 

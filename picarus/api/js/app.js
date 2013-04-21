@@ -514,9 +514,6 @@ function app_main() {
             }
         }, 100)
     });
-    /*login_get(function (email_auth) {
-        PICARUS.setAuth(email_auth.email, email_auth.auth);
-    });*/
 
     // Based on: https://gist.github.com/2711454
     var all_view = _.map($('#tpls [id*=tpl]'), function (v) {
