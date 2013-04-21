@@ -1,7 +1,7 @@
 Overview
 =========
 
-.. image:: images/architecture.svg
+.. image:: images/architecture.png
 
 Capabilities
 ------------
