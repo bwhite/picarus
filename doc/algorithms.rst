@@ -14,7 +14,7 @@ Image Feature
 -------------
 Computing image features is the primary task that is 'computer vision' specific, with the majority of Picarus's functionality being applicable to general machine learning tasks.  Image features can be categorized into three types: fixed-sized vectors (e.g., histograms, bovw, gist), matrices with one fixed dimension (e.g., feature point descriptors), and three dimensional masks with one fixed dimension (e.g., confidence maps, dense 2d features).  Picarus supports each of these feature types and has several instances of each.
 
--------------   ------     -----------
+=============   ======     ===========
 Name            Type       Status
 =============   ======     ===========
 GIST            Vector     Ok
@@ -30,7 +30,7 @@ Classifiers
 ------------
 
 
--------------   ------       ----------
+=============   =====        ==========
 Name            Type         Status
 =============   ======       ==========
 Linear SVM      binary       Ok
