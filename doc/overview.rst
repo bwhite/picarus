@@ -1,9 +1,9 @@
 Overview
 =========
 
-Capabilities: Algorithms
-------------------------
-Below is an incomplete list of the algorithms available, more detail is available in the API documentation below.
+Capabilities
+------------
+Below is an incomplete list of the algorithm level "things you can do", more detail is available throughout the documentation.
 
 - Crawling: Flickr
 - Annotation: Standalone or Mechanical Turk.  Several operating modes.
@@ -19,12 +19,6 @@ Our projects
 
 - hadoopy_ (`doc <http://hadoopy.co>`_): Cython based Hadoop library for Python.  Efficient, simple, and powerful.
 - picarus_takeout_: C/C++ module that contains the core picarus algorithms, separate so that it can be built as a standalone executable.
-- imfeat_ (`doc <http://bwhite.github.com/imfeat/>`_): Image features (take image, produce feature vector) and support functions.
-- distpy_ (`doc <http://bwhite.github.com/distpy/>`_): Distance metrics.
-- classipy_: Classifiers using a simple standardized interface (supports scikit-learn_).
-- impoint_: Image feature point detection and description.
-- vidfeat_: Video features (take video, produce feature vector) and support functions.
-- keyframe_: Video keyframe algorithms (take video, identify frame changes).
 
 Third party
 
@@ -46,9 +40,9 @@ Third party
 .. _keyframe: https://github.com/bwhite/keyframe
 .. _scikit-learn: http://scikit-learn.org/stable/
 
-Useful Tools (Optional)
+Useful Tools
 ---------------------------
-Our projects (ordered by relevance)
+These are all optional, but you may find them useful.  Our projects (ordered by relevance)
 
 - hadoopy_flow_: Hadoopy monkey patch library to perform automatic job-level parallelism.
 - vision_data_: Library of computer vision dataset interfaces with standardized output formats.
