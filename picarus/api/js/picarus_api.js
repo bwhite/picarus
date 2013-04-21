@@ -20,7 +20,7 @@ function PicarusClient(args) {
     else
         this.server = args.server;
 
-    if (_.isUndefined(args) || _.isUndefined(args.email) || _.isUndefined(args.apiKey))
+    if (!(_.isUndefined(args) || _.isUndefined(args.email) || _.isUndefined(args.apiKey)))
         this.setAuth(args.email, args.apiKey);
 
     this.get = function (path, data, success, fail) {
