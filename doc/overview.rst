@@ -65,7 +65,7 @@ These are all optional, but you may find them useful.  Our projects (ordered by 
 .. _pycassa_server: https://github.com/bwhite/pycassa_server
 
 
-Roles: How Picarus fits in
+How Picarus fits in
 ---------------------------
 Picarus is designed to be used in a variety of capacities from data warehouse, execution engine, web application, REST API, and algorithm factory; however, these are intended to be optional and the level of integration and involvement should be determined by the user.
 

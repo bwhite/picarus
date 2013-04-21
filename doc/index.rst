@@ -6,7 +6,6 @@ Picarus
     :maxdepth: 2
 
     overview
-    index
     api
     app
     takeout
