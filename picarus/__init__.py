@@ -32,6 +32,20 @@ class PicarusClient(object):
     def _decode_dict(self, d):
         return {self.dec(x): self.dec(y) for x, y in d.items()}
 
+    def _split_data(self, data):
+        data_out = {}
+        files_out = {}
+        if data is None:
+            data = {}
+        for k, v in data.items():
+            if hasattr(v, 'read'):
+                files_out[k] = v
+            elif len(v) > 1024 * 8:
+                files_out[k] = StringIO.StringIO(v)
+            else:
+                data_out[k] = v
+        return {'data': data_out, 'files': files_out}
+
     # raw
 
     def get(self, path, data=None):
@@ -39,9 +53,9 @@ class PicarusClient(object):
         r = self.requests.get('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), params=data)
         return self._check_status(r)
 
-    def post(self, path, data=None, files=None):
+    def post(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data, files=files)
+        r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), **self._split_data(data))
         return self._check_status(r)
 
     def delete(self, path, data=None):
@@ -49,9 +63,9 @@ class PicarusClient(object):
         r = self.requests.delete('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data)
         return self._check_status(r)
 
-    def patch(self, path, data=None, files=None):
+    def patch(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = self.requests.patch('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data, files=files)
+        r = self.requests.patch('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), **self._split_data(data))
         return self._check_status(r)
 
     def _encode_columns(self, columns):
@@ -65,8 +79,8 @@ class PicarusClient(object):
     def get_table(self, table, columns=None):
         return self._decode_lod(self.get(('data', table), data=self._encode_columns(columns)))
 
-    def post_table(self, table, data=None, files=None):
-        return self.decvalues(self.post(('data', table), data=self.encdict(data), files=self.enckeys(files)))
+    def post_table(self, table, data=None):
+        return self.decvalues(self.post(('data', table), data=self.encdict(data)))
 
     # /data/:table/:row
 
@@ -81,8 +95,8 @@ class PicarusClient(object):
     def delete_row(self, table, row):
         return self.delete(('data', table, self.encurl(row)))
 
-    def patch_row(self, table, row, data=None, files=None):
-        return self.patch(('data', table, self.encurl(row)), data=self.encdict(data), files=self.enckeys(files))
+    def patch_row(self, table, row, data=None):
+        return self.patch(('data', table, self.encurl(row)), data=self.encdict(data))
 
     # /slice/:table/:start_row/:stop_row
 
@@ -128,7 +142,8 @@ class PicarusClient(object):
     def encdict(self, d):
         if d is None:
             return {}
-        return {self.enc(x): self.enc(y) for x, y in d.items()}
+        return {self.enc(x): self.enc(y) if isinstance(y, (unicode, str)) else y
+                for x, y in d.items()}
 
     def decdict(self, d):
         if d is None:
