@@ -4,7 +4,7 @@ Picarus supports a variety of algorithm types and instances of them.  The comput
 
 Less is More
 ------------
-A natural urge is to pack as many algorithms as possible into a system like this; however, what ends up happening is you have very thin code usage for the majority of the codebase and very heavy usage for a small part.  Part of the philosophy of the core Picarus library is to aim for uniform usage across the available methods.  It is simple to integrate new algorithms and those on the 'long tail' end will be maintained out of the main tree.  This builds confidence and user density in the core algorithms and clearly signals which ones are more experimental.  To achieve this it must be easy enough to add new algorithms that this is an acceptable policy.
+A natural urge is to pack as many algorithms as possible into a system like this; however, what ends up happening is you have very thin code usage for the majority of the codebase and very heavy usage for a small part.  Part of the philosophy of the core Picarus library is to aim for uniform usage across the available methods.  It is simple to integrate new algorithms and those on the 'long tail' end will be maintained out of the main tree.  This builds confidence and user density in the core algorithms and clearly signals which ones are more experimental.  To achieve this it must be easy enough to add new algorithms that this is an acceptable policy.  Ideally we'll be able to keep statistics on each algorithms usage and use that to inform our selection decisions.
 
 Image Preprocessors
 -------------------
@@ -41,7 +41,22 @@ LocalNBNN       multi        Ok
 
 Hashers
 -------
+Features (for images and in general) are essentially a raw representation of some trait that we want to capture from the source data; however, they are not, in general, compact or designed for in memory storage.  A standard technique (hashing) is to convert features (often represented as large floating point vectors) into compact binary codes that attempt to preserve the majority of their information.
 
+===============   ===========
+Name              Status
+===============   ===========
+Spherical         Ok
+Random Rotation   Integrating
+===============   ===========
 
 Indexes
 -------
+Given many features or hashes, we would like to have an efficient data-structure (i.e., an index) for consolidating and retrieving them given a query.  The index compares the query to the existing data, producing a ranked list of candidate matches.  To compare two features one must define a distance metric (e.g., euclidean (L2), manhatten (L1), cosine, histogram intersection), for binary codes one must define a corresponding operation.  This is often a Hamming distance, but may be an operation between the two bit vectors (e.g., spherical hashing used a different metric).
+
+===============   ===========
+Name              Status
+===============   ===========
+hamming2d         Ok
+Spherical         Ok
+===============   ===========
