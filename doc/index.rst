@@ -28,6 +28,12 @@ Contents
     examples
     install
 
+
+Architecture
+-------------
+.. image:: images/architecture.png
+
+
 History
 ----------
 
