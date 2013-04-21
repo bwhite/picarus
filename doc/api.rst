@@ -1,3 +1,6 @@
+API
+===
+
 API Overview
 --------------
 You can access data by row (/data/:table/:row) or by slice (/slice/:table/:startRow/:stopRow which is [startRow, stopRow)).  Slices exploit the contiguous nature of the rows in HBase and allow for batch execution on Hadoop.
