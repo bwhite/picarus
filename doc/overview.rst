@@ -1,6 +1,8 @@
 Overview
 =========
 
+.. image:: images/architecture.png
+
 Capabilities
 ------------
 Below is an concise (and incomplete) list of the "things you can do", more detail is available throughout the documentation.
