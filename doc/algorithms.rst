@@ -31,7 +31,7 @@ Classifiers
 ------------
 Binary classifiers (i.e., have a concept of negative/positive) take in a feature (often as a vector) and produce a real-valued confidence where towards positive infinity is 'more positive' and towards negative infinity is 'more negative', with the interpretation of positive/negative depending on what the original classifier was trained on.  Multi-class classifiers are more varied and harder to generalize over; however, one approach is to have a ranked list of classes with a distance value.  Lower distance is 'better', and the list itself is sorted.  Some classifiers don't have a clear numerical interpretation of "better' (e.g., nearest neighbor) and the usefulness of the distance value itself will depend on the method used.  The ranked list may be complete (i.e., all known classes are present in the ranking) or partial (i.e., only the top performing classes are reported).
 
-=============   =====        ==========
+=============   ======       ==========
 Name            Type         Status
 =============   ======       ==========
 Linear SVM      binary       Ok
