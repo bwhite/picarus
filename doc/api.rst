@@ -264,18 +264,19 @@ Example: Python
     # POST /data/images
     r = c.post_table('images', {'meta:class': 'horse', 'data:image': 'not image'})
     test_passed() if 'row' in r else test_failed()
+    row = r['row']
     # GET /data/images/:row
-    r2 = c.get_row('images', r['row'], ['meta:class'])
-    test_passed() if r2 == {'meta:class': 'horse'} else test_failed()
-    r2 = c.get_row('images', r['row'], ['meta:'])
-    test_passed() if r2 == {'meta:class': 'horse'} else test_failed()
-    r2 = c.get_row('images', r['row'], ['data:image'])
-    test_passed() if r2 == {'data:image': 'not image'} else test_failed()
-    r2 = c.get_row('images', r['row'])
-    test_passed() if r2 == {'meta:class': 'horse', 'data:image': 'not image'} else test_failed()
+    r = c.get_row('images', row, ['meta:class'])
+    test_passed() if r == {'meta:class': 'horse'} else test_failed()
+    r = c.get_row('images', row, ['meta:'])
+    test_passed() if r == {'meta:class': 'horse'} else test_failed()
+    r = c.get_row('images', row, ['data:image'])
+    test_passed() if r == {'data:image': 'not image'} else test_failed()
+    r = c.get_row('images', row)
+    test_passed() if r == {'meta:class': 'horse', 'data:image': 'not image'} else test_failed()
     # DELETE /data/images/:row
-    r2 = c.delete_row('images', r['row'])
-    test_passed() if r2 == {} else test_failed()
+    r = c.delete_row('images', row)
+    test_passed() if r == {} else test_failed()
 
 
 Creating a Model
