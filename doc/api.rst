@@ -76,16 +76,10 @@ Python
 
     import base64
     import json
-
-    # b64
     b64_enc = base64.b64encode
     b64_dec = base64.b64decode
-
-    # ub64
     ub64_enc = base64.urlsafe_b64encode
     ub64_dec = base64.urlsafe_b64decode
-
-    # json_ub64_b64
     json_ub64_b64_enc = lambda x: json.dumps({ub64_enc(k): b64_enc(v)
                                               for k, v in x.items()})
     json_ub64_b64_dec = lambda x: {ub64_dec(k): b64_dec(v)
@@ -139,7 +133,7 @@ HBase Filters
 -------------
 The GET /slice/:table/:startRow/:stopRow command takes in a filter argument that can be any valid HBase Thrift filter.  While documentation is available (http://hbase.apache.org/book/thrift.html) it is partially out of date (see https://issues.apache.org/jira/browse/HBASE-5946) so some caution must be taken.  Below are a few examples that work and using them as a guide the documentation can help elaborate on what else can be done.  This feature is new for HBase and has limitations, for example only ASCII characters may be used, while HBase rows/columns are represented as raw binary values.
 
-.. code-block:: python
+.. code-block::
 
     # Only output rows where column meta:class is exactly equal to 'dinner', and if the meta:class column is missing, then include it
     SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner')
