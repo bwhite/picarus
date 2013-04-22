@@ -628,19 +628,24 @@ function render_annotate_entity() {
 function render_visualize_thumbnails() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
     $('#runButton').click(function () {
+        function uninstallScroll() {
+            $(window).unbind("scroll");
+            $(window).off('scroll.infinite resize.infinite');
+        }
         var startRow = unescape($('#startRow').val());
         var stopRow = unescape($('#stopRow').val());
         var imageColumn = 'thum:image_150sq';
         var getMoreData = undefined;
         var hasMoreData = true;
         var gimmeMoreData = false; // 
+        uninstallScroll();
+        $('#results').html('');
         var $el = $('<div>');
-        $('#results').append(#el);
+        $('#results').append($el);
         if (startRow.length == 0 || stopRow.length == 0) {
             display_alert('Must specify rows');
             return;
         }
-        $el.html('');
         function success(row, columns) {
             c = columns;
             console.log(row);
@@ -669,8 +674,7 @@ function render_visualize_thumbnails() {
             console.log('No more results');
         }, onBottom: function (callback) {
             if (!jQuery.contains(document.documentElement, $el[0])) {
-                $(window).unbind("scroll");
-                $(window).off('scroll.infinite resize.infinite');
+                uninstallScroll();
                 return;
             }
             console.log('More data!');
