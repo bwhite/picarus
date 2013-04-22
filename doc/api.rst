@@ -198,11 +198,11 @@ The table below contains the data commands for Picarus.  GET/PATCH/DELETE are id
 +---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
 
 
-POST /data/:table
-------------------
+Row Operations
+--------------
 
-Uploading data
-^^^^^^^^^^^^^^^^^^
+Create a row
+^^^^^^^^^^^^
 Upload data without specifying a row.
 
 RESOURCE URL
@@ -219,7 +219,27 @@ EXAMPLE RESPONSE
 
     {"row": b64 row}
 
-GET /data/:table/:row
+
+Create/Modify a row
+^^^^^^^^^^^^^^^^^^^
+Upload data specifying a row.  A row need not be created with POST before this operation can be called.  Use this operation when you want the row to be a specific value (normally the case) and the POST method for temporary data.
+
+RESOURCE URL
+""""""""""""
+PATCH https://api.picar.us/a1/data/:table/:row
+
+PARAMETERS
+"""""""""""
+* \*b64 column\* (b64): One or more base64 encoded column/value pairs.  See table permissions for what values you can set.
+
+EXAMPLE RESPONSE
+""""""""""""""""
+.. code-block:: javascript
+
+    {}
+
+
+Get row
 ^^^^^^^^^^^^^^^^^^^^^^^
 Get data from the specified row
 
@@ -274,6 +294,12 @@ Example: Python
     test_passed() if r == {'data:image': 'not image'} else test_failed()
     r = c.get_row('images', row)
     test_passed() if r == {'meta:class': 'horse', 'data:image': 'not image'} else test_failed()
+    # PATCH /data/images/:row
+    r = c.patch_row('images', row, {'meta:class': 'cat', 'data:image': 'image not'})
+    test_passed() if r == {} else test_failed()
+    # GET /data/images/:row
+    r = c.get_row('images', row)
+    test_passed() if r == {'meta:class': 'cat', 'data:image': 'image not'} else test_failed()
     # DELETE /data/images/:row
     r = c.delete_row('images', row)
     test_passed() if r == {} else test_failed()
