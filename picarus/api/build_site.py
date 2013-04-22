@@ -27,7 +27,9 @@ def main():
     render_app()
     preinclude = ['jquery.min.js', 'underscore-min.js']
     preinclude = ['js/' + x for x in preinclude]
-    a = preinclude + list(set(glob.glob('js/*.js')) - set(preinclude))
+    postinclude = ['picarus_api.js', 'app.js']
+    postinclude = ['js/' + x for x in postinclude]
+    a = preinclude + list(set(glob.glob('js/*.js')) - set(preinclude) - set(postinclude)) + postinclude
     if args.debug:
         open('static/compressed.js', 'wb').write(';\n'.join([open(x, 'rb').read() for x in a]))
     else:
