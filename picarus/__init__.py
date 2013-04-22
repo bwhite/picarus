@@ -83,7 +83,7 @@ class PicarusClient(object):
         return self.post_login(['auth', 'email'])
 
     def auth_yubikey(self, otp):
-        return self.post_login(['auth', 'email'], data={'otp': otp})
+        return self.post_login(['auth', 'yubikey'], data={'otp': otp})
 
     # /data/:table
 

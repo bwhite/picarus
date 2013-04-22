@@ -33,8 +33,10 @@ class Test(unittest.TestCase):
         import glob
         import os
         import picarus
+        email = os.environ['EMAIL']
+        login_key = os.environ['LOGIN_KEY']
         otp = raw_input('Yubikey OTP: ')
-        picarus.
+        print(picarus.PicarusClient(email=email, login_key=login_key).auth_yubikey(otp))
         prefix = ['import picarus']
 
         def test_passed():
