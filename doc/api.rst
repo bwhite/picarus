@@ -37,7 +37,7 @@ Example: Python
 .. code-block:: python
 
     r = picarus.PicarusClient(email=email, login_key=login_key).auth_email_api_key()
-    test_passed() if r == {} else test_failed()
+    assert r == {}
 
 Example: Javascript
 """""""""""""""""""
@@ -71,7 +71,7 @@ Example: Python
 .. code-block:: python
 
     r = picarus.PicarusClient(email=email, login_key=login_key).auth_yubikey(otp)
-    test_passed() if 'apiKey' in r else test_failed()
+    assert 'apiKey' in r
 
 Example: Javascript
 """""""""""""""""""
@@ -283,26 +283,26 @@ Example: Python
     c = picarus.PicarusClient(email=email, api_key=api_key)
     # POST /data/images
     r = c.post_table('images', {'meta:class': 'horse', 'data:image': 'not image'})
-    test_passed() if 'row' in r else test_failed()
+    assert 'row' in r
     row = r['row']
     # GET /data/images/:row
     r = c.get_row('images', row, ['meta:class'])
-    test_passed() if r == {'meta:class': 'horse'} else test_failed()
+    assert r == {'meta:class': 'horse'}
     r = c.get_row('images', row, ['meta:'])
-    test_passed() if r == {'meta:class': 'horse'} else test_failed()
+    assert r == {'meta:class': 'horse'}
     r = c.get_row('images', row, ['data:image'])
-    test_passed() if r == {'data:image': 'not image'} else test_failed()
+    assert r == {'data:image': 'not image'}
     r = c.get_row('images', row)
-    test_passed() if r == {'meta:class': 'horse', 'data:image': 'not image'} else test_failed()
+    assert r == {'meta:class': 'horse', 'data:image': 'not image'}
     # PATCH /data/images/:row
     r = c.patch_row('images', row, {'meta:class': 'cat', 'data:image': 'image not'})
-    test_passed() if r == {} else test_failed()
+    assert r == {}
     # GET /data/images/:row
     r = c.get_row('images', row)
-    test_passed() if r == {'meta:class': 'cat', 'data:image': 'image not'} else test_failed()
+    assert r == {'meta:class': 'cat', 'data:image': 'image not'}
     # DELETE /data/images/:row
     r = c.delete_row('images', row)
-    test_passed() if r == {} else test_failed()
+    assert r == {}
 
 
 Creating a Model
