@@ -17,7 +17,7 @@ function render_visualize_thumbnails() {
             if (!_.has(columns, imageColumn))
                 return;
             console.log(row);
-            $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row))
+            $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row));
         }
         function done() {
             hasMoreData = false;
@@ -31,10 +31,10 @@ function render_visualize_thumbnails() {
         if (filter.length > 0) {
             params.filter = filter;
         }
-        PICARUS.scanner("images", startRow, stopRow, params)
-        $('#results').infiniteScroll({threshold, onEnd: function () {
+        PICARUS.scanner("images", startRow, stopRow, params);
+        $('#results').infiniteScroll({threshold: 800, onEnd: function () {
             console.log('No more results');
-        }, onBotton: function (callback) {
+        }, onBottom: function (callback) {
             console.log('More data!');
             if (hasMoreData && !_.isUndefined(getMoreData)) {
                 var more = getMoreData;
