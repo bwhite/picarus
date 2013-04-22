@@ -41,8 +41,8 @@ function render_visualize_thumbnails() {
             console.log('No more results');
         }, onBottom: function (callback) {
             if (!jQuery.contains(document.documentElement, $el[0])) {
-                console.log('Unloaded');
-                $window.off('scroll.infinite resize.infinite');
+                $(window).unbind("scroll");
+                $(window).off('scroll.infinite resize.infinite');
                 return;
             }
             console.log('More data!');
