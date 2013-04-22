@@ -35,8 +35,11 @@ class Test(unittest.TestCase):
         import picarus
         email = os.environ['EMAIL']
         login_key = os.environ['LOGIN_KEY']
-        otp = raw_input('Yubikey OTP: ')
-        print(picarus.PicarusClient(email=email, login_key=login_key).auth_yubikey(otp))
+        if 'API_KEY' not in os.environ:
+            otp = raw_input('Yubikey OTP: ')
+            api_key = picarus.PicarusClient(email=email, login_key=login_key).auth_yubikey(otp)['apiKey']
+        else:
+            api_key = os.environ['API_KEY']
         prefix = ['import picarus']
 
         def test_passed():
@@ -50,9 +53,9 @@ class Test(unittest.TestCase):
                 source = '\n'.join(prefix + source)
                 print('Test from file [%s]' % doc_fn)
                 print(source)
-                exec(compile(source, 'blah.py', 'exec'), {}, {'email': os.environ['EMAIL'],
-                                                              'login_key': os.environ['LOGIN_KEY'],
-                                                              'api_key': os.environ['API_KEY'],
+                exec(compile(source, 'blah.py', 'exec'), {}, {'email': email,
+                                                              'login_key': login_key,
+                                                              'api_key': api_key,
                                                               'otp': otp,
                                                               'test_passed': test_passed,
                                                               'test_failed': test_failed})

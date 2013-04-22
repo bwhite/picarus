@@ -22,30 +22,31 @@ Get an API Key (email)
 ^^^^^^^^^^^^^^^^^^^^^^^
 Send user an email with an API key.
 
-RESOURCE URL
+Resource URL
 """"""""""""
 POST https://api.picar.us/a1/auth/email
 
-EXAMPLE RESPONSE
+Example Response
 """"""""""""""""
 .. code-block:: javascript
 
     {}
 
-EXAMPLE: Python
+Example: Python
 """"""""""""""""
 .. code-block:: python
 
     r = picarus.PicarusClient(email=email, login_key=login_key).auth_email_api_key()
     test_passed() if r == {} else test_failed()
 
-EXAMPLE: Javascript
+Example: Javascript
 """""""""""""""""""
 .. code-block:: javascript
 
     p = new PicarusClient()
     p.setAuth(email, loginKey)
     p.authEmailAPIKey({success: testPassed, fail: testFailed})
+
 
 Get an API Key (yubikey)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -64,6 +65,22 @@ EXAMPLE RESPONSE
 .. code-block:: javascript
 
     {"apiKey": "w0tnnb7wcUbpZFp8wH57"}
+
+Example: Python
+""""""""""""""""
+.. code-block:: python
+
+    r = picarus.PicarusClient(email=email, login_key=login_key).auth_yubikey(otp)
+    test_passed() if 'apiKey' in r else test_failed()
+
+Example: Javascript
+"""""""""""""""""""
+.. code-block:: javascript
+
+    p = new PicarusClient()
+    p.setAuth(email, loginKey)
+    p.authYubikey({success: function (resp) {if (resp.hasOwnProperty('apiKey')) testPassed() else testFailed()}, fail: testFailed})
+
 
 Encodings
 ---------
@@ -92,11 +109,9 @@ Javascript
 
     // Requires underscore.js (http://underscorejs.org/) and base64
     // (http://stringencoders.googlecode.com/svn-history/r210/trunk/javascript/base64.js)
-
     // b64
     b64_enc = base64.encode
     b64_dec = base64.decode
-    
     // ub64
     function ub64_enc(x) {
         return base64.encode(x).replace(/\+/g , '-').replace(/\//g , '_');
@@ -104,7 +119,6 @@ Javascript
     function ub64_dec(x) {
         return base64.decode(x.replace(/\-/g , '+').replace(/\_/g , '/'));
     }
-
     // json_ub64_b64
     function json_ub64_b64_enc(x) {
         return JSON.stringify(_.object(_.map(_.pairs(x), function (i) {
@@ -127,7 +141,7 @@ Standard status codes used are 400, 401, 403, 404, and 500.  In general 4xx is a
 
 Column Semantics
 ----------------
-In several API calls a "column" parameter is available, each column is ub64 encoded and the parameter itself is often optional (i.e., if not specified, all columns are returned) and repeatable (i.e., many columns can be specified and only those can be returned).  For GET operations, a row will be returned if it contains a single of the specified columns or any columns at all if there are none specified.  As these columns are used in HBase, the column family may also be specified and has the same semantics as they do with the Thrift API (i.e., has the effect of returning all columns in the column family); however, this should be avoided if not necessary as it is a goal to allow for other databases to be used (e.g., Cassandra, Accumulo) and this capability will not hold universally.
+In several API calls a "columns" parameter is available, each column is b64 encoded and separated by commas (,).  The parameter itself is optional (i.e., if not specified, all columns are returned).  For GET operations, a row will be returned if it contains a single of the specified columns or any columns at all if there are none specified.  As these columns are used in HBase, the column family may also be specified and has the same semantics as they do with the Thrift API (i.e., has the effect of returning all columns in the column family); however, this property only holds for tables stored in HBase.
 
 HBase Filters
 -------------
@@ -135,10 +149,12 @@ The GET /slice/:table/:startRow/:stopRow command takes in a filter argument that
 
 .. code-block::
 
-    # Only output rows where column meta:class is exactly equal to 'dinner', and if the meta:class column is missing, then include it
+    # Only output rows where column meta:class is exactly equal to 'dinner',
+    # and if the meta:class column is missing, then include it
     SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner')
 
-    # Only output rows where column meta:class is exactly equal to 'dinner' and if the meta:class column is missing, then don't include it
+    # Only output rows where column meta:class is exactly equal to 'dinner'
+    # and if the meta:class column is missing, then don't include it
     SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner', true, true)
 
     # Only output rows where column meta:class starts with 'a'
@@ -147,11 +163,10 @@ The GET /slice/:table/:startRow/:stopRow command takes in a filter argument that
 
 Content-Type: application/json
 ------------------------------
-If the request "Content-Type" is set to "application/json" then JSON parameters may be provided as a JSON object where repeated fields are replaced with lists with the name pluralized (e.g., instead of ?column=1&column=2 it would be {"columns": ["1", "2"]} in JSON).
+If the request "Content-Type" is set to "application/json" then JSON parameters may be provided as a JSON object where columns are replaced with lists of b64 encoded values instead of comma delimiting them in a string.
 
 Table Permissions
 -----------------
-
 The table below contains the data commands for Picarus.  GET/PATCH/DELETE are idempotent (multiple applications have the same impact as one).  Params marked with a value of \* accepts column/value pairs, where the column name is ub64 encoded and the value is b64 encoded (see Encodings).  Each table defines which columns can be modified directly by a user.  Params marked with a value of \- do not accept parameters and ... means that additional parameters are available and specified below.  Params with "column" accept ub64 encoded column names and the parameter is optional and may be repeated for multiple columns.
 
 +---------+----------------------------------+-----------+---------+---------+------------+----------------+--------------------------------+
@@ -182,26 +197,73 @@ The table below contains the data commands for Picarus.  GET/PATCH/DELETE are id
 | DELETE  | /slice/:table/:startRow/:stopRow | N         | N       | N       | N          | N              | \-                             |
 +---------+----------------------------------+-----------+---------+---------+------------+----------------+--------------------------------+
 
+
 POST /data/:table
 ------------------
 
-Uploading an Image
+Uploading data
 ^^^^^^^^^^^^^^^^^^
-Upload an image without specifying a row.
+Upload data without specifying a row.
 
 RESOURCE URL
 """"""""""""
-POST https://api.picar.us/a1/data/images
+POST https://api.picar.us/a1/data/:table
 
 PARAMETERS
 """""""""""
-* \*ub64 column\* (ub64): Columns must include "data:image" and may include anything prefixed with "meta:".
+* \*b64 column\* (b64): One or more base64 encoded column/value pairs.  See table permissions for what values you can set.
 
 EXAMPLE RESPONSE
 """"""""""""""""
 .. code-block:: javascript
 
-    {"row": ub64 row}
+    {"row": b64 row}
+
+Example: Python
+""""""""""""""""
+.. code-block:: python
+
+    c = picarus.PicarusClient(email=email, api_key=api_key)
+    r = c.post_table('images', {'meta:class': 'horse'})
+    test_passed() if 'row' in r else test_failed()
+
+
+GET /data/:table/:row
+^^^^^^^^^^^^^^^^^^^^^^^
+Get data from the specified row
+
+RESOURCE URL
+""""""""""""
+GET https://api.picar.us/a1/data/:table/:row
+
+PARAMETERS
+"""""""""""
+* columns (string): Optional list of columns (b64 encoded separated by ',').
+
+EXAMPLE RESPONSE
+""""""""""""""""
+.. code-block:: javascript
+
+    {"meta:class": "horse"}
+
+Example: Python
+""""""""""""""""
+.. code-block:: python
+
+    c = picarus.PicarusClient(email=email, api_key=api_key)
+    r = c.post_table('images', {'meta:class': 'horse'})
+    test_passed() if 'row' in r else test_failed()
+    r2 = c.get_row('images', r['row'])
+    test_passed() if r2 == {'meta:class': 'horse'} else test_failed()
+
+Example: Javascript
+"""""""""""""""""""
+.. code-block:: javascript
+
+    p = new PicarusClient()
+    p.setAuth(email, loginKey)
+    p.authYubikey({success: function (resp) {if (resp.hasOwnProperty('apiKey')) testPassed() else testFailed()}, fail: testFailed})
+
 
 
 Creating a Model
@@ -223,7 +285,7 @@ EXAMPLE RESPONSE
 """"""""""""""""
 .. code-block:: javascript
 
-    {"row": ub64 row}
+    {"row": b64 row}
 
 
 POST /data/:table/:row
