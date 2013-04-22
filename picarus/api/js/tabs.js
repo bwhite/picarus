@@ -643,7 +643,7 @@ function render_visualize_thumbnails() {
                 return;
             listView.append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row))
         }
-        var params = {success: success, maxRows: 100, columns: [imageColumn]};
+        var params = {success: success, maxRows: 10000, columns: [imageColumn]};
         var filter = unescape($('#filter').val());
         if (filter.length > 0) {
             params.filter = filter;
