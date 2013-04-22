@@ -634,18 +634,19 @@ function render_visualize_thumbnails() {
         var getMoreData = undefined;
         var hasMoreData = true;
         var gimmeMoreData = false; // 
+        var $el = $('#results');
         if (startRow.length == 0 || stopRow.length == 0) {
             display_alert('Must specify rows');
             return;
         }
-        $('#results').html('');
+        $el.html('');
         function success(row, columns) {
             c = columns;
             console.log(row);
             if (!_.has(columns, imageColumn))
                 return;
             console.log(row);
-            $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row));
+            $el.append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row));
         }
         function done() {
             hasMoreData = false;
@@ -663,9 +664,14 @@ function render_visualize_thumbnails() {
         if (filter.length > 0) {
             params.filter = filter;
         }
-        $('#results').infiniteScroll({threshold: 1024, onEnd: function () {
+        $el.infiniteScroll({threshold: 1024, onEnd: function () {
             console.log('No more results');
         }, onBottom: function (callback) {
+            if (!jQuery.contains(document.documentElement, $el[0])) {
+                console.log('Unloaded');
+                $window.off('scroll.infinite resize.infinite');
+                return;
+            }
             console.log('More data!');
             if (hasMoreData)
                 if (!_.isUndefined(getMoreData)) {
@@ -677,10 +683,6 @@ function render_visualize_thumbnails() {
                 }
             callback(hasMoreData);
         }});
-        $('#results').unload(function (evt) {
-            console.log('Unloaded');
-            $window.off('scroll.infinite resize.infinite');
-        });
         PICARUS.scanner("images", startRow, stopRow, params);
     });
 }
