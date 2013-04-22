@@ -640,17 +640,20 @@ function render_visualize_thumbnails() {
         $('#results').html('');
         function success(row, columns) {
             c = columns;
+            console.log(row);
             if (!_.has(columns, imageColumn))
                 return;
+            console.log(row);
             $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row))
         }
         function done() {
             hasMoreData = false;
         }
         function resume(callback) {
+            console.log('Resuming');
             getMoreData = callback;
         }
-        var params = {success: success, maxRows: 100, columns: [imageColumn], resume: resume};
+        var params = {success: success, columns: [imageColumn], resume: resume};
         var filter = unescape($('#filter').val());
         if (filter.length > 0) {
             params.filter = filter;
