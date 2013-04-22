@@ -634,7 +634,8 @@ function render_visualize_thumbnails() {
         var getMoreData = undefined;
         var hasMoreData = true;
         var gimmeMoreData = false; // 
-        var $el = $('#results');
+        var $el = $('<div>');
+        $('#results').append(#el);
         if (startRow.length == 0 || stopRow.length == 0) {
             display_alert('Must specify rows');
             return;
