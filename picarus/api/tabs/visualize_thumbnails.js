@@ -5,7 +5,8 @@ function render_visualize_thumbnails() {
         var stopRow = unescape($('#stopRow').val());
         var imageColumn = 'thum:image_150sq';
         var getMoreData = undefined;
-        var hasMoreData = false;
+        var hasMoreData = true;
+        var gimmeMoreData = false;
         if (startRow.length == 0 || stopRow.length == 0) {
             display_alert('Must specify rows');
             return;
@@ -23,25 +24,32 @@ function render_visualize_thumbnails() {
             hasMoreData = false;
         }
         function resume(callback) {
-            console.log('Resuming');
-            getMoreData = callback;
+            console.log('Got resume');
+            if (gimmeMoreData) {
+                gimmeMoreData = false;
+                callback();
+            } else
+                getMoreData = callback;
         }
         var params = {success: success, columns: [imageColumn], resume: resume};
         var filter = unescape($('#filter').val());
         if (filter.length > 0) {
             params.filter = filter;
         }
-        PICARUS.scanner("images", startRow, stopRow, params);
         $('#results').infiniteScroll({threshold: 800, onEnd: function () {
             console.log('No more results');
         }, onBottom: function (callback) {
             console.log('More data!');
-            if (hasMoreData && !_.isUndefined(getMoreData)) {
-                var more = getMoreData;
-                getMoreData = undefined;
-                more();
-            }
+            if (hasMoreData)
+                if (!_.isUndefined(getMoreData)) {
+                    var more = getMoreData;
+                    getMoreData = undefined;
+                    more();
+                } else {
+                    gimmeMoreData = true;
+                }
             callback(hasMoreData);
         }});
+        PICARUS.scanner("images", startRow, stopRow, params);
     });
 }
