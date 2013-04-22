@@ -79,7 +79,7 @@ Example: Javascript
 
     p = new PicarusClient()
     p.setAuth(email, loginKey)
-    p.authYubikey({success: function (resp) {if (resp.hasOwnProperty('apiKey')) testPassed() else testFailed()}, fail: testFailed})
+    p.authYubikey({success: function (r) {if (_.has(r, 'apiKey')) testPassed() else testFailed()}, fail: testFailed})
 
 
 Encodings
@@ -219,15 +219,6 @@ EXAMPLE RESPONSE
 
     {"row": b64 row}
 
-Example: Python
-""""""""""""""""
-.. code-block:: python
-
-    c = picarus.PicarusClient(email=email, api_key=api_key)
-    r = c.post_table('images', {'meta:class': 'horse'})
-    test_passed() if 'row' in r else test_failed()
-
-
 GET /data/:table/:row
 ^^^^^^^^^^^^^^^^^^^^^^^
 Get data from the specified row
@@ -246,24 +237,45 @@ EXAMPLE RESPONSE
 
     {"meta:class": "horse"}
 
+
+DELETE /data/:table/:row
+^^^^^^^^^^^^^^^^^^^^^^^
+Delete a specified row
+
+RESOURCE URL
+""""""""""""
+DELETE https://api.picar.us/a1/data/:table/:row
+
+PARAMETERS
+"""""""""""
+None
+
+EXAMPLE RESPONSE
+""""""""""""""""
+.. code-block:: javascript
+
+    {}
+
 Example: Python
 """"""""""""""""
 .. code-block:: python
 
     c = picarus.PicarusClient(email=email, api_key=api_key)
-    r = c.post_table('images', {'meta:class': 'horse'})
+    # POST /data/images
+    r = c.post_table('images', {'meta:class': 'horse', 'data:image': 'not image'})
     test_passed() if 'row' in r else test_failed()
-    r2 = c.get_row('images', r['row'])
+    # GET /data/images/:row
+    r2 = c.get_row('images', r['row'], ['meta:class'])
     test_passed() if r2 == {'meta:class': 'horse'} else test_failed()
-
-Example: Javascript
-"""""""""""""""""""
-.. code-block:: javascript
-
-    p = new PicarusClient()
-    p.setAuth(email, loginKey)
-    p.authYubikey({success: function (resp) {if (resp.hasOwnProperty('apiKey')) testPassed() else testFailed()}, fail: testFailed})
-
+    r2 = c.get_row('images', r['row'], ['meta:'])
+    test_passed() if r2 == {'meta:class': 'horse'} else test_failed()
+    r2 = c.get_row('images', r['row'], ['data:image'])
+    test_passed() if r2 == {'data:image': 'not image'} else test_failed()
+    r2 = c.get_row('images', r['row'])
+    test_passed() if r2 == {'meta:class': 'horse', 'data:image': 'not image'} else test_failed()
+    # DELETE /data/images/:row
+    r2 = c.delete_row('images', r['row'])
+    test_passed() if r2 == {} else test_failed()
 
 
 Creating a Model
