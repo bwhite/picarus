@@ -631,7 +631,8 @@ function render_visualize_thumbnails() {
         var startRow = unescape($('#startRow').val());
         var stopRow = unescape($('#stopRow').val());
         var imageColumn = 'thum:image_150sq';
-        var listView = new infinity.ListView($('#results'));
+        var getMoreData = undefined;
+        var hasMoreData = false;
         if (startRow.length == 0 || stopRow.length == 0) {
             display_alert('Must specify rows');
             return;
@@ -641,14 +642,31 @@ function render_visualize_thumbnails() {
             c = columns;
             if (!_.has(columns, imageColumn))
                 return;
-            listView.append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row))
+            $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row))
         }
-        var params = {success: success, maxRows: 10000, columns: [imageColumn]};
+        function done() {
+            hasMoreData = false;
+        }
+        function resume(callback) {
+            getMoreData = callback;
+        }
+        var params = {success: success, maxRows: 100, columns: [imageColumn], resume: resume};
         var filter = unescape($('#filter').val());
         if (filter.length > 0) {
             params.filter = filter;
         }
         PICARUS.scanner("images", startRow, stopRow, params)
+        $('#results').infiniteScroll({threshold, onEnd: function () {
+            console.log('No more results');
+        }, onBotton: function (callback) {
+            console.log('More data!');
+            if (hasMoreData && !_.isUndefined(getMoreData)) {
+                var more = getMoreData;
+                getMoreData = undefined;
+                more();
+            }
+            callback(hasMoreData);
+        }});
     });
 }
 function render_visualize_metadata() {

@@ -506,649 +506,6 @@ function picarus_api_row_action(rows, action, params) {
 	}
 
 }(this, document, jQuery));;
-function login_get(func) {
-    var otp = $('#otp');
-    var apiKey = $('#apiKey');
-    var modal = $('#authModal');
-    var emailKeys = $('#emailKeys');
-    emailKeys.click(function () {
-        var email = $('#email').val();
-        var loginKey = $('#loginKey').val();
-        PICARUS.setAuth(email, loginKey);
-        PICARUS.authEmailAPIKey();
-    });
-    if (typeof EMAIL_AUTH === 'undefined') {
-        function get_auth() {
-            function success(response) {
-                PICARUS.setAuth(email, response.apiKey);
-                use_api(response.apiKey);
-            }
-            function fail() {
-                $('#secondFactorAuth').addClass('error');
-            }
-            var otp_val = otp.val();
-            var email = $('#email').val();
-            var loginKey = $('#loginKey').val();
-            PICARUS.setAuth(email, loginKey);
-            PICARUS.authYubikey(otp_val, {success: success, fail: fail});
-        }
-        function get_api() {
-            var email = $('#email').val();
-            var apiKey = $('#apiKey').val();
-            function success() {
-                use_api(apiKey);
-            }
-            function fail() {
-                $('#secondFactorAuth').addClass('error');
-            }
-            $('#secondFactorAuth').addClass('info');
-            $('#secondFactorAuth').removeClass('error');
-            PICARUS.setAuth(email, apiKey);
-            PICARUS.getRow('users', email, {success: success, fail: fail});
-        }
-        function use_api(apiKey) {
-            var email = $('#email').val();
-            var loginKey = $('#loginKey').val();
-            $('#secondFactorAuth').removeClass('error');
-            $.cookie('email', email, {secure: true});
-            $.cookie('loginKey', loginKey, {secure: true});
-            EMAIL_AUTH = {auth: apiKey, email: email};
-            $('#otp').unbind();
-            $('#apiKey').unbind('keypress');
-            func(EMAIL_AUTH);
-            modal.modal('hide');
-        }
-        function enable_inputs() {
-            var email = $('#email').val();
-            var loginKey = $('#loginKey').val();
-            if (email.length && loginKey.length) {
-                otp.removeAttr("disabled");
-                apiKey.removeAttr("disabled");
-                emailKeys.removeAttr("disabled");
-            }
-        }
-        $('#email').val($.cookie('email'));
-        $('#loginKey').val($.cookie('loginKey'));
-        enable_inputs();
-        $('#email').keypress(enable_inputs);
-        $('#email').on('paste', function () {_.defer(enable_inputs)});
-        $('#loginKey').keypress(enable_inputs);
-        $('#loginKey').on('paste', function () {_.defer(enable_inputs)});
-        otp.keypress(_.debounce(get_auth, 100));
-        otp.on('paste', function () {_.defer(get_auth)});
-        apiKey.keypress(_.debounce(get_api, 100));
-        apiKey.on('paste', function () {_.defer(get_api)});
-        modal.modal('show');
-        modal.off('shown');
-        modal.on('shown', function () {otp.focus()});
-    } else {
-        func(EMAIL_AUTH);
-    }
-}
-
-function google_visualization_load(callback) {
-    google.load("visualization", "1", {packages:["corechart"], callback: callback});
-}
-
-function add_hint(el, text) {
-    el.wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', text));
-}
-function random_bytes(num) {
-    return _.map(_.range(10), function () {
-        return String.fromCharCode(_.random(255));
-    }).join('');
-}
-
-function imageThumbnail(row, id) {
-    var imageColumn = 'thum:image_150sq';
-    function success(columns) {
-        $('#' + id).attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row)
-    }
-    PICARUS.getRow('images', row, {success: success, data: {columns: imageColumn}});
-}
-
-function button_confirm_click(button, fun) {
-    button.unbind();
-    button.click(function (data) {
-        var button = $(data.target);
-        button.unbind();
-        button.addClass('btn-danger');
-        button.click(fun);
-    });
-}
-function button_confirm_click_reset(button) {
-    button.removeClass('btn-danger');
-    button.unbind();
-}
-
-function progressModal() {
-    $('#progressModal').modal('show');
-    function update(pct) {
-        $('#progress').css('width', (100 * pct + '%'));
-    }
-    function done() {
-        $('#progressModal').modal('hide');
-    }
-    return {done: done, update: update};
-}
-
-function alert_running() {
-    $('#results').html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
-}
-
-function alert_done() {
-    $('#results').html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
-}
-
-function alert_running_wrap(el) {
-    return function () {
-        el.html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
-    }
-}
-
-function alert_success_wrap(el) {
-    return function () {
-        el.html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
-    }
-}
-
-function alert_fail_wrap(el) {
-    return function () {
-        el.html('<div class="alert alert-error"><strong>Error!</strong> Job failed!</div>');
-    }
-}
-
-function wrap_hints() {
-    $('[hint]').each(function (x) {
-        $(this).wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', $(this).attr('hint')));
-    });
-}
-
-function button_running() {
-    $('#runButton').button('loading');
-}
-
-function button_reset() {
-    $('#runButton').button('reset');
-}
-
-function button_error() {
-    $('#runButton').button('error');
-}
-
-function model_dropdown(args) {
-    var columns_model = ['meta:'];
-    var models = new PicarusRows([], {'table': 'models', columns: columns_model});
-    if (typeof args.change === 'undefined') {
-        args.change = function () {};
-    }
-    var AppView = Backbone.View.extend({
-        el: $('#container'),
-        initialize: function() {
-            _.bindAll(this, 'render');
-            this.collection.bind('sync', this.render);
-        },
-        renderDrop: args.change,
-        modelFilter: args.modelFilter,
-        events: {'change': 'renderDrop'},
-        render: function() {
-            n = this.$el;
-            this.$el.empty();
-            var select_template = "{{#models}}<option value='{{row}}'>{{{text}}}</option>{{/models}};" // text is escaped already
-            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: encode_id(data.get('row')), text: data.escape('meta:tags') + ' ' + data.escape('meta:name')}});
-            models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
-            this.$el.append(Mustache.render(select_template, {models: models_filt}));
-            this.renderDrop();
-        }
-    });
-    av = new AppView({collection: models, el: args.el});
-    models.fetch();
-    return models;
-}
-
-function rows_dropdown(rows, args) {
-    if (_.isUndefined(args.change)) {
-        args.change = function () {};
-    }
-    if (_.isUndefined(args.filter)) {
-        args.filter = function () {return true};
-    }
-    if (_.isUndefined(args.text)) {
-        args.text = function (x) {return x.escape('row')};
-    }
-    var AppView = Backbone.View.extend({
-        el: $('#container'),
-        initialize: function() {
-            _.bindAll(this, 'render');
-            this.collection.bind('sync', this.render);
-        },
-        events: {'change': 'renderDrop'},
-        renderDrop: args.change,
-        render: function() {
-            n = this.$el;
-            this.$el.empty();
-            var select_template = "{{#models}}<option value='{{row}}'>{{text}}</option>{{/models}};"
-            var models_filt = _.map(rows.filter(args.filter), function (data) {return {row: encode_id(data.get('row')), text: args.text(data)}});
-            models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
-            this.$el.append(Mustache.render(select_template, {models: models_filt}));
-            this.renderDrop();
-        }
-    });
-    av = new AppView({collection: rows, el: args.el});
-    rows.fetch();
-}
-
-
-function project_selector(projectsDrop) {
-    var AppView = Backbone.View.extend({
-        initialize: function() {
-            _.bindAll(this, 'render');
-            this.model.bind('sync', this.render);
-        },
-        events: {'change': 'renderDrop'},
-        render: function() {
-            this.$el.empty();
-            var projects = _.keys(JSON.parse(this.model.get('image_projects')));
-            projects.sort(function (x, y) {return Number(x > y) - Number(x < y)});
-            var select_template = "{{#projects}}<option value='{{.}}'>{{.}}</option>{{/projects}};"
-            this.$el.append(Mustache.render(select_template, {projects: projects}));
-            this.renderDrop(); // TODO: This needs to be setup somewhere
-        }
-    });
-    var auth = login_get(function (email_auth) {
-        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
-        new AppView({model: user, el: projectsDrop});
-        user.fetch();
-    });
-}
-
-function row_selector(prefixDrop, startRow, stopRow) {
-    var AppView = Backbone.View.extend({
-        initialize: function() {
-            _.bindAll(this, 'render');
-            this.model.bind('sync', this.render);
-        },
-        events: {'change': 'renderDrop'},
-        renderDrop: function () {
-            var prefix = prefixDrop.children().filter('option:selected').val();
-            if (typeof startRow !== 'undefined')
-                startRow.val(prefix);
-            // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
-            if (typeof stopRow !== 'undefined')
-                stopRow.val(prefix_to_stop_row(prefix));
-        },
-        render: function() {
-            this.$el.empty();
-            // TODO: Check permissions and accept perissions as argument
-            var prefixes = _.keys(JSON.parse(this.model.get('image_prefixes')));
-            prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
-            var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
-            this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
-            this.renderDrop();
-        }
-    });
-    var auth = login_get(function (email_auth) {
-        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
-        new AppView({model: user, el: prefixDrop});
-        user.fetch();
-    });
-}
-
-function slices_selector() {
-    var prefixDrop = $('#slicesSelectorPrefixDrop'), startRow = $('#slicesSelectorStartRow'), stopRow = $('#slicesSelectorStopRow');
-    var addButton = $('#slicesSelectorAddButton'), clearButton = $('#slicesSelectorClearButton'), slicesText = $('#slicesSelectorSlices');
-    if (!prefixDrop.size())  // Skip if not visible
-        return;
-    var AppView = Backbone.View.extend({
-        initialize: function() {
-            _.bindAll(this, 'render');
-            this.model.bind('sync', this.render);
-        },
-        events: {'change': 'renderDrop'},
-        renderDrop: function () {
-            var prefix = decode_id(prefixDrop.children().filter('option:selected').val());
-            if (typeof startRow !== 'undefined')
-                startRow.val(prefix);
-            // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
-            if (typeof stopRow !== 'undefined')
-                stopRow.val(prefix_to_stop_row(prefix));
-        },
-        render: function() {
-            this.$el.empty();
-            // TODO: Check permissions and accept perissions as argument
-            var prefixes = _.keys(JSON.parse(this.model.get('image_prefixes')));
-            prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
-            var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
-            var prefixes_render = _.map(prefixes, function (x) {return {value: encode_id(x), text: x}});
-            this.$el.append(Mustache.render(select_template, {prefixes: prefixes_render}));
-            this.renderDrop();
-        }
-    });
-    addButton.click(function () {
-        slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', base64.encode(unescape(startRow.val())) + ',' + base64.encode(unescape(stopRow.val()))));
-    });
-    clearButton.click(function () {
-        slicesText.html('');
-    });
-    var auth = login_get(function (email_auth) {
-        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
-        new AppView({model: user, el: prefixDrop});
-        user.fetch();
-    });
-}
-
-function slices_selector_get(split) {
-    var out = _.map($('#slicesSelectorSlices').children(), function (x) {return $(x).attr('value')});
-    if (split)
-        return _.map(out, function (x) {
-            return x.split(',');
-        });
-    return out;
-}
-
-function app_main() {
-    PICARUS = new PicarusClient();
-    // Setup models
-    function param_encode(dd) {
-        return _.map(dd, function (v) {
-            return v.join('=');
-        }).join('&');
-    }
-    PicarusRow = Backbone.Model.extend({
-        idAttribute: "row",
-        initialize: function(attributes, options) {
-            if (!_.isUndefined(options)) {
-                if (_.has(options, 'table'))
-                    this.table = options.table;
-                if (_.isArray(options.columns))
-                    this.columns = options.columns;
-            }
-        },
-        sync: function (method, model, options) {
-            opt = options;
-            console.log('row:' + method);
-            mod = model;
-            var table = model.get_table();
-            var out;
-            var success = options.success;
-            var params = {success: success};
-            params.data = model.attributes;
-            if (_.has(options, 'attrs')) {
-                params.data = options.attrs;
-            }
-            if (method == 'read') {
-                if (_.has(this, 'columns'))
-                    params.columns = this.columns;
-                out = PICARUS.getRow(table, model.id, params);
-            } else if (method == 'delete') {
-                out = PICARUS.deleteRow(table, model.id, params);
-            } else if (method == 'patch') {
-                out = PICARUS.patchRow(table, model.id, params);
-            } else if (method == 'create') {
-                out = PICARUS.postTable(table, params);
-            }
-            debug_out = out;
-            model.trigger('request', model, out, options);
-            return out;
-        },
-        get_table: function () {
-            var table = this.table;
-            if (_.isUndefined(table))
-                table = this.collection.table;
-            return table;
-        },
-        unset: function (attr, options) {
-            function s() {
-                return this.set(attr, void 0, _.extend({}, options, {unset: true}));
-            }
-            s = _.bind(s, this);
-            return PICARUS.deleteColumn(this.get_table(), this.id, attr, {success: s});
-        }
-    });
-    PicarusRows = Backbone.Collection.extend({
-        model : PicarusRow,
-        initialize: function(models, options) {
-            this.table = options.table;
-            if (_.isArray(options.columns))
-                this.columns = options.columns;
-        },
-        sync: function (method, model, options) {
-            opt = options;
-            console.log('rows:' + method);
-            mod = model;
-            var out;
-            var params = {};
-            var table = this.table;
-            if (_.has(options, 'attrs'))
-                params.data = options.attrs;
-            if (method == 'read') {
-                if (_.has(this, 'columns'))
-                    params.columns = this.columns;
-                params.success = function (lod) {
-                    options.success(_.map(lod, function (v) {v[1].row = v[0]; return v[1]}));
-                };
-                out = PICARUS.getTable(this.table, params);
-            }
-            model.trigger('request', model, out, options);
-            return out;
-        }
-    });
-
-
-    function deleteValueFunc(row, column) {
-        if (column == 'row')
-            return '';
-        return Mustache.render('<a class="value_delete" style="padding-left: 5px" row="{{row}}" column="{{column}}">Delete</a>', {row: encode_id(row), column: encode_id(column)});
-    }
-    function deleteRowFunc(row) {
-        return Mustache.render('<button class="btn row_delete" type="submit" row="{{row}}"">Delete</button>', {row: encode_id(row)});
-    }
-
-    RowsView = Backbone.View.extend({
-        initialize: function(options) {
-            _.bindAll(this, 'render');
-            this.collection.bind('add', this.render);
-            this.collection.bind('sync', this.render);
-            this.collection.bind('reset', this.render);
-            this.collection.bind('change', this.render);
-            this.collection.bind('remove', this.render);
-            this.collection.bind('destroy', this.render);
-            this.extraColumns = [];
-            this.postRender = function () {};
-            this.deleteValues = false;
-            this.deleteRows = false;
-            if (!_.isUndefined(options.postRender))
-                this.postRender = options.postRender;
-            if (!_.isUndefined(options.extraColumns))
-                this.extraColumns = options.extraColumns;
-            if (options.deleteRows) {
-                this.deleteRows = true;
-                function delete_row(data) {
-                    var row = decode_id(data.target.getAttribute('row'));
-                    this.collection.get(row).destroy({wait: true});
-                }
-                delete_row = _.bind(delete_row, this);
-                this.postRender = _.compose(this.postRender, function () {
-                    button_confirm_click($('.row_delete'), delete_row);
-                });
-                this.extraColumns.push({header: "Delete", getFormatted: function() { return deleteRowFunc(this.get('row'))}});
-            }
-            if (options.deleteValues) {
-                this.deleteValues = true;
-                function delete_value(data) {
-                    var row = decode_id(data.target.getAttribute('row'));
-                    var column = decode_id(data.target.getAttribute('column'));
-                    this.collection.get(row).unset(column);
-                }
-                delete_value = _.bind(delete_value, this);
-                this.postRender = _.compose(this.postRender, function () {
-                    button_confirm_click($('.value_delete'), delete_value);
-                });
-            }
-            if (options.columns)
-                this.columns = options.columns;
-        },
-        render: _.debounce(function() {
-            
-            var columns = this.columns;
-            if (_.isUndefined(columns))
-                columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
-                    return _.keys(x.attributes);
-                })));
-            var deleteValueFuncLocal = function () {return ''};
-            if (this.deleteValues)
-                deleteValueFuncLocal = deleteValueFunc;
-            var table_columns = _.map(columns, function (x) {
-                if (x === 'row')
-                    return {header: 'row', getFormatted: function() { return _.escape(this.get(x))}};
-                outExtra = '';
-                return {header: x, getFormatted: function() {
-                    var val = this.get(x);
-                    if (_.isUndefined(val))
-                        return '';
-                    return _.escape(val) + deleteValueFuncLocal(this.get('row'), x);
-                }
-                };
-            }).concat(this.extraColumns);
-            picarus_table = new Backbone.Table({
-                collection: this.collection,
-                columns: table_columns
-            });
-            if (this.collection.length) {
-                this.$el.html(picarus_table.render().el);
-                this.postRender();
-            } else {
-                this.$el.html('<div class="alert alert-info">Table Empty</div>');
-            }
-        }, 100)
-    });
-
-    // Based on: https://gist.github.com/2711454
-    var all_view = _.map($('#tpls [id*=tpl]'), function (v) {
-        return v.id.slice(4).split('_').join('/')
-    });
-
-    function capFirst(string) {
-        return string.charAt(0).toUpperCase() + string.slice(1);
-    }
-
-    //This is the Backbone controller that manages the content of the app
-    var Content = Backbone.View.extend({
-        initialize:function(options){
-            Backbone.history.on('route',function(source, path){
-                this.render(path);
-            }, this);
-        },
-        //This object defines the content for each of the routes in the application
-        content: _.object(_.map(all_view, function (val) {
-            var selector_id;
-            var prefix = 'tpl_';
-            if (val === "") {
-                selector_id = "data_user"
-            } else {
-                selector_id = val.split('/').join('_');
-            }
-            return [val, _.template(document.getElementById(prefix + selector_id).innerHTML, {baseLogin: document.getElementById('bpl_login').innerHTML,
-                                                                                              rowSelect: document.getElementById('bpl_row_select').innerHTML,
-                                                                                              slicesSelect: document.getElementById('bpl_slices_select').innerHTML,
-                                                                                              filter: document.getElementById('bpl_filter').innerHTML,
-                                                                                              prefixSelect: document.getElementById('bpl_prefix_select').innerHTML,
-                                                                                              runButton: document.getElementById('bpl_run_button').innerHTML})];
-        })),
-        render:function(route){
-            //Simply sets the content as appropriate
-            this.$el.html(this.content[route]);
-            // Post-process the DOM for Picarus specific helpers
-            wrap_hints();
-            custom_checkbox_and_radio();
-            // Handles post render javascript calls if available
-            if (route === "")
-                route = 'data/user';
-            var func_name = 'render_' + route.split('/').join('_');
-            if (window.hasOwnProperty(func_name))
-                login_get(window[func_name]);
-        }
-    });
-    
-    //This is the Backbone controller that manages the Nav Bar
-    var NavBar = Backbone.View.extend({
-        initialize:function(options){
-            Backbone.history.on('route',function(source, path){
-                this.render(path);
-            }, this);
-        },
-        //This is a collection of possible routes and their accompanying
-        //user-friendly titles
-        titles: _.object(_.map(all_view, function (val) {
-            var name;
-            if (val === "") {
-                name = "user";
-            } else {
-                name = _.last(val.split('/', 2));
-            }
-            return [val, capFirst(name)];
-        })),
-        events:{
-            'click a':function(source) {
-                var hrefRslt = source.target.getAttribute('href');
-                Backbone.history.navigate(hrefRslt, {trigger:true});
-                //Cancel the regular event handling so that we won't actual change URLs
-                //We are letting Backbone handle routing
-                return false;
-            }
-        },
-        //Each time the routes change, we refresh the navigation (dropdown magic by Brandyn)
-        render:function(route){
-            this.$el.empty();
-            var template = _.template("<li class='<%=active%>'><a href='<%=url%>'><%=visible%></a></li>");
-            var drop_template = _.template("<li <%=active%>><a href='#'><%=prev_key%></a><ul><% _.each(vals, function(data) { %> <li class='<%=data[2]%>'><a href='#<%=data[0]%>'><%=data[1]%></a></li> <% }); %></ul></li>");
-            var prev_els = [];
-            var prev_key = undefined;
-            var route_key = route.split('/', 2)[0]
-            function flush_dropdown(el) {
-                el.append(drop_template({prev_key: capFirst(prev_key), vals: prev_els, active: route_key === prev_key ? "class='active'" : ''}));
-            }
-            for (var key in this.titles) {
-                var active = route === key ? 'active' : '';
-                var key_splits = key.split('/', 2);
-                var name = this.titles[key];
-                if (typeof prev_key != 'undefined' && (prev_key != key_splits[0] || key_splits.length < 2)) {
-                    flush_dropdown(this.$el);
-                    prev_key = undefined;
-                    prev_els = [];
-                }
-                // If a part of a dropdown, add to list, else add directly
-                if (key_splits.length >= 2) {
-                    prev_key = key_splits[0];
-                    prev_els.push([key, name, active]);
-                } else {
-                    this.$el.append(template({url:'#' + key,visible:this.titles[key],active:active}));
-                }
-            }
-            if (typeof prev_key != 'undefined') {
-                flush_dropdown(this.$el);
-            }
-        }
-    });
-    
-    //Every time a Router is instantiated, the route is added
-    //to a global Backbone.history object. Thus, this is just a
-    //nice way of defining possible application states
-    new (Backbone.Router.extend({
-        routes: _.object(_.map(all_view, function (val) {
-            return [val, val];
-        }).concat([['*path', 'data/user']]))
-    }));
-    
-    //Attach Backbone Views to existing HTML elements
-    new NavBar({el:document.getElementById('nav-item-container')});
-    new Content({el:document.getElementById('container')});
-    
-    //Start the app by setting kicking off the history behaviour.
-    //We will get a routing event with the initial URL fragment
-    Backbone.history.start();
-    window.onbeforeunload = function() {return "Leaving Picarus..."};
-};
 /*
 CryptoJS v3.1.2
 code.google.com/p/crypto-js
@@ -1157,6 +514,11 @@ code.google.com/p/crypto-js/wiki/License
 */
 (function(){var h=CryptoJS,j=h.lib.WordArray;h.enc.Base64={stringify:function(b){var e=b.words,f=b.sigBytes,c=this._map;b.clamp();b=[];for(var a=0;a<f;a+=3)for(var d=(e[a>>>2]>>>24-8*(a%4)&255)<<16|(e[a+1>>>2]>>>24-8*((a+1)%4)&255)<<8|e[a+2>>>2]>>>24-8*((a+2)%4)&255,g=0;4>g&&a+0.75*g<f;g++)b.push(c.charAt(d>>>6*(3-g)&63));if(e=c.charAt(64))for(;b.length%4;)b.push(e);return b.join("")},parse:function(b){var e=b.length,f=this._map,c=f.charAt(64);c&&(c=b.indexOf(c),-1!=c&&(e=c));for(var c=[],a=0,d=0;d<
 e;d++)if(d%4){var g=f.indexOf(b.charAt(d-1))<<2*(d%4),h=f.indexOf(b.charAt(d))>>>6-2*(d%4);c[a>>>2]|=(g|h)<<24-8*(a%4);a++}return j.create(c,a)},_map:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="}})();
+;
+/*! jquery.infinitescroll.js | https://github.com/diy/jquery-infinitescroll | Apache License (v2) */
+(function(b){b.fn.infiniteScroll=function(){var d=b(this),c=b(window),j=b("body"),e="init",f=!1,i=!0,a={threshold:80,onBottom:function(){},onEnd:null,iScroll:null};arguments.length&&("string"===typeof arguments[0]?(e=arguments[0],1<arguments.length&&"object"===typeof arguments[1]&&(a=b.extend(a,arguments[1]))):"object"===typeof arguments[0]&&(a=b.extend(a,arguments[0])));if("init"===e){var g=function(){if(!f&&i&&(a.iScroll?-a.iScroll.maxScrollY+a.iScroll.y:j.outerHeight()-c.height()-c.scrollTop())<
+a.threshold){f=true;a.onBottom(function(b){if(b===false){i=false;if(typeof a.onEnd==="function")a.onEnd()}f=false})}};if(a.iScroll){var h=a.iScroll.options.onScrollMove||null;a.iScroll.options.onScrollMove=function(){h&&h();g()};a.iScroll_scrollMove=h}else c.on("scroll.infinite resize.infinite",g);d.data("infinite-scroll",a);b(g)}"reset"===e&&(a=d.data("infinite-scroll"),a.iScroll&&(a.iScroll_scrollMove&&(a.iScroll.options.onScrollMove=a.iScroll_scrollMove),a.iScroll.scrollTo(0,0,0,!1)),c.off("scroll.infinite resize.infinite"),
+d.infiniteScroll(a));return this}})(jQuery);
 ;
 function render_data_prefixes() {
     rows = new PicarusRows([], {'table': 'prefixes'});
@@ -1791,7 +1153,8 @@ function render_visualize_thumbnails() {
         var startRow = unescape($('#startRow').val());
         var stopRow = unescape($('#stopRow').val());
         var imageColumn = 'thum:image_150sq';
-        var listView = new infinity.ListView($('#results'));
+        var getMoreData = undefined;
+        var hasMoreData = false;
         if (startRow.length == 0 || stopRow.length == 0) {
             display_alert('Must specify rows');
             return;
@@ -1801,14 +1164,31 @@ function render_visualize_thumbnails() {
             c = columns;
             if (!_.has(columns, imageColumn))
                 return;
-            listView.append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row))
+            $('#results').append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row))
         }
-        var params = {success: success, maxRows: 10000, columns: [imageColumn]};
+        function done() {
+            hasMoreData = false;
+        }
+        function resume(callback) {
+            getMoreData = callback;
+        }
+        var params = {success: success, maxRows: 100, columns: [imageColumn], resume: resume};
         var filter = unescape($('#filter').val());
         if (filter.length > 0) {
             params.filter = filter;
         }
         PICARUS.scanner("images", startRow, stopRow, params)
+        $('#results').infiniteScroll({threshold, onEnd: function () {
+            console.log('No more results');
+        }, onBotton: function (callback) {
+            console.log('More data!');
+            if (hasMoreData && !_.isUndefined(getMoreData)) {
+                var more = getMoreData;
+                getMoreData = undefined;
+                more();
+            }
+            callback(hasMoreData);
+        }});
     });
 }
 function render_visualize_metadata() {
@@ -3389,160 +2769,60 @@ Function vbstr(b)vbstr=CStr(b.responseBody)+chr(0)End Function</'+'script>');
 
 })(this);
 ;
-/*
- * Copyright (c) 2010 Nick Galbreath
- * http://code.google.com/p/stringencoders/source/browse/#svn/trunk/javascript
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
-*/
+// Custom checkbox and radios
+function setupLabel() {
+    // Checkbox
+    var checkBox = ".checkbox";
+    var checkBoxInput = checkBox + " input[type='checkbox']";
+    var checkBoxChecked = "checked";
+    var checkBoxDisabled = "disabled";
 
-/* base64 encode/decode compatible with window.btoa/atob
- *
- * window.atob/btoa is a Firefox extension to convert binary data (the "b")
- * to base64 (ascii, the "a").
- *
- * It is also found in Safari and Chrome.  It is not available in IE.
- *
- * if (!window.btoa) window.btoa = base64.encode
- * if (!window.atob) window.atob = base64.decode
- *
- * The original spec's for atob/btoa are a bit lacking
- * https://developer.mozilla.org/en/DOM/window.atob
- * https://developer.mozilla.org/en/DOM/window.btoa
- *
- * window.btoa and base64.encode takes a string where charCodeAt is [0,255]
- * If any character is not [0,255], then an exception is thrown.
- *
- * window.atob and base64.decode take a base64-encoded string
- * If the input length is not a multiple of 4, or contains invalid characters
- *   then an exception is thrown.
- */
-base64 = {};
-base64.PADCHAR = '=';
-base64.ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-base64.getbyte64 = function(s,i) {
-    // This is oddly fast, except on Chrome/V8.
-    //  Minimal or no improvement in performance by using a
-    //   object with properties mapping chars to value (eg. 'A': 0)
-    var idx = base64.ALPHA.indexOf(s.charAt(i));
-    if (idx == -1) {
-	throw "Cannot decode base64";
-    }
-    return idx;
+    // Radio
+    var radio = ".radio";
+    var radioInput = radio + " input[type='radio']";
+    var radioOn = "checked";
+    var radioDisabled = "disabled";
+
+    // Checkboxes
+    if ($(checkBoxInput).length) {
+        $(checkBox).each(function(){
+            $(this).removeClass(checkBoxChecked);
+        });
+        $(checkBoxInput + ":checked").each(function(){
+            $(this).parent(checkBox).addClass(checkBoxChecked);
+        });
+        $(checkBoxInput + ":disabled").each(function(){
+            $(this).parent(checkBox).addClass(checkBoxDisabled);
+        });
+    };
+
+    // Radios
+    if ($(radioInput).length) {
+        $(radio).each(function(){
+            $(this).removeClass(radioOn);
+        });
+        $(radioInput + ":checked").each(function(){
+            $(this).parent(radio).addClass(radioOn);
+        });
+        $(radioInput + ":disabled").each(function(){
+            $(this).parent(radio).addClass(radioDisabled);
+        });
+    };
+};
+
+function custom_checkbox_and_radio() {
+    $("html").addClass("has-js");
+    
+
+    // First let's prepend icons (needed for effects)
+    $(".checkbox, .radio").prepend("<span class='icon'></span><span class='icon-to-fade'></span>");
+
+    $(".checkbox, .radio").click(function(){
+        setupLabel();
+    });
+    setupLabel();
 }
 
-base64.decode = function(s) {
-    // convert to string
-    s = "" + s;
-    var getbyte64 = base64.getbyte64;
-    var pads, i, b10;
-    var imax = s.length
-    if (imax == 0) {
-        return s;
-    }
-
-    if (imax % 4 != 0) {
-	throw "Cannot decode base64";
-    }
-
-    pads = 0
-    if (s.charAt(imax -1) == base64.PADCHAR) {
-        pads = 1;
-        if (s.charAt(imax -2) == base64.PADCHAR) {
-            pads = 2;
-        }
-        // either way, we want to ignore this last block
-        imax -= 4;
-    }
-
-    var x = [];
-    for (i = 0; i < imax; i += 4) {
-        b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12) |
-            (getbyte64(s,i+2) << 6) | getbyte64(s,i+3);
-        x.push(String.fromCharCode(b10 >> 16, (b10 >> 8) & 0xff, b10 & 0xff));
-    }
-
-    switch (pads) {
-    case 1:
-        b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12) | (getbyte64(s,i+2) << 6)
-        x.push(String.fromCharCode(b10 >> 16, (b10 >> 8) & 0xff));
-        break;
-    case 2:
-        b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12);
-        x.push(String.fromCharCode(b10 >> 16));
-        break;
-    }
-    return x.join('');
-}
-
-base64.getbyte = function(s,i) {
-    var x = s.charCodeAt(i);
-    if (x > 255) {
-        throw "INVALID_CHARACTER_ERR: DOM Exception 5";
-    }
-    return x;
-}
-
-
-base64.encode = function(s) {
-    if (arguments.length != 1) {
-	throw "SyntaxError: Not enough arguments";
-    }
-    var padchar = base64.PADCHAR;
-    var alpha   = base64.ALPHA;
-    var getbyte = base64.getbyte;
-
-    var i, b10;
-    var x = [];
-
-    // convert to string
-    s = "" + s;
-
-    var imax = s.length - s.length % 3;
-
-    if (s.length == 0) {
-        return s;
-    }
-    for (i = 0; i < imax; i += 3) {
-        b10 = (getbyte(s,i) << 16) | (getbyte(s,i+1) << 8) | getbyte(s,i+2);
-        x.push(alpha.charAt(b10 >> 18));
-        x.push(alpha.charAt((b10 >> 12) & 0x3F));
-        x.push(alpha.charAt((b10 >> 6) & 0x3f));
-        x.push(alpha.charAt(b10 & 0x3f));
-    }
-    switch (s.length - imax) {
-    case 1:
-        b10 = getbyte(s,i) << 16;
-        x.push(alpha.charAt(b10 >> 18) + alpha.charAt((b10 >> 12) & 0x3F) +
-               padchar + padchar);
-        break;
-    case 2:
-        b10 = (getbyte(s,i) << 16) | (getbyte(s,i+1) << 8);
-        x.push(alpha.charAt(b10 >> 18) + alpha.charAt((b10 >> 12) & 0x3F) +
-               alpha.charAt((b10 >> 6) & 0x3f) + padchar);
-        break;
-    }
-    return x.join('');
-}
 ;
 /*!
  * jQuery Cookie Plugin v1.3.1
@@ -3552,6 +2832,27 @@ base64.encode = function(s) {
  * Released under the MIT license
  */
 (function(a,b,c){function e(a){return a}function f(a){return g(decodeURIComponent(a.replace(d," ")))}function g(a){return 0===a.indexOf('"')&&(a=a.slice(1,-1).replace(/\\"/g,'"').replace(/\\\\/g,"\\")),a}function h(a){return i.json?JSON.parse(a):a}var d=/\+/g,i=a.cookie=function(d,g,j){if(g!==c){if(j=a.extend({},i.defaults,j),null===g&&(j.expires=-1),"number"==typeof j.expires){var k=j.expires,l=j.expires=new Date;l.setDate(l.getDate()+k)}return g=i.json?JSON.stringify(g):g+"",b.cookie=[encodeURIComponent(d),"=",i.raw?g:encodeURIComponent(g),j.expires?"; expires="+j.expires.toUTCString():"",j.path?"; path="+j.path:"",j.domain?"; domain="+j.domain:"",j.secure?"; secure":""].join("")}for(var m=i.raw?e:f,n=b.cookie.split("; "),o=d?null:{},p=0,q=n.length;q>p;p++){var r=n[p].split("="),s=m(r.shift()),t=m(r.join("="));if(d&&d===s){o=h(t);break}d||(o[s]=h(t))}return o};i.defaults={},a.removeCookie=function(b,c){return null!==a.cookie(b)?(a.cookie(b,null,c),!0):!1}})(jQuery,document);;
+/*
+Backbone.Table 0.1.0
+(c) 2012 Jeremy Singer-Vine, The Wall Street Journal
+Backbone.Table is freely distributable under the MIT license.
+https://github.com/jsvine/Backbone.Table
+*/
+Backbone.Table = Backbone.View.extend({
+  tagName: "table",
+  initialize: function() {
+    return this.$el = this.$el || $(this.el);
+  },
+  template: _.template("<% var rows = collection.models;  %>\n<thead>\n	<tr>\n		<% _.each(columns, function (col) { %>\n			<th class=\"<%= col.className || '' %>\">\n				<%= col.header || (_.isArray(col) && col[1]) || col %>\n			</th>\n		<% }) %>\n	</tr>\n</thead>\n<tbody>\n	<% _.each(rows, function (row, i) { %>\n	<tr class=\"<%= i % 2 ? 'even' : 'odd' %>\">\n		<% _.each(columns, function (col) { %>\n			<td class=\"<%= col.className || '' %>\"<% if (col.getValue) { %> value=\"<%= col.getValue.call(row) %>\"<% } %>>\n				<%= col.getFormatted ? col.getFormatted.call(row) : row.get((_.isArray(col) ? col[0] : col)) %>\n			</td>\n		<% }) %>\n	</tr>\n	<% }) %>\n</tbody>\n<tfoot>\n	<tr>\n		<% _.each(columns, function (col) { %>\n			<th class=\"<%= col.className || '' %>\"><%= col.footer || \"\" %></th>\n		<% }) %>\n	</tr>\n</tfoot>"),
+  render: function() {
+    this.$el.html(this.template({
+      collection: this.collection,
+      columns: this.options.columns
+    }));
+    return this;
+  }
+});
+;
 /**
 *
 *  Secure Hash Algorithm (SHA1)
@@ -3764,25 +3065,159 @@ function json_ub64_b64_dec(x) {
 //@ sourceMappingURL=backbone-min.map
 */;
 /*
-Backbone.Table 0.1.0
-(c) 2012 Jeremy Singer-Vine, The Wall Street Journal
-Backbone.Table is freely distributable under the MIT license.
-https://github.com/jsvine/Backbone.Table
+ * Copyright (c) 2010 Nick Galbreath
+ * http://code.google.com/p/stringencoders/source/browse/#svn/trunk/javascript
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
 */
-Backbone.Table = Backbone.View.extend({
-  tagName: "table",
-  initialize: function() {
-    return this.$el = this.$el || $(this.el);
-  },
-  template: _.template("<% var rows = collection.models;  %>\n<thead>\n	<tr>\n		<% _.each(columns, function (col) { %>\n			<th class=\"<%= col.className || '' %>\">\n				<%= col.header || (_.isArray(col) && col[1]) || col %>\n			</th>\n		<% }) %>\n	</tr>\n</thead>\n<tbody>\n	<% _.each(rows, function (row, i) { %>\n	<tr class=\"<%= i % 2 ? 'even' : 'odd' %>\">\n		<% _.each(columns, function (col) { %>\n			<td class=\"<%= col.className || '' %>\"<% if (col.getValue) { %> value=\"<%= col.getValue.call(row) %>\"<% } %>>\n				<%= col.getFormatted ? col.getFormatted.call(row) : row.get((_.isArray(col) ? col[0] : col)) %>\n			</td>\n		<% }) %>\n	</tr>\n	<% }) %>\n</tbody>\n<tfoot>\n	<tr>\n		<% _.each(columns, function (col) { %>\n			<th class=\"<%= col.className || '' %>\"><%= col.footer || \"\" %></th>\n		<% }) %>\n	</tr>\n</tfoot>"),
-  render: function() {
-    this.$el.html(this.template({
-      collection: this.collection,
-      columns: this.options.columns
-    }));
-    return this;
-  }
-});
+
+/* base64 encode/decode compatible with window.btoa/atob
+ *
+ * window.atob/btoa is a Firefox extension to convert binary data (the "b")
+ * to base64 (ascii, the "a").
+ *
+ * It is also found in Safari and Chrome.  It is not available in IE.
+ *
+ * if (!window.btoa) window.btoa = base64.encode
+ * if (!window.atob) window.atob = base64.decode
+ *
+ * The original spec's for atob/btoa are a bit lacking
+ * https://developer.mozilla.org/en/DOM/window.atob
+ * https://developer.mozilla.org/en/DOM/window.btoa
+ *
+ * window.btoa and base64.encode takes a string where charCodeAt is [0,255]
+ * If any character is not [0,255], then an exception is thrown.
+ *
+ * window.atob and base64.decode take a base64-encoded string
+ * If the input length is not a multiple of 4, or contains invalid characters
+ *   then an exception is thrown.
+ */
+base64 = {};
+base64.PADCHAR = '=';
+base64.ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+base64.getbyte64 = function(s,i) {
+    // This is oddly fast, except on Chrome/V8.
+    //  Minimal or no improvement in performance by using a
+    //   object with properties mapping chars to value (eg. 'A': 0)
+    var idx = base64.ALPHA.indexOf(s.charAt(i));
+    if (idx == -1) {
+	throw "Cannot decode base64";
+    }
+    return idx;
+}
+
+base64.decode = function(s) {
+    // convert to string
+    s = "" + s;
+    var getbyte64 = base64.getbyte64;
+    var pads, i, b10;
+    var imax = s.length
+    if (imax == 0) {
+        return s;
+    }
+
+    if (imax % 4 != 0) {
+	throw "Cannot decode base64";
+    }
+
+    pads = 0
+    if (s.charAt(imax -1) == base64.PADCHAR) {
+        pads = 1;
+        if (s.charAt(imax -2) == base64.PADCHAR) {
+            pads = 2;
+        }
+        // either way, we want to ignore this last block
+        imax -= 4;
+    }
+
+    var x = [];
+    for (i = 0; i < imax; i += 4) {
+        b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12) |
+            (getbyte64(s,i+2) << 6) | getbyte64(s,i+3);
+        x.push(String.fromCharCode(b10 >> 16, (b10 >> 8) & 0xff, b10 & 0xff));
+    }
+
+    switch (pads) {
+    case 1:
+        b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12) | (getbyte64(s,i+2) << 6)
+        x.push(String.fromCharCode(b10 >> 16, (b10 >> 8) & 0xff));
+        break;
+    case 2:
+        b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12);
+        x.push(String.fromCharCode(b10 >> 16));
+        break;
+    }
+    return x.join('');
+}
+
+base64.getbyte = function(s,i) {
+    var x = s.charCodeAt(i);
+    if (x > 255) {
+        throw "INVALID_CHARACTER_ERR: DOM Exception 5";
+    }
+    return x;
+}
+
+
+base64.encode = function(s) {
+    if (arguments.length != 1) {
+	throw "SyntaxError: Not enough arguments";
+    }
+    var padchar = base64.PADCHAR;
+    var alpha   = base64.ALPHA;
+    var getbyte = base64.getbyte;
+
+    var i, b10;
+    var x = [];
+
+    // convert to string
+    s = "" + s;
+
+    var imax = s.length - s.length % 3;
+
+    if (s.length == 0) {
+        return s;
+    }
+    for (i = 0; i < imax; i += 3) {
+        b10 = (getbyte(s,i) << 16) | (getbyte(s,i+1) << 8) | getbyte(s,i+2);
+        x.push(alpha.charAt(b10 >> 18));
+        x.push(alpha.charAt((b10 >> 12) & 0x3F));
+        x.push(alpha.charAt((b10 >> 6) & 0x3f));
+        x.push(alpha.charAt(b10 & 0x3f));
+    }
+    switch (s.length - imax) {
+    case 1:
+        b10 = getbyte(s,i) << 16;
+        x.push(alpha.charAt(b10 >> 18) + alpha.charAt((b10 >> 12) & 0x3F) +
+               padchar + padchar);
+        break;
+    case 2:
+        b10 = (getbyte(s,i) << 16) | (getbyte(s,i+1) << 8);
+        x.push(alpha.charAt(b10 >> 18) + alpha.charAt((b10 >> 12) & 0x3F) +
+               alpha.charAt((b10 >> 6) & 0x3f) + padchar);
+        break;
+    }
+    return x.join('');
+}
 ;
 if(!window['googleLT_']){window['googleLT_']=(new Date()).getTime();}if (!window['google']) {
 window['google'] = {};
@@ -3824,66 +3259,648 @@ google.loader.rfm({":search":{"versions":{":1":"1",":1.0":"1"},"path":"/api/sear
 google.loader.rpl({":scriptaculous":{"versions":{":1.8.3":{"uncompressed":"scriptaculous.js","compressed":"scriptaculous.js"},":1.9.0":{"uncompressed":"scriptaculous.js","compressed":"scriptaculous.js"},":1.8.2":{"uncompressed":"scriptaculous.js","compressed":"scriptaculous.js"},":1.8.1":{"uncompressed":"scriptaculous.js","compressed":"scriptaculous.js"}},"aliases":{":1.8":"1.8.3",":1":"1.9.0",":1.9":"1.9.0"}},":yui":{"versions":{":2.6.0":{"uncompressed":"build/yuiloader/yuiloader.js","compressed":"build/yuiloader/yuiloader-min.js"},":2.9.0":{"uncompressed":"build/yuiloader/yuiloader.js","compressed":"build/yuiloader/yuiloader-min.js"},":2.7.0":{"uncompressed":"build/yuiloader/yuiloader.js","compressed":"build/yuiloader/yuiloader-min.js"},":2.8.0r4":{"uncompressed":"build/yuiloader/yuiloader.js","compressed":"build/yuiloader/yuiloader-min.js"},":2.8.2r1":{"uncompressed":"build/yuiloader/yuiloader.js","compressed":"build/yuiloader/yuiloader-min.js"},":2.8.1":{"uncompressed":"build/yuiloader/yuiloader.js","compressed":"build/yuiloader/yuiloader-min.js"},":3.3.0":{"uncompressed":"build/yui/yui.js","compressed":"build/yui/yui-min.js"}},"aliases":{":3":"3.3.0",":2":"2.9.0",":2.7":"2.7.0",":2.8.2":"2.8.2r1",":2.6":"2.6.0",":2.9":"2.9.0",":2.8":"2.8.2r1",":2.8.0":"2.8.0r4",":3.3":"3.3.0"}},":swfobject":{"versions":{":2.1":{"uncompressed":"swfobject_src.js","compressed":"swfobject.js"},":2.2":{"uncompressed":"swfobject_src.js","compressed":"swfobject.js"}},"aliases":{":2":"2.2"}},":ext-core":{"versions":{":3.1.0":{"uncompressed":"ext-core-debug.js","compressed":"ext-core.js"},":3.0.0":{"uncompressed":"ext-core-debug.js","compressed":"ext-core.js"}},"aliases":{":3":"3.1.0",":3.0":"3.0.0",":3.1":"3.1.0"}},":webfont":{"versions":{":1.0.28":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.27":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.29":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.12":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.13":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.14":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.15":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.10":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.11":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.2":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.1":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.0":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.6":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.19":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.5":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.18":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.4":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.17":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.3":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.16":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.9":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.21":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.22":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.25":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.26":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.23":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"},":1.0.24":{"uncompressed":"webfont_debug.js","compressed":"webfont.js"}},"aliases":{":1":"1.0.29",":1.0":"1.0.29"}},":mootools":{"versions":{":1.3.1":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.1.1":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.3.0":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.3.2":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.1.2":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.2.3":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.2.4":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.2.1":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.2.2":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.2.5":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.4.0":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.4.1":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"},":1.4.2":{"uncompressed":"mootools.js","compressed":"mootools-yui-compressed.js"}},"aliases":{":1":"1.1.2",":1.11":"1.1.1",":1.4":"1.4.2",":1.3":"1.3.2",":1.2":"1.2.5",":1.1":"1.1.2"}},":jqueryui":{"versions":{":1.8.0":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.2":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.1":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.15":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.14":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.13":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.12":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.11":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.10":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.17":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.16":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.6.0":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.9":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.7":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.8":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.7.2":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.5":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.7.3":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.6":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.7.0":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.7.1":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.8.4":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.5.3":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"},":1.5.2":{"uncompressed":"jquery-ui.js","compressed":"jquery-ui.min.js"}},"aliases":{":1.8":"1.8.17",":1.7":"1.7.3",":1.6":"1.6.0",":1":"1.8.17",":1.5":"1.5.3",":1.8.3":"1.8.4"}},":chrome-frame":{"versions":{":1.0.2":{"uncompressed":"CFInstall.js","compressed":"CFInstall.min.js"},":1.0.1":{"uncompressed":"CFInstall.js","compressed":"CFInstall.min.js"},":1.0.0":{"uncompressed":"CFInstall.js","compressed":"CFInstall.min.js"}},"aliases":{":1":"1.0.2",":1.0":"1.0.2"}},":prototype":{"versions":{":1.7.0.0":{"uncompressed":"prototype.js","compressed":"prototype.js"},":1.6.0.2":{"uncompressed":"prototype.js","compressed":"prototype.js"},":1.6.1.0":{"uncompressed":"prototype.js","compressed":"prototype.js"},":1.6.0.3":{"uncompressed":"prototype.js","compressed":"prototype.js"}},"aliases":{":1.7":"1.7.0.0",":1.6.1":"1.6.1.0",":1":"1.7.0.0",":1.6":"1.6.1.0",":1.7.0":"1.7.0.0",":1.6.0":"1.6.0.3"}},":dojo":{"versions":{":1.3.1":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.3.0":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.6.1":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.1.1":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.3.2":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.6.0":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.2.3":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.7.2":{"uncompressed":"dojo/dojo.js.uncompressed.js","compressed":"dojo/dojo.js"},":1.7.0":{"uncompressed":"dojo/dojo.js.uncompressed.js","compressed":"dojo/dojo.js"},":1.7.1":{"uncompressed":"dojo/dojo.js.uncompressed.js","compressed":"dojo/dojo.js"},":1.4.3":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.5.1":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.5.0":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.2.0":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.4.0":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"},":1.4.1":{"uncompressed":"dojo/dojo.xd.js.uncompressed.js","compressed":"dojo/dojo.xd.js"}},"aliases":{":1.7":"1.7.2",":1":"1.6.1",":1.6":"1.6.1",":1.5":"1.5.1",":1.4":"1.4.3",":1.3":"1.3.2",":1.2":"1.2.3",":1.1":"1.1.1"}},":jquery":{"versions":{":1.6.2":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.3.1":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.6.1":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.3.0":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.6.4":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.6.3":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.3.2":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.6.0":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.2.3":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.7.0":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.7.1":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.2.6":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.4.3":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.4.4":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.5.1":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.5.0":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.4.0":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.5.2":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.4.1":{"uncompressed":"jquery.js","compressed":"jquery.min.js"},":1.4.2":{"uncompressed":"jquery.js","compressed":"jquery.min.js"}},"aliases":{":1.7":"1.7.1",":1.6":"1.6.4",":1":"1.7.1",":1.5":"1.5.2",":1.4":"1.4.4",":1.3":"1.3.2",":1.2":"1.2.6"}}});
 }
 ;
-//     (c) 2012 Airbnb, Inc.
-//     
-//     infinity.js may be freely distributed under the terms of the BSD
-//     license. For all licensing information, details, and documention:
-//     http://airbnb.github.com/infinity
-!function(e,t,n){"use strict";function l(e,t){t=t||{},this.$el=k(),this.$shadow=k(),e.append(this.$el),this.lazy=!!t.lazy,this.lazyFn=t.lazy||null,c(this),this.top=this.$el.offset().top,this.width=0,this.height=0,this.pages=[],this.startIndex=0,E.attach(this)}function c(e){e._$buffer=k().prependTo(e.$el)}function h(e){var t,n=e.pages,r=e._$buffer;n.length>0?(t=n[e.startIndex],r.height(t.top)):r.height(0)}function p(e,t){t.$el.remove(),e.$el.append(t.$el),C(t,e.height),t.$el.remove()}function d(e){var n,r,i,s=e.pages,o=!1,u=!0;n=e.startIndex,r=t.min(n+f,s.length);for(n;n<r;n++)i=s[n],e.lazy&&i.lazyload(e.lazyFn),o&&i.onscreen&&(u=!1),u?i.onscreen||(o=!0,i.appendTo(e.$el)):(i.stash(e.$shadow),i.appendTo(e.$el))}function v(e){var n,i,s,o,u,a=e.startIndex,l=r.scrollTop()-e.top,c=r.height(),p=l+c,v=b(e,l,p);if(v<0||v===a)return a;s=e.pages,a=e.startIndex,o=t.min(a+f,s.length),u=t.min(v+f,s.length);for(n=a,i=o;n<i;n++)(n<v||n>=u)&&s[n].stash(e.$shadow);return e.startIndex=v,d(e),h(e),v}function m(e,t){var r;return t instanceof N?t:(typeof t=="string"&&(t=n(t)),r=new N(t),p(e,r),r)}function g(e,t){y(e)}function y(e){var t,n,r,i,s,o,u,a,f,l=e.pages,c=[];n=new S(e),c.push(n);for(r=0,i=l.length;r<i;r++){t=l[r],u=t.items;for(s=0,o=u.length;s<o;s++)a=u[s],f=a.clone(),n.hasVacancy()?n.append(f):(n=new S(e),c.push(n),n.append(f));t.remove()}e.pages=c,d(e)}function b(e,n,r){var i=w(e,n,r);return i=t.max(i-a,0),i=t.min(i,e.pages.length),i}function w(e,n,r){var i,s,o,u,f,l,c,h=e.pages,p=n+(r-n)/2;u=t.min(e.startIndex+a,h.length-1);if(h.length<=0)return-1;o=h[u],f=o.top+o.height/2,c=p-f;if(c<0){for(i=u-1;i>=0;i--){o=h[i],f=o.top+o.height/2,l=p-f;if(l>0)return l<-c?i:i+1;c=l}return 0}if(c>0){for(i=u+1,s=h.length;i<s;i++){o=h[i],f=o.top+o.height/2,l=p-f;if(l<0)return-l<c?i:i-1;c=l}return h.length-1}return u}function S(e){this.parent=e,this.items=[],this.$el=k(),this.id=x.generatePageId(this),this.$el.attr(u,this.id),this.top=0,this.bottom=0,this.width=0,this.height=0,this.lazyloaded=!1,this.onscreen=!1}function T(e,t){var n,r,i,s=t.items;for(n=0,r=s.length;n<r;n++)if(s[n]===e){i=n;break}return i==null?!1:(s.splice(i,1),t.bottom-=e.height,t.height=t.bottom-t.top,t.hasVacancy()&&g(t.parent,t),!0)}function N(e){this.$el=e,this.parent=null,this.top=0,this.bottom=0,this.width=0,this.height=0}function C(e,t){var n=e.$el;e.top=t,e.height=n.outerHeight(!0),e.bottom=e.top+e.height,e.width=n.width()}function k(){return n("<div>").css({margin:0,padding:0,border:"none"})}function L(e){var t;e?(t=e.ListView,n.fn.listView=function(e){return new t(this,e)}):delete n.fn.listView}var r=n(e),i=e.infinity,s=e.infinity={},o=s.config={},u="data-infinity-pageid",a=1,f=a*2+1;o.PAGE_TO_SCREEN_RATIO=3,o.SCROLL_THROTTLE=350,l.prototype.append=function(e){if(!e||!e.length)return null;var t,n=m(this,e),r=this.pages;this.height+=n.height,this.$el.height(this.height),t=r[r.length-1];if(!t||!t.hasVacancy())t=new S(this),r.push(t);return t.append(n),d(this),n},l.prototype.remove=function(){this.$el.remove(),this.cleanup()},l.prototype.find=function(e){var t,r,i;return typeof e=="string"?(r=this.$el.find(e),i=this.$shadow.find(e),this.find(r).concat(this.find(i))):e instanceof N?[e]:(t=[],e.each(function(){var e,r,i,s,o,a,f=n(this).parentsUntil("["+u+"]").andSelf().first(),l=f.parent();e=l.attr(u),r=x.lookup(e);if(r){i=r.items;for(s=0,o=i.length;s<o;s++){a=i[s];if(a.$el.is(f)){t.push(a);break}}}}),t)},l.prototype.cleanup=function(){var e=this.pages,t;E.detach(this);while(t=e.pop())t.cleanup()};var E=function(){function s(){t||(setTimeout(u,o.SCROLL_THROTTLE),t=!0)}function u(){var e,n;for(e=0,n=i.length;e<n;e++)v(i[e]);t=!1}function a(){n&&clearTimeout(n),n=setTimeout(f,200)}function f(){var e,t;for(e=0;t=i[e];e++)y(t)}var e=!1,t=!1,n=null,i=[];return{attach:function(t){e||(r.on("scroll",s),r.on("resize",a),e=!0),i.push(t)},detach:function(t){var n,o;for(n=0,o=i.length;n<o;n++)if(i[n]===t)return i.splice(n,1),i.length===0&&(r.off("scroll",s),r.off("resize",a),e=!1),!0;return!1}}}();S.prototype.append=function(e){var t=this.items;t.length===0&&(this.top=e.top),this.bottom=e.bottom,this.width=this.width>e.width?this.width:e.width,this.height=this.bottom-this.top,t.push(e),e.parent=this,this.$el.append(e.$el),this.lazyloaded=!1},S.prototype.prepend=function(e){var t=this.items;this.bottom+=e.height,this.width=this.width>e.width?this.width:e.width,this.height=this.bottom-this.top,t.push(e),e.parent=this,this.$el.prepend(e.$el),this.lazyloaded=!1},S.prototype.hasVacancy=function(){return this.height<r.height()*o.PAGE_TO_SCREEN_RATIO},S.prototype.appendTo=function(e){this.onscreen||(this.$el.appendTo(e),this.onscreen=!0)},S.prototype.prependTo=function(e){this.onscreen||(this.$el.prependTo(e),this.onscreen=!0)},S.prototype.stash=function(e){this.onscreen&&(this.$el.appendTo(e),this.onscreen=!1)},S.prototype.remove=function(){this.onscreen&&(this.$el.remove(),this.onscreen=!1),this.cleanup()},S.prototype.cleanup=function(){var e=this.items,t;this.parent=null,x.remove(this);while(t=e.pop())t.cleanup()},S.prototype.lazyload=function(e){var t=this.$el,n,r;if(!this.lazyloaded){for(n=0,r=t.length;n<r;n++)e.call(t[n],t[n]);this.lazyloaded=!0}};var x=function(){var e=[];return{generatePageId:function(t){return e.push(t)-1},lookup:function(t){return e[t]||null},remove:function(t){var n=t.id;return e[n]?(e[n]=null,!0):!1}}}();N.prototype.clone=function(){var e=new N(this.$el);return e.top=this.top,e.bottom=this.bottom,e.width=this.width,e.height=this.height,e},N.prototype.remove=function(){this.$el.remove(),T(this,this.parent),this.cleanup()},N.prototype.cleanup=function(){this.parent=null},s.ListView=l,s.Page=S,s.ListItem=N,L(s),s.noConflict=function(){return e.infinity=i,L(i),s}}(window,Math,jQuery);;
-// Custom checkbox and radios
-function setupLabel() {
-    // Checkbox
-    var checkBox = ".checkbox";
-    var checkBoxInput = checkBox + " input[type='checkbox']";
-    var checkBoxChecked = "checked";
-    var checkBoxDisabled = "disabled";
-
-    // Radio
-    var radio = ".radio";
-    var radioInput = radio + " input[type='radio']";
-    var radioOn = "checked";
-    var radioDisabled = "disabled";
-
-    // Checkboxes
-    if ($(checkBoxInput).length) {
-        $(checkBox).each(function(){
-            $(this).removeClass(checkBoxChecked);
-        });
-        $(checkBoxInput + ":checked").each(function(){
-            $(this).parent(checkBox).addClass(checkBoxChecked);
-        });
-        $(checkBoxInput + ":disabled").each(function(){
-            $(this).parent(checkBox).addClass(checkBoxDisabled);
-        });
-    };
-
-    // Radios
-    if ($(radioInput).length) {
-        $(radio).each(function(){
-            $(this).removeClass(radioOn);
-        });
-        $(radioInput + ":checked").each(function(){
-            $(this).parent(radio).addClass(radioOn);
-        });
-        $(radioInput + ":disabled").each(function(){
-            $(this).parent(radio).addClass(radioDisabled);
-        });
-    };
-};
-
-function custom_checkbox_and_radio() {
-    $("html").addClass("has-js");
-    
-
-    // First let's prepend icons (needed for effects)
-    $(".checkbox, .radio").prepend("<span class='icon'></span><span class='icon-to-fade'></span>");
-
-    $(".checkbox, .radio").click(function(){
-        setupLabel();
+function login_get(func) {
+    var otp = $('#otp');
+    var apiKey = $('#apiKey');
+    var modal = $('#authModal');
+    var emailKeys = $('#emailKeys');
+    emailKeys.click(function () {
+        var email = $('#email').val();
+        var loginKey = $('#loginKey').val();
+        PICARUS.setAuth(email, loginKey);
+        PICARUS.authEmailAPIKey();
     });
-    setupLabel();
+    if (typeof EMAIL_AUTH === 'undefined') {
+        function get_auth() {
+            function success(response) {
+                PICARUS.setAuth(email, response.apiKey);
+                use_api(response.apiKey);
+            }
+            function fail() {
+                $('#secondFactorAuth').addClass('error');
+            }
+            var otp_val = otp.val();
+            var email = $('#email').val();
+            var loginKey = $('#loginKey').val();
+            PICARUS.setAuth(email, loginKey);
+            PICARUS.authYubikey(otp_val, {success: success, fail: fail});
+        }
+        function get_api() {
+            var email = $('#email').val();
+            var apiKey = $('#apiKey').val();
+            function success() {
+                use_api(apiKey);
+            }
+            function fail() {
+                $('#secondFactorAuth').addClass('error');
+            }
+            $('#secondFactorAuth').addClass('info');
+            $('#secondFactorAuth').removeClass('error');
+            PICARUS.setAuth(email, apiKey);
+            PICARUS.getRow('users', email, {success: success, fail: fail});
+        }
+        function use_api(apiKey) {
+            var email = $('#email').val();
+            var loginKey = $('#loginKey').val();
+            $('#secondFactorAuth').removeClass('error');
+            $.cookie('email', email, {secure: true});
+            $.cookie('loginKey', loginKey, {secure: true});
+            EMAIL_AUTH = {auth: apiKey, email: email};
+            $('#otp').unbind();
+            $('#apiKey').unbind('keypress');
+            func(EMAIL_AUTH);
+            modal.modal('hide');
+        }
+        function enable_inputs() {
+            var email = $('#email').val();
+            var loginKey = $('#loginKey').val();
+            if (email.length && loginKey.length) {
+                otp.removeAttr("disabled");
+                apiKey.removeAttr("disabled");
+                emailKeys.removeAttr("disabled");
+            }
+        }
+        $('#email').val($.cookie('email'));
+        $('#loginKey').val($.cookie('loginKey'));
+        enable_inputs();
+        $('#email').keypress(enable_inputs);
+        $('#email').on('paste', function () {_.defer(enable_inputs)});
+        $('#loginKey').keypress(enable_inputs);
+        $('#loginKey').on('paste', function () {_.defer(enable_inputs)});
+        otp.keypress(_.debounce(get_auth, 100));
+        otp.on('paste', function () {_.defer(get_auth)});
+        apiKey.keypress(_.debounce(get_api, 100));
+        apiKey.on('paste', function () {_.defer(get_api)});
+        modal.modal('show');
+        modal.off('shown');
+        modal.on('shown', function () {otp.focus()});
+    } else {
+        func(EMAIL_AUTH);
+    }
 }
 
-;
+function google_visualization_load(callback) {
+    google.load("visualization", "1", {packages:["corechart"], callback: callback});
+}
+
+function add_hint(el, text) {
+    el.wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', text));
+}
+function random_bytes(num) {
+    return _.map(_.range(10), function () {
+        return String.fromCharCode(_.random(255));
+    }).join('');
+}
+
+function imageThumbnail(row, id) {
+    var imageColumn = 'thum:image_150sq';
+    function success(columns) {
+        $('#' + id).attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row)
+    }
+    PICARUS.getRow('images', row, {success: success, data: {columns: imageColumn}});
+}
+
+function button_confirm_click(button, fun) {
+    button.unbind();
+    button.click(function (data) {
+        var button = $(data.target);
+        button.unbind();
+        button.addClass('btn-danger');
+        button.click(fun);
+    });
+}
+function button_confirm_click_reset(button) {
+    button.removeClass('btn-danger');
+    button.unbind();
+}
+
+function progressModal() {
+    $('#progressModal').modal('show');
+    function update(pct) {
+        $('#progress').css('width', (100 * pct + '%'));
+    }
+    function done() {
+        $('#progressModal').modal('hide');
+    }
+    return {done: done, update: update};
+}
+
+function alert_running() {
+    $('#results').html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
+}
+
+function alert_done() {
+    $('#results').html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
+}
+
+function alert_running_wrap(el) {
+    return function () {
+        el.html('<div class="alert alert-info"><strong>Running!</strong> Job is running, please wait...</div>');
+    }
+}
+
+function alert_success_wrap(el) {
+    return function () {
+        el.html('<div class="alert alert-success"><strong>Done!</strong> Job is done.</div>');
+    }
+}
+
+function alert_fail_wrap(el) {
+    return function () {
+        el.html('<div class="alert alert-error"><strong>Error!</strong> Job failed!</div>');
+    }
+}
+
+function wrap_hints() {
+    $('[hint]').each(function (x) {
+        $(this).wrap($('<span>').attr('class', 'hint hint--bottom').attr('data-hint', $(this).attr('hint')));
+    });
+}
+
+function button_running() {
+    $('#runButton').button('loading');
+}
+
+function button_reset() {
+    $('#runButton').button('reset');
+}
+
+function button_error() {
+    $('#runButton').button('error');
+}
+
+function model_dropdown(args) {
+    var columns_model = ['meta:'];
+    var models = new PicarusRows([], {'table': 'models', columns: columns_model});
+    if (typeof args.change === 'undefined') {
+        args.change = function () {};
+    }
+    var AppView = Backbone.View.extend({
+        el: $('#container'),
+        initialize: function() {
+            _.bindAll(this, 'render');
+            this.collection.bind('sync', this.render);
+        },
+        renderDrop: args.change,
+        modelFilter: args.modelFilter,
+        events: {'change': 'renderDrop'},
+        render: function() {
+            n = this.$el;
+            this.$el.empty();
+            var select_template = "{{#models}}<option value='{{row}}'>{{{text}}}</option>{{/models}};" // text is escaped already
+            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: encode_id(data.get('row')), text: data.escape('meta:tags') + ' ' + data.escape('meta:name')}});
+            models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
+            this.$el.append(Mustache.render(select_template, {models: models_filt}));
+            this.renderDrop();
+        }
+    });
+    av = new AppView({collection: models, el: args.el});
+    models.fetch();
+    return models;
+}
+
+function rows_dropdown(rows, args) {
+    if (_.isUndefined(args.change)) {
+        args.change = function () {};
+    }
+    if (_.isUndefined(args.filter)) {
+        args.filter = function () {return true};
+    }
+    if (_.isUndefined(args.text)) {
+        args.text = function (x) {return x.escape('row')};
+    }
+    var AppView = Backbone.View.extend({
+        el: $('#container'),
+        initialize: function() {
+            _.bindAll(this, 'render');
+            this.collection.bind('sync', this.render);
+        },
+        events: {'change': 'renderDrop'},
+        renderDrop: args.change,
+        render: function() {
+            n = this.$el;
+            this.$el.empty();
+            var select_template = "{{#models}}<option value='{{row}}'>{{text}}</option>{{/models}};"
+            var models_filt = _.map(rows.filter(args.filter), function (data) {return {row: encode_id(data.get('row')), text: args.text(data)}});
+            models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
+            this.$el.append(Mustache.render(select_template, {models: models_filt}));
+            this.renderDrop();
+        }
+    });
+    av = new AppView({collection: rows, el: args.el});
+    rows.fetch();
+}
+
+
+function project_selector(projectsDrop) {
+    var AppView = Backbone.View.extend({
+        initialize: function() {
+            _.bindAll(this, 'render');
+            this.model.bind('sync', this.render);
+        },
+        events: {'change': 'renderDrop'},
+        render: function() {
+            this.$el.empty();
+            var projects = _.keys(JSON.parse(this.model.get('image_projects')));
+            projects.sort(function (x, y) {return Number(x > y) - Number(x < y)});
+            var select_template = "{{#projects}}<option value='{{.}}'>{{.}}</option>{{/projects}};"
+            this.$el.append(Mustache.render(select_template, {projects: projects}));
+            this.renderDrop(); // TODO: This needs to be setup somewhere
+        }
+    });
+    var auth = login_get(function (email_auth) {
+        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
+        new AppView({model: user, el: projectsDrop});
+        user.fetch();
+    });
+}
+
+function row_selector(prefixDrop, startRow, stopRow) {
+    var AppView = Backbone.View.extend({
+        initialize: function() {
+            _.bindAll(this, 'render');
+            this.model.bind('sync', this.render);
+        },
+        events: {'change': 'renderDrop'},
+        renderDrop: function () {
+            var prefix = prefixDrop.children().filter('option:selected').val();
+            if (typeof startRow !== 'undefined')
+                startRow.val(prefix);
+            // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
+            if (typeof stopRow !== 'undefined')
+                stopRow.val(prefix_to_stop_row(prefix));
+        },
+        render: function() {
+            this.$el.empty();
+            // TODO: Check permissions and accept perissions as argument
+            var prefixes = _.keys(JSON.parse(this.model.get('image_prefixes')));
+            prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
+            var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
+            this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
+            this.renderDrop();
+        }
+    });
+    var auth = login_get(function (email_auth) {
+        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
+        new AppView({model: user, el: prefixDrop});
+        user.fetch();
+    });
+}
+
+function slices_selector() {
+    var prefixDrop = $('#slicesSelectorPrefixDrop'), startRow = $('#slicesSelectorStartRow'), stopRow = $('#slicesSelectorStopRow');
+    var addButton = $('#slicesSelectorAddButton'), clearButton = $('#slicesSelectorClearButton'), slicesText = $('#slicesSelectorSlices');
+    if (!prefixDrop.size())  // Skip if not visible
+        return;
+    var AppView = Backbone.View.extend({
+        initialize: function() {
+            _.bindAll(this, 'render');
+            this.model.bind('sync', this.render);
+        },
+        events: {'change': 'renderDrop'},
+        renderDrop: function () {
+            var prefix = decode_id(prefixDrop.children().filter('option:selected').val());
+            if (typeof startRow !== 'undefined')
+                startRow.val(prefix);
+            // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
+            if (typeof stopRow !== 'undefined')
+                stopRow.val(prefix_to_stop_row(prefix));
+        },
+        render: function() {
+            this.$el.empty();
+            // TODO: Check permissions and accept perissions as argument
+            var prefixes = _.keys(JSON.parse(this.model.get('image_prefixes')));
+            prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
+            var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
+            var prefixes_render = _.map(prefixes, function (x) {return {value: encode_id(x), text: x}});
+            this.$el.append(Mustache.render(select_template, {prefixes: prefixes_render}));
+            this.renderDrop();
+        }
+    });
+    addButton.click(function () {
+        slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', base64.encode(unescape(startRow.val())) + ',' + base64.encode(unescape(stopRow.val()))));
+    });
+    clearButton.click(function () {
+        slicesText.html('');
+    });
+    var auth = login_get(function (email_auth) {
+        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
+        new AppView({model: user, el: prefixDrop});
+        user.fetch();
+    });
+}
+
+function slices_selector_get(split) {
+    var out = _.map($('#slicesSelectorSlices').children(), function (x) {return $(x).attr('value')});
+    if (split)
+        return _.map(out, function (x) {
+            return x.split(',');
+        });
+    return out;
+}
+
+function app_main() {
+    PICARUS = new PicarusClient();
+    // Setup models
+    function param_encode(dd) {
+        return _.map(dd, function (v) {
+            return v.join('=');
+        }).join('&');
+    }
+    PicarusRow = Backbone.Model.extend({
+        idAttribute: "row",
+        initialize: function(attributes, options) {
+            if (!_.isUndefined(options)) {
+                if (_.has(options, 'table'))
+                    this.table = options.table;
+                if (_.isArray(options.columns))
+                    this.columns = options.columns;
+            }
+        },
+        sync: function (method, model, options) {
+            opt = options;
+            console.log('row:' + method);
+            mod = model;
+            var table = model.get_table();
+            var out;
+            var success = options.success;
+            var params = {success: success};
+            params.data = model.attributes;
+            if (_.has(options, 'attrs')) {
+                params.data = options.attrs;
+            }
+            if (method == 'read') {
+                if (_.has(this, 'columns'))
+                    params.columns = this.columns;
+                out = PICARUS.getRow(table, model.id, params);
+            } else if (method == 'delete') {
+                out = PICARUS.deleteRow(table, model.id, params);
+            } else if (method == 'patch') {
+                out = PICARUS.patchRow(table, model.id, params);
+            } else if (method == 'create') {
+                out = PICARUS.postTable(table, params);
+            }
+            debug_out = out;
+            model.trigger('request', model, out, options);
+            return out;
+        },
+        get_table: function () {
+            var table = this.table;
+            if (_.isUndefined(table))
+                table = this.collection.table;
+            return table;
+        },
+        unset: function (attr, options) {
+            function s() {
+                return this.set(attr, void 0, _.extend({}, options, {unset: true}));
+            }
+            s = _.bind(s, this);
+            return PICARUS.deleteColumn(this.get_table(), this.id, attr, {success: s});
+        }
+    });
+    PicarusRows = Backbone.Collection.extend({
+        model : PicarusRow,
+        initialize: function(models, options) {
+            this.table = options.table;
+            if (_.isArray(options.columns))
+                this.columns = options.columns;
+        },
+        sync: function (method, model, options) {
+            opt = options;
+            console.log('rows:' + method);
+            mod = model;
+            var out;
+            var params = {};
+            var table = this.table;
+            if (_.has(options, 'attrs'))
+                params.data = options.attrs;
+            if (method == 'read') {
+                if (_.has(this, 'columns'))
+                    params.columns = this.columns;
+                params.success = function (lod) {
+                    options.success(_.map(lod, function (v) {v[1].row = v[0]; return v[1]}));
+                };
+                out = PICARUS.getTable(this.table, params);
+            }
+            model.trigger('request', model, out, options);
+            return out;
+        }
+    });
+
+
+    function deleteValueFunc(row, column) {
+        if (column == 'row')
+            return '';
+        return Mustache.render('<a class="value_delete" style="padding-left: 5px" row="{{row}}" column="{{column}}">Delete</a>', {row: encode_id(row), column: encode_id(column)});
+    }
+    function deleteRowFunc(row) {
+        return Mustache.render('<button class="btn row_delete" type="submit" row="{{row}}"">Delete</button>', {row: encode_id(row)});
+    }
+
+    RowsView = Backbone.View.extend({
+        initialize: function(options) {
+            _.bindAll(this, 'render');
+            this.collection.bind('add', this.render);
+            this.collection.bind('sync', this.render);
+            this.collection.bind('reset', this.render);
+            this.collection.bind('change', this.render);
+            this.collection.bind('remove', this.render);
+            this.collection.bind('destroy', this.render);
+            this.extraColumns = [];
+            this.postRender = function () {};
+            this.deleteValues = false;
+            this.deleteRows = false;
+            if (!_.isUndefined(options.postRender))
+                this.postRender = options.postRender;
+            if (!_.isUndefined(options.extraColumns))
+                this.extraColumns = options.extraColumns;
+            if (options.deleteRows) {
+                this.deleteRows = true;
+                function delete_row(data) {
+                    var row = decode_id(data.target.getAttribute('row'));
+                    this.collection.get(row).destroy({wait: true});
+                }
+                delete_row = _.bind(delete_row, this);
+                this.postRender = _.compose(this.postRender, function () {
+                    button_confirm_click($('.row_delete'), delete_row);
+                });
+                this.extraColumns.push({header: "Delete", getFormatted: function() { return deleteRowFunc(this.get('row'))}});
+            }
+            if (options.deleteValues) {
+                this.deleteValues = true;
+                function delete_value(data) {
+                    var row = decode_id(data.target.getAttribute('row'));
+                    var column = decode_id(data.target.getAttribute('column'));
+                    this.collection.get(row).unset(column);
+                }
+                delete_value = _.bind(delete_value, this);
+                this.postRender = _.compose(this.postRender, function () {
+                    button_confirm_click($('.value_delete'), delete_value);
+                });
+            }
+            if (options.columns)
+                this.columns = options.columns;
+        },
+        render: _.debounce(function() {
+            
+            var columns = this.columns;
+            if (_.isUndefined(columns))
+                columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
+                    return _.keys(x.attributes);
+                })));
+            var deleteValueFuncLocal = function () {return ''};
+            if (this.deleteValues)
+                deleteValueFuncLocal = deleteValueFunc;
+            var table_columns = _.map(columns, function (x) {
+                if (x === 'row')
+                    return {header: 'row', getFormatted: function() { return _.escape(this.get(x))}};
+                outExtra = '';
+                return {header: x, getFormatted: function() {
+                    var val = this.get(x);
+                    if (_.isUndefined(val))
+                        return '';
+                    return _.escape(val) + deleteValueFuncLocal(this.get('row'), x);
+                }
+                };
+            }).concat(this.extraColumns);
+            picarus_table = new Backbone.Table({
+                collection: this.collection,
+                columns: table_columns
+            });
+            if (this.collection.length) {
+                this.$el.html(picarus_table.render().el);
+                this.postRender();
+            } else {
+                this.$el.html('<div class="alert alert-info">Table Empty</div>');
+            }
+        }, 100)
+    });
+
+    // Based on: https://gist.github.com/2711454
+    var all_view = _.map($('#tpls [id*=tpl]'), function (v) {
+        return v.id.slice(4).split('_').join('/')
+    });
+
+    function capFirst(string) {
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+
+    //This is the Backbone controller that manages the content of the app
+    var Content = Backbone.View.extend({
+        initialize:function(options){
+            Backbone.history.on('route',function(source, path){
+                this.render(path);
+            }, this);
+        },
+        //This object defines the content for each of the routes in the application
+        content: _.object(_.map(all_view, function (val) {
+            var selector_id;
+            var prefix = 'tpl_';
+            if (val === "") {
+                selector_id = "data_user"
+            } else {
+                selector_id = val.split('/').join('_');
+            }
+            return [val, _.template(document.getElementById(prefix + selector_id).innerHTML, {baseLogin: document.getElementById('bpl_login').innerHTML,
+                                                                                              rowSelect: document.getElementById('bpl_row_select').innerHTML,
+                                                                                              slicesSelect: document.getElementById('bpl_slices_select').innerHTML,
+                                                                                              filter: document.getElementById('bpl_filter').innerHTML,
+                                                                                              prefixSelect: document.getElementById('bpl_prefix_select').innerHTML,
+                                                                                              runButton: document.getElementById('bpl_run_button').innerHTML})];
+        })),
+        render:function(route){
+            //Simply sets the content as appropriate
+            this.$el.html(this.content[route]);
+            // Post-process the DOM for Picarus specific helpers
+            wrap_hints();
+            custom_checkbox_and_radio();
+            // Handles post render javascript calls if available
+            if (route === "")
+                route = 'data/user';
+            var func_name = 'render_' + route.split('/').join('_');
+            if (window.hasOwnProperty(func_name))
+                login_get(window[func_name]);
+        }
+    });
+    
+    //This is the Backbone controller that manages the Nav Bar
+    var NavBar = Backbone.View.extend({
+        initialize:function(options){
+            Backbone.history.on('route',function(source, path){
+                this.render(path);
+            }, this);
+        },
+        //This is a collection of possible routes and their accompanying
+        //user-friendly titles
+        titles: _.object(_.map(all_view, function (val) {
+            var name;
+            if (val === "") {
+                name = "user";
+            } else {
+                name = _.last(val.split('/', 2));
+            }
+            return [val, capFirst(name)];
+        })),
+        events:{
+            'click a':function(source) {
+                var hrefRslt = source.target.getAttribute('href');
+                Backbone.history.navigate(hrefRslt, {trigger:true});
+                //Cancel the regular event handling so that we won't actual change URLs
+                //We are letting Backbone handle routing
+                return false;
+            }
+        },
+        //Each time the routes change, we refresh the navigation (dropdown magic by Brandyn)
+        render:function(route){
+            this.$el.empty();
+            var template = _.template("<li class='<%=active%>'><a href='<%=url%>'><%=visible%></a></li>");
+            var drop_template = _.template("<li <%=active%>><a href='#'><%=prev_key%></a><ul><% _.each(vals, function(data) { %> <li class='<%=data[2]%>'><a href='#<%=data[0]%>'><%=data[1]%></a></li> <% }); %></ul></li>");
+            var prev_els = [];
+            var prev_key = undefined;
+            var route_key = route.split('/', 2)[0]
+            function flush_dropdown(el) {
+                el.append(drop_template({prev_key: capFirst(prev_key), vals: prev_els, active: route_key === prev_key ? "class='active'" : ''}));
+            }
+            for (var key in this.titles) {
+                var active = route === key ? 'active' : '';
+                var key_splits = key.split('/', 2);
+                var name = this.titles[key];
+                if (typeof prev_key != 'undefined' && (prev_key != key_splits[0] || key_splits.length < 2)) {
+                    flush_dropdown(this.$el);
+                    prev_key = undefined;
+                    prev_els = [];
+                }
+                // If a part of a dropdown, add to list, else add directly
+                if (key_splits.length >= 2) {
+                    prev_key = key_splits[0];
+                    prev_els.push([key, name, active]);
+                } else {
+                    this.$el.append(template({url:'#' + key,visible:this.titles[key],active:active}));
+                }
+            }
+            if (typeof prev_key != 'undefined') {
+                flush_dropdown(this.$el);
+            }
+        }
+    });
+    
+    //Every time a Router is instantiated, the route is added
+    //to a global Backbone.history object. Thus, this is just a
+    //nice way of defining possible application states
+    new (Backbone.Router.extend({
+        routes: _.object(_.map(all_view, function (val) {
+            return [val, val];
+        }).concat([['*path', 'data/user']]))
+    }));
+    
+    //Attach Backbone Views to existing HTML elements
+    new NavBar({el:document.getElementById('nav-item-container')});
+    new Content({el:document.getElementById('container')});
+    
+    //Start the app by setting kicking off the history behaviour.
+    //We will get a routing event with the initial URL fragment
+    Backbone.history.start();
+    window.onbeforeunload = function() {return "Leaving Picarus..."};
+};
 /*! @source http://purl.eligrey.com/github/FileSaver.js/blob/master/FileSaver.js */
 var saveAs=saveAs||navigator.msSaveBlob&&navigator.msSaveBlob.bind(navigator)||function(a){"use strict";var b=a.document,c=function(){return a.URL||a.webkitURL||a},d=a.URL||a.webkitURL||a,e=b.createElementNS("http://www.w3.org/1999/xhtml","a"),f="download"in e,g=function(c){var d=b.createEvent("MouseEvents");return d.initMouseEvent("click",!0,!1,a,0,0,0,0,0,!1,!1,!1,!1,0,null),c.dispatchEvent(d)},h=a.webkitRequestFileSystem,i=a.requestFileSystem||h||a.mozRequestFileSystem,j=function(b){(a.setImmediate||a.setTimeout)(function(){throw b},0)},k="application/octet-stream",l=0,m=[],n=function(){for(var a=m.length;a--;){var b=m[a];"string"==typeof b?d.revokeObjectURL(b):b.remove()}m.length=0},o=function(a,b,c){b=[].concat(b);for(var d=b.length;d--;){var e=a["on"+b[d]];if("function"==typeof e)try{e.call(a,c||a)}catch(f){j(f)}}},p=function(b,d){var q,r,x,j=this,n=b.type,p=!1,s=function(){var a=c().createObjectURL(b);return m.push(a),a},t=function(){o(j,"writestart progress write writeend".split(" "))},u=function(){(p||!q)&&(q=s(b)),r&&(r.location.href=q),j.readyState=j.DONE,t()},v=function(a){return function(){return j.readyState!==j.DONE?a.apply(this,arguments):void 0}},w={create:!0,exclusive:!1};return j.readyState=j.INIT,d||(d="download"),f&&(q=s(b),e.href=q,e.download=d,g(e))?(j.readyState=j.DONE,t(),void 0):(a.chrome&&n&&n!==k&&(x=b.slice||b.webkitSlice,b=x.call(b,0,b.size,k),p=!0),h&&"download"!==d&&(d+=".download"),r=n===k||h?a:a.open(),i?(l+=b.size,i(a.TEMPORARY,l,v(function(a){a.root.getDirectory("saved",w,v(function(a){var c=function(){a.getFile(d,w,v(function(a){a.createWriter(v(function(c){c.onwriteend=function(b){r.location.href=a.toURL(),m.push(a),j.readyState=j.DONE,o(j,"writeend",b)},c.onerror=function(){var a=c.error;a.code!==a.ABORT_ERR&&u()},"writestart progress write abort".split(" ").forEach(function(a){c["on"+a]=j["on"+a]}),c.write(b),j.abort=function(){c.abort(),j.readyState=j.DONE},j.readyState=j.WRITING}),u)}),u)};a.getFile(d,{create:!1},v(function(a){a.remove(),c()}),v(function(a){a.code===a.NOT_FOUND_ERR?c():u()}))}),u)}),u),void 0):(u(),void 0))},q=p.prototype,r=function(a,b){return new p(a,b)};return q.abort=function(){var a=this;a.readyState=a.DONE,o(a,"abort")},q.readyState=q.INIT=0,q.WRITING=1,q.DONE=2,q.error=q.onwritestart=q.onprogress=q.onwrite=q.onabort=q.onerror=q.onwriteend=null,a.addEventListener("unload",n,!1),r}(self);
