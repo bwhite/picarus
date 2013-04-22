@@ -633,7 +633,7 @@ function render_visualize_thumbnails() {
         var imageColumn = 'thum:image_150sq';
         var getMoreData = undefined;
         var hasMoreData = true;
-        var gimmeMoreData = false;
+        var gimmeMoreData = false; // 
         if (startRow.length == 0 || stopRow.length == 0) {
             display_alert('Must specify rows');
             return;
@@ -663,7 +663,7 @@ function render_visualize_thumbnails() {
         if (filter.length > 0) {
             params.filter = filter;
         }
-        $('#results').infiniteScroll({threshold: 800, onEnd: function () {
+        $('#results').infiniteScroll({threshold: 1024, onEnd: function () {
             console.log('No more results');
         }, onBottom: function (callback) {
             console.log('More data!');
@@ -677,6 +677,9 @@ function render_visualize_thumbnails() {
                 }
             callback(hasMoreData);
         }});
+        $('#results').unload(function (evt) {
+            $window.off('scroll.infinite resize.infinite');
+        });
         PICARUS.scanner("images", startRow, stopRow, params);
     });
 }
