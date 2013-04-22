@@ -51,6 +51,7 @@ function render_visualize_thumbnails() {
             callback(hasMoreData);
         }});
         $('#results').unload(function (evt) {
+            console.log('Unloaded');
             $window.off('scroll.infinite resize.infinite');
         });
         PICARUS.scanner("images", startRow, stopRow, params);
