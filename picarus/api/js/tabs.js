@@ -342,9 +342,13 @@ function render_models_create() {
     av = new AppView({collection: results, el: $('#selects')});
     results.fetch();
     $('#runButton').click(function () {
-        var params = _.object($('#params :input').map(function () {return [[$(this).attr('name'), $(this).val()]]}));
-        if (!_.isUndefined(params['input-meta']))
-            params['input-meta'] = params['input-meta'];
+        var params = _.object($('#params :input').map(function () {
+            var k = $(this).attr('name');
+            var v = $(this).val();
+            if (k.slice(0, 5) === 'input' && k != 'input-meta')
+                return [[k, decode_id(v)]];
+            return [[k, v]];
+        }));
         function success(response) {
             $('#results').html(response.row);
         }
