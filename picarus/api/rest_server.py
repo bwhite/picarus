@@ -21,6 +21,8 @@ import glob
 def check_version(func):
 
     def inner(version, *args, **kw):
+        if ARGS.debug:
+            print_request()
         if version != VERSION:
             bottle.abort(400)
         return func(*args, **kw)
@@ -62,6 +64,7 @@ if __name__ == "__main__":
     parser.add_argument('--annotations_redis_host', help='Annotations Host', default='localhost')
     parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
     parser.add_argument('--annotations_redis_db', type=int, help='Annotations DB', default=2)
+    parser.add_argument('--debug', action='store_true')
     parser.add_argument('--port', default='15000', type=int)
     parser.add_argument('--thrift_server', default='localhost')
     parser.add_argument('--thrift_port', default='9090')
