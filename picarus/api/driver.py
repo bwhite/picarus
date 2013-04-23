@@ -202,11 +202,6 @@ class PicarusManager(object):
         self._model_to_pb(c, preprocessor, 'preprocessor')
         return c
 
-    def create_tables(self):
-        self.hb.createTable(self.models_table, [hadoopy_hbase.ColumnDescriptor('data:', maxVersions=1, compression='SNAPPY'),
-                                                hadoopy_hbase.ColumnDescriptor('meta:', maxVersions=1),
-                                                hadoopy_hbase.ColumnDescriptor('user:', maxVersions=1)])
-
     def image_thumbnail(self, **kw):
         # Makes 150x150 thumbnails from the data:image column
         model = [{'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}}]
