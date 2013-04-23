@@ -347,7 +347,7 @@ function render_models_create() {
             var v = $(this).val();
             if (_.isUndefined(k))
                 return;
-            if (k.slice(0, 5) === 'input' && k != 'input-meta')
+            if (k.slice(0, 5) === 'input' && k != 'input-meta' && k != 'input-raw_image')
                 return [[k, decode_id(v)]];
             return [[k, v]];
         }));

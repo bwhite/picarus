@@ -42,8 +42,11 @@ function login_get(func) {
             var email = $('#email').val();
             var loginKey = $('#loginKey').val();
             $('#secondFactorAuth').removeClass('error');
-            $.cookie('email', email, {secure: true});
-            $.cookie('loginKey', loginKey, {secure: true});
+            // NOTE: Removed secure attribute since this
+            // information isn't strictly secret (can only be used to send you an email an hour)
+            // This makes using a demo http version much nicer, to add back use {secure: true} below
+            $.cookie('email', email);
+            $.cookie('loginKey', loginKey);
             EMAIL_AUTH = {auth: apiKey, email: email};
             $('#otp').unbind();
             $('#apiKey').unbind('keypress');
