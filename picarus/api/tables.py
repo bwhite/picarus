@@ -600,8 +600,10 @@ class ImagesHBaseTable(HBaseTable):
                 return {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name=class_name, query=query, **p)}
             elif action in ('io/annotate/image/query', 'io/annotate/image/entity', 'io/annotate/image/query_batch'):
                 self._slice_validate(start_row, stop_row, 'r')
-                secret = base64.b64encode(uuid.uuid4().bytes)[:-2]
-                task = base64.b64encode(uuid.uuid4().bytes)[:-2]
+                # We never need to decode these, they just need to be
+                # random strings that can be in a url
+                secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
+                task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
                 p = {}
                 image_column = base64.b64decode(params['imageColumn'])
                 if action == 'io/annotate/image/entity':
