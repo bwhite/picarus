@@ -27,6 +27,8 @@ Contents
     takeout
     examples
     install
+    admin
+    development
 
 
 Architecture
