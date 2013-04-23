@@ -29,7 +29,7 @@ def email_auth_factory(email_auth_fn='email_auth.js'):
         print('Body\n')
         print(body)
 
-    if not EMAIL['key'] or not EMAIL['secret']:
+    if not EMAIL.get('key') or EMAIL.get('secret'):
         logging.warn('Basic email mode as no amazon API key is in email_auth.js, see email_auth.example.js')
         return basic_email_func
 
