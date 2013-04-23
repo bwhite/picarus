@@ -13,10 +13,15 @@ import crawlers
 import re
 import gipc
 import picarus_takeout
+import logging
 import msgpack # TODO: Abstract these operations
 from driver import PicarusManager
 from picarus._importer import call_import
-from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
+try:
+    from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
+except ImportError:
+    logging.warn('No default flickr keys found in flickr_keys.py, see flickr_keys.example.py')
+    FLICKR_API_KEY, FLICKR_API_SECRET = '', ''
 from parameters import PARAM_SCHEMAS_SERVE
 from model_factories import FACTORIES
 
@@ -579,6 +584,8 @@ class ImagesHBaseTable(HBaseTable):
                 p['radius'] = params.get('radius')
                 p['api_key'] = params.get('apiKey', FLICKR_API_KEY)
                 p['api_secret'] = params.get('apiSecret', FLICKR_API_SECRET)
+                if not p['api_key'] or not p['api_secret']:
+                    bottle.abort(400)  # Either we don't have a default or the user provided an empty key
                 if 'hasGeo' in params:
                     p['has_geo'] = params['hasGeo'] == '1'
                 try:

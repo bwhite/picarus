@@ -7,10 +7,32 @@ import time
 import redis
 import argparse
 import json
+import logging
 
 
 def email_auth_factory(email_auth_fn='email_auth.js'):
-    EMAIL = json.load(open(email_auth_fn))  # keys as key, secret, admin, url, name
+    try:
+        EMAIL = json.load(open(email_auth_fn))  # keys as key, secret, admin, url, name
+    except IOError:
+        EMAIL = {'name': 'Demo picar.us server'}
+
+    def basic_email_func(email, api_key, login_key=None):
+        print('Send the following to: %s' % email)
+        if login_key is None:
+            body = '<h2>Email</h2><pre>%s</pre><h2><h2>API Key (Expires in 24 hours)</h2><pre>%s</pre>' % (email, api_key)
+            subject = '[%s] - API Key' % EMAIL['name']
+        else:
+            body = '<h2>Email</h2><pre>%s</pre><h2>Login Key</h2><pre>%s</pre><h2>API Key (Expires in 24 hours)</h2><pre>%s</pre>' % (email, login_key, api_key)
+            subject = '[%s] - Login/API Key' % EMAIL['name']
+        print('Subject\n')
+        print(subject)
+        print('Body\n')
+        print(body)
+
+    if not EMAIL['key'] or not EMAIL['secret']:
+        logging.warn('Basic email mode as no amazon API key is in email_auth.js, see email_auth.example.js')
+        return basic_email_func
+
     import boto
 
     def email_func(email, api_key, login_key=None):

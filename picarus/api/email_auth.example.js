@@ -1,0 +1,1 @@
+{"admin": "admin@host.com", "key": "", "secret": "", "name": "api.host.com"}
