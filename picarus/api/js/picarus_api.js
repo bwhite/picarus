@@ -16,7 +16,7 @@ function PicarusClient(args) {
     };
 
     if (_.isUndefined(args) || _.isUndefined(args.server))
-        this.server = 'https://api.picar.us';
+        this.server = '';
     else
         this.server = args.server;
 
