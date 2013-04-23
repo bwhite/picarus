@@ -342,9 +342,11 @@ function render_models_create() {
     av = new AppView({collection: results, el: $('#selects')});
     results.fetch();
     $('#runButton').click(function () {
-        var params = _.object($('#params :input').map(function () {
+        var params = _.object($('#params :input[name]').map(function () {
             var k = $(this).attr('name');
             var v = $(this).val();
+            if (_.isUndefined(k))
+                return;
             if (k.slice(0, 5) === 'input' && k != 'input-meta')
                 return [[k, decode_id(v)]];
             return [[k, v]];
