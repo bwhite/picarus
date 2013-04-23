@@ -25,7 +25,7 @@ PARAM_SCHEMAS.append({'type': 'model',
                       'kind': 'image_preprocessor',
                       'input_type': 'raw_image',
                       'output_type': 'processed_image',
-                      'params': {'compression': {'type': 'enum', 'values': ['jpg', 'png']},
+                      'params': {'compression': {'type': 'enum', 'values': ['jpg', 'png', 'ppm']},
                                  'size': {'type': 'int', 'min': 16, 'max': 1025},
                                  'method': {'type': 'enum', 'values': ['force_max_side', 'max_side', 'force_square']}}})
 
