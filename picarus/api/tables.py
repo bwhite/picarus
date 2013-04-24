@@ -655,11 +655,13 @@ class ImagesHBaseTable(HBaseTable):
 def parse_slices():
     k = base64.b64encode('slices')
     if bottle.request.content_type == "application/json":
-        return bottle.request.json[k]
+        out = bottle.request.json[k]
     else:
         if not bottle.request.params[k]:
-            return []
-        return bottle.request.params[k].split(';')
+            out = []
+        else:
+            out = bottle.request.params[k].split(';')
+    return [map(base64.b64decode, x.split(',')) for x in out]
 
 
 class ModelsHBaseTable(HBaseTable):
@@ -711,8 +713,7 @@ class ModelsHBaseTable(HBaseTable):
                 return _create_model_from_params(manager, self.owner, path, params)
             elif path.startswith('factory/'):
                 table = params['table']
-                slices = parse_slices()
-                start_stop_rows = [map(base64.b64decode, s.split(',')) for s in slices]
+                start_stop_rows = parse_slices()
                 data_table = get_table(self._auth_user, table)
                 for start_row, stop_row in start_stop_rows:
                     data_table._slice_validate(start_row, stop_row, 'r')
