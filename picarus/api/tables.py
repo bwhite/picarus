@@ -660,7 +660,7 @@ def parse_slices():
         if not bottle.request.params[k]:
             out = []
         else:
-            out = bottle.request.params[k].split(';')
+            out = base64.b64decode(bottle.request.params[k]).split(';')
     return [map(base64.b64decode, x.split(',')) for x in out]
 
 
