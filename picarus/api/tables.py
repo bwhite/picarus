@@ -653,12 +653,13 @@ class ImagesHBaseTable(HBaseTable):
 
 
 def parse_slices():
+    k = base64.b64encode('slices')
     if bottle.request.content_type == "application/json":
-        return bottle.request.json['slices']
+        return bottle.request.json[k]
     else:
-        if not bottle.request.params['slices']:
+        if not bottle.request.params[k]:
             return []
-        return bottle.request.params['slices'].split(';')
+        return bottle.request.params[k].split(';')
 
 
 class ModelsHBaseTable(HBaseTable):
