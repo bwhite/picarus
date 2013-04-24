@@ -167,7 +167,7 @@ def index_hamming_feature2d(queue, params, inputs, schema, start_stop_rows, tabl
             hashes.append(f[0])
             #keypoints += f[1]
             indeces += [len(labels)] * f[2][0]
-            labels.append(base64.urlsafe_b64encode(row))
+            labels.append(row)
             print(len(labels))
     hashes = ''.join(hashes)
     factory_info = {'slices': slices, 'num_hashes': len(indeces), 'num_images': len(labels), 'data': 'slices', 'params': params, 'inputs': inputsb64}
