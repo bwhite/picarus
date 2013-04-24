@@ -182,6 +182,7 @@ function render_models_list() {
     }};
     var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('meta:tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + encode_id(this.get('row')) + '">edit</a></span>'}};
     var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('meta:notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + encode_id(this.get('row')) + '">edit</a></span>'}};
+    var rowB64Column = {header: "RowB64", getFormatted: function() { return base64.encode(this.get('row'))}};
     function postRender() {
         function process_takeout(row, model_chunks_column, model_column, model_type) {
             function takeoutSuccess(response) {
@@ -236,7 +237,7 @@ function render_models_list() {
         setup_modal($('.modal_link_notes'), 'meta:notes');
         setup_modal($('.modal_link_tags'), 'meta:tags');
     }
-    new RowsView({collection: results, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn], postRender: postRender, deleteRows: true, columns: columns});
+    new RowsView({collection: results, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, rowB64Column], postRender: postRender, deleteRows: true, columns: columns});
     results.fetch();
 }
 function render_models_create() {
@@ -1071,6 +1072,7 @@ function render_visualize_annotations_loaded() {
             else
                 scoresTotal[x] = y;
         });
+        //TODO: Verify this
         return {scoresPos: scoresPos, scoresNeg: scoresNeg, scoresTotal: score_total(scoresPos, scoresNeg, scoresTotal)};
     }
     function image_entity_score(users, results) {
