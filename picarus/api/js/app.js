@@ -99,7 +99,7 @@ function imageThumbnail(row, id) {
     function success(columns) {
         $('#' + id).attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row)
     }
-    PICARUS.getRow('images', row, {success: success, data: {columns: imageColumn}});
+    PICARUS.getRow('images', row, {success: success, data: {columns: [imageColumn]}});
 }
 
 function button_confirm_click(button, fun) {
