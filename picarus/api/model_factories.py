@@ -139,7 +139,7 @@ def index_spherical(queue, params, inputs, schema, start_stop_rows, table, owner
                                          start_row=start_row, stop_row=stop_row)
         for row, cols in row_cols:
             hashes.append(cols[inputs['hash']])
-            labels.append(base64.urlsafe_b64encode(row))
+            labels.append(row)
     hashes = ''.join(hashes)
     factory_info = {'slices': slices, 'num_hashes': len(labels), 'data': 'slices', 'params': params, 'inputs': inputsb64}
     model_link = {'name': 'picarus.SphericalHashIndex', 'kw': {'hashes': hashes,
