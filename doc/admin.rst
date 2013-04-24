@@ -7,7 +7,7 @@ All user admin tasks are performed using the "users.py" script in the picarus/ap
 
 To add a user to the database
 
-.. code-block::
+.. code-block:: bash
 
     python users.py add you@host.com
 
@@ -15,7 +15,7 @@ If you have AWS email enabled (by filling out your api details in email_auth.exa
 
 To give a user read/write access to a row prefix
 
-.. code-block::
+.. code-block:: bash
 
     python users.py add_image_prefix you@host.com "yourprefix:" rw
 
