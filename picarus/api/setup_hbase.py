@@ -16,8 +16,11 @@ def main():
                               hadoopy_hbase.ColumnDescriptor('pred:', maxVersions=1),
                               hadoopy_hbase.ColumnDescriptor('srch:', maxVersions=1),
                               hadoopy_hbase.ColumnDescriptor('attr:', maxVersions=1),
+                              hadoopy_hbase.ColumnDescriptor('thum:', maxVersions=1),
                               hadoopy_hbase.ColumnDescriptor('misc:', maxVersions=1),
                               hadoopy_hbase.ColumnDescriptor('feat:', maxVersions=1, compression='SNAPPY'),
+                              hadoopy_hbase.ColumnDescriptor('mfeat:', maxVersions=1, compression='SNAPPY'),
+                              hadoopy_hbase.ColumnDescriptor('mask:', maxVersions=1, compression='SNAPPY'),
                               hadoopy_hbase.ColumnDescriptor('hash:', maxVersions=1)])
 
 if __name__ == '__main__':
