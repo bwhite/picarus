@@ -91,6 +91,7 @@ function render_visualize_annotations_loaded() {
             else
                 scoresTotal[x] = y;
         });
+        //TODO: Verify this
         return {scoresPos: scoresPos, scoresNeg: scoresNeg, scoresTotal: score_total(scoresPos, scoresNeg, scoresTotal)};
     }
     function image_entity_score(users, results) {
