@@ -91,6 +91,8 @@ class PicarusClient(object):
         return self._decode_lod(self.get(('data', table), data=self._encode_columns(columns)))
 
     def post_table(self, table, data=None):
+        if data and 'slices' in data:
+            data['slices'] = ';'.join(','.join(map(base64.b64encode, x)) for x in slices)
         return self.decvalues(self.post(('data', table), data=self.encdict(data)))
 
     # /data/:table/:row
