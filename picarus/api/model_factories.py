@@ -18,7 +18,7 @@ def _setup(start_stop_rows, inputs):
     slices = [base64.b64encode(start_row) + ',' + base64.b64encode(stop_row)
               for start_row, stop_row in start_stop_rows]
     os.nice(5)  # These are background tasks, don't let the CPU get too crazy
-    return thrift, manager, slices, map(base64.b64encode, inputs)
+    return thrift, manager, slices, {k: base64.b64encode(v) for k, v in inputs.items()}
 
 
 def classifier_sklearn(queue, params, inputs, schema, start_stop_rows, table, owner):
