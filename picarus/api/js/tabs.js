@@ -192,7 +192,7 @@ function render_models_list() {
                  model = _.map(chunks, function (v, k) {
                     return v[1];
                 }).join('');
-                var curSha1 = CryptoJS.SHA1(CryptoJS.enc.Base64.parse(base64.encode(model))).toString();
+                var curSha1 = Sha1.hash(model, false);
                 var trueSha1 = results.get(row).escape('meta:model_' + model_type + '_sha1');
                 if (curSha1 === trueSha1) {
                     var modelByteArray = new Uint8Array(model.length);
