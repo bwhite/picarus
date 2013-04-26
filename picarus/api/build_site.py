@@ -25,7 +25,7 @@ def main():
                         help="Don't minify the source")
     args = parser.parse_args()
     render_app()
-    preinclude = ['jquery.min.js', 'underscore-min.js']
+    preinclude = ['jquery.min.js', 'underscore-min.js', 'backbone-min.js']
     preinclude = ['js/' + x for x in preinclude]
     postinclude = ['picarus_api.js', 'app.js']
     postinclude = ['js/' + x for x in postinclude]
