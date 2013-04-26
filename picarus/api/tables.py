@@ -465,8 +465,6 @@ class ImagesHBaseTable(HBaseTable):
                 model = picarus_takeout.ModelChain(msgpack.dumps(model_chain))
                 bottle.response.headers["Content-type"] = "application/json"
                 v = base64.b64encode(model.process_binary(binary_input))
-                print(v[:25])
-                print(v[-25:])
                 return json.dumps({params['model']: v})
             else:
                 bottle.abort(400)
