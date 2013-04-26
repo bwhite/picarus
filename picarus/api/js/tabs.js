@@ -186,10 +186,10 @@ function render_models_list() {
     function postRender() {
         function process_takeout(row, model_chunks_column, model_column, model_type) {
             function takeoutSuccess(response) {
-                var chunks = _.map(response, function (v, k) {
+                 chunks = _.map(response, function (v, k) {
                     return [Number(k.split('-')[1]), v];
                 }).sort();
-                var model = _.map(chunks, function (v, k) {
+                 model = _.map(chunks, function (v, k) {
                     return v[1];
                 }).join('');
                 var curSha1 = CryptoJS.SHA1(CryptoJS.enc.Base64.parse(base64.encode(model))).toString();
