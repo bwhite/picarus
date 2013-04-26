@@ -110,6 +110,16 @@ PARAM_SCHEMAS.append({'type': 'factory',
                       'input_types': ['feature', 'meta'],
                       'params': {'class_positive': {'type': 'str'}}})
 
+
+PARAM_SCHEMAS.append({'type': 'factory',
+                      'name': 'svmkernel',
+                      'kind': 'classifier',
+                      'data': 'slices',
+                      'input_types': ['feature', 'meta'],
+                      'params': {'class_positive': {'type': 'str'},
+                                 'kernel': {'type': 'enum', 'values': ['hik']}}})
+
+
 PARAM_SCHEMAS.append({'type': 'factory',
                       'name': 'bovw',
                       'kind': 'feature',

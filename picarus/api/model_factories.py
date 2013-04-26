@@ -7,6 +7,7 @@ import scipy.cluster.vq
 import scipy as sp
 import random
 import picarus_takeout
+import kernels
 import tables
 import os
 from driver import PicarusManager
@@ -43,6 +44,42 @@ def classifier_sklearn(queue, params, inputs, schema, start_stop_rows, table, ow
     factory_info = {'slices': slices, 'num_rows': len(features), 'data': 'slices', 'params': params, 'inputs': inputsb64}
     model_link = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': classifier.coef_.tolist()[0],
                                                              'intercept': classifier.intercept_[0]}}
+    model_chain = tables._takeout_model_chain_from_key(manager, inputs['feature']) + [model_link]
+    queue.put(manager.input_model_param_to_key(**{'input': inputs['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
+                                                  'output_type': 'binary_class_confidence', 'email': owner, 'name': manager.model_to_name(model_link),
+                                                  'factory_info': json.dumps(factory_info)}))
+
+
+def classifier_kernel_sklearn(queue, params, inputs, schema, start_stop_rows, table, owner):
+    thrift, manager, slices, inputsb64 = _setup(start_stop_rows, inputs)
+    label_features = {0: [], 1: []}
+    for start_row, stop_row in start_stop_rows:
+        row_cols = hadoopy_hbase.scanner(thrift, table,
+                                         columns=[inputs['feature'], inputs['meta']],
+                                         start_row=start_row, stop_row=stop_row)
+        for row, cols in row_cols:
+            try:
+                label = int(cols[inputs['meta']] == params['class_positive'])
+                label_features[label].append(cols[inputs['feature']])
+            except KeyError:
+                continue
+
+    kernel = {'hik': kernels.histogram_intersection}[params['kernel']]
+    labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
+    features = label_features[0] + label_features[1]
+    features = np.asfarray([msgpack.loads(x)[0] for x in features])
+    gram = kernel(features, features)
+    import sklearn.svm
+    classifier = sklearn.svm.SVC(kernel='precomputed')
+    classifier.fit(gram, np.asarray(labels))
+    factory_info = {'slices': slices, 'num_rows': len(features), 'data': 'slices', 'params': params, 'inputs': inputsb64}
+    support_vectors = features[classifier.support_, :].ravel().tolist()
+    dual_coef = classifier.dual_coef_.ravel().tolist()
+    intercept = float(classifier.intercept_.ravel()[0])
+    model_link = {'name': 'picarus.KernelClassifier', 'kw': {'support_vectors': support_vectors,
+                                                             'dual_coef': dual_coef,
+                                                             'intercept': intercept,
+                                                             'kernel': params['kernel']}}
     model_chain = tables._takeout_model_chain_from_key(manager, inputs['feature']) + [model_link]
     queue.put(manager.input_model_param_to_key(**{'input': inputs['feature'], 'model_link': model_link, 'model_chain': model_chain, 'input_type': 'feature',
                                                   'output_type': 'binary_class_confidence', 'email': owner, 'name': manager.model_to_name(model_link),
@@ -185,6 +222,7 @@ def index_hamming_feature2d(queue, params, inputs, schema, start_stop_rows, tabl
 
 
 FACTORIES = {'factory/classifier/svmlinear': classifier_sklearn,
+             'factory/classifier/svmkernel': classifier_kernel_sklearn,
              'factory/classifier/localnbnn': classifier_localnbnn,
              'factory/feature/bovw': feature_bovw_mask,
              'factory/hasher/spherical': hasher_spherical,
