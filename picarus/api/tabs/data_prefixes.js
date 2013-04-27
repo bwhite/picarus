@@ -2,7 +2,7 @@ function render_data_prefixes() {
     rows = new PicarusRows([], {'table': 'prefixes'});
     function prefixChange() {
         var row = $('#prefixTable option:selected').val();
-        var prefix_drop $('#prefixDrop option:selected').val();
+        var prefix_drop = $('#prefixDrop option:selected').val();
         if (_.isUndefined(row) || _.isUndefined(prefix_drop)) {
             $('#permissions').html('');
             return;
