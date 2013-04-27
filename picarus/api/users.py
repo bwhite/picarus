@@ -68,10 +68,10 @@ class User(object):
         self._stat_prefix = 'stat:'
         self._api_key_prefix = 'auth:'
         self._login_key_prefix = 'login:'
-        self._image_row_prefix = 'image_prefix:'
         self._image_project_prefix = 'imageproject:'
         self._enabled_col = 'enabled'
         self.key_length = 15
+        self._tables = ('images', 'videos')
         assert self.key_length % 3 == 0
         assert self.key_length > 0
         if setup:
@@ -128,11 +128,18 @@ class User(object):
         self._user_db.set(self._login_key_prefix + self.email, self._hash_key(key))
         return key
 
-    def add_image_prefix(self, prefix, permissions):
-        self._user_db.hset(self._image_row_prefix + self.email, prefix, permissions)
+    def _table_prefix(self, table):
+        # TODO: was 'image_prefix:' is now 'prefix_images'
+        # Fix: a=redis.StrictRedis(port=6380)
+        # [a.hmset('prefix_images:' + x.split(':', 1)[1], a.hgetall(x)) for x in a.keys('*_prefix:*')]
+        assert table in self._tables
+        return 'prefix_%s:' % table
 
-    def remove_image_prefix(self, prefix):
-        self._user_db.hdel(self._image_row_prefix + self.email, prefix)
+    def add_prefix(self, table, prefix, permissions):
+        self._user_db.hset(self._table_prefix(table) + self.email, prefix, permissions)
+
+    def remove_prefix(self, table, prefix):
+        self._user_db.hdel(self._table_prefix(table) + self.email, prefix)
 
     def add_image_project(self, project, slices):
         self._user_db.hset(self._image_project_prefix + self.email, project, slices)
@@ -140,9 +147,8 @@ class User(object):
     def remove_image_project(self, project):
         self._user_db.hdel(self._image_project_prefix + self.email, project)
 
-    @property
-    def image_prefixes(self):
-        return self._user_db.hgetall(self._image_row_prefix + self.email)
+    def prefixes(self, table):
+        return self._user_db.hgetall(self._table_prefix(table) + self.email)
 
     @property
     def image_projects(self):
@@ -273,24 +279,29 @@ def main():
         for x in args.emails:
             print('Adding user [%s]' % x)
             user = users.add_user(x)
-            user.add_image_prefix(user.upload_row_prefix, 'rw')
+            for x in user._tables:
+                user.add_prefix(x, user.upload_row_prefix, 'rw')
+                user.add_prefix(x, user.upload_row_prefix, 'rw')
             users.email_login_api_key(user)
 
-    def _add_user_image_prefix(args, users):
+    def _add_user_prefix(args, users):
         user = users.get_user(args.email)
-        user.add_image_prefix(args.prefix, args.permissions)
+        user.add_prefix(args.table, args.prefix, args.permissions)
 
-    def _add_image_upload_prefix(args, users):
+    def _add_upload_prefix(args, users):
         user = users.get_user(args.email)
-        user.add_image_prefix(user.upload_row_prefix, 'rw')
+        for x in user._tables:
+            user.add_prefix(x, user.upload_row_prefix, 'rw')
+            user.add_prefix(x, user.upload_row_prefix, 'rw')
 
-    def _remove_user_image_prefix(args, users):
+    def _remove_user_prefix(args, users):
         user = users.get_user(args.email)
-        user.remove_image_prefix(args.prefix)
+        user.remove_prefix(args.table, args.prefix)
 
-    def _list_user_image_prefix(args, users):
+    def _list_user_prefix(args, users):
         user = users.get_user(args.email)
-        print user.image_prefixes
+        for x in user._tables:
+            print('%s: %r' % (x, user.prefixes()))
 
     def _auth(args, users):
         user = users.get_user(args.email)
@@ -313,24 +324,26 @@ def main():
     parser.add_argument('--redis_db', type=int, help='Redis DB', default=0)
     subparsers = parser.add_subparsers(help='Commands')
 
-    subparser = subparsers.add_parser('add_image_prefix', help='Add prefix')
+    subparser = subparsers.add_parser('add_prefix', help='Add prefix')
+    subparser.add_argument('table', help='table')
     subparser.add_argument('email', help='email')
     subparser.add_argument('prefix', help='Prefix')
     subparser.add_argument('permissions', help='Permissions')
-    subparser.set_defaults(func=_add_user_image_prefix)
+    subparser.set_defaults(func=_add_user_prefix)
 
-    subparser = subparsers.add_parser('add_image_upload_prefix', help='Add upload prefix')
+    subparser = subparsers.add_parser('add_upload_prefix', help='Add upload prefix')
     subparser.add_argument('email', help='email')
-    subparser.set_defaults(func=_add_image_upload_prefix)
+    subparser.set_defaults(func=_add_upload_prefix)
 
-    subparser = subparsers.add_parser('remove_image_prefix', help='Remove prefix')
+    subparser = subparsers.add_parser('remove_prefix', help='Remove prefix')
+    subparser.add_argument('table', help='table')
     subparser.add_argument('email', help='email')
     subparser.add_argument('prefix', help='Prefix')
-    subparser.set_defaults(func=_remove_user_image_prefix)
+    subparser.set_defaults(func=_remove_user_prefix)
 
-    subparser = subparsers.add_parser('list_image_prefix', help='List prefix')
+    subparser = subparsers.add_parser('list_prefix', help='List prefix')
     subparser.add_argument('email', help='email')
-    subparser.set_defaults(func=_list_user_image_prefix)
+    subparser.set_defaults(func=_list_user_prefix)
 
     subparser = subparsers.add_parser('email_login_api', help='Email the user their login/api details')
     subparser.add_argument('email', help='email')

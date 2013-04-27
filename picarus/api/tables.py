@@ -174,7 +174,8 @@ def _create_model_from_factory(manager, email, path, create_model, params, start
 
 
 def _user_to_dict(user):
-    cols = {'stats': json.dumps(user.stats()), 'upload_row_prefix': user.upload_row_prefix, 'image_prefixes': json.dumps(user.image_prefixes)}
+    # TODO: Remove this eventually
+    cols = {'stats': json.dumps(user.stats()), 'upload_row_prefix': user.upload_row_prefix, 'image_prefixes': json.dumps(user.prefixes('images'))}
     cols = {base64.b64encode(x) : base64.b64encode(y) for x, y in cols.items()}
     cols['row'] = base64.b64encode(user.email)
     return cols
@@ -262,9 +263,12 @@ class RedisUsersTable(BaseTableSmall):
 class PrefixesTable(RedisUsersTable):
 
     def __init__(self, _auth_user):
-        super(PrefixesTable, self).__init__(_auth_user, {'images': _auth_user.image_prefixes},
-                                            {'images': _auth_user.add_image_prefix},
-                                            {'images': _auth_user.remove_image_prefix})
+        table = {x: _auth_user.prefixes(x) for x in _auth_user._tables}
+        set_column = {x: lambda y, z: _auth_user.add_prefix(x, y, z)
+                      for x in _auth_user._tables}
+        del_column = {x: lambda y: _auth_user.remove_prefix(x, y)
+                      for x in _auth_user._tables}
+        super(PrefixesTable, self).__init__(_auth_user, table, set_column, del_column)
 
     def _row_column_value_validator(self, row, new_column, new_value):
         if new_value not in ('r', 'rw'):
@@ -278,6 +282,7 @@ class PrefixesTable(RedisUsersTable):
 class ProjectsTable(RedisUsersTable):
 
     def __init__(self, _auth_user):
+        # TODO: Update for new method
         super(ProjectsTable, self).__init__(_auth_user, {'images': _auth_user.image_projects},
                                             {'images': _auth_user.add_image_project},
                                             {'images': _auth_user.remove_image_project})
