@@ -2,12 +2,13 @@ function render_data_prefixes() {
     rows = new PicarusRows([], {'table': 'prefixes'});
     function prefixChange() {
         var row = $('#prefixTable option:selected').val();
-        if (_.isUndefined(row)) {
+        var prefix_drop $('#prefixDrop option:selected').val();
+        if (_.isUndefined(row) || _.isUndefined(prefix_drop)) {
             $('#permissions').html('');
             return;
         }
         row = decode_id(row);
-        var permissions = rows.get(row).get(decode_id($('#prefixDrop option:selected').val()));
+        var permissions = rows.get(row).get(decode_id(prefix_drop));
         ps = permissions;
         var perms = ['r'];
         if (permissions == 'rw')
@@ -40,8 +41,6 @@ function render_data_prefixes() {
     $('#createButton').click(function () {
         var row = $('#prefixTable option:selected').val();
         if (_.isUndefined(row)) {
-            $('#prefixDrop').html('');
-            prefixChange();
             return;
         }
         row = decode_id(row);
