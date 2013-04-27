@@ -1,7 +1,12 @@
 function render_data_prefixes() {
     rows = new PicarusRows([], {'table': 'prefixes'});
     function prefixChange() {
-        var row = decode_id($('#prefixTable option:selected').val());
+        var row = $('#prefixTable option:selected').val()
+        if (_.isUndefined(row)) {
+            $('#permissions').html('');
+            return;
+        }
+        row = decode_id(row);
         var permissions = rows.get(row).get(decode_id($('#prefixDrop option:selected').val()));
         ps = permissions;
         var perms = ['r'];
@@ -11,11 +16,18 @@ function render_data_prefixes() {
         $('#permissions').html(Mustache.render(select_template, {prefixes: _.map(perms, function (x) {return {text: x, value: encode_id(x)}})}));
     }
     function change() {
-        var row = decode_id($('#prefixTable option:selected').val());
+        var row = $('#prefixTable option:selected').val();
+        if (_.isUndefined(row)) {
+            $('#prefixDrop').html('');
+            prefixChange();
+            return;
+        }
+        row = decode_id(row);
         var prefixes = [];
         _.each(rows.get(row).attributes, function (val, key) {
-            if (key == 'row')
+            if (key == 'row') {
                 return;
+            }
             prefixes.push(key);
         });
         prefixes.sort();
