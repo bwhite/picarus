@@ -2,6 +2,7 @@
 from gevent import monkey
 monkey.patch_all()
 import bottle
+bottle.BaseRequest.MEMFILE_MAX = 10 * 1024 ** 2  # 10MB file cap
 import os
 import argparse
 import gevent.queue
