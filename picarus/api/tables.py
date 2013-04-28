@@ -694,6 +694,7 @@ def register_frames(row):
             h = cv2.findHomography(prev_points[matches[0]], points[matches[1]], cv2.RANSAC)
             print(h)
         prev_descs = descs
+        prev_points = points
 
 
 class VideosHBaseTable(DataHBaseTable):
