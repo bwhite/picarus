@@ -173,14 +173,6 @@ def _create_model_from_factory(manager, email, path, create_model, params, start
     return {'row': base64.b64encode(row)}
 
 
-def _user_to_dict(user):
-    # TODO: Remove this eventually
-    cols = {'stats': json.dumps(user.stats()), 'upload_row_prefix': user.upload_row_prefix, 'image_prefixes': json.dumps(user.prefixes('images'))}
-    cols = {base64.b64encode(x) : base64.b64encode(y) for x, y in cols.items()}
-    cols['row'] = base64.b64encode(user.email)
-    return cols
-
-
 class BaseTableSmall(object):
     """Base class for tables that easily fit in memory"""
 
@@ -290,21 +282,6 @@ class ProjectsTable(RedisUsersTable):
     def _row_column_value_validator(self, row, new_column, new_value):
         # TODO: Add checks
         return
-
-
-class UsersTable(object):
-    # TODO: Remove the user's table, it is not necessary anymore
-
-    def __init__(self, _auth_user):
-        self._auth_user = _auth_user
-
-    def get_row(self, row, columns):
-        # TODO: Use columns parameter
-        if self._auth_user.email != row:
-            bottle.abort(401)
-        out = dict(_user_to_dict(self._auth_user))
-        del out['row']
-        return out
 
 
 class AnnotationsTable(BaseTableSmall):
@@ -827,7 +804,5 @@ def get_table(_auth_user, table):
         return ProjectsTable(_auth_user)
     elif table == 'parameters':
         return ParametersTable()
-    elif table == 'users':
-        return UsersTable(_auth_user)
     else:
         bottle.abort(404)

@@ -534,58 +534,6 @@ function render_data_projects() {
     }};
     new RowsView({collection: PROJECTS, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
 }
-function render_data_user() {
-    users = new PicarusRows([], {'table': 'users'});
-    var AppView = Backbone.View.extend({
-        initialize: function() {
-            _.bindAll(this, 'render');
-            this.collection.bind('reset', this.render);
-            this.collection.bind('change', this.render);
-        },
-        render: function() {
-            var columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
-                return _.keys(x.attributes);
-            })));
-            picarus_table = new Backbone.Table({
-                collection: this.collection,
-                columns: _.map(columns, function (x) {
-                    if (x === 'row')
-                        return {header: 'email', getFormatted: function() {return this.escape(x)}};
-                    return {header: x, getFormatted: function() {return this.escape(x)}};
-                })
-            });
-            this.$el.html(picarus_table.render().el);
-        }
-    });
-    new AppView({collection: users, el: $('#users')});
-    login_get(function (email_auth) {
-        var user = new PicarusRow({row: email_auth.email});
-        users.add(user);
-        user.fetch();
-        
-    });
-}
-function render_data_uploads(email_auth) {
-    var AppView = Backbone.View.extend({
-        el: $('#container'),
-        initialize: function() {
-            _.bindAll(this, 'render');
-            this.model.bind('reset', this.render);
-            this.model.bind('change', this.render);
-        },
-        render: function() {
-            var startRow = this.model.get('upload_row_prefix');
-            var imageColumn = 'thum:image_150sq';
-            function success(row, columns) {
-                $('#images').append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('width', '150px'));
-            }
-            PICARUS.scanner("images", startRow, prefix_to_stop_row(startRow), {success: success, maxRows: 24, columns: [imageColumn]})
-        }
-    });
-    var model = new PicarusRow({row: email_auth.email}, {table: 'users'});
-    new AppView({model: model});
-    model.fetch();
-}
 function render_crawl_flickr() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
     $('#runButton').click(function () {
