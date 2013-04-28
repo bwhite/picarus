@@ -396,15 +396,15 @@ class HBaseTable(object):
                 for x, y in result[0].columns.items()}
 
 
-class ImagesHBaseTable(HBaseTable):
+class DataHBaseTable(HBaseTable):
 
-    def __init__(self, _auth_user):
-        super(ImagesHBaseTable, self).__init__(_auth_user, 'images')
-        self.image_prefixes = _auth_user.image_prefixes
+    def __init__(self, _auth_user, table):
+        super(DataHBaseTable, self).__init__(_auth_user, table)
+        self.prefixes = _auth_user.prefixes(table)
         self.upload_row_prefix = _auth_user.upload_row_prefix
 
     def _slice_validate(self, start_row, stop_row, permissions):
-        prefixes = self.image_prefixes
+        prefixes = self.prefixes
         permissions = set(permissions)
         prefixes = [x for x, y in prefixes.items() if set(y).issuperset(permissions)]
         for prefix in prefixes:
@@ -419,7 +419,7 @@ class ImagesHBaseTable(HBaseTable):
         bottle.abort(401)
 
     def _row_validate(self, row, permissions, thrift=None):
-        prefixes = self.image_prefixes
+        prefixes = self.prefixes
         permissions = set(permissions)
         prefixes = [x for x, y in prefixes.items() if set(y).issuperset(permissions)]
         for prefix in prefixes:
@@ -433,46 +433,10 @@ class ImagesHBaseTable(HBaseTable):
                 return
         bottle.abort(401)
 
-    def _column_write_validate(self, column):
-        if column == 'data:image':
-            return
-        if column.startswith('meta:'):
-            return
-        bottle.abort(403)
-
     def post_table(self, params, files):
         row = self.upload_row_prefix + '%.10d%s' % (2147483648 - int(time.time()), uuid.uuid4().bytes)
         self.patch_row(row, params, files)
         return {'row': base64.b64encode(row)}
-
-    def post_row(self, row, params, files):
-        action = params['action']
-        with thrift_lock() as thrift:
-            manager = PicarusManager(thrift=thrift)
-            print(params)
-            model_key = base64.b64decode(params['model'])
-            print('ModelKey[%r]' % model_key)
-            # TODO: Allow io/ so that we can write back to the image too
-            if action == 'i/link':
-                self._row_validate(row, 'r')
-                # TODO: Get this directly from model
-                chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
-                binary_input = thrift.get(self.table, row, chain_input)[0].value  # TODO: Check val
-                model = picarus_takeout.ModelChain(msgpack.dumps([model_link]))
-                bottle.response.headers["Content-type"] = "application/json"
-                return json.dumps({params['model']: base64.b64encode(model.process_binary(binary_input))})
-            elif action == 'i/chain':
-                self._row_validate(row, 'r')
-                # TODO: Get this directly from model
-                chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
-                binary_input = thrift.get(self.table, row, chain_inputs[0])[0].value  # TODO: Check val
-                model_chain = list(model_chain)
-                model = picarus_takeout.ModelChain(msgpack.dumps(model_chain))
-                bottle.response.headers["Content-type"] = "application/json"
-                v = base64.b64encode(model.process_binary(binary_input))
-                return json.dumps({params['model']: v})
-            else:
-                bottle.abort(400)
 
     def _byte_count_rows(self, lod_rows, row_bytes=0, column_bytes=0):
         byte_count = 0
@@ -513,9 +477,51 @@ class ImagesHBaseTable(HBaseTable):
             mutations.append(hadoopy_hbase.Mutation(column=base64.b64decode(x), value=base64.b64decode(y)))
         if mutations:
             with thrift_lock() as thrift:
-                for row, _ in hadoopy_hbase.scanner(thrift, self.table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()', columns=['data:image']):
+                for row, _ in hadoopy_hbase.scanner(thrift, self.table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()', columns=['meta:']):
                     thrift.mutateRow(self.table, row, mutations)
         return {}
+
+
+class ImagesHBaseTable(DataHBaseTable):
+
+    def __init__(self, _auth_user):
+        super(ImagesHBaseTable, self).__init__(_auth_user, 'images')
+
+    def _column_write_validate(self, column):
+        if column == 'data:image':
+            return
+        if column.startswith('meta:'):
+            return
+        bottle.abort(403)
+
+    def post_row(self, row, params, files):
+        action = params['action']
+        with thrift_lock() as thrift:
+            manager = PicarusManager(thrift=thrift)
+            print(params)
+            model_key = base64.b64decode(params['model'])
+            print('ModelKey[%r]' % model_key)
+            # TODO: Allow io/ so that we can write back to the image too
+            if action == 'i/link':
+                self._row_validate(row, 'r')
+                # TODO: Get this directly from model
+                chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
+                binary_input = thrift.get(self.table, row, chain_input)[0].value  # TODO: Check val
+                model = picarus_takeout.ModelChain(msgpack.dumps([model_link]))
+                bottle.response.headers["Content-type"] = "application/json"
+                return json.dumps({params['model']: base64.b64encode(model.process_binary(binary_input))})
+            elif action == 'i/chain':
+                self._row_validate(row, 'r')
+                # TODO: Get this directly from model
+                chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
+                binary_input = thrift.get(self.table, row, chain_inputs[0])[0].value  # TODO: Check val
+                model_chain = list(model_chain)
+                model = picarus_takeout.ModelChain(msgpack.dumps(model_chain))
+                bottle.response.headers["Content-type"] = "application/json"
+                v = base64.b64encode(model.process_binary(binary_input))
+                return json.dumps({params['model']: v})
+            else:
+                bottle.abort(400)
 
     def post_slice(self, start_row, stop_row, params, files):
         action = params['action']
@@ -656,6 +662,19 @@ class ImagesHBaseTable(HBaseTable):
                 bottle.abort(400)
 
 
+class VideosHBaseTable(DataHBaseTable):
+
+    def __init__(self, _auth_user):
+        super(VideosHBaseTable, self).__init__(_auth_user, 'videos')
+
+    def _column_write_validate(self, column):
+        if column.startswith('data:video-'):
+            return
+        if column.startswith('meta:'):
+            return
+        bottle.abort(403)
+
+
 def parse_slices():
     k = base64.b64encode('slices')
     if bottle.request.content_type == "application/json":
@@ -735,6 +754,8 @@ def get_table(_auth_user, table):
         return AnnotationsTable(_auth_user)
     elif table == 'images':
         return ImagesHBaseTable(_auth_user)
+    elif table == 'videos':
+        return VideosHBaseTable(_auth_user)
     elif table == 'models':
         return ModelsHBaseTable(_auth_user)
     elif table == 'prefixes':
