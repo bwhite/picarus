@@ -86,6 +86,8 @@ function render_models_create() {
         renderKind: function() {
             var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
             var models_filt = _.uniq(_.map(this.collection.models, function (data) {return data.escape('kind')}));
+            if (!models_filt.length)
+                return;
             $('#kind_select').html(Mustache.render(select_template, {models: models_filt}));
             this.renderName();
         },
