@@ -688,7 +688,7 @@ def register_frames(row):
         points, descs = brisk.detectAndCompute(frame, mask)
         print((frame_num, points, descs))
         if prev_descs is not None:
-            print((hamming.cdist(prev_descs, descs) < match_thresh).nonzero()[0])
+            print((hamming.cdist(prev_descs, descs) < match_thresh).nonzero())
             #cv2.findHomography(prev_points, points, cv2.RANSAC)
         prev_descs = descs
 
