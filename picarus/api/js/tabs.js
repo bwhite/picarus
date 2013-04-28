@@ -365,6 +365,9 @@ function render_models_create() {
             return [[k, v]];
         }));
         function success(response) {
+            var model = new PicarusRow({row: response.row}, {table: 'models', columns: ['meta:']});
+            MODELS.add(model);
+            model.fetch();
             $('#results').html(response.row);
         }
         var model_kind = $('#kind_select option:selected').val();
