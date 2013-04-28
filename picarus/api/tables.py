@@ -662,6 +662,29 @@ class ImagesHBaseTable(DataHBaseTable):
                 bottle.abort(400)
 
 
+def register_frames(row):
+    import tempfile
+    import viderator
+    import cv2
+    thrift = hadoopy_hbase.connect()
+    fp = tempfile.NamedTemporaryFile()
+
+    def get_column(column):
+        return thrift.getRowWithColumns('videos', row,
+                                        [column])[0].columns[column].value
+    video_chunks = int(get_column('meta:video_chunks'))
+    for x in range(video_chunks):
+        fp.write(get_column('data:video-%d' % x))
+    fp.sync()
+    brisk = cv2.BRISK(40, 4, 1.)  # TODO: Get from model
+    mask = None
+    for frame_num, frame_time, frame in viderator.frame_iter(fp.name):
+        if mask is None:
+            mask = np.ones((frame.shape[0], frame.shape[1]))
+        points, descs = brisk.detectAndCompute(frame, mask)
+        print((frame_num, points, descs))
+
+
 class VideosHBaseTable(DataHBaseTable):
 
     def __init__(self, _auth_user):
@@ -682,7 +705,7 @@ class VideosHBaseTable(DataHBaseTable):
             # TODO: Allow io/ so that we can write back to the image too
             if action == 'i/register/sequential':
                 self._row_validate(row, 'r')
-                print('Reg')
+                register_frames(row)
                 return {}
 
 
