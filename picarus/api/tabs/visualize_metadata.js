@@ -21,6 +21,7 @@ function render_visualize_metadata() {
             $('#results').html('');
             if (!images.length)
                 return;
+            // TODO: Change to use RowsView
             var AppView = Backbone.View.extend({
                 initialize: function() {
                     _.bindAll(this, 'render');

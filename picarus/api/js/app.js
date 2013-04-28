@@ -181,6 +181,7 @@ function model_dropdown(args) {
         initialize: function() {
             _.bindAll(this, 'render');
             this.collection.bind('sync', this.render);
+            this.render();
         },
         renderDrop: args.change,
         modelFilter: args.modelFilter,
@@ -214,6 +215,7 @@ function rows_dropdown(rows, args) {
         initialize: function() {
             _.bindAll(this, 'render');
             this.collection.bind('sync', this.render);
+            this.render();
         },
         events: {'change': 'renderDrop'},
         renderDrop: args.change,
@@ -237,6 +239,7 @@ function project_selector(projectsDrop) {
         initialize: function() {
             _.bindAll(this, 'render');
             this.model.bind('sync', this.render);
+            this.render();
         },
         events: {'change': 'renderDrop'},
         render: function() {
@@ -261,6 +264,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
         initialize: function() {
             _.bindAll(this, 'render');
             this.model.bind('sync', this.render);
+            this.render();
         },
         events: {'change': 'renderDrop'},
         renderDrop: function () {
@@ -297,6 +301,7 @@ function slices_selector() {
         initialize: function() {
             _.bindAll(this, 'render');
             this.model.bind('sync', this.render);
+            this.render();
         },
         events: {'change': 'renderDrop'},
         renderDrop: function () {
@@ -481,6 +486,7 @@ function app_main() {
             }
             if (options.columns)
                 this.columns = options.columns;
+            this.render();
         },
         render: _.debounce(function() {
             
