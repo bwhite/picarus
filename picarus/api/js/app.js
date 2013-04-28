@@ -230,7 +230,6 @@ function rows_dropdown(rows, args) {
         }
     });
     av = new AppView({collection: rows, el: args.el});
-    rows.fetch();
 }
 
 // TODO: This isn't complete
@@ -323,7 +322,7 @@ function slices_selector() {
             var prefixes = this.collection.get('images');
             if (_.isUndefined(prefixes))
                 return;
-            prefixes = _.keys(JSON.parse(prefixes.attributes));
+            prefixes = _.keys(prefixes.attributes);
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
             var prefixes_render = _.map(prefixes, function (x) {return {value: encode_id(x), text: x}});
