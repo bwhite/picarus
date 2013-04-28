@@ -696,7 +696,7 @@ def register_frames(row):
             b = np.array(prev_points[matches[1], :], dtype=np.float32)
             print(a)
             print(b)
-            if a.length and b.length:
+            if a.size and b.size:
                 h = cv2.findHomography(a, b, cv2.RANSAC)
                 print(h)
         prev_descs = descs
