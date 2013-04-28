@@ -293,9 +293,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
             this.renderDrop();
         }
     });
-    var auth = login_get(function (email_auth) {
-        new AppView({collection: PREFIXES, el: prefixDrop});
-    });
+    new AppView({collection: PREFIXES, el: prefixDrop});
 }
 
 function slices_selector() {
@@ -339,9 +337,7 @@ function slices_selector() {
     clearButton.click(function () {
         slicesText.html('');
     });
-    var auth = login_get(function (email_auth) {
-        new AppView({collection: PREFIXES, el: prefixDrop});
-    });
+    new AppView({collection: PREFIXES, el: prefixDrop});
 }
 
 function slices_selector_get(split) {
