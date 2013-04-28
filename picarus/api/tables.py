@@ -684,7 +684,10 @@ def register_frames(row):
     prev_descs = None
     prev_points = None
     match_thresh = 50
-    for frame_num, frame_time, frame in viderator.frame_iter(fp.name, frame_skip=5):
+    min_inliers = 10
+    frames_matched = []
+    for frame_num, frame_time, frame in viderator.frame_iter(fp.name, frame_skip=3):
+        matched = False
         st = time.time()
         if mask is None:
             mask = np.ones((frame.shape[0], frame.shape[1]))
@@ -698,12 +701,16 @@ def register_frames(row):
             b = np.array(points[matches[1], :], dtype=np.float32)
             #print(a)
             #print(b)
-            if a.shape[0] >= 4 and b.shape[0] >= 4:
-                h = cv2.findHomography(a, b, cv2.RANSAC)
-                print(h)
+            if a.shape[0] >= min_inliers and b.shape[0] >= min_inliers:
+                h, i = cv2.findHomography(a, b, cv2.RANSAC)
+                if np.sum(i) >= min_inliers:
+                    matched = True
+                print((h, i))
+        frames_matched.append(matched)
         prev_descs = descs
         prev_points = points
         print(time.time() - st)
+    print(matched)
 
 
 class VideosHBaseTable(DataHBaseTable):
