@@ -639,6 +639,21 @@ function app_main() {
     new NavBar({el:document.getElementById('nav-item-container')});
     new Content({el:document.getElementById('container')});
     
+    login_get(app_main_postauth);
+}
+
+function refresh_models() {
+    _.each([PROJECTS, PREFIXES, ANNOTATIONS, PARAMETERS, MODELS], function (x) {x.fetch()});
+}
+
+function app_main_postauth(email_auth) {
+    PROJECTS = new PicarusRows([], {'table': 'projects'});
+    PREFIXES = new PicarusRows([], {'table': 'prefixes'});
+    ANNOTATIONS = new PicarusRows([], {'table': 'annotations'});
+    PARAMETERS = new PicarusRows([], {'table': 'parameters'});
+    MODELS = new PicarusRows([], {'table': 'models', columns: ['meta:']});
+    refresh_models();
+
     //Start the app by setting kicking off the history behaviour.
     //We will get a routing event with the initial URL fragment
     Backbone.history.start();
