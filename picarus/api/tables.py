@@ -674,6 +674,18 @@ class VideosHBaseTable(DataHBaseTable):
             return
         bottle.abort(403)
 
+    def post_row(self, row, params, files):
+        action = params['action']
+        with thrift_lock() as thrift:
+            manager = PicarusManager(thrift=thrift)
+            print(params)
+            # TODO: Allow io/ so that we can write back to the image too
+            if action == 'i/register/sequential':
+                self._row_validate(row, 'r')
+                print('Reg')
+                return {}
+
+
 
 def parse_slices():
     k = base64.b64encode('slices')
