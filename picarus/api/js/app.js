@@ -294,9 +294,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
         }
     });
     var auth = login_get(function (email_auth) {
-        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
         new AppView({collection: PREFIXES, el: prefixDrop});
-        user.fetch();
     });
 }
 
