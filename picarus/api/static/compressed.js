@@ -3700,6 +3700,8 @@ function slices_selector() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
             var prefixes = this.model.get('image_prefixes');
+            if (_.isUndefined(prefixes))
+                return;
             prefixes = _.keys(JSON.parse(prefixes));
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
