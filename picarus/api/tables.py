@@ -675,7 +675,7 @@ def register_frames(row):
     video_chunks = int(get_column('meta:video_chunks'))
     for x in range(video_chunks):
         fp.write(get_column('data:video-%d' % x))
-    fp.sync()
+    fp.flush()
     brisk = cv2.BRISK(40, 4, 1.)  # TODO: Get from model
     mask = None
     for frame_num, frame_time, frame in viderator.frame_iter(fp.name):
