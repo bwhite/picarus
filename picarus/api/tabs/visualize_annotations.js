@@ -3,7 +3,6 @@ function render_visualize_annotations() {
 }
 
 function render_visualize_annotations_loaded() {
-    var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
         users.each(function(x) {
@@ -287,7 +286,7 @@ function render_visualize_annotations_loaded() {
         // TODO: Add other annotation types
         PICARUS.getRow("annotations", task, {success: success_annotation});
     }
-    rows_dropdown(rows, {el: $('#annotator_select'), text: function (x) {
+    rows_dropdown(ANNOTATIONS, {el: $('#annotator_select'), text: function (x) {
         var p = JSON.parse(x.get('params'));
         if (p.type == "image_entity")
             return p.type + ' ' + p.num_tasks;
@@ -295,5 +294,4 @@ function render_visualize_annotations_loaded() {
             return p.type + ' ' +  p.query + ' '+ p.num_tasks;
         return p.type;
     }, change: change});
-    rows.fetch();
 }

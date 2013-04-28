@@ -1,5 +1,4 @@
 function render_data_prefixes() {
-    rows = new PicarusRows([], {'table': 'prefixes'});
     function prefixChange() {
         var row = $('#prefixTable option:selected').val();
         var prefix_drop = $('#prefixDrop option:selected').val();
@@ -8,7 +7,7 @@ function render_data_prefixes() {
             return;
         }
         row = decode_id(row);
-        var permissions = rows.get(row).get(decode_id(prefix_drop));
+        var permissions = PREFIXES.get(row).get(decode_id(prefix_drop));
         ps = permissions;
         var perms = ['r'];
         if (permissions == 'rw')
@@ -25,7 +24,7 @@ function render_data_prefixes() {
         }
         row = decode_id(row);
         var prefixes = [];
-        _.each(rows.get(row).attributes, function (val, key) {
+        _.each(PREFIXES.get(row).attributes, function (val, key) {
             if (key == 'row') {
                 return;
             }
@@ -37,26 +36,24 @@ function render_data_prefixes() {
         $('#prefixDrop').change(prefixChange); // TODO: Redo this in backbone
         prefixChange();
     }
-    rows_dropdown(rows, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}, change: change});
+    rows_dropdown(PREFIXES, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}, change: change});
     $('#createButton').click(function () {
         var row = $('#prefixTable option:selected').val();
         if (_.isUndefined(row)) {
             return;
         }
         row = decode_id(row);
-        var data = {}
+        var data = {};
         data[decode_id($('#prefixDrop option:selected').val()) + unescape($('#suffix').val())] = decode_id($('#permissions option:selected').val());
-        rows.get(row).save(data, {patch: true});        
+        PREFIXES.get(row).save(data, {patch: true});
     });
     var tableColumn = {header: "Table", getFormatted: function() {
         return this.escape('row');
     }};
-    new RowsView({collection: rows, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
-    rows.fetch();
+    new RowsView({collection: PREFIXES, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
 }
 function render_data_projects() {
-    rows = new PicarusRows([], {'table': 'projects'});
-    rows_dropdown(rows, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}});
+    rows_dropdown(PROJECTS, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}});
     slices_selector();
     $('#modifyProjectButton').click(function () {
         var row = decode_id($('#prefixTable option:selected').val());
@@ -64,13 +61,12 @@ function render_data_projects() {
         var slices = slices_selector_get(true);
         var value = _.map(slices, function (x) {return x[0] + ',' + x[1]}).join(';');
         data[$('#projectName').val()] = value;
-        rows.get(row).save(data, {patch: true});
+        PROJECTS.get(row).save(data, {patch: true});
     });
     var tableColumn = {header: "Table", getFormatted: function() {
         return this.escape('row');
     }};
-    new RowsView({collection: rows, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
-    rows.fetch();
+    new RowsView({collection: PROJECTS, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
 }
 function render_data_user() {
     users = new PicarusRows([], {'table': 'users'});
@@ -192,8 +188,7 @@ function render_crawl_flickr() {
 function render_models_list() {
     var columns = ['meta:name', 'meta:input_type', 'meta:output_type', 'row', 'meta:creation_time', 'meta:input',
                    'meta:model_link_size', 'meta:model_chain_size', 'meta:factory_info'];
-    var columns_model = ['meta:'];
-    results = new PicarusRows([], {'table': 'models', columns: columns_model});
+
     var takeoutColumn = {header: "Takeout", getFormatted: function() {
         return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: encode_id(this.get('row'))});
     }};
@@ -210,7 +205,7 @@ function render_models_list() {
                     return v[1];
                 }).join('');
                 var curSha1 = Sha1.hash(model, false);
-                var trueSha1 = results.get(row).escape('meta:model_' + model_type + '_sha1');
+                var trueSha1 = MODELS.get(row).escape('meta:model_' + model_type + '_sha1');
                 if (curSha1 === trueSha1) {
                     var modelByteArray = new Uint8Array(model.length);
                     for (var i = 0; i < model.length; i++) {
@@ -222,7 +217,7 @@ function render_models_list() {
                     alert("Model SHA1 doesn't match!");
                 }
             }
-            var num_chunks = Number(results.get(row).escape(model_chunks_column));
+            var num_chunks = Number(MODELS.get(row).escape(model_chunks_column));
             var columns =  _.map(_.range(num_chunks), function (x) {
                 return model_column + '-' + x;
             });
@@ -239,7 +234,7 @@ function render_models_list() {
         function setup_modal(links, col) {
             links.click(function (data) {
                 var row = decode_id(data.target.getAttribute('row'));
-                var model = results.get(row);
+                var model = MODELS.get(row);
                 $('#modal_content').val(model.escape(col));
                 $('#save_button').unbind();
                 $('#save_button').click(function () {
@@ -254,11 +249,9 @@ function render_models_list() {
         setup_modal($('.modal_link_notes'), 'meta:notes');
         setup_modal($('.modal_link_tags'), 'meta:tags');
     }
-    new RowsView({collection: results, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, rowB64Column], postRender: postRender, deleteRows: true, columns: columns});
-    results.fetch();
+    new RowsView({collection: MODELS, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, rowB64Column], postRender: postRender, deleteRows: true, columns: columns});
 }
 function render_models_create() {
-    results = new PicarusRows([], {'table': 'parameters'});
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'renderKind');
@@ -274,7 +267,7 @@ function render_models_create() {
             $('#slices_select').html('');
             var model_kind = $('#kind_select option:selected').val();
             var name = $('#name_select option:selected').val();
-            model = results.filter(function (x) {
+            model = PARAMETERS.filter(function (x) {
                 if (x.escape('kind') == model_kind && x.escape('name') == name)
                     return true;
             })[0];
@@ -357,8 +350,7 @@ function render_models_create() {
             this.renderParam();
         }
     });
-    av = new AppView({collection: results, el: $('#selects')});
-    results.fetch();
+    av = new AppView({collection: PARAMETERS, el: $('#selects')});
     $('#runButton').click(function () {
         var params = _.object($('#params :input[name]').map(function () {
             var k = $(this).attr('name');
@@ -374,7 +366,7 @@ function render_models_create() {
         }
         var model_kind = $('#kind_select option:selected').val();
         var name = $('#name_select option:selected').val();
-        var model = results.filter(function (x) {
+        var model = PARAMETERS.filter(function (x) {
             if (x.escape('kind') == model_kind && x.escape('name') == name)
                 return true;
         })[0];
@@ -611,14 +603,12 @@ function render_process_copy() {
     });
 }
 function render_annotate_list() {
-    results = new PicarusRows([], {'table': 'annotations'});
     var workerColumn = {header: "Worker", getFormatted: function() {
         return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.escape('task')});
     }};
     function postRender() {
     }
-    new RowsView({collection: results, el: $('#annotations'), extraColumns: [workerColumn], postRender: postRender, deleteRows: true});
-    results.fetch();
+    new RowsView({collection: ANNOTATIONS, el: $('#annotations'), extraColumns: [workerColumn], postRender: postRender, deleteRows: true});
 }
 function render_annotate_batch() {
     row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
@@ -1001,7 +991,6 @@ function render_visualize_annotations() {
 }
 
 function render_visualize_annotations_loaded() {
-    var rows = new PicarusRows([], {'table': 'annotations'});
     function collect_users(users, results, onlyWorkers, onlyAnnotated) {
         var users_filtered = {};
         users.each(function(x) {
@@ -1285,7 +1274,7 @@ function render_visualize_annotations_loaded() {
         // TODO: Add other annotation types
         PICARUS.getRow("annotations", task, {success: success_annotation});
     }
-    rows_dropdown(rows, {el: $('#annotator_select'), text: function (x) {
+    rows_dropdown(ANNOTATIONS, {el: $('#annotator_select'), text: function (x) {
         var p = JSON.parse(x.get('params'));
         if (p.type == "image_entity")
             return p.type + ' ' + p.num_tasks;
@@ -1293,7 +1282,6 @@ function render_visualize_annotations_loaded() {
             return p.type + ' ' +  p.query + ' '+ p.num_tasks;
         return p.type;
     }, change: change});
-    rows.fetch();
 }
 function render_evaluate_classifier() {
     google_visualization_load(render_evaluate_classifier_loaded);

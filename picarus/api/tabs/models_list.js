@@ -1,8 +1,7 @@
 function render_models_list() {
     var columns = ['meta:name', 'meta:input_type', 'meta:output_type', 'row', 'meta:creation_time', 'meta:input',
                    'meta:model_link_size', 'meta:model_chain_size', 'meta:factory_info'];
-    var columns_model = ['meta:'];
-    results = new PicarusRows([], {'table': 'models', columns: columns_model});
+
     var takeoutColumn = {header: "Takeout", getFormatted: function() {
         return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: encode_id(this.get('row'))});
     }};
@@ -19,7 +18,7 @@ function render_models_list() {
                     return v[1];
                 }).join('');
                 var curSha1 = Sha1.hash(model, false);
-                var trueSha1 = results.get(row).escape('meta:model_' + model_type + '_sha1');
+                var trueSha1 = MODELS.get(row).escape('meta:model_' + model_type + '_sha1');
                 if (curSha1 === trueSha1) {
                     var modelByteArray = new Uint8Array(model.length);
                     for (var i = 0; i < model.length; i++) {
@@ -31,7 +30,7 @@ function render_models_list() {
                     alert("Model SHA1 doesn't match!");
                 }
             }
-            var num_chunks = Number(results.get(row).escape(model_chunks_column));
+            var num_chunks = Number(MODELS.get(row).escape(model_chunks_column));
             var columns =  _.map(_.range(num_chunks), function (x) {
                 return model_column + '-' + x;
             });
@@ -48,7 +47,7 @@ function render_models_list() {
         function setup_modal(links, col) {
             links.click(function (data) {
                 var row = decode_id(data.target.getAttribute('row'));
-                var model = results.get(row);
+                var model = MODELS.get(row);
                 $('#modal_content').val(model.escape(col));
                 $('#save_button').unbind();
                 $('#save_button').click(function () {
@@ -63,6 +62,5 @@ function render_models_list() {
         setup_modal($('.modal_link_notes'), 'meta:notes');
         setup_modal($('.modal_link_tags'), 'meta:tags');
     }
-    new RowsView({collection: results, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, rowB64Column], postRender: postRender, deleteRows: true, columns: columns});
-    results.fetch();
+    new RowsView({collection: MODELS, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, rowB64Column], postRender: postRender, deleteRows: true, columns: columns});
 }

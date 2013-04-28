@@ -173,7 +173,6 @@ function button_error() {
 
 function model_dropdown(args) {
     var columns_model = ['meta:'];
-    var models = new PicarusRows([], {'table': 'models', columns: columns_model});
     if (typeof args.change === 'undefined') {
         args.change = function () {};
     }
@@ -190,15 +189,14 @@ function model_dropdown(args) {
             n = this.$el;
             this.$el.empty();
             var select_template = "{{#models}}<option value='{{row}}'>{{{text}}}</option>{{/models}};" // text is escaped already
-            var models_filt = _.map(models.filter(this.modelFilter), function (data) {return {row: encode_id(data.get('row')), text: data.escape('meta:tags') + ' ' + data.escape('meta:name')}});
+            var models_filt = _.map(MODELS.filter(this.modelFilter), function (data) {return {row: encode_id(data.get('row')), text: data.escape('meta:tags') + ' ' + data.escape('meta:name')}});
             models_filt.sort(function (x, y) {return Number(x.text > y.text) - Number(x.text < y.text)});
             this.$el.append(Mustache.render(select_template, {models: models_filt}));
             this.renderDrop();
         }
     });
-    av = new AppView({collection: models, el: args.el});
-    models.fetch();
-    return models;
+    av = new AppView({collection: MODELS, el: args.el});
+    return MODELS;
 }
 
 function rows_dropdown(rows, args) {
@@ -251,6 +249,7 @@ function project_selector(projectsDrop) {
         }
     });
     var auth = login_get(function (email_auth) {
+        // TODO: Need to update projects table
         user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
         new AppView({model: user, el: projectsDrop});
         user.fetch();

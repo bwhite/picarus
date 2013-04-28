@@ -1,5 +1,4 @@
 function render_data_prefixes() {
-    rows = new PicarusRows([], {'table': 'prefixes'});
     function prefixChange() {
         var row = $('#prefixTable option:selected').val();
         var prefix_drop = $('#prefixDrop option:selected').val();
@@ -8,7 +7,7 @@ function render_data_prefixes() {
             return;
         }
         row = decode_id(row);
-        var permissions = rows.get(row).get(decode_id(prefix_drop));
+        var permissions = PREFIXES.get(row).get(decode_id(prefix_drop));
         ps = permissions;
         var perms = ['r'];
         if (permissions == 'rw')
@@ -25,7 +24,7 @@ function render_data_prefixes() {
         }
         row = decode_id(row);
         var prefixes = [];
-        _.each(rows.get(row).attributes, function (val, key) {
+        _.each(PREFIXES.get(row).attributes, function (val, key) {
             if (key == 'row') {
                 return;
             }
@@ -37,20 +36,19 @@ function render_data_prefixes() {
         $('#prefixDrop').change(prefixChange); // TODO: Redo this in backbone
         prefixChange();
     }
-    rows_dropdown(rows, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}, change: change});
+    rows_dropdown(PREFIXES, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}, change: change});
     $('#createButton').click(function () {
         var row = $('#prefixTable option:selected').val();
         if (_.isUndefined(row)) {
             return;
         }
         row = decode_id(row);
-        var data = {}
+        var data = {};
         data[decode_id($('#prefixDrop option:selected').val()) + unescape($('#suffix').val())] = decode_id($('#permissions option:selected').val());
-        rows.get(row).save(data, {patch: true});        
+        PREFIXES.get(row).save(data, {patch: true});
     });
     var tableColumn = {header: "Table", getFormatted: function() {
         return this.escape('row');
     }};
-    new RowsView({collection: rows, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
-    rows.fetch();
+    new RowsView({collection: PREFIXES, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
 }

@@ -1,5 +1,4 @@
 function render_models_create() {
-    results = new PicarusRows([], {'table': 'parameters'});
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'renderKind');
@@ -15,7 +14,7 @@ function render_models_create() {
             $('#slices_select').html('');
             var model_kind = $('#kind_select option:selected').val();
             var name = $('#name_select option:selected').val();
-            model = results.filter(function (x) {
+            model = PARAMETERS.filter(function (x) {
                 if (x.escape('kind') == model_kind && x.escape('name') == name)
                     return true;
             })[0];
@@ -98,8 +97,7 @@ function render_models_create() {
             this.renderParam();
         }
     });
-    av = new AppView({collection: results, el: $('#selects')});
-    results.fetch();
+    av = new AppView({collection: PARAMETERS, el: $('#selects')});
     $('#runButton').click(function () {
         var params = _.object($('#params :input[name]').map(function () {
             var k = $(this).attr('name');
@@ -115,7 +113,7 @@ function render_models_create() {
         }
         var model_kind = $('#kind_select option:selected').val();
         var name = $('#name_select option:selected').val();
-        var model = results.filter(function (x) {
+        var model = PARAMETERS.filter(function (x) {
             if (x.escape('kind') == model_kind && x.escape('name') == name)
                 return true;
         })[0];
