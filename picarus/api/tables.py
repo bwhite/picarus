@@ -693,7 +693,7 @@ def register_frames(row):
             matches = (hamming.cdist(prev_descs, descs) < match_thresh).nonzero()
             print(matches)
             a = np.array(prev_points[matches[0], :], dtype=np.float32)
-            b = np.array(prev_points[matches[1], :], dtype=np.float32)
+            b = np.array(points[matches[1], :], dtype=np.float32)
             print(a)
             print(b)
             if a.size and b.size:
