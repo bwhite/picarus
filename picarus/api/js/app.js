@@ -36,7 +36,7 @@ function login_get(func) {
             $('#secondFactorAuth').addClass('info');
             $('#secondFactorAuth').removeClass('error');
             PICARUS.setAuth(email, apiKey);
-            PICARUS.getRow('users', email, {success: success, fail: fail});
+            PICARUS.getTable('prefixes', {success: success, fail: fail});
         }
         function use_api(apiKey) {
             var email = $('#email').val();
@@ -238,13 +238,13 @@ function project_selector(projectsDrop) {
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
-            this.model.bind('sync', this.render);
+            this.collection.bind('sync', this.render);
             this.render();
         },
         events: {'change': 'renderDrop'},
         render: function() {
             this.$el.empty();
-            var projects = this.model.get('image_projects');
+            projects = this.collection.get('images');
             if (_.isUndefined(projects))
                 return;
             projects = _.keys(JSON.parse(projects));
@@ -255,9 +255,8 @@ function project_selector(projectsDrop) {
         }
     });
     var auth = login_get(function (email_auth) {
-        // TODO: Need to update projects table
-        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
-        new AppView({model: user, el: projectsDrop});
+        // TODO: Need to update projects table        
+        new AppView({collection: PROJECTS, el: projectsDrop});
         user.fetch();
     });
 }
