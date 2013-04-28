@@ -691,7 +691,7 @@ def register_frames(row):
         print((frame_num, points, descs))
         if prev_descs is not None:
             matches = (hamming.cdist(prev_descs, descs) < match_thresh).nonzero()
-            h = cv2.findHomography(prev_points[matches[0]], points[matches[1]], cv2.RANSAC)
+            h = cv2.findHomography(np.array(prev_points[matches[0], :]), np.array(points[matches[1], :]), cv2.RANSAC)
             print(h)
         prev_descs = descs
         prev_points = points
