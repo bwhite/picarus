@@ -282,7 +282,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
         render: function() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
-            // TODO: Hookup to dropdown box
+            // TODO: Hookup to table dropdown box
             prefixes = this.collection.get('images');
             if (_.isUndefined(prefixes))
                 return;
@@ -306,7 +306,7 @@ function slices_selector() {
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
-            this.model.bind('sync', this.render);
+            this.collection.bind('sync', this.render);
             this.render();
         },
         events: {'change': 'renderDrop'},
@@ -315,16 +315,17 @@ function slices_selector() {
             if (typeof startRow !== 'undefined')
                 startRow.val(prefix);
             // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
+            // TODO: Hookup to table dropdown box
             if (typeof stopRow !== 'undefined')
                 stopRow.val(prefix_to_stop_row(prefix));
         },
         render: function() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
-            var prefixes = this.model.get('image_prefixes');
+            var prefixes = this.collection.get('images');
             if (_.isUndefined(prefixes))
                 return;
-            prefixes = _.keys(JSON.parse(prefixes));
+            prefixes = _.keys(JSON.parse(prefixes.attributes));
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
             var prefixes_render = _.map(prefixes, function (x) {return {value: encode_id(x), text: x}});
@@ -339,9 +340,7 @@ function slices_selector() {
         slicesText.html('');
     });
     var auth = login_get(function (email_auth) {
-        user = new PicarusRow({row: email_auth.email}, {'table': 'users'});
-        new AppView({model: user, el: prefixDrop});
-        user.fetch();
+        new AppView({collection: PREFIXES, el: prefixDrop});
     });
 }
 
