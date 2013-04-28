@@ -244,7 +244,10 @@ function project_selector(projectsDrop) {
         events: {'change': 'renderDrop'},
         render: function() {
             this.$el.empty();
-            var projects = _.keys(JSON.parse(this.model.get('image_projects')));
+            var projects = this.model.get('image_projects');
+            if (_.isUndefined(projects))
+                return;
+            projects = _.keys(JSON.parse(projects));
             projects.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#projects}}<option value='{{.}}'>{{.}}</option>{{/projects}};"
             this.$el.append(Mustache.render(select_template, {projects: projects}));
@@ -278,7 +281,10 @@ function row_selector(prefixDrop, startRow, stopRow) {
         render: function() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
-            var prefixes = _.keys(JSON.parse(this.model.get('image_prefixes')));
+            var prefixes = this.model.get('image_prefixes');
+            if (_.isUndefined(prefixes))
+                return;
+            var prefixes = _.keys(JSON.parse(prefixes));
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
             this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
