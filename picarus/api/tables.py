@@ -667,6 +667,7 @@ def register_frames(row):
     import viderator
     import cv2
     import distpy
+    import time
     hamming = distpy.Hamming()
     thrift = hadoopy_hbase.connect()
     fp = tempfile.NamedTemporaryFile()
@@ -683,24 +684,26 @@ def register_frames(row):
     prev_descs = None
     prev_points = None
     match_thresh = 25
-    for frame_num, frame_time, frame in viderator.frame_iter(fp.name):
+    for frame_num, frame_time, frame in viderator.frame_iter(fp.name, frame_skip=10):
+        st = time.time()
         if mask is None:
             mask = np.ones((frame.shape[0], frame.shape[1]))
         points, descs = brisk.detectAndCompute(frame, mask)
         points = np.array([x.pt for x in points])
-        print((frame_num, points, descs))
+        #print((frame_num, points, descs))
         if prev_descs is not None:
             matches = (hamming.cdist(prev_descs, descs) < match_thresh).nonzero()
             print(matches)
             a = np.array(prev_points[matches[0], :], dtype=np.float32)
             b = np.array(points[matches[1], :], dtype=np.float32)
-            print(a)
-            print(b)
+            #print(a)
+            #print(b)
             if a.shape[0] >= 4 and b.shape[0] >= 4:
                 h = cv2.findHomography(a, b, cv2.RANSAC)
                 print(h)
         prev_descs = descs
         prev_points = points
+        print(time.time() - st)
 
 
 class VideosHBaseTable(DataHBaseTable):
