@@ -683,7 +683,7 @@ def register_frames(row):
     mask = None
     prev_descs = None
     prev_points = None
-    match_thresh = 25
+    match_thresh = 50
     for frame_num, frame_time, frame in viderator.frame_iter(fp.name, frame_skip=10):
         st = time.time()
         if mask is None:
