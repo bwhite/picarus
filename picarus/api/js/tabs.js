@@ -259,6 +259,7 @@ function render_models_create() {
             this.collection.bind('reset', this.renderKind);
             this.collection.bind('change', this.renderKind);
             this.collection.bind('add', this.renderKind);
+            this.renderKind();
         },
         events: {'change #kind_select': 'renderName',
                  'change #name_select': 'renderParam'},
@@ -728,6 +729,7 @@ function render_visualize_metadata() {
             $('#results').html('');
             if (!images.length)
                 return;
+            // TODO: Change to use RowsView
             var AppView = Backbone.View.extend({
                 initialize: function() {
                     _.bindAll(this, 'render');
@@ -792,6 +794,7 @@ function render_visualize_exif() {
             $('#results').html('');
             if (!images.length)
                 return;
+            // TODO: Change to use RowsView
             var AppView = Backbone.View.extend({
                 initialize: function() {
                     _.bindAll(this, 'render');
