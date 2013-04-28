@@ -8,6 +8,7 @@ function render_annotate_batch() {
         var numTasks = Number($('#num_tasks').val());
         var query = $('#query').val();
         function success(response) {
+            ANNOTATIONS.fetch();
             $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
         }
         PICARUS.postSlice('images', startRow, stopRow, {success: success, data: {action: 'io/annotate/image/query_batch', imageColumn: imageColumn, query: query, instructions: $('#instructions').val(), numTasks: numTasks, mode: "amt"}});
