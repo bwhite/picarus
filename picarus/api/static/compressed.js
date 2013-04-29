@@ -3873,7 +3873,7 @@ function app_main() {
             } else {
                 this.$el.html('<div class="alert alert-info">Table Empty</div>');
             }
-        }, 10);
+        }, 10)
     });
 
     // Based on: https://gist.github.com/2711454
