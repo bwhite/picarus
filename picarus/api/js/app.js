@@ -461,12 +461,12 @@ function app_main() {
     RowsView = Backbone.View.extend({
         initialize: function(options) {
             _.bindAll(this, 'render');
-            this.collection.bind('add', this.render);
+            this.collection.bind('add', this.renderWait);
             this.collection.bind('sync', this.render);
             this.collection.bind('reset', this.render);
-            this.collection.bind('change', this.render);
-            this.collection.bind('remove', this.render);
-            this.collection.bind('destroy', this.render);
+            this.collection.bind('change', this.renderWait);
+            this.collection.bind('remove', this.renderWait);
+            this.collection.bind('destroy', this.renderWait);
             this.extraColumns = [];
             this.postRender = function () {};
             this.deleteValues = false;
@@ -501,9 +501,10 @@ function app_main() {
             }
             if (options.columns)
                 this.columns = options.columns;
-            this.render();
+            this.renderWait();
         },
-        render: _.debounce(function() {
+        renderWait: _.debounce(function () {this.render()}, 5),
+        render: function() {
             console.log('Rendering!');
             var columns = this.columns;
             if (_.isUndefined(columns))
@@ -535,7 +536,7 @@ function app_main() {
             } else {
                 this.$el.html('<div class="alert alert-info">Table Empty</div>');
             }
-        }, 10)
+        }
     });
 
     // Based on: https://gist.github.com/2711454
