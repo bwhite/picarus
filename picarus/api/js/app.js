@@ -236,7 +236,7 @@ function project_selector() {
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
-            this.$projects = $('globalProjectDrop');
+            this.$projects = $('#globalProjectDrop');
             this.collection.bind('sync', this.render);
             this.render();
         },
