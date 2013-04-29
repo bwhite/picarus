@@ -3841,7 +3841,7 @@ function app_main() {
                 this.columns = options.columns;
             this.renderWait();
         },
-        renderWait: _.debounce(function () {this.render()}, 5),
+        renderWait: _.debounce(function () {this.render()}, 15),
         render: function() {
             console.log('Rendering!');
             var columns = this.columns;
