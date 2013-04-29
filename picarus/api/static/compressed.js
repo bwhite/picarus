@@ -3607,11 +3607,10 @@ function row_selector(prefixDrop, startRow, stopRow) {
             this.collection.bind('sync', this.render);
             this.$tables = $('#globalDataTableDrop');
             this.$projects = $('#globalProjectDrop');
+            this.$projects.change(render);
             this.render();
         },
-        events: {'change': 'renderDrop',
-                 'keyup #globalDataTableDrop': 'render',
-                 'keyup #globalProjectDrop': 'render'},
+        events: {'change': 'renderDrop'},
         renderDrop: function () {
             var prefix = prefixDrop.children().filter('option:selected').val();
             if (typeof startRow !== 'undefined')
