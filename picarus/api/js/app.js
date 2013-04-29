@@ -273,8 +273,8 @@ function row_selector(prefixDrop, startRow, stopRow) {
             this.render();
         },
         events: {'change': 'renderDrop',
-                 'change #globalDataTableDrop': 'render',
-                 'change #globalProjectDrop': 'render'},
+                 'keyup #globalDataTableDrop': 'render',
+                 'keyup #globalProjectDrop': 'render'},
         renderDrop: function () {
             var prefix = prefixDrop.children().filter('option:selected').val();
             if (typeof startRow !== 'undefined')
