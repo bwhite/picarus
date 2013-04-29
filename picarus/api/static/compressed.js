@@ -3903,7 +3903,7 @@ function app_main() {
             custom_checkbox_and_radio();
             // Handles post render javascript calls if available
             if (route === "")
-                route = 'data/user';
+                route = 'models/list';
             var func_name = 'render_' + route.split('/').join('_');
             if (window.hasOwnProperty(func_name))
                 login_get(window[func_name]);
