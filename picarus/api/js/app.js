@@ -275,7 +275,7 @@ function row_selector(prefixDrop, startRow, stopRow, postRender) {
             this.$tables.change(this.render);  // TODO: Hack
             this.$projects.change(this.render);
             this.postRender = function () {};
-            if (_.isUndefined(postRender))
+            if (!_.isUndefined(postRender))
                 this.postRender = postRender;
             this.render();
         },
@@ -314,7 +314,7 @@ function slices_selector() {
     }
     if (!prefixDrop.size())  // Skip if not visible
         return;
-    row_selector(prefixDrop, startRow, stopRow, clear)
+    row_selector(prefixDrop, startRow, stopRow, clear);
     addButton.click(function () {
         slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', base64.encode(unescape(startRow.val())) + ',' + base64.encode(unescape(stopRow.val()))));
     });
