@@ -249,6 +249,7 @@ function project_selector() {
             projects = [''].concat(_.keys(_.omit(projects.attributes, 'row')));
             var select_template = "{{#projects}}<option value='{{.}}'>{{.}}</option>{{/projects}};";
             this.$projects.append(Mustache.render(select_template, {projects: projects}));
+            this.$projects.trigger('change');
         },
         render: function() {
             this.$el.empty();
@@ -257,6 +258,7 @@ function project_selector() {
                 return;
             var select_template = "{{#tables}}<option value='{{.}}'>{{.}}</option>{{/tables}};"
             this.$el.append(Mustache.render(select_template, {tables: tables}));
+            this.$el.trigger('change');
             this.renderDrop();
         }
     });
