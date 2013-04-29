@@ -4,7 +4,10 @@ function render_data_projects() {
         var row = $('#globalDataTableDrop option:selected').val();
         var data = {};
         var value = slices_selector_get(true).join(',');
-        data[$('#projectName').val()] = value;
+        var project = $('#projectName').val();
+        if (project === '')
+            return;
+        data[project] = value;
         PROJECTS.get(row).save(data, {patch: true});
     });
     var tableColumn = {header: "Table", getFormatted: function() {
