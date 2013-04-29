@@ -6,7 +6,6 @@ function render_data_prefixes() {
             $('#permissions').html('');
             return;
         }
-        row = decode_id(row);
         var permissions = PREFIXES.get(row).get(decode_id(prefix_drop));
         ps = permissions;
         var perms = ['r'];

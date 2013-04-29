@@ -472,7 +472,6 @@ function render_data_prefixes() {
             $('#permissions').html('');
             return;
         }
-        row = decode_id(row);
         var permissions = PREFIXES.get(row).get(decode_id(prefix_drop));
         ps = permissions;
         var perms = ['r'];
@@ -521,7 +520,7 @@ function render_data_prefixes() {
 function render_data_projects() {
     slices_selector();
     $('#modifyProjectButton').click(function () {
-        var row = decode_id($('#globalDataTableDrop option:selected').val());
+        var row = $('#globalDataTableDrop option:selected').val();
         var data = {};
         var slices = slices_selector_get(true);
         var value = _.map(slices, function (x) {return x[0] + ',' + x[1]}).join(';');
