@@ -1,10 +1,9 @@
 function render_data_projects() {
-    slices_selector();
+    prefixes_selector();
     $('#modifyProjectButton').click(function () {
         var row = $('#globalDataTableDrop option:selected').val();
         var data = {};
-        var slices = slices_selector_get(true);
-        var value = _.map(slices, function (x) {return x[0] + ',' + x[1]}).join(';');
+        var value = slices_selector_get(true).join(',');
         data[$('#projectName').val()] = value;
         PROJECTS.get(row).save(data, {patch: true});
     });

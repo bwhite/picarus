@@ -265,7 +265,9 @@ function project_selector() {
     new AppView({collection: PROJECTS, el: $('#globalDataTableDrop')});
 }
 
-function row_selector(prefixDrop, startRow, stopRow, postRender) {
+function row_selector(prefixDrop, args) {
+    if (_.isUndefined(args))
+        args = {};
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
@@ -275,27 +277,35 @@ function row_selector(prefixDrop, startRow, stopRow, postRender) {
             this.$tables.change(this.render);  // TODO: Hack
             this.$projects.change(this.render);
             this.postRender = function () {};
-            if (!_.isUndefined(postRender))
-                this.postRender = postRender;
+            if (!_.isUndefined(args.postRender))
+                this.postRender = args.postRender;
             this.render();
         },
         events: {'change': 'renderDrop'},
         renderDrop: function () {
             var prefix = prefixDrop.children().filter('option:selected').val();
-            if (typeof startRow !== 'undefined')
-                startRow.val(prefix);
+            if (typeof args.startRow !== 'undefined')
+                args.startRow.val(prefix);
             // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
-            if (typeof stopRow !== 'undefined')
-                stopRow.val(prefix_to_stop_row(prefix));
+            if (typeof args.stopRow !== 'undefined')
+                args.stopRow.val(prefix_to_stop_row(prefix));
         },
         render: function() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
+            var project = this.$projects.val();
             prefixes = this.collection.get(this.$tables.val());
             projects = PROJECTS.get(this.$tables.val());
             if (_.isUndefined(prefixes))
                 return;
             var prefixes = _.keys(_.omit(prefixes.attributes, 'row'));
+            if (!_.isUndefined(project) && project !== '') {
+                var table_project = PROJECTS.get(this.$tables.val()).get(project);
+                var table_prefixes = _.map(table_project.split(','), function (x) {
+                    return base64.decode(x);
+                });
+                prefixes = _.intersection(prefixes, table_prefixes);
+            }
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
             this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
@@ -314,9 +324,24 @@ function slices_selector() {
     }
     if (!prefixDrop.size())  // Skip if not visible
         return;
-    row_selector(prefixDrop, startRow, stopRow, clear);
+    row_selector(prefixDrop, {startRow: startRow, stopRow: stopRow, postRender: clear});
     addButton.click(function () {
         slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', base64.encode(unescape(startRow.val())) + ',' + base64.encode(unescape(stopRow.val()))));
+    });
+    clearButton.click(clear);
+}
+
+function prefixes_selector() {
+    var prefixDrop = $('#slicesSelectorPrefixDrop');
+    var addButton = $('#slicesSelectorAddButton'), clearButton = $('#slicesSelectorClearButton'), slicesText = $('#slicesSelectorSlices');
+    function clear() {
+        slicesText.html('');
+    }
+    if (!prefixDrop.size())  // Skip if not visible
+        return;
+    row_selector(prefixDrop, {postRender: clear});
+    addButton.click(function () {
+        slicesText.append($('<option>').text(prefixDrop.children().filter('option:selected').val()).attr('value', base64.encode(prefixDrop.children().filter('option:selected').val())));
     });
     clearButton.click(clear);
 }
@@ -327,6 +352,11 @@ function slices_selector_get(split) {
         return _.map(out, function (x) {
             return x.split(',');
         });
+    return out;
+}
+
+function prefixes_selector_get() {
+    var out = _.map($('#slicesSelectorSlices').children(), function (x) {return $(x).attr('value')});
     return out;
 }
 

@@ -50,8 +50,5 @@ function render_data_prefixes() {
         data[decode_id($('#prefixDrop option:selected').val()) + unescape($('#suffix').val())] = decode_id($('#permissions option:selected').val());
         PREFIXES.get(row).save(data, {patch: true});
     });
-    var tableColumn = {header: "Table", getFormatted: function() {
-        return this.escape('row');
-    }};
-    new RowsView({collection: PREFIXES, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true, postRender: change});
+    new RowsView({collection: PREFIXES, el: $('#prefixes'), deleteValues: true, postRender: change});
 }

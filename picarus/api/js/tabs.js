@@ -50,18 +50,14 @@ function render_data_prefixes() {
         data[decode_id($('#prefixDrop option:selected').val()) + unescape($('#suffix').val())] = decode_id($('#permissions option:selected').val());
         PREFIXES.get(row).save(data, {patch: true});
     });
-    var tableColumn = {header: "Table", getFormatted: function() {
-        return this.escape('row');
-    }};
-    new RowsView({collection: PREFIXES, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true, postRender: change});
+    new RowsView({collection: PREFIXES, el: $('#prefixes'), deleteValues: true, postRender: change});
 }
 function render_data_projects() {
-    slices_selector();
+    prefixes_selector();
     $('#modifyProjectButton').click(function () {
         var row = $('#globalDataTableDrop option:selected').val();
         var data = {};
-        var slices = slices_selector_get(true);
-        var value = _.map(slices, function (x) {return x[0] + ',' + x[1]}).join(';');
+        var value = slices_selector_get(true).join(',');
         data[$('#projectName').val()] = value;
         PROJECTS.get(row).save(data, {patch: true});
     });
