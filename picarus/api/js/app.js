@@ -566,6 +566,7 @@ function app_main() {
             return [val, _.template(document.getElementById(prefix + selector_id).innerHTML, {baseLogin: document.getElementById('bpl_login').innerHTML,
                                                                                               rowSelect: document.getElementById('bpl_row_select').innerHTML,
                                                                                               slicesSelect: document.getElementById('bpl_slices_select').innerHTML,
+                                                                                              prefixesSelect: document.getElementById('bpl_prefixes_select').innerHTML,
                                                                                               filter: document.getElementById('bpl_filter').innerHTML,
                                                                                               prefixSelect: document.getElementById('bpl_prefix_select').innerHTML,
                                                                                               runButton: document.getElementById('bpl_run_button').innerHTML})];
