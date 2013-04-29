@@ -6,7 +6,7 @@ Images
 
 Row
 ^^^
-Each row corresponds to an "image" along with all associated features, metadata, etc.
+Each row corresponds to an "image" along with all associated features, metadata, etc.  The image itself is stored in data:image.
 
 Permissions
 ^^^^^^^^^^^
@@ -21,23 +21,44 @@ Column Families
 +--------------+------------------------------------------------------------------------------------------------------+
 | thum         | Where visualization-only thumbnails exist (these are not to be used for actual analysis)             |
 +--------------+------------------------------------------------------------------------------------------------------+
-| feat         | Image features (picarus.api.NDArray vector, fixed size)                                              |
-+--------------+------------------------------------------------------------------------------------------------------+
-| mfeat        | Image features (picarus.api.NDArray matrix, fixed columns, variable rows)                            |
-+--------------+------------------------------------------------------------------------------------------------------+
-| mask         | Image masks (picarus.api.NDArray matrix, height/width matching image, fixed depth)                   |
+| feat         | Image features                                                                                       |
 +--------------+------------------------------------------------------------------------------------------------------+
 | pred         | Image predictions stored as a binary double.                                                         |
-+--------------+------------------------------------------------------------------------------------------------------+
-| srch         | Search results                                                                                       |
-+--------------+------------------------------------------------------------------------------------------------------+
-| attr         | Image attributes (basically metadata that is derived from the source data).                          |
 +--------------+------------------------------------------------------------------------------------------------------+
 | hash         | Hash codes stored as binary bytes.  Separated from feat so that it can be scanned fast.              |
 +--------------+------------------------------------------------------------------------------------------------------+
 | meta         | Image labels, tags, etc.                                                                             |
 +--------------+------------------------------------------------------------------------------------------------------+
-| misc         | Columns that don't fit into the other categories.                                                    |
+
+Videos
+------
+
+There are a variety of ways to store videos, this approach allows for client/server/workers to only have a constant amount of the video in memory at any given time which is essential for long videos.  As the video isn't re-encoded, if we want to execute a video in parallel with frame-accurate processing then each client will need to have access to portion of video they need to process along with all video preceeding it.  This is a very conservative approach that simplifies the implementation considerably and future optimizations will allow us to only require the preceding chunk.  However, any non-trivial analysis of the video will dominate the execution time so this isn't a priority at this point.
+
+Row
+^^^
+Each row corresponds to a "video" along with all associated features, metadata, etc.  The video data is broken into chunks, with the chunk size stored in meta:video_chunk_size (the last chunk may be partial) and the number of chunks stored in meta:video_chunks.  The current recommended chunk size is 1MB.  To ensure that when the video is reconstituted it is identical to the original, the sha1 hash is stored in meta:video_sha1.  These must all be set by the user from Picarus's point of view, but practically this will be done by a client side library that developers will interact with.
+
+Permissions
+^^^^^^^^^^^
+Users can read all columns and write to data:video- and meta: (i.e., anything under meta:).
+
+Column Families
+^^^^^^^^^^^^^^^
++--------------+------------------------------------------------------------------------------------------------------+
+| Column Family| Description                                                                                          |
++--------------+------------------------------------------------------------------------------------------------------+
+| data         | Video data. data:video-* is where the "source" video goes.                                           |
++--------------+------------------------------------------------------------------------------------------------------+
+| thum         | Where visualization-only thumbnails exist (these are not to be used for actual analysis)             |
++--------------+------------------------------------------------------------------------------------------------------+
+| feat         | Image/video features                                                                                 |
++--------------+------------------------------------------------------------------------------------------------------+
+| pred         | Image/video predictions stored as a binary double.                                                   |
++--------------+------------------------------------------------------------------------------------------------------+
+| hash         | Hash codes stored as binary bytes.  Separated from feat so that it can be scanned fast.              |
++--------------+------------------------------------------------------------------------------------------------------+
+| meta         | Image labels, tags, etc.                                                                             |
 +--------------+------------------------------------------------------------------------------------------------------+
 
 Models
