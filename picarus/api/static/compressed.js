@@ -3605,9 +3605,11 @@ function row_selector(prefixDrop, startRow, stopRow) {
         initialize: function() {
             _.bindAll(this, 'render');
             this.collection.bind('sync', this.render);
+            this.$projects = $('#globalProjectDrop');
             this.render();
         },
-        events: {'change': 'renderDrop'},
+        events: {'change': 'renderDrop',
+                 'change #globalProjectsDrop': 'render'},
         renderDrop: function () {
             var prefix = prefixDrop.children().filter('option:selected').val();
             if (typeof startRow !== 'undefined')
@@ -3619,8 +3621,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
         render: function() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
-            // TODO: Hookup to table dropdown box
-            prefixes = this.collection.get('images');
+            prefixes = this.collection.get(this.$projects.val());
             if (_.isUndefined(prefixes))
                 return;
             var prefixes = _.keys(prefixes.attributes);
