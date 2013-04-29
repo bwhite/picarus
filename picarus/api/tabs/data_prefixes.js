@@ -35,7 +35,6 @@ function render_data_prefixes() {
         prefixChange();
     }
     $('#globalDataTableDrop').change(change);
-    change();
     $('#createButton').click(function () {
         var row = $('#globalDataTableDrop option:selected').val();
         if (_.isUndefined(row)) {
@@ -48,5 +47,5 @@ function render_data_prefixes() {
     var tableColumn = {header: "Table", getFormatted: function() {
         return this.escape('row');
     }};
-    new RowsView({collection: PREFIXES, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
+    new RowsView({collection: PREFIXES, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true, postRender: change});
 }
