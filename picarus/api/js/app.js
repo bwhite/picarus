@@ -460,7 +460,7 @@ function app_main() {
 
     RowsView = Backbone.View.extend({
         initialize: function(options) {
-            _.bindAll(this, 'render');
+            _.bindAll(this, 'render', 'renderWait');
             this.collection.bind('add', this.renderWait);
             this.collection.bind('sync', this.render);
             this.collection.bind('reset', this.render);
