@@ -14,6 +14,7 @@ import re
 import gipc
 import picarus_takeout
 import logging
+import functools
 import msgpack # TODO: Abstract these operations
 from driver import PicarusManager
 from picarus._importer import call_import
@@ -255,11 +256,13 @@ class RedisUsersTable(BaseTableSmall):
 class PrefixesTable(RedisUsersTable):
 
     def __init__(self, _auth_user):
-        table = {x: _auth_user.prefixes(x) for x in _auth_user._tables}
-        set_column = {x: lambda y, z: _auth_user.add_prefix(x, y, z)
-                      for x in _auth_user._tables}
-        del_column = {x: lambda y: _auth_user.remove_prefix(x, y)
-                      for x in _auth_user._tables}
+        table = {}
+        set_column = {}
+        del_column = {}
+        for x in _auth_user._tables:
+            table[x] = _auth_user.prefixes(x)
+            set_column[x] = functools.partial(_auth_user.add_prefix, x)
+            del_column[x] = functools.partial(_auth_user.remove_prefix, x)
         super(PrefixesTable, self).__init__(_auth_user, table, set_column, del_column)
 
     def _row_column_value_validator(self, row, new_column, new_value):
@@ -273,11 +276,13 @@ class PrefixesTable(RedisUsersTable):
 
 class ProjectsTable(RedisUsersTable):
     def __init__(self, _auth_user):
-        table = {x: _auth_user.projects(x) for x in _auth_user._tables}
-        set_column = {x: lambda y, z: _auth_user.add_project(x, y, z)
-                      for x in _auth_user._tables}
-        del_column = {x: lambda y: _auth_user.remove_project(x, y)
-                      for x in _auth_user._tables}
+        table = {}
+        set_column = {}
+        del_column = {}
+        for x in _auth_user._tables:
+            table[x] = _auth_user.projects(x)
+            set_column[x] = functools.partial(_auth_user.add_project, x)
+            del_column[x] = functools.partial(_auth_user.remove_project, x)
         super(ProjectsTable, self).__init__(_auth_user, table, set_column, del_column)
 
     def _row_column_value_validator(self, row, new_column, new_value):
