@@ -305,43 +305,13 @@ function slices_selector() {
     var addButton = $('#slicesSelectorAddButton'), clearButton = $('#slicesSelectorClearButton'), slicesText = $('#slicesSelectorSlices');
     if (!prefixDrop.size())  // Skip if not visible
         return;
-    var AppView = Backbone.View.extend({
-        initialize: function() {
-            _.bindAll(this, 'render');
-            this.collection.bind('sync', this.render);
-            this.render();
-        },
-        events: {'change': 'renderDrop'},
-        renderDrop: function () {
-            var prefix = decode_id(prefixDrop.children().filter('option:selected').val());
-            if (typeof startRow !== 'undefined')
-                startRow.val(prefix);
-            // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
-            // TODO: Hookup to table dropdown box
-            if (typeof stopRow !== 'undefined')
-                stopRow.val(prefix_to_stop_row(prefix));
-        },
-        render: function() {
-            this.$el.empty();
-            // TODO: Check permissions and accept perissions as argument
-            var prefixes = this.collection.get('images');
-            if (_.isUndefined(prefixes))
-                return;
-            prefixes = _.keys(prefixes.attributes);
-            prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
-            var select_template = "{{#prefixes}}<option value='{{value}}'>{{text}}</option>{{/prefixes}};"
-            var prefixes_render = _.map(prefixes, function (x) {return {value: encode_id(x), text: x}});
-            this.$el.append(Mustache.render(select_template, {prefixes: prefixes_render}));
-            this.renderDrop();
-        }
-    });
+    row_selector(prefixDrop, startRow, stopRow)
     addButton.click(function () {
         slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', base64.encode(unescape(startRow.val())) + ',' + base64.encode(unescape(stopRow.val()))));
     });
     clearButton.click(function () {
         slicesText.html('');
     });
-    new AppView({collection: PREFIXES, el: prefixDrop});
 }
 
 function slices_selector_get(split) {

@@ -35,6 +35,7 @@ function render_data_prefixes() {
         prefixChange();
     }
     $('#globalDataTableDrop').change(change);
+    change();
     $('#createButton').click(function () {
         var row = $('#globalDataTableDrop option:selected').val();
         if (_.isUndefined(row)) {
