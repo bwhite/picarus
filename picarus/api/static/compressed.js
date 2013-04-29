@@ -3841,7 +3841,7 @@ function app_main() {
                 this.columns = options.columns;
             this.render();
         },
-        render: function() {
+        render: _.debounce(function() {
             console.log('Rendering!');
             var columns = this.columns;
             if (_.isUndefined(columns))
@@ -3873,7 +3873,7 @@ function app_main() {
             } else {
                 this.$el.html('<div class="alert alert-info">Table Empty</div>');
             }
-        }
+        }, 10);
     });
 
     // Based on: https://gist.github.com/2711454
