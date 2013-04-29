@@ -270,7 +270,8 @@ function row_selector(prefixDrop, startRow, stopRow) {
             this.collection.bind('sync', this.render);
             this.$tables = $('#globalDataTableDrop');
             this.$projects = $('#globalProjectDrop');
-            this.$projects.change(render);
+            this.$tables.change(this.render);  // TODO: Hack
+            this.$projects.change(this.render);
             this.render();
         },
         events: {'change': 'renderDrop'},
