@@ -23,18 +23,3 @@ annotations                 Auth'd user's annotation tasks                   Ann
 annotations-results-:task   Annotation results for :task (row=annotation)    Annotation ID
 annotations-users-:task     Annotators for :task (row=annotator)             User ID
 =========================   ==============================================   =========================   ========================================================================
-
-prefixes
---------
-The user's table 
-
-
-projects
---------
-
-Yubikey
--------
-
-
-Annotations
------------
