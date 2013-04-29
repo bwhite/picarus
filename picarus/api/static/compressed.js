@@ -3605,6 +3605,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
         initialize: function() {
             _.bindAll(this, 'render');
             this.collection.bind('sync', this.render);
+            this.$tables = $('#globalDataTableDrop');
             this.$projects = $('#globalProjectDrop');
             this.render();
         },
@@ -3621,7 +3622,8 @@ function row_selector(prefixDrop, startRow, stopRow) {
         render: function() {
             this.$el.empty();
             // TODO: Check permissions and accept perissions as argument
-            prefixes = this.collection.get(this.$projects.val());
+            prefixes = this.collection.get(this.$tables.val());
+            projects = PROJECTS.get(this.$tables.val());
             if (_.isUndefined(prefixes))
                 return;
             var prefixes = _.keys(prefixes.attributes);
