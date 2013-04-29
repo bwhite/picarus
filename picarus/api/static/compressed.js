@@ -487,7 +487,6 @@ function render_data_prefixes() {
             prefixChange();
             return;
         }
-        row = decode_id(row);
         var prefixes = [];
         _.each(PREFIXES.get(row).attributes, function (val, key) {
             if (key == 'row') {
@@ -507,7 +506,6 @@ function render_data_prefixes() {
         if (_.isUndefined(row)) {
             return;
         }
-        row = decode_id(row);
         var data = {};
         data[decode_id($('#prefixDrop option:selected').val()) + unescape($('#suffix').val())] = decode_id($('#permissions option:selected').val());
         PREFIXES.get(row).save(data, {patch: true});
