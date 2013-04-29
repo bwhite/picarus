@@ -134,6 +134,10 @@ class User(object):
         assert table in self._tables
         return 'prefix_%s:' % table
 
+    def _table_project(self, table):
+        assert table in self._tables
+        return 'project_%s:' % table
+
     def add_prefix(self, table, prefix, permissions):
         self._user_db.hset(self._table_prefix(table) + self.email, prefix, permissions)
 
