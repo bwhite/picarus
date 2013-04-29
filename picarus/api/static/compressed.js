@@ -3842,6 +3842,7 @@ function app_main() {
             this.render();
         },
         render: function() {
+            console.log('Rendering!');
             var columns = this.columns;
             if (_.isUndefined(columns))
                 columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
