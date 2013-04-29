@@ -3569,35 +3569,35 @@ function rows_dropdown(rows, args) {
     av = new AppView({collection: rows, el: args.el});
 }
 
-// TODO: This isn't complete
-/*
-function project_selector(projectsDrop) {
+function project_selector() {
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
+            this.$projects = $('globalProjectDrop');
             this.collection.bind('sync', this.render);
             this.render();
         },
         events: {'change': 'renderDrop'},
-        render: function() {
-            this.$el.empty();
-            projects = this.collection.get('images');
+        renderDrop: function() {
+            this.$projects.empty();
+            var projects =  this.collection.get(this.$el.val());
             if (_.isUndefined(projects))
                 return;
-            projects = _.keys(JSON.parse(projects));
-            projects.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#projects}}<option value='{{.}}'>{{.}}</option>{{/projects}};"
-            this.$el.append(Mustache.render(select_template, {projects: projects}));
-            this.renderDrop(); // TODO: This needs to be setup somewhere
+            this.$projects.append(Mustache.render(select_template, {projects: projects}));
+        },
+        render: function() {
+            this.$el.empty();
+            var tables = _.keys(this.collection.models);
+            if (!tables.length)
+                return;
+            var select_template = "{{#tables}}<option value='{{.}}'>{{.}}</option>{{/tables}};"
+            this.$el.append(Mustache.render(select_template, {tables: tables}));
+            this.renderDrop();
         }
     });
-    var auth = login_get(function (email_auth) {
-        // TODO: Need to update projects table        
-        new AppView({collection: PROJECTS, el: projectsDrop});
-        user.fetch();
-    });
+    new AppView({collection: PROJECTS, el: $('#globalDataTableDrop')});
 }
-*/
 
 function row_selector(prefixDrop, startRow, stopRow) {
     var AppView = Backbone.View.extend({
@@ -3998,7 +3998,7 @@ function app_main_postauth(email_auth) {
     PARAMETERS = new PicarusRows([], {'table': 'parameters'});
     MODELS = new PicarusRows([], {'table': 'models', columns: ['meta:']});
     refresh_models();
-
+    project_selector();
     //Start the app by setting kicking off the history behaviour.
     //We will get a routing event with the initial URL fragment
     Backbone.history.start();
