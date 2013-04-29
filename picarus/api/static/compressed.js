@@ -3588,7 +3588,7 @@ function project_selector() {
         },
         render: function() {
             this.$el.empty();
-            var tables = _.keys(this.collection.models);
+            var tables = this.collection.pluck('row');
             if (!tables.length)
                 return;
             var select_template = "{{#tables}}<option value='{{.}}'>{{.}}</option>{{/tables}};"
