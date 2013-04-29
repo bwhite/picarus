@@ -22,7 +22,13 @@ function render_data_prefixes() {
             return;
         }
         var prefixes = [];
-        _.each(PREFIXES.get(row).attributes, function (val, key) {
+        var table_prefixes = PREFIXES.get(row);
+        if (_.isUndefined(table_prefixes)) {
+            $('#prefixDrop').html('');
+            prefixChange();
+            return;
+        }
+        _.each(table_prefixes.attributes, function (val, key) {
             if (key == 'row') {
                 return;
             }
