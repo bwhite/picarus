@@ -34,7 +34,7 @@ Binary classifiers (i.e., have a concept of negative/positive) take in a feature
 Name            Type         Status
 =============   ======       ==========
 Linear SVM      binary       Ok
-Kernel SVM      binary       TODO
+Kernel SVM      binary       Ok
 LocalNBNN       multi        Ok
 =============   ======       ==========
 
