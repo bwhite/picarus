@@ -503,8 +503,7 @@ function app_main() {
                 this.columns = options.columns;
             this.render();
         },
-        render: _.debounce(function() {
-            
+        render: function() {
             var columns = this.columns;
             if (_.isUndefined(columns))
                 columns = _.uniq(_.flatten(_.map(this.collection.models, function (x) {
@@ -535,7 +534,7 @@ function app_main() {
             } else {
                 this.$el.html('<div class="alert alert-info">Table Empty</div>');
             }
-        }, 100)
+        }
     });
 
     // Based on: https://gist.github.com/2711454
