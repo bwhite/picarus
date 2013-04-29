@@ -31,6 +31,7 @@ class Annotators(object):
         if redis_host_port is None:
             raise CapacityException
         data['_redis_host_port'] = redis_host_port
+        # TODO: Ensure that the task doesn't exist
         self.db.hmset(self.annotator_prefix + task, data)
         return redis_host_port
 
