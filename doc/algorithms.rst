@@ -1,5 +1,5 @@
-Models
-======
+Algorithms
+==========
 Picarus supports a variety of algorithm types and instances of them.  The computational atoms in Picarus are 'models' which are essentially parameterized functions that are stored in the models table.  These parameters are either user defined or are computed algorithmically from training data.  Models computed from training data have a 'factory' which performs any necessary training on input data and then ultimately produces a model.  A model that does not require training data is fully parameterized by the user.  Both factories and models themselves are specified by the 'parameters' table that defines what parameters a factory/model takes in.
 
 Less is More
@@ -25,7 +25,6 @@ HoG             Matrix     Ok
 Brisk           Matrix     Ok
 Texton Forest   Mask       Integrating
 =============   ======     ===========
-
 
 Classifiers
 ------------
