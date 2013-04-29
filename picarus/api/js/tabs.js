@@ -70,7 +70,7 @@ function render_data_projects() {
     new RowsView({collection: PROJECTS, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
 }
 function render_crawl_flickr() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
         var demo_class = $('#democlass').val();
@@ -473,7 +473,7 @@ function render_models_single() {
 function render_models_slice() {
     model_dropdown({modelFilter: function (x) {return true},
                     el: $('#model_select')});
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
         var startRow = unescape($('#startRow').val());
@@ -486,7 +486,7 @@ function render_models_slice() {
     });
 }
 function render_process_thumbnail() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
         var startRow = $('#startRow').val();
@@ -495,7 +495,7 @@ function render_process_thumbnail() {
     });
 }
 function render_process_garbage() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
         var startRow = $('#startRow').val();
@@ -511,7 +511,7 @@ function render_process_garbage() {
     });
 }
 function render_process_exif() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
         var startRow = $('#startRow').val();
@@ -520,7 +520,7 @@ function render_process_exif() {
     });
 }
 function render_process_modify() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
         var columnName = $('#columnName').val();
@@ -533,7 +533,7 @@ function render_process_modify() {
     });
 }
 function render_process_copy() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     row_selector($('#rowPrefixDrop2'));
     $('#runButton').click(function () {
         button_running();
@@ -566,7 +566,7 @@ function render_annotate_list() {
     new RowsView({collection: ANNOTATIONS, el: $('#annotations'), extraColumns: [workerColumn], postRender: postRender, deleteRows: true});
 }
 function render_annotate_batch() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
@@ -582,7 +582,7 @@ function render_annotate_batch() {
     });
 }
 function render_annotate_entity() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
@@ -597,7 +597,7 @@ function render_annotate_entity() {
     });
 }
 function render_visualize_thumbnails() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         function uninstallScroll() {
             $(window).unbind("scroll");
@@ -663,7 +663,7 @@ function render_visualize_thumbnails() {
     });
 }
 function render_visualize_metadata() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         var startRow = unescape($('#startRow').val());
         var stopRow = unescape($('#stopRow').val());
@@ -735,7 +735,7 @@ function render_visualize_metadata() {
     });
 }
 function render_visualize_exif() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         var startRow = unescape($('#startRow').val());
         var stopRow = unescape($('#stopRow').val());
@@ -808,7 +808,7 @@ function render_visualize_locations() {
     document.body.appendChild(script);
 }
 function render_visualize_locations_loaded() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     function deg2rad(deg) {
         return deg * (Math.PI/180)
     }
@@ -884,7 +884,7 @@ function render_visualize_times() {
 }
 
 function render_visualize_times_loaded() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     function drawYears(hist) {
         var data = google.visualization.arrayToDataTable([['Year', 'Count']].concat(hist));
         new google.visualization.ColumnChart(document.getElementById('histYear')).draw(data, {title:"Histogram (Year)", width:600, height:400, vAxis: {title: "Count"}, hAxis: {title: "Year"}});

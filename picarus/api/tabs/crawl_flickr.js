@@ -1,5 +1,5 @@
 function render_crawl_flickr() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
         var demo_class = $('#democlass').val();

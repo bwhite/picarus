@@ -1,5 +1,5 @@
 function render_visualize_thumbnails() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         function uninstallScroll() {
             $(window).unbind("scroll");

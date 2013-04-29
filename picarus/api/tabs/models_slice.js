@@ -1,7 +1,7 @@
 function render_models_slice() {
     model_dropdown({modelFilter: function (x) {return true},
                     el: $('#model_select')});
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
         var startRow = unescape($('#startRow').val());

@@ -1,5 +1,5 @@
 function render_visualize_exif() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         var startRow = unescape($('#startRow').val());
         var stopRow = unescape($('#stopRow').val());

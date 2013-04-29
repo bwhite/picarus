@@ -1,5 +1,5 @@
 function render_process_copy() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     row_selector($('#rowPrefixDrop2'));
     $('#runButton').click(function () {
         button_running();

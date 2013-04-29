@@ -3,7 +3,7 @@ function render_visualize_times() {
 }
 
 function render_visualize_times_loaded() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     function drawYears(hist) {
         var data = google.visualization.arrayToDataTable([['Year', 'Count']].concat(hist));
         new google.visualization.ColumnChart(document.getElementById('histYear')).draw(data, {title:"Histogram (Year)", width:600, height:400, vAxis: {title: "Count"}, hAxis: {title: "Year"}});

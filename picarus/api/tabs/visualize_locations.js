@@ -5,7 +5,7 @@ function render_visualize_locations() {
     document.body.appendChild(script);
 }
 function render_visualize_locations_loaded() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     function deg2rad(deg) {
         return deg * (Math.PI/180)
     }

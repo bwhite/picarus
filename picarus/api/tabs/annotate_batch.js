@@ -1,5 +1,5 @@
 function render_annotate_batch() {
-    row_selector($('#rowPrefixDrop'), $('#startRow'), $('#stopRow'));
+    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
