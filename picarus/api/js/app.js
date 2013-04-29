@@ -265,7 +265,7 @@ function project_selector() {
     new AppView({collection: PROJECTS, el: $('#globalDataTableDrop')});
 }
 
-function row_selector(prefixDrop, startRow, stopRow) {
+function row_selector(prefixDrop, startRow, stopRow, postRender) {
     var AppView = Backbone.View.extend({
         initialize: function() {
             _.bindAll(this, 'render');
@@ -274,6 +274,9 @@ function row_selector(prefixDrop, startRow, stopRow) {
             this.$projects = $('#globalProjectDrop');
             this.$tables.change(this.render);  // TODO: Hack
             this.$projects.change(this.render);
+            this.postRender = function () {};
+            if (_.isUndefined(postRender))
+                this.postRender = postRender;
             this.render();
         },
         events: {'change': 'renderDrop'},
@@ -296,6 +299,7 @@ function row_selector(prefixDrop, startRow, stopRow) {
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
             this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
+            this.postRender();
             this.renderDrop();
         }
     });
@@ -305,15 +309,16 @@ function row_selector(prefixDrop, startRow, stopRow) {
 function slices_selector() {
     var prefixDrop = $('#slicesSelectorPrefixDrop'), startRow = $('#slicesSelectorStartRow'), stopRow = $('#slicesSelectorStopRow');
     var addButton = $('#slicesSelectorAddButton'), clearButton = $('#slicesSelectorClearButton'), slicesText = $('#slicesSelectorSlices');
+    function clear() {
+        slicesText.html('');
+    }
     if (!prefixDrop.size())  // Skip if not visible
         return;
-    row_selector(prefixDrop, startRow, stopRow)
+    row_selector(prefixDrop, startRow, stopRow, clear)
     addButton.click(function () {
         slicesText.append($('<option>').text(_.escape(startRow.val()) + '/' + _.escape(stopRow.val())).attr('value', base64.encode(unescape(startRow.val())) + ',' + base64.encode(unescape(stopRow.val()))));
     });
-    clearButton.click(function () {
-        slicesText.html('');
-    });
+    clearButton.click(clear);
 }
 
 function slices_selector_get(split) {
