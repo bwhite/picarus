@@ -243,7 +243,7 @@ function project_selector() {
         events: {'change': 'renderDrop'},
         renderDrop: function() {
             this.$projects.empty();
-            var projects = PROJECTS.get(this.$el.val());
+            var projects = this.collection.get(this.$el.val());
             if (_.isUndefined(projects))
                 return;
             projects = [''].concat(_.keys(_.omit(projects.attributes, 'row')));
