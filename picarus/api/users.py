@@ -68,7 +68,6 @@ class User(object):
         self._stat_prefix = 'stat:'
         self._api_key_prefix = 'auth:'
         self._login_key_prefix = 'login:'
-        self._image_project_prefix = 'imageproject:'
         self._enabled_col = 'enabled'
         self.key_length = 15
         self._tables = ('images', 'videos')
@@ -141,18 +140,17 @@ class User(object):
     def remove_prefix(self, table, prefix):
         self._user_db.hdel(self._table_prefix(table) + self.email, prefix)
 
-    def add_image_project(self, project, slices):
-        self._user_db.hset(self._image_project_prefix + self.email, project, slices)
+    def add_project(self, table, project, slices):
+        self._user_db.hset(self._table_project(table) + self.email, project, slices)
 
-    def remove_image_project(self, project):
-        self._user_db.hdel(self._image_project_prefix + self.email, project)
+    def remove_project(self, table, project):
+        self._user_db.hdel(self._table_project(table) + self.email, project)
 
     def prefixes(self, table):
         return self._user_db.hgetall(self._table_prefix(table) + self.email)
 
-    @property
-    def image_projects(self):
-        return self._user_db.hgetall(self._image_project_prefix + self.email)
+    def projects(self, table):
+        return self._user_db.hgetall(self._table_project(table) + self.email)
 
     @property
     def login_key(self):

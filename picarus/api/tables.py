@@ -272,12 +272,13 @@ class PrefixesTable(RedisUsersTable):
 
 
 class ProjectsTable(RedisUsersTable):
-
     def __init__(self, _auth_user):
-        # TODO: Update for new method
-        super(ProjectsTable, self).__init__(_auth_user, {'images': _auth_user.image_projects},
-                                            {'images': _auth_user.add_image_project},
-                                            {'images': _auth_user.remove_image_project})
+        table = {x: _auth_user.projects(x) for x in _auth_user._tables}
+        set_column = {x: lambda y, z: _auth_user.add_project(x, y, z)
+                      for x in _auth_user._tables}
+        del_column = {x: lambda y: _auth_user.remove_project(x, y)
+                      for x in _auth_user._tables}
+        super(ProjectsTable, self).__init__(_auth_user, table, set_column, del_column)
 
     def _row_column_value_validator(self, row, new_column, new_value):
         # TODO: Add checks
