@@ -466,7 +466,7 @@ d.infiniteScroll(a));return this}})(jQuery);
 ;
 function render_data_prefixes() {
     function prefixChange() {
-        var row = $('#prefixTable option:selected').val();
+        var row = $('#globalDataTableDrop option:selected').val();
         var prefix_drop = $('#prefixDrop option:selected').val();
         if (_.isUndefined(row) || _.isUndefined(prefix_drop)) {
             $('#permissions').html('');
@@ -482,7 +482,7 @@ function render_data_prefixes() {
         $('#permissions').html(Mustache.render(select_template, {prefixes: _.map(perms, function (x) {return {text: x, value: encode_id(x)}})}));
     }
     function change() {
-        var row = $('#prefixTable option:selected').val();
+        var row = $('#globalDataTableDrop option:selected').val();
         if (_.isUndefined(row)) {
             $('#prefixDrop').html('');
             prefixChange();
@@ -502,9 +502,9 @@ function render_data_prefixes() {
         $('#prefixDrop').change(prefixChange); // TODO: Redo this in backbone
         prefixChange();
     }
-    rows_dropdown(PREFIXES, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}, change: change});
+    $('#globalDataTableDrop').change(change);
     $('#createButton').click(function () {
-        var row = $('#prefixTable option:selected').val();
+        var row = $('#globalDataTableDrop option:selected').val();
         if (_.isUndefined(row)) {
             return;
         }
@@ -519,10 +519,9 @@ function render_data_prefixes() {
     new RowsView({collection: PREFIXES, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
 }
 function render_data_projects() {
-    rows_dropdown(PROJECTS, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}});
     slices_selector();
     $('#modifyProjectButton').click(function () {
-        var row = decode_id($('#prefixTable option:selected').val());
+        var row = decode_id($('#globalDataTableDrop option:selected').val());
         var data = {};
         var slices = slices_selector_get(true);
         var value = _.map(slices, function (x) {return x[0] + ',' + x[1]}).join(';');

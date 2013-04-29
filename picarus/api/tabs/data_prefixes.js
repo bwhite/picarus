@@ -1,6 +1,6 @@
 function render_data_prefixes() {
     function prefixChange() {
-        var row = $('#prefixTable option:selected').val();
+        var row = $('#globalDataTableDrop option:selected').val();
         var prefix_drop = $('#prefixDrop option:selected').val();
         if (_.isUndefined(row) || _.isUndefined(prefix_drop)) {
             $('#permissions').html('');
@@ -16,7 +16,7 @@ function render_data_prefixes() {
         $('#permissions').html(Mustache.render(select_template, {prefixes: _.map(perms, function (x) {return {text: x, value: encode_id(x)}})}));
     }
     function change() {
-        var row = $('#prefixTable option:selected').val();
+        var row = $('#globalDataTableDrop option:selected').val();
         if (_.isUndefined(row)) {
             $('#prefixDrop').html('');
             prefixChange();
@@ -36,9 +36,9 @@ function render_data_prefixes() {
         $('#prefixDrop').change(prefixChange); // TODO: Redo this in backbone
         prefixChange();
     }
-    rows_dropdown(PREFIXES, {el: $('#prefixTable'), text: function (x) {return x.escape('row')}, change: change});
+    $('#globalDataTableDrop').change(change);
     $('#createButton').click(function () {
-        var row = $('#prefixTable option:selected').val();
+        var row = $('#globalDataTableDrop option:selected').val();
         if (_.isUndefined(row)) {
             return;
         }
