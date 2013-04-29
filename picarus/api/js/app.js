@@ -295,7 +295,7 @@ function row_selector(prefixDrop, startRow, stopRow, postRender) {
             projects = PROJECTS.get(this.$tables.val());
             if (_.isUndefined(prefixes))
                 return;
-            var prefixes = _.keys(prefixes.attributes);
+            var prefixes = _.keys(_.omit(prefixes.attributes, 'row'));
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
             this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
