@@ -3580,10 +3580,11 @@ function project_selector() {
         events: {'change': 'renderDrop'},
         renderDrop: function() {
             this.$projects.empty();
-            var projects =  this.collection.get(this.$el.val());
+            var projects = PROJECTS.get(this.$el.val());
             if (_.isUndefined(projects))
                 return;
-            var select_template = "{{#projects}}<option value='{{.}}'>{{.}}</option>{{/projects}};"
+            projects = [''].concat(_.keys(_.omit(projects.attributes, 'row')));
+            var select_template = "{{#projects}}<option value='{{.}}'>{{.}}</option>{{/projects}};";
             this.$projects.append(Mustache.render(select_template, {projects: projects}));
         },
         render: function() {
