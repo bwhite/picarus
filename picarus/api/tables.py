@@ -546,8 +546,12 @@ class ImagesHBaseTable(DataHBaseTable):
                     except KeyError:
                         label = labels[cur_cols['meta:class']] = len(labels)
                     image = cv2.imdecode(np.fromstring(cur_cols['data:image'], np.uint8), 0)
+                    # Crop
+                    image = np.ascontiguousarray(image[62:-62, 62:-62])
+                    if n == 0:
+                        cv2.imwrite('out.png', image)
                     print(image.shape)
-                    if n < 100:
+                    if n < 1000:
                         r.update(np.array([image]), np.array([label]))
                     else:
                         if r.predict(image)[0] == label:
