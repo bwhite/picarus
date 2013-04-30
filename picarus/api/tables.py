@@ -532,6 +532,8 @@ class ImagesHBaseTable(DataHBaseTable):
                 return {}
             elif action == 'i/faces':
                 # TODO: Temporary, remove when done
+                names = set(['George_W_Bush', 'Colin_Powell', 'Tony_Blair', 'Donald_Rumsfeld', 'Gerhard_Schroeder',
+                             'Ariel_Sharon', 'Hugo_Chavez', 'Junichiro_Koizumi', 'Serena_Williams', 'John_Ashcroft'])
                 self._slice_validate(start_row, stop_row, 'r')
                 import cv2
                 r = cv2.createLBPHFaceRecognizer()
@@ -540,19 +542,21 @@ class ImagesHBaseTable(DataHBaseTable):
                 neg = 0
                 data = []
                 lab = []
-                num_train = 100
+                num_train = 2000
                 for n, (cur_row, cur_cols) in enumerate(hadoopy_hbase.scanner(thrift, self.table,
                                                                               start_row=start_row, per_call=10,
                                                                               stop_row=stop_row, columns=['data:image', 'meta:class'])):
                     cur_class = cur_cols['meta:class']
+                    if cur_class not in names:
+                        continue
                     if cur_class not in labels:
                         labels[cur_class] = len(labels)
                     label = labels[cur_class]
                     image = cv2.imdecode(np.fromstring(cur_cols['data:image'], np.uint8), 0)
                     # Crop
                     image = np.ascontiguousarray(image[62:-62, 62:-62])
-                    if n == 0:
-                        cv2.imwrite('out.png', image)
+                    #if n == 0:
+                    #    cv2.imwrite('out.png', image)
                     if n < num_train:
                         lab.append(label)
                         data.append(image)
