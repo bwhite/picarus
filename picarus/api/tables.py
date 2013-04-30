@@ -554,7 +554,7 @@ class ImagesHBaseTable(DataHBaseTable):
                             pos += 1
                         else:
                             neg += 1
-                        print((pos, neg, pos / float(pos + neg)))
+                    print((n, pos, neg, pos / float(pos + neg)))
             elif action == 'io/garbage':
                 self._slice_validate(start_row, stop_row, 'rw')
                 columns_removed = set()
