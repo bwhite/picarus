@@ -536,7 +536,7 @@ class ImagesHBaseTable(DataHBaseTable):
                              'Ariel_Sharon', 'Hugo_Chavez', 'Junichiro_Koizumi', 'Serena_Williams', 'John_Ashcroft'])
                 self._slice_validate(start_row, stop_row, 'r')
                 import cv2
-                r = cv2.createLBPHFaceRecognizer()
+                r = None
                 labels = {}
                 pos = 0
                 neg = 0
@@ -561,8 +561,10 @@ class ImagesHBaseTable(DataHBaseTable):
                         lab.append(label)
                         data.append(image)
                     else:
-                        if n == num_train:
+                        if r is None:
+                            r = cv2.createLBPHFaceRecognizer()
                             r.train(data, np.array(lab))
+                            print('TRAINED-----------------------')
                         pred = r.predict(image)[0]
                         print((pred, label))
                         if pred == label:
