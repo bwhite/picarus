@@ -127,10 +127,11 @@ class PicarusClient(object):
     def patch_slice(self, table, start_row, stop_row, data=None):
         return self.patch(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=self.encdict(data))
 
-    def scanner(self, table, start_row, stop_row, columns=None):
-        max_rows_iter = 10000
-        data = {}
-        data['maxRows'] = max_rows_iter
+    def scanner(self, table, start_row, stop_row, columns=None, data=None):
+        if data is None:
+            data = {}
+        if 'maxRows' not in data:
+            data['maxRows'] = '10000'
         while True:
             row_columns = self.get_slice(table, start_row, stop_row, columns=columns, data=data)
             if not row_columns:

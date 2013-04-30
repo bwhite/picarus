@@ -431,6 +431,7 @@ class DataHBaseTable(HBaseTable):
     def get_slice(self, start_row, stop_row, columns, params, files):
         self._slice_validate(start_row, stop_row, 'r')
         max_rows = min(10000, int(params.get('maxRows', 1)))
+        print('MaxRows[%d]' % max_rows)
         max_bytes = min(1048576, int(params.get('maxBytes', 1048576)))
         filter_string = params.get('filter')
         print('filter string[%s]' % filter_string)
@@ -554,7 +555,7 @@ class ImagesHBaseTable(DataHBaseTable):
                     label = labels[cur_class]
                     image = cv2.imdecode(np.fromstring(cur_cols['data:image'], np.uint8), 0)
                     # Crop
-                    #image = np.ascontiguousarray(image[62:-62, 62:-62])
+                    image = np.ascontiguousarray(image[62:-62, 62:-62])
                     #if n == 0:
                     #    cv2.imwrite('out.png', image)
                     if n < num_train:
