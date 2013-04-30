@@ -538,6 +538,9 @@ class ImagesHBaseTable(DataHBaseTable):
                 labels = {}
                 pos = 0
                 neg = 0
+                data = []
+                lab = []
+                num_train = 100
                 for n, (cur_row, cur_cols) in enumerate(hadoopy_hbase.scanner(thrift, self.table,
                                                                               start_row=start_row, per_call=10,
                                                                               stop_row=stop_row, columns=['data:image', 'meta:class'])):
@@ -551,10 +554,15 @@ class ImagesHBaseTable(DataHBaseTable):
                     if n == 0:
                         cv2.imwrite('out.png', image)
                     print(image.shape)
-                    if n < 1000:
-                        r.update(np.array([image]), np.array([label]))
+                    if n < num_train:
+                        lab.append(label)
+                        data.append(image)
                     else:
-                        if r.predict(image)[0] == label:
+                        if n == num_train:
+                            r.train(data, np.array(lab))
+                        pred = r.predict(image)[0]
+                        print((pred, label))
+                        if pred == label:
                             pos += 1
                         else:
                             neg += 1
