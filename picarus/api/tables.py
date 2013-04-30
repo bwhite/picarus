@@ -437,8 +437,10 @@ class DataHBaseTable(HBaseTable):
         print('filter string[%s]' % filter_string)
         exclude_start = bool(int(params.get('excludeStart', 0)))
         out = []
+        per_call = 1
+        max_byte_count = 0
         with thrift_lock() as thrift:
-            scanner = hadoopy_hbase.scanner(thrift, self.table, per_call=10, columns=columns,
+            scanner = hadoopy_hbase.scanner(thrift, self.table, per_call=per_call, columns=columns,
                                             start_row=start_row, stop_row=stop_row, filter=filter_string)
             cur_row = start_row
             byte_count = 0
@@ -446,7 +448,12 @@ class DataHBaseTable(HBaseTable):
                 if exclude_start and row_num == 1:
                     continue
                 out.append(encode_row(cur_row, cur_columns))
-                byte_count += self._byte_count_rows(out[-1:])
+                cur_byte_count = self._byte_count_rows(out[-1:])
+                byte_count += cur_byte_count
+                # Compute the number of rows we should try to get by using the max sized row
+                # that we have seen as an upper bound.
+                max_byte_count = max(1, max(max_byte_count, cur_byte_count))
+                per_call = max(1, min((max_bytes - byte_count) / max_byte_count, max_rows - len(out)))
                 if len(out) >= max_rows or byte_count >= max_bytes:
                     break
         bottle.response.headers["Content-type"] = "application/json"
