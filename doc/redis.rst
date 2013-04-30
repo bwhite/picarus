@@ -14,12 +14,12 @@ Redis Tables
 =============
 The previous section describes the literal Redis servers used by Picarus; however, not all of these are exposed to the user.  This section describes what the user can access through the API.
 
-=========================   ==============================================   =========================   ========================================================================
-Table                       Description                                      Row                         Example GET /:table/:row
-=========================   ==============================================   =========================   ========================================================================
+=========================   ==============================================   =========================
+Table                       Description                                      Row                      
+=========================   ==============================================   =========================
 prefixes                    Auth'd user's prefixes                           Data table (images/video)
 projects                    Auth'd user's projects                           Data table (images/video)
 annotations                 Auth'd user's annotation tasks                   Annotation Task ID
 annotations-results-:task   Annotation results for :task (row=annotation)    Annotation ID
 annotations-users-:task     Annotators for :task (row=annotator)             User ID
-=========================   ==============================================   =========================   ========================================================================
+=========================   ==============================================   =========================
