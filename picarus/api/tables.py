@@ -432,7 +432,7 @@ class DataHBaseTable(HBaseTable):
         self._slice_validate(start_row, stop_row, 'r')
         max_rows = min(10000, int(params.get('maxRows', 1)))
         print('MaxRows[%d]' % max_rows)
-        max_bytes = min(1048576, int(params.get('maxBytes', 1048576)))
+        max_bytes = min(5242880, int(params.get('maxBytes', 5242880)))
         filter_string = params.get('filter')
         print('filter string[%s]' % filter_string)
         exclude_start = bool(int(params.get('excludeStart', 0)))
