@@ -554,7 +554,7 @@ class ImagesHBaseTable(DataHBaseTable):
                     label = labels[cur_class]
                     image = cv2.imdecode(np.fromstring(cur_cols['data:image'], np.uint8), 0)
                     # Crop
-                    image = np.ascontiguousarray(image[62:-62, 62:-62])
+                    #image = np.ascontiguousarray(image[62:-62, 62:-62])
                     #if n == 0:
                     #    cv2.imwrite('out.png', image)
                     if n < num_train:
