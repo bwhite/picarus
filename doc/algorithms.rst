@@ -51,7 +51,7 @@ Random Rotation   Integrating
 
 Indexes
 -------
-Given many features or hashes, we would like to have an efficient data-structure (i.e., an index) for consolidating and retrieving them given a query.  The index compares the query to the existing data, producing a ranked list of candidate matches.  To compare two features one must define a distance metric (e.g., euclidean (L2), manhatten (L1), cosine, histogram intersection), for binary codes one must define a corresponding operation.  This is often a Hamming distance, but may be an operation between the two bit vectors (e.g., spherical hashing used a different metric).
+Given many features or hashes, we would like to have an efficient data-structure (i.e., an index) for consolidating and retrieving them given a query.  The index compares the query to the existing data, producing a ranked list of candidate matches.  To compare two features one must define a distance metric (e.g., euclidean (L2), manhattan (L1), cosine, histogram intersection), for binary codes one must define a corresponding operation.  This is often a Hamming distance, but may be an operation between the two bit vectors (e.g., spherical hashing used a different metric).
 
 ===============   ===========
 Name              Status
