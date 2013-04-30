@@ -545,7 +545,7 @@ class ImagesHBaseTable(DataHBaseTable):
                         label = labels[cur_cols['meta:class']]
                     except KeyError:
                         label = labels[cur_cols['meta:class']] = len(labels)
-                    image = cv2.imdecode(np.fromstring(cur_cols['data:image'], np.uint8), 0).ravel()
+                    image = cv2.imdecode(np.fromstring(cur_cols['data:image'], np.uint8), 0)
                     print(image.shape)
                     if n < 6616:
                         r.update(np.array([image]), np.array([label]))
