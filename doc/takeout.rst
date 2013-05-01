@@ -45,3 +45,23 @@ FFTW
 
 http://www.fftw.org/install/windows.html
 http://www.fftw.org/fftw-3.3.3.tar.gz
+
+
+Include/Library Paths
+++++++++++++++++++++++
+An example of all of the paths, libraries, and command line arguments can be found here https://gist.github.com/bwhite/5493885
+
+Building
++++++++++
+* Use cmake to create a directory (e.g., /build).  Go into build, open picarus.vcxproj.
+* Change to release mode.  In the solution explorer, right click on picarus, go to properties.
+* In VC++ Directories/Include Directories add all of the include dirs.
+* For opencv make sure to include every single directory in modules/*/include (lots of copy and pasting)
+* Under linker/general, add the library paths under "Additional Library Directories".
+* Close that window, right click on picarus, go to build.
+* You will need a 1.) a picarus model (if you need one ask me) and an input is an image
+* Copy the model and input image into the /build/Release directory.
+* Either 1.) copy all the dll's into the /build/Release directory or 2.) make sure windows knows where to find them.
+* Go into the /build/Release directory in a terminal, and type  "picarus <model> <input> <output>"
+* Model is the picarus model, input is an image, and output is where to store the output file
+* If everything worked, you'll have a new output file at the path you specified, it is in msgpack format.
