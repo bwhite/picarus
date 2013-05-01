@@ -192,6 +192,8 @@ function PicarusClient(args) {
         this.getSlice(table, startRow, stopRow, iterArgs);
     };
     this._argsDefaults = function (args) {
+        if (_.isUndefined(args))
+            args = {};
         args = _.clone(args);
         if (!_.has(args, 'success'))
             args.success = function () {};
