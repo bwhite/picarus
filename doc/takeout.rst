@@ -53,7 +53,8 @@ An example of all of the paths, libraries, and command line arguments can be fou
 
 Building
 +++++++++
-* Use cmake to create a directory (e.g., /build).  Go into build, open picarus.vcxproj.
+* Use cmake to create a directory (e.g., /build) by pointed it's source input at the inner picarus_takeout folder (has the CMakeLists.txt file).
+* Go into build, open picarus.vcxproj.
 * Change to release mode.  In the solution explorer, right click on picarus, go to properties.
 * In VC++ Directories/Include Directories add all of the include dirs.
 * For opencv make sure to include every single directory in modules/*/include (lots of copy and pasting)
