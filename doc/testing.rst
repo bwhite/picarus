@@ -25,7 +25,7 @@ Using the Python library, there is a test suite in picarus/tests that exercises 
 
 Web App
 -------------
-Using casper.js (which uses phantom.js a headless webkit) we script several user interactions with the server.  These can be replayed to ensure that they are repeatable and to identify any functional bugs.
+Using casper.js (which uses phantom.js, a headless webkit) we script several user interactions with the server.  These can be replayed to ensure that they are repeatable and to identify any functional bugs.
 
 
 TODOs
