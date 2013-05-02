@@ -233,8 +233,9 @@ Disallow: /'''
 @check_version
 @USERS.auth_login_key(True)
 def auth_email(_auth_user):
+    params = parse_params()
     try:
-        USERS.email_api_key(_auth_user)
+        USERS.email_api_key(_auth_user, ttl=params.get('ttl'))
     except UnknownUser:
         bottle.abort(401)
     return {}
@@ -251,7 +252,7 @@ def auth_yubikey(_auth_user):
         bottle.abort(401)
     if not email or email != _auth_user.email:
         bottle.abort(401)
-    return {'apiKey': _auth_user.create_api_key()}
+    return {'apiKey': _auth_user.create_api_key(ttl=params.get('ttl'))}
 
 
 @bottle.get('/<version:re:[^/]*>/annotate/<task:re:[^/]*>/index.html')

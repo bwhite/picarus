@@ -8,21 +8,21 @@ import redis
 import argparse
 import json
 import logging
+    
 
-
-def email_auth_factory(email_auth_fn='email_auth.js'):
+def email_auth_factory(email_auth_fn='email_auth.js'):        
     try:
         EMAIL = json.load(open(email_auth_fn))  # keys as key, secret, admin, url, name
     except IOError:
         EMAIL = {'name': 'Demo picar.us server'}
 
-    def basic_email_func(email, api_key, login_key=None):
+    def basic_email_func(email, api_key, ttl, login_key=None):
         print('Send the following to: %s' % email)
         if login_key is None:
-            body = '<h2>Email</h2><pre>%s</pre><h2><h2>API Key (Expires in 24 hours)</h2><pre>%s</pre>' % (email, api_key)
+            body = '<h2>Email</h2><pre>%s</pre><h2><h2>API Key (Expires in %d seconds)</h2><pre>%s</pre>' % (email, ttl, api_key)
             subject = '[%s] - API Key' % EMAIL['name']
         else:
-            body = '<h2>Email</h2><pre>%s</pre><h2>Login Key</h2><pre>%s</pre><h2>API Key (Expires in 24 hours)</h2><pre>%s</pre>' % (email, login_key, api_key)
+            body = '<h2>Email</h2><pre>%s</pre><h2>Login Key</h2><pre>%s</pre><h2>API Key (Expires in %d seconds)</h2><pre>%s</pre>' % (email, login_key, ttl, api_key)
             subject = '[%s] - Login/API Key' % EMAIL['name']
         print('Subject\n')
         print(subject)
@@ -35,13 +35,13 @@ def email_auth_factory(email_auth_fn='email_auth.js'):
 
     import boto
 
-    def email_func(email, api_key, login_key=None):
+    def email_func(email, api_key, ttl, login_key=None):
         conn = boto.connect_ses(EMAIL['key'], EMAIL['secret'])
         if login_key is None:
-            body = '<h2>Email</h2><pre>%s</pre><h2><h2>API Key (Expires in 24 hours)</h2><pre>%s</pre>' % (email, api_key)
+            body = '<h2>Email</h2><pre>%s</pre><h2><h2>API Key (Expires in %d seconds)</h2><pre>%s</pre>' % (email, ttl, api_key)
             subject = '[%s] - API Key' % EMAIL['name']
         else:
-            body = '<h2>Email</h2><pre>%s</pre><h2>Login Key</h2><pre>%s</pre><h2>API Key (Expires in 24 hours)</h2><pre>%s</pre>' % (email, login_key, api_key)
+            body = '<h2>Email</h2><pre>%s</pre><h2>Login Key</h2><pre>%s</pre><h2>API Key (Expires in %d seconds)</h2><pre>%s</pre>' % (email, login_key, ttl, api_key)
             subject = '[%s] - Login/API Key' % EMAIL['name']
         return conn.send_email(source=EMAIL['admin'], subject=subject,
                                body=body, to_addresses=email, format='html')
@@ -114,7 +114,10 @@ class User(object):
     def hset(self, key, val):
         return self._user_db.hset(self._user_prefix + self.email, key, val)
 
-    def create_api_key(self, ttl=86400):
+    def create_api_key(self, ttl=None):
+        if ttl is None:
+            ttl = 86400
+        ttl = max(1, min(int(ttl), 604800))  # 1sec <= x <= 1week
         key = self._key_gen()
         k = self._api_key_prefix + self.email
         cur_time = time.time()
@@ -239,14 +242,18 @@ class Users(object):
             bottle.abort(401)
         return user
 
-    def email_api_key(self, user):
+    def email_api_key(self, user, ttl=None):
+        if ttl is None:
+            ttl = 86400
         # Can only send one every hour
         if time.time() - user.last_email() >= 3600:
             user.set_last_email()
-            self.email_func(user.email, user.create_api_key())
+            self.email_func(user.email, user.create_api_key(ttl=ttl), ttl)
 
-    def email_login_api_key(self, user):
-        self.email_func(user.email, user.create_api_key(), user.create_login_key())
+    def email_login_api_key(self, user, ttl=None):
+        if ttl is None:
+            ttl = 86400
+        self.email_func(user.email, user.create_api_key(ttl=ttl), ttl, user.create_login_key())
 
     def auth_api_key(self, private=False):
         def inner(func):
