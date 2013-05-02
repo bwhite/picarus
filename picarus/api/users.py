@@ -312,9 +312,9 @@ def main():
         for x in user._tables:
             print('%s: %r' % (x, user.prefixes()))
 
-    def _auth(args, users):
+    def _api_key(args, users):
         user = users.get_user(args.email)
-        print user.create_auth(args.ttl)
+        print user.create_api_key(args.ttl)
 
     def _email_login_api(args, users):
         user = users.get_user(args.email)
@@ -358,10 +358,10 @@ def main():
     subparser.add_argument('email', help='email')
     subparser.set_defaults(func=_email_login_api)
 
-    subparser = subparsers.add_parser('auth', help='Create an auth key for a user')
+    subparser = subparsers.add_parser('api_key', help='Create an api_key key for a user')
     subparser.add_argument('email', help='email')
     subparser.add_argument('ttl', help='Time to live (sec)')
-    subparser.set_defaults(func=_auth)
+    subparser.set_defaults(func=_api_key)
 
     subparser = subparsers.add_parser('add', help='Add users')
     subparser.add_argument('emails', nargs='+', help='emails')
