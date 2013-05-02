@@ -654,7 +654,7 @@ function app_main() {
     new (Backbone.Router.extend({
         routes: _.object(_.map(all_view, function (val) {
             return [val, val];
-        }).concat([['*path', 'data/user']]))
+        }).concat([['*path', 'models/list']]))
     }));
     
     //Attach Backbone Views to existing HTML elements
