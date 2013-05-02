@@ -310,7 +310,7 @@ def main():
     def _list_user_prefix(args, users):
         user = users.get_user(args.email)
         for x in user._tables:
-            print('%s: %r' % (x, user.prefixes()))
+            print('%s: %r' % (x, user.prefixes(x)))
 
     def _api_key(args, users):
         user = users.get_user(args.email)
