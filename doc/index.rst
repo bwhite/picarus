@@ -29,4 +29,5 @@ Contents
     install
     admin
     development
+    testing
     history
