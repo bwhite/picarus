@@ -648,7 +648,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 except KeyError:
                     pass
                 return {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name=class_name, query=query, **p)}
-            elif action in ('io/annotate/image/query', 'io/annotate/image/entity', 'io/annotate/image/query_batch'):
+            elif action in ('io/annotate/image/query', 'io/annotate/image/entity', 'io/annotate/image/class', 'io/annotate/image/query_batch'):
                 self._slice_validate(start_row, stop_row, 'r')
                 # We never need to decode these, they just need to be
                 # random strings that can be in a url
@@ -667,6 +667,20 @@ class ImagesHBaseTable(DataHBaseTable):
                     data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.b64encode(start_row), base64.b64encode(stop_row), base64.b64encode(image_column))
                     p['type'] = 'image_query'
                     p['query'] = query
+                elif action == 'io/annotate/image/class':
+                    entity_column = base64.b64decode(params['entityColumn'])
+                    assert entity_column.startswith('meta:')
+                    data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (base64.b64encode(start_row), base64.b64encode(stop_row),
+                                                                                       base64.b64encode(entity_column), base64.b64encode(image_column))
+                    p['type'] = 'image_class'
+                    try:
+                        p['class_descriptions'] = params['classDescriptions']
+                    except KeyError:
+                        pass
+                    try:
+                        p['class_thumbnails'] = params['classThumbnails']
+                    except KeyError:
+                        pass
                 elif action == 'io/annotate/image/query_batch':
                     query = params['query']
                     data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.b64encode(start_row), base64.b64encode(stop_row), base64.b64encode(image_column))
