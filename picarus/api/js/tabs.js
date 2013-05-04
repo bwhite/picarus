@@ -522,6 +522,9 @@ function render_annotate_entity() {
         PICARUS.postSlice('images', startRow, stopRow, {success: success, data: {action: 'io/annotate/image/entity', imageColumn: imageColumn, entityColumn: entityColumn, instructions: $('#instructions').val(), numTasks: numTasks, mode: "amt"}});
     });
 }
+function render_workflow_classifier() {
+
+}
 function render_visualize_thumbnails() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
