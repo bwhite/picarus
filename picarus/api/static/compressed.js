@@ -535,7 +535,7 @@ function render_data_projects() {
     }};
     new RowsView({collection: PROJECTS, el: $('#prefixes'), extraColumns: [tableColumn], deleteValues: true});
 }
-function render_crawl_flickr() {
+function render_data_flickr() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();

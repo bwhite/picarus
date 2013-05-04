@@ -1,4 +1,4 @@
-function render_crawl_flickr() {
+function render_data_flickr() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
