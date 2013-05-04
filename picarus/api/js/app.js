@@ -331,6 +331,88 @@ function slices_selector() {
     clearButton.click(clear);
 }
 
+function model_create_selector($slices_select, $params, model_kind, name) {
+    model = PARAMETERS.filter(function (x) {
+        if (x.escape('kind') == model_kind && x.escape('name') == name)
+            return true;
+    })[0];
+
+    function add_param_selections(params, param_prefix) {
+        _.each(params, function (value, key) {
+            var cur_el;
+            if (value.type == 'enum') {
+                var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
+                cur_el = $('<select>').attr('name', param_prefix + key).html(Mustache.render(select_template, {models: value.values}));
+            } else if (value.type == 'int') {
+                // TODO: Client-side data validation
+                cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
+            } else if (value.type == 'float') {
+                // TODO: Client-side data validation
+                cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
+            } else if (value.type == 'int_list') {
+                // Create as many input boxes as the min # of boxes
+                cur_el = $('<input>').attr('type', 'text').addClass('input-medium').val(value.min_size);
+                var box_func = function () {
+                    $("[name^=" + param_prefix + key +  "]").remove();
+                    _.each(_.range(Number(cur_el.val())), function (x) {
+                        var cur_el_num = $('<input>').attr('name', param_prefix + key + ':' + x).attr('type', 'text').addClass('input-mini');
+                        $params.append(cur_el_num);
+                        add_hint(cur_el_num, key + ':' + x);
+                    });
+                }
+                box_func();
+                cur_el.change(box_func);
+            } else if (value.type == 'str') {
+                // TODO: Client-side data validation
+                cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
+            }
+            if (typeof cur_el !== 'undefined') {
+                $params.append(cur_el);
+                add_hint(cur_el, key);
+            }
+        });
+    }
+    add_param_selections(JSON.parse(model.get('params')), 'param-');
+    if (model.escape('data') === 'slices') {
+        $slices_select.append(document.getElementById('bpl_slices_select').innerHTML);
+        slices_selector();
+    }
+    var inputs;
+    if (model.escape('type') == 'model')
+        inputs = [model.escape('input_type')];
+    else
+        inputs = JSON.parse(model.get('input_types'));
+    _.each(inputs, function (value) {
+        var cur_el;
+        var cur_id = _.uniqueId('model_select_');          
+        if (value === 'raw_image') {
+            $params.append($('<input>').attr('name', 'input-' + value).attr('type', 'hidden').val('data:image'));
+        } else if (value === 'meta') {
+            var cur_id = _.uniqueId('model_select_');
+            var el = $('<input>').attr('id', cur_id).attr('name', 'input-' +  value).attr('type', 'text').addClass('input-medium');
+            $params.append(el);
+            add_hint(el, 'Metadata column (e.g., meta:class)');
+        } else {
+            $params.append($('<select>').attr('id', cur_id).attr('name', 'input-' + value).addClass('input-medium'));
+            model_dropdown({modelFilter: function (x) {return x.escape('meta:output_type') === value},
+                            change: function() {},
+                            el: $('#' + cur_id)});
+        }
+    });
+}
+
+function model_create_selector_get($params) {
+    return _.object($params.find(':input[name]').map(function () {
+        var k = $(this).attr('name');
+        var v = $(this).val();
+        if (_.isUndefined(k))
+            return;
+        if (k.slice(0, 5) === 'input' && k != 'input-meta' && k != 'input-raw_image')
+            return [[k, decode_id(v)]];
+        return [[k, v]];
+    }));
+}
+
 function prefixes_selector() {
     var prefixDrop = $('#slicesSelectorPrefixDrop');
     var addButton = $('#slicesSelectorAddButton'), clearButton = $('#slicesSelectorClearButton'), slicesText = $('#slicesSelectorSlices');
