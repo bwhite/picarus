@@ -44,9 +44,9 @@ function render_workflow_classifier() {
                 return _.contains(['svmlinear', 'svmkernel'], x.get('name'));
             });
             var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};" // text is escaped already
-            $('#preprocess_select').html(Mustache.render(select_template, {models: preprocessors.pluck('name')}));
-            $('#feature_select').html(Mustache.render(select_template, {models: features.pluck('name')}));
-            $('#classifier_select').html(Mustache.render(select_template, {models: classifiers.pluck('name')}));
+            $('#preprocess_select').html(Mustache.render(select_template, {models: _.pluck(preprocessors, 'name')}));
+            $('#feature_select').html(Mustache.render(select_template, {models: _.pluck(features, 'name')}));
+            $('#classifier_select').html(Mustache.render(select_template, {models: _.pluck(classifiers, 'name')}));
             slices_selector();
             renderPreprocessor();
             renderFeature();
