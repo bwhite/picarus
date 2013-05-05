@@ -1,7 +1,10 @@
 Web Application
 ===============
-Picarus has a full REST api from which client applications can be built.  Within the project, there is a web app that tracks the REST api and attempts to expose all of Picarus's functionality. It is intended to simplify new functionality by standardizing commonly used widgets, models, authentication, etc.  The web application consists of an authorization modal that is displayed when the page is loaded, a navigation bar with project selection (projects filter models/data shown), a variety of tabs that are accessed using the navigation bar, and a series of reusable models/widgets for the tabs.
+Picarus has a full REST api from which client applications can be built.  Within the project, there is a web app that tracks the REST api and attempts to expose all of Picarus's functionality. It is intended to simplify new functionality by standardizing commonly used widgets, models, authentication, etc.  The web application consists of an authorization modal that is displayed when the page is loaded, a navigation bar with project selection (projects filter models/data shown), a variety of tabs that are accessed using the navigation bar, and a series of reusable models/widgets for the tabs.  The application is a single-page that is dynamically updated using javscript (specifically using `backbone.js <http://backbonejs.org/>`_) to allow the user to easily move between tabs without communicating with the server unnecessarily.
 
+Libraries
+---------
+The web app is build using `backbone.js <http://backbonejs.org/>`_, `underscore.js <http://underscorejs.org/>`_, `jQuery <http://jquery.com>`_, and `Bootstrap <http://twitter.github.io/bootstrap/>`_.  All Picarus REST API calls are made with the library in /api/js/picarus.js.
 
 Code Layout
 -----------
@@ -12,8 +15,6 @@ Each tab has a .js and .html file in the api/tabs directory named after the majo
     // Major: data Minor: flickr
     function render_data_flickr() {
     }
-
-
 
 Inside each .html file there should be a script tag with an id of the form "tpl_major_minor", this is put into the DOM, replacing what is inside div with id "container".
 
