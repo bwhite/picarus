@@ -989,9 +989,22 @@ function render_annotate_entity() {
     });
 }
 function render_workflow_classifier() {
-    model_create_selector($('#slices_select'), $('#params_preprocessor'), 'image_preprocessor', 'picarus.ImagePreprocessor');
-    model_create_selector($('#slices_select'), $('#params_feature'), 'feature', 'bovw');
-    model_create_selector($('#slices_select'), $('#params_classifier'), 'classifier', 'svmkernel');
+    var AppView = Backbone.View.extend({
+        initialize: function() {
+            _.bindAll(this, 'render');
+            this.collection.bind('sync', this.render);
+            this.render();
+        },
+        render: function() {
+            $('#params_preprocessor').html('');
+            $('#params_feature').html('');
+            $('#params_classifier').html('');
+            model_create_selector($('#slices_select'), $('#params_preprocessor'), 'image_preprocessor', 'picarus.ImagePreprocessor');
+            model_create_selector($('#slices_select'), $('#params_feature'), 'feature', 'bovw');
+            model_create_selector($('#slices_select'), $('#params_classifier'), 'classifier', 'svmkernel');
+        }
+    });
+    new AppView({collection: PARAMETERS, el: $('#params')});
 }
 function render_visualize_thumbnails() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
@@ -3607,7 +3620,8 @@ function model_create_selector($slices_select, $params, model_kind, name) {
         if (x.escape('kind') == model_kind && x.escape('name') == name)
             return true;
     })[0];
-
+    if (_.isUndefined(model))
+        return;
     function add_param_selections(params, param_prefix) {
         _.each(params, function (value, key) {
             var cur_el;

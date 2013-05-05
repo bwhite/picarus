@@ -336,7 +336,8 @@ function model_create_selector($slices_select, $params, model_kind, name) {
         if (x.escape('kind') == model_kind && x.escape('name') == name)
             return true;
     })[0];
-
+    if (_.isUndefined(model))
+        return;
     function add_param_selections(params, param_prefix) {
         _.each(params, function (value, key) {
             var cur_el;
