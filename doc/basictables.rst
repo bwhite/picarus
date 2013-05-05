@@ -1,20 +1,20 @@
 Basic Tables
 ============
-Tables that are a small constant size are stored in memory on the REST servers.
+Tables that are a small constant size are stored in memory on the REST servers.  For consistency they have the same interface as other Picarus tables.
 
 Parameters
 -----------
 
 Row
 ^^^
-Corresponds to a model/factory that can be instantiated using POST /data/models.  
+Corresponds to a model/factory that can be instantiated using POST /data/models.
 
 Permissions
 ^^^^^^^^^^^
 Users can read all columns but not write to any.
 
 Columns
-^^^^^^^^^^^^^^^^
+^^^^^^^
 
 +--------------+------------------------------------------------------------------------------------------------------+
 | Column       | Description                                                                                          |
