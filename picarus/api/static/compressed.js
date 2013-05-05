@@ -3662,8 +3662,10 @@ function model_create_selector($slicesSelect, $params, modelKind, name, hideInpu
     }
     add_param_selections(JSON.parse(model.get('params')), 'param-');
     if (model.escape('data') === 'slices') {
-        $slicesSelect.append(document.getElementById('bpl_slices_select').innerHTML);
-        slices_selector();
+        if (!hideInputs) {
+            $slicesSelect.append(document.getElementById('bpl_slices_select').innerHTML);
+            slices_selector();
+        }
     }
     if (!hideInputs) {
         var inputs;
