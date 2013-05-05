@@ -157,7 +157,6 @@ def data_row(_auth_user, table_name, row):
     if method == 'GET':
         return table.get_row(row, parse_columns())
     elif method == 'PATCH':
-        print_request()
         return table.patch_row(row, *parse_params_files())
     elif method == 'POST':
         return table.post_row(row, *parse_params_files())
