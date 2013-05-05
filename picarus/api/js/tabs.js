@@ -530,12 +530,15 @@ function render_workflow_classifier() {
             this.render();
         },
         render: function() {
+            $('#slices_select').html('');
+            $('slices_select').append(document.getElementById('bpl_slices_select').innerHTML);
+            slices_selector();
             $('#params_preprocessor').html('');
             $('#params_feature').html('');
             $('#params_classifier').html('');
-            model_create_selector($('#slices_select'), $('#params_preprocessor'), 'image_preprocessor', 'picarus.ImagePreprocessor');
-            model_create_selector($('#slices_select'), $('#params_feature'), 'feature', 'bovw');
-            model_create_selector($('#slices_select'), $('#params_classifier'), 'classifier', 'svmkernel');
+            model_create_selector($('#slices_select'), $('#params_preprocessor'), 'image_preprocessor', 'picarus.ImagePreprocessor', true);
+            model_create_selector($('#slices_select'), $('#params_feature'), 'feature', 'bovw', true);
+            model_create_selector($('#slices_select'), $('#params_classifier'), 'classifier', 'svmkernel', true);
         }
     });
     new AppView({collection: PARAMETERS, el: $('#params')});
