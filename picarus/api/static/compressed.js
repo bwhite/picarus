@@ -1039,6 +1039,7 @@ function render_workflow_classifier() {
         }
     });
     new AppView({collection: PARAMETERS, el: $('#params')});
+    alert('This tab is still being developed, it is currently non-functional')
 }
 function render_visualize_thumbnails() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
