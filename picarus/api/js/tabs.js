@@ -532,7 +532,7 @@ function render_workflow_classifier() {
         events: {'change #preprocess_select': 'renderPreprocessor',
                  'change #feature_select': 'renderFeature',
                  'change #classifier_select': 'renderClassifier'},
-        renderPreprocessor: function {
+        renderPreprocessor: function () {
             $('#params_preprocessor').html('');
             var name = $('#preprocess_select').val();
             if (_.isUndefined(name))
