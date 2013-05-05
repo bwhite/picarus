@@ -7,7 +7,7 @@ function render_workflow_classifier() {
         },
         render: function() {
             $('#slices_select').html('');
-            $('slices_select').append(document.getElementById('bpl_slices_select').innerHTML);
+            $('#slices_select').append(document.getElementById('bpl_slices_select').innerHTML);
             slices_selector();
             $('#params_preprocessor').html('');
             $('#params_feature').html('');
