@@ -331,9 +331,9 @@ function slices_selector() {
     clearButton.click(clear);
 }
 
-function model_create_selector($slices_select, $params, model_kind, name) {
+function model_create_selector($slicesSelect, $params, modelKind, name, hideInputs) {
     model = PARAMETERS.filter(function (x) {
-        if (x.escape('kind') == model_kind && x.escape('name') == name)
+        if (x.escape('kind') == modelKind && x.escape('name') == name)
             return true;
     })[0];
     if (_.isUndefined(model))
@@ -375,31 +375,33 @@ function model_create_selector($slices_select, $params, model_kind, name) {
     }
     add_param_selections(JSON.parse(model.get('params')), 'param-');
     if (model.escape('data') === 'slices') {
-        $slices_select.append(document.getElementById('bpl_slices_select').innerHTML);
+        $slicesSelect.append(document.getElementById('bpl_slices_select').innerHTML);
         slices_selector();
     }
-    var inputs;
-    if (model.escape('type') == 'model')
-        inputs = [model.escape('input_type')];
-    else
-        inputs = JSON.parse(model.get('input_types'));
-    _.each(inputs, function (value) {
-        var cur_el;
-        var cur_id = _.uniqueId('model_select_');          
-        if (value === 'raw_image') {
-            $params.append($('<input>').attr('name', 'input-' + value).attr('type', 'hidden').val('data:image'));
-        } else if (value === 'meta') {
-            var cur_id = _.uniqueId('model_select_');
-            var el = $('<input>').attr('id', cur_id).attr('name', 'input-' +  value).attr('type', 'text').addClass('input-medium');
-            $params.append(el);
-            add_hint(el, 'Metadata column (e.g., meta:class)');
-        } else {
-            $params.append($('<select>').attr('id', cur_id).attr('name', 'input-' + value).addClass('input-medium'));
-            model_dropdown({modelFilter: function (x) {return x.escape('meta:output_type') === value},
-                            change: function() {},
-                            el: $('#' + cur_id)});
-        }
-    });
+    if (!hideInputs) {
+        var inputs;
+        if (model.escape('type') == 'model')
+            inputs = [model.escape('input_type')];
+        else
+            inputs = JSON.parse(model.get('input_types'));
+        _.each(inputs, function (value) {
+            var cur_el;
+            var cur_id = _.uniqueId('model_select_');          
+            if (value === 'raw_image') {
+                $params.append($('<input>').attr('name', 'input-' + value).attr('type', 'hidden').val('data:image'));
+            } else if (value === 'meta') {
+                var cur_id = _.uniqueId('model_select_');
+                var el = $('<input>').attr('id', cur_id).attr('name', 'input-' +  value).attr('type', 'text').addClass('input-medium');
+                $params.append(el);
+                add_hint(el, 'Metadata column (e.g., meta:class)');
+            } else {
+                $params.append($('<select>').attr('id', cur_id).attr('name', 'input-' + value).addClass('input-medium'));
+                model_dropdown({modelFilter: function (x) {return x.escape('meta:output_type') === value},
+                                change: function() {},
+                                el: $('#' + cur_id)});
+            }
+        });
+    }
 }
 
 function model_create_selector_get($params) {
