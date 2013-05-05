@@ -1,12 +1,25 @@
 Takeout
 =======
+An issue with any complex system/library is that as more features are added, it steepens the learning curve for new users.  The cost of understanding the relevant parts of the system and installing it can become prohibitive.  Moreover, while web applications are a plausible way to bridge language/platform gaps (e.g., perform complex server side processing instead of custom android/iphone implementations) it is an advantage to have the ability to run a system on a variety of platforms.  This was considered during Picarus's development and we decided to write all of the execution-time algorithms (e.g., classifier prediction) in C/C++ so that the models (e.g., classifiers, search indexes, features) used by the system would be as cross-platform as possible.  The reason for specifiying execution-time algorithms is that they are often simple (e.g., for linear classifiers it is a dot product) compared to the training portion (e.g., numerical optimization).  What that means is that the training phase may be tied into the server or depend on Python, but post-training, everything is done in pure C/C++ with BLAS.
 
-Overview
---------
+To simplify installation of just the execution-time algorithms, they are in the Picarus Takeout repo.  All modules in Picarus can be exported using the Takeout link in the web app and then executed on a system with Picarus Takeout installed.  The goal is to make this library have as few required dependencies as possible (e.g., use ifdef's to ignore modules that need dependencies we don't have); however, this is an ongoing process and the most significant dependency is on OpenCV, primarily for IO, color conversion, and resizing which could be replicated in the takeout tree without depending on the entire library.
 
+https://github.com/bwhite/picarus_takeout
+
+
+Linux (ubuntu)
+---------------
+- Build OpenCV (latest version) from source
+- Get msgpack (apt-get install libmsgpack-dev)
+- Get blas (apt-get install libatlas3gf-base)
+- Get fftw3 (apt-get install libfftw3-dev)
+- Get cmake (apt-get install cmake)
+- cmake picarus_takeout
+- make
 
 Windows
 --------
+Below is a guide to installing Picarus Takeout on Windows.
 
 CMake
 +++++
