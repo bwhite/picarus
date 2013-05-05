@@ -572,9 +572,9 @@ function render_workflow_classifier() {
             $('#feature_select').html(Mustache.render(select_template, {models: _.pluck(features, 'name')}));
             $('#classifier_select').html(Mustache.render(select_template, {models: _.pluck(classifiers, 'name')}));
             slices_selector();
-            renderPreprocessor();
-            renderFeature();
-            renderClassifier();
+            this.renderPreprocessor();
+            this.renderFeature();
+            this.renderClassifier();
         }
     });
     new AppView({collection: PARAMETERS, el: $('#params')});
