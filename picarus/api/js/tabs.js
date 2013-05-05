@@ -559,7 +559,7 @@ function render_workflow_classifier() {
             // NOTE(brandyn): Factory parameters needs more specification of output_type
             // as we can't do this automatically without it, for now it is hardcoded
             var names = PARAMETERS.pluck('name');
-            var preprocessors = _.intersection(names, ['preprocessor']);
+            var preprocessors = _.intersection(names, ['picarus.ImagePreprocessor']);
             var features = _.intersection(names, ['bovw', 'picarus.GISTImageFeature', 'picarus.HistogramImageFeature']);
             var classifiers = _.intersection(names, ['svmlinear', 'svmkernel']);
             var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};" // text is escaped already
