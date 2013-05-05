@@ -537,21 +537,21 @@ function render_workflow_classifier() {
             var name = $('#preprocess_select').val();
             if (_.isUndefined(name))
                 return;
-            model_create_selector($('#slices_select'), $('#params_preprocessor'), 'image_preprocessor', decode_id(name), true);
+            model_create_selector($('#slices_select'), $('#params_preprocessor'), 'image_preprocessor', name, true);
         },
         renderFeature: function () {
             $('#params_feature').html('');
             var name = $('#feature_select').val();
             if (_.isUndefined(name))
                 return;
-            model_create_selector($('#slices_select'), $('#params_feature'), 'feature', decode_id(name), true);
+            model_create_selector($('#slices_select'), $('#params_feature'), 'feature', name, true);
         },
         renderClassifier: function () {
             $('#params_classifier').html('');
             var name = $('#classifier_select').val();
             if (_.isUndefined(name))
                 return;
-            model_create_selector($('#slices_select'), $('#params_classifier'), 'classifier', decode_id(name), true);
+            model_create_selector($('#slices_select'), $('#params_classifier'), 'classifier', name, true);
         },
         render: function() {
             $('#slices_select').html('');
@@ -567,10 +567,10 @@ function render_workflow_classifier() {
             var classifiers = PARAMETERS.filter(function (x) {
                 return _.contains(['svmlinear', 'svmkernel'], x.get('name'));
             });
-            var select_template = "{{#models}}<option value='{{row}}'>{{{text}}}</option>{{/models}};" // text is escaped already
-            $('#preprocess_select').html(Mustache.render(select_template, {models: _.map(encode_id, preprocessors.pluck('name'))}));
-            $('#feature_select').html(Mustache.render(select_template, {models: _.map(encode_id, features.pluck('name'))}));
-            $('#classifier_select').html(Mustache.render(select_template, {models: _.map(encode_id, classifiers.pluck('name'))}));
+            var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};" // text is escaped already
+            $('#preprocess_select').html(Mustache.render(select_template, {models: preprocessors.pluck('name')}));
+            $('#feature_select').html(Mustache.render(select_template, {models: features.pluck('name')}));
+            $('#classifier_select').html(Mustache.render(select_template, {models: classifiers.pluck('name')}));
             slices_selector();
             renderPreprocessor();
             renderFeature();
