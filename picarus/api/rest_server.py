@@ -64,7 +64,6 @@ if __name__ == "__main__":
     parser.add_argument('--yubikey_redis_db', type=int, help='Redis DB', default=1)
     parser.add_argument('--annotations_redis_host', help='Annotations Host', default='localhost')
     parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
-    parser.add_argument('--annotations_redis_db', type=int, help='Annotations DB', default=2)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--port', default='80', type=int)
     parser.add_argument('--thrift_server', default='localhost')
@@ -76,7 +75,7 @@ if __name__ == "__main__":
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     USERS = Users(ARGS.users_redis_host, ARGS.users_redis_port, ARGS.users_redis_db)
     YUBIKEY = Yubikey(ARGS.yubikey_redis_host, ARGS.yubikey_redis_port, ARGS.yubikey_redis_db)
-    ANNOTATORS = annotators.Annotators(ARGS.annotations_redis_host, ARGS.annotations_redis_port, ARGS.annotations_redis_db)
+    ANNOTATORS = annotators.Annotators(ARGS.annotations_redis_host, ARGS.annotations_redis_port)
     SITE = load_site()
     # Set necessary globals in tables module
     tables.VERSION = VERSION = 'a1'
