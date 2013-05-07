@@ -656,22 +656,12 @@ class ImagesHBaseTable(DataHBaseTable):
                 task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
                 p = {}
                 image_column = base64.b64decode(params['imageColumn'])
-                if action == 'io/annotate/image/entity':
+                ub64 = base64.urlsafe_b64encode
+                if action == 'io/annotate/image/class':
                     entity_column = base64.b64decode(params['entityColumn'])
                     assert entity_column.startswith('meta:')
-                    data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (base64.b64encode(start_row), base64.b64encode(stop_row),
-                                                                                       base64.b64encode(entity_column), base64.b64encode(image_column))
-                    p['type'] = 'image_entity'
-                elif action == 'io/annotate/image/query':
-                    query = params['query']
-                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.b64encode(start_row), base64.b64encode(stop_row), base64.b64encode(image_column))
-                    p['type'] = 'image_query'
-                    p['query'] = query
-                elif action == 'io/annotate/image/class':
-                    entity_column = base64.b64decode(params['entityColumn'])
-                    assert entity_column.startswith('meta:')
-                    data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (base64.b64encode(start_row), base64.b64encode(stop_row),
-                                                                                       base64.b64encode(entity_column), base64.b64encode(image_column))
+                    data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (ub64(start_row), ub64(stop_row),
+                                                                                       ub64(entity_column), ub64(image_column))
                     p['type'] = 'image_class'
                     try:
                         p['class_descriptions'] = params['classDescriptions']
@@ -681,11 +671,6 @@ class ImagesHBaseTable(DataHBaseTable):
                         p['class_thumbnails'] = params['classThumbnails']
                     except KeyError:
                         pass
-                elif action == 'io/annotate/image/query_batch':
-                    query = params['query']
-                    data = 'hbase://localhost:9090/images/%s/%s?image=%s' % (base64.b64encode(start_row), base64.b64encode(stop_row), base64.b64encode(image_column))
-                    p['type'] = 'image_query_batch'
-                    p['query'] = query
                 else:
                     bottle.abort(400)
                 if 'instructions' in params:

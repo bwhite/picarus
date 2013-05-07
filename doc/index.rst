@@ -25,6 +25,7 @@ Contents
     api
     app
     takeout
+    annotation
     examples
     install
     admin
