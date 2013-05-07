@@ -11,15 +11,15 @@ function render_visualize_annotations_loaded() {
         });
         results.each(function (x) {
             // TODO: Fix this encoding mismatch
-            var i = x.escape('user_id');
-            if (_.has(users_filtered, i) && (!onlyAnnotated || x.escape('end_time'))) {
+            var i = x.escape('userId');
+            if (_.has(users_filtered, i) && (!onlyAnnotated || x.escape('endTime'))) {
                 users_filtered[i].push(x);
             }
         });
         _.each(users_filtered, function (x) {
             x.sort(function (a, b) {
-                a = Number(a.escape('start_time'));
-                b = Number(b.escape('start_time'));
+                a = Number(a.escape('startTime'));
+                b = Number(b.escape('startTime'));
                 if (a < b)
                     return -1;
                 if (a > b)
@@ -29,87 +29,23 @@ function render_visualize_annotations_loaded() {
         });
         return users_filtered;
     }
-    function accumulate(hist, vals, inc) {
-        _.each(vals, function (x) {
-            if (_.has(hist, x))
-                hist[x] += inc;
-            else
-                hist[x] = inc;
-        });
-    }
-    function score_total(scoresPos, scoresNeg, scoresTotal) {
-        if (_.isUndefined(scoresTotal))
-            scoresTotal = {};
-        _.each(scoresPos, function (y, x) {
-            if (_.has(scoresTotal, x))
-                scoresTotal[x] += y;
-            else
-                scoresTotal[x] = y;
-        });
-        _.each(scoresNeg, function (y, x) {
-            if (_.has(scoresTotal, x))
-                scoresTotal[x] += y;
-            else
-                scoresTotal[x] = y;
-        });
-        return scoresTotal;
-    }
-    function image_batch_score(users, results, unused_class_name, scoreUnselected) {
-        // Only count explicit marks
-        scoresPos = {};
-        scoresNeg = {};
-        scoresTotal = {};
-
-        pick = function (s, l) { return _.map(s, function (x) {return l[x]});}
-
-        results.each(function (x) {
-            d = x.get('user_data');
-            if (_.isUndefined(d))
-                return;
-            d = JSON.parse(d);
-            images = JSON.parse(x.get('images'));
-            accumulate(scoresTotal, images, 0);  // Makes each image show up, even if not annotated
-            if (d.polarity)
-                accumulate(scoresPos, pick(d.selected, images), 1);
-            if (scoreUnselected)
-                accumulate(scoresNeg, pick(d.notSelected, images), 1);
-            else
-                accumulate(scoresNeg, pick(d.selected, images), 1);
-            if (scoreUnselected)
-                accumulate(scoresPos, pick(d.notSelected, images), 1);
-        });
-        _.each(scoresPos, function (y, x) {
-            if (_.has(scoresTotal, x))
-                scoresTotal[x] += y;
-            else
-                scoresTotal[x] = y;
-        });
-        _.each(scoresNeg, function (y, x) {
-            if (_.has(scoresTotal, x))
-                scoresTotal[x] += y;
-            else
-                scoresTotal[x] = y;
-        });
-        //TODO: Verify this
-        return {scoresPos: scoresPos, scoresNeg: scoresNeg, scoresTotal: score_total(scoresPos, scoresNeg, scoresTotal)};
-    }
-    function image_entity_score(users, results) {
+    function image_class_score(users, results) {
         // Only count explicit marks
         var scores = {};
 
         results.each(function (x) {
-            var annotation = x.get('user_data');
+            var annotation = x.get('userData');
             if (_.isUndefined(annotation))
                 return;
             annotation = JSON.parse(annotation);
             var image = x.escape('image');
-            var entity = x.escape('entity');
-            if (!_.has(scores, entity)) {
-                scores[entity] = {scoresPos: {}, scoresNeg: {}, scoresTotal: {}};
+            var cls = x.escape('class');
+            if (!_.has(scores, cls)) {
+                scores[cls] = {scoresPos: {}, scoresNeg: {}, scoresTotal: {}};
             }
-            var scoresPos = scores[entity].scoresPos;
-            var scoresNeg = scores[entity].scoresNeg;
-            var scoresTotal = scores[entity].scoresTotal;
+            var scoresPos = scores[cls].scoresPos;
+            var scoresNeg = scores[cls].scoresNeg;
+            var scoresTotal = scores[cls].scoresTotal;
             if (_.has(scoresTotal, image))
                 scoresTotal[image] += 1;
             else
@@ -130,7 +66,6 @@ function render_visualize_annotations_loaded() {
         return scores;
     }
     function display_annotation_task(task, get_classes, get_scores) {
-        /* TODO: Compute a dropdown list of available classes (new view for results model) */
         results = new PicarusRows([], {'table': 'annotations-results-' + task});
         users = new PicarusRows([], {'table': 'annotations-users-' + task});
         var imageColumn = 'thum:image_150sq';
@@ -172,7 +107,7 @@ function render_visualize_annotations_loaded() {
             annotation_times = {};
             _.each(user_annotations, function (z) {
                 _.each(z, function(x, y) {
-                    var t = Number(x.escape('end_time')) - Number(x.escape('start_time'));
+                    var t = Number(x.escape('endTime')) - Number(x.escape('startTime'));
                     if (_.has(annotation_times, y))
                         annotation_times[y].push(t)
                     else
@@ -264,34 +199,20 @@ function render_visualize_annotations_loaded() {
         }
         function success_annotation(annotation) {
             annotation_type = JSON.parse(annotation['params']).type;
-            // Code is over nested, use partial application to flatten it
-            if (annotation_type == 'image_entity') {
+            if (annotation_type == 'image_class') {
                 get_classes = function (results) {
-                    return _.unique(results.map(function (x, y) {return x.escape('entity')})).sort()
+                    return _.unique(results.map(function (x, y) {return x.escape('class')})).sort()
                 }
-                get_scores = image_entity_score;
-                // TODO: Add function to get scores from results given a class
-            } else if (annotation_type == 'image_query_batch') {
-                
-            } else {
-                
+                get_scores = image_class_score;
             }
             display_annotation_task(task, get_classes, get_scores);
         }
-        // TODO: Add dropdown to select annotator to query
-        // TODO: Histogram of annotation times, annotation time vs annotation iteration (scatter and median), histogram of image annotations
-        // TODO: Abstract functions for getting image annotations based on annotation type
-        // TODO: Filter rows and/or modify column based on annotation
-        // TODO: Add voting rules for neg/pos/unsure
-        // TODO: Add other annotation types
         PICARUS.getRow("annotations", task, {success: success_annotation});
     }
     rows_dropdown(ANNOTATIONS, {el: $('#annotator_select'), text: function (x) {
         var p = JSON.parse(x.get('params'));
-        if (p.type == "image_entity")
+        if (p.type == "image_class")
             return p.type + ' ' + p.num_tasks;
-        if (p.type == "image_query_batch")
-            return p.type + ' ' +  p.query + ' '+ p.num_tasks;
         return p.type;
     }, change: change});
 }

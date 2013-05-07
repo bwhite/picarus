@@ -648,7 +648,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 except KeyError:
                     pass
                 return {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name=class_name, query=query, **p)}
-            elif action in ('io/annotate/image/query', 'io/annotate/image/entity', 'io/annotate/image/class', 'io/annotate/image/query_batch'):
+            elif action in ('io/annotate/image/class'):
                 self._slice_validate(start_row, stop_row, 'r')
                 # We never need to decode these, they just need to be
                 # random strings that can be in a url
@@ -658,10 +658,10 @@ class ImagesHBaseTable(DataHBaseTable):
                 image_column = base64.b64decode(params['imageColumn'])
                 ub64 = base64.urlsafe_b64encode
                 if action == 'io/annotate/image/class':
-                    entity_column = base64.b64decode(params['entityColumn'])
-                    assert entity_column.startswith('meta:')
-                    data = 'hbase://localhost:9090/images/%s/%s?entity=%s&image=%s' % (ub64(start_row), ub64(stop_row),
-                                                                                       ub64(entity_column), ub64(image_column))
+                    class_column = base64.b64decode(params['classColumn'])
+                    assert class_column.startswith('meta:')
+                    data = 'hbase://localhost:9090/images/%s/%s?class=%s&image=%s' % (ub64(start_row), ub64(stop_row),
+                                                                                      ub64(class_column), ub64(image_column))
                     p['type'] = 'image_class'
                     try:
                         p['class_descriptions'] = params['classDescriptions']
@@ -679,15 +679,13 @@ class ImagesHBaseTable(DataHBaseTable):
                 assert 0 < p['num_tasks']
                 assert params['mode'] in ('standalone', 'amt')
                 p['mode'] = params['mode']
-                try:
-                    redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p).split(':')
-                except annotators.CapacityException:
-                    bottle.abort(503)
-                p['setup'] = True
+
+                redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p)
                 p['reset'] = True
                 p['secret'] = secret
                 p['redis_address'] = redis_host
                 p['redis_port'] = int(redis_port)
+                p['task_key'] = task
                 mturk_vision.manager(data=data, **p)
                 return {'task': task}
             else:
