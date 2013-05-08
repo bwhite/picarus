@@ -679,13 +679,12 @@ class ImagesHBaseTable(DataHBaseTable):
                 assert 0 < p['num_tasks']
                 assert params['mode'] in ('standalone', 'amt')
                 p['mode'] = params['mode']
-
+                p['task_key'] = task
                 redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p)
                 p['reset'] = True
                 p['secret'] = secret
                 p['redis_address'] = redis_host
                 p['redis_port'] = int(redis_port)
-                p['task_key'] = task
                 mturk_vision.manager(data=data, **p)
                 return {'task': task}
             else:

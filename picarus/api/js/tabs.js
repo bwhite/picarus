@@ -485,7 +485,7 @@ function render_process_copy() {
 }
 function render_annotate_list() {
     var workerColumn = {header: "Worker", getFormatted: function() {
-        return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.escape('task')});
+        return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.escape('row')});
     }};
     function postRender() {
     }
