@@ -3,9 +3,9 @@ function render_annotate_class() {
     $('#runButton').click(function () {
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
-        var imageColumn = 'thum:image_150sq';
+        var imageColumn = base64.encode('thum:image_150sq');
         var numTasks = Number($('#num_tasks').val());
-        var classColumn = $('#class').val();
+        var classColumn = base64.encode($('#class').val());
         function success(response) {
             ANNOTATIONS.fetch();
             $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
