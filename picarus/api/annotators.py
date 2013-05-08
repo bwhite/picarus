@@ -96,6 +96,9 @@ def main():
     def _info(args, annotators):
         pprint.pprint(_get_all_tasks(annotators))
 
+    def _destroy(args, annotators):
+        annotators.db.flushall()
+
     parser = argparse.ArgumentParser(description='Picarus annotator operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
     parser.add_argument('--redis_port', type=int, help='Redis Port', default=6380)
@@ -103,6 +106,9 @@ def main():
 
     subparser = subparsers.add_parser('info', help='Display info about annotators')
     subparser.set_defaults(func=_info)
+
+    subparser = subparsers.add_parser('destroy', help='Delete everything in the annotation DB')
+    subparser.set_defaults(func=_destroy)
 
     args = parser.parse_args()
     users = Annotators(args.redis_host, args.redis_port, args.redis_db)
