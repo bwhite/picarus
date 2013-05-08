@@ -151,6 +151,7 @@ def data_table(_auth_user, table_name):
 def data_row(_auth_user, table_name, row):
     table = tables.get_table(_auth_user, table_name)
     method = bottle.request.method.upper()
+    print('Row[%s]' % repr(row))
     row = base64.urlsafe_b64decode(row)
     method = bottle.request.method.upper()
     if method == 'GET':
