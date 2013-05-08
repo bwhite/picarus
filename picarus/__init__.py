@@ -101,9 +101,7 @@ class PicarusClient(object):
         return self.decdict(self.get(('data', table, self.encurl(row)), data=self._encode_columns(columns)))
 
     def post_row(self, table, row, data=None):
-        if data and 'model' in data:
-            data['model'] = base64.b64encode(data['model'])
-        return self.decdict(self.post(('data', table, self.encurl(row)), data=data))
+        return self.decdict(self.post(('data', table, self.encurl(row)), data=self.encvalues(data)))
 
     def delete_row(self, table, row):
         return self.delete(('data', table, self.encurl(row)))
@@ -120,9 +118,7 @@ class PicarusClient(object):
         return self._decode_lod(self.get(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=column_data))
 
     def post_slice(self, table, start_row, stop_row, data=None):
-        if data and 'model' in data:
-            data['model'] = base64.b64encode(data['model'])
-        return self.post(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=data)
+        return self.post(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=self.encvalues(data))
 
     def patch_slice(self, table, start_row, stop_row, data=None):
         return self.patch(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=self.encdict(data))
@@ -154,11 +150,13 @@ class PicarusClient(object):
         return base64.urlsafe_b64decode(str(x))
 
     def encdict(self, d):
+        return {self.enc(x): y for x, y in self.encvalues(d).items()}
+
+    def encvalues(self, d):
         if d is None:
             return {}
         out = {}
         for k, v in d.items():
-            k = self.enc(k)
             if isinstance(v, (str, unicode)):
                 if len(v) > 1024 * 8:
                     out[k] = StringIO.StringIO(v)
@@ -172,11 +170,6 @@ class PicarusClient(object):
         if d is None:
             return {}
         return {self.dec(x): self.dec(y) for x, y in d.items()}
-
-    def enckeys(self, d):
-        if d is None:
-            return {}
-        return {self.enc(x): y for x, y in d.items()}
 
     def decvalues(self, d):
         if d is None:

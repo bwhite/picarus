@@ -486,11 +486,14 @@ class ImagesHBaseTable(DataHBaseTable):
         bottle.abort(403)
 
     def post_row(self, row, params, files):
+        if files:
+            bottle.abort(400)
+        params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
         with thrift_lock() as thrift:
             manager = PicarusManager(thrift=thrift)
             print(params)
-            model_key = base64.b64decode(params['model'])
+            model_key = params['model']
             print('ModelKey[%r]' % model_key)
             # TODO: Allow io/ so that we can write back to the image too
             if action == 'i/link':
@@ -515,6 +518,9 @@ class ImagesHBaseTable(DataHBaseTable):
                 bottle.abort(400)
 
     def post_slice(self, start_row, stop_row, params, files):
+        if files:
+            bottle.abort(400)
+        params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
         with thrift_new() as thrift:
             manager = PicarusManager(thrift=thrift)
@@ -528,13 +534,13 @@ class ImagesHBaseTable(DataHBaseTable):
                 return {}
             elif action == 'io/link':
                 self._slice_validate(start_row, stop_row, 'rw')
-                model_key = base64.b64decode(params['model'])
+                model_key = params['model']
                 chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
                 manager.takeout_chain_job([model_link], chain_input, model_key, start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/chain':
                 self._slice_validate(start_row, stop_row, 'rw')
-                model_key = base64.b64decode(params['model'])
+                model_key = params['model']
                 chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
                 manager.takeout_chain_job(list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row)
                 return {}
@@ -603,7 +609,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 return {'columnsRemoved': list(columns_removed), 'columnsKept': list(columns_kept)}
             elif action == 'i/dedupe/identical':
                 self._slice_validate(start_row, stop_row, 'r')
-                col = base64.b64decode(params['column'])
+                col = params['column']
                 features = {}
                 dedupe_feature = lambda x, y: features.setdefault(base64.b64encode(hashlib.md5(y).digest()), []).append(base64.b64encode(x))
                 for cur_row, cur_col in hadoopy_hbase.scanner_row_column(thrift, self.table, column=col,
@@ -655,10 +661,10 @@ class ImagesHBaseTable(DataHBaseTable):
                 secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
                 task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
                 p = {}
-                image_column = base64.b64decode(params['imageColumn'])
+                image_column = params['imageColumn']
                 ub64 = base64.urlsafe_b64encode
                 if action == 'io/annotate/image/class':
-                    class_column = base64.b64decode(params['classColumn'])
+                    class_column = params['classColumn']
                     assert class_column.startswith('meta:')
                     data = 'hbase://localhost:9090/images/%s/%s?class=%s&image=%s' % (ub64(start_row), ub64(stop_row),
                                                                                       ub64(class_column), ub64(image_column))

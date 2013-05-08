@@ -74,11 +74,7 @@ function PicarusClient(args) {
     this.postRow = function (table, row, args) {
         //args: success, fail, data
         args = this._argsDefaults(args);
-        if (!_.isUndefined(args)) {
-            if (_.has(args.data, 'model'))
-                args.data.model = base64.encode(args.data.model);
-        }
-        return this.post(['data', table, encode_id(row)], args.data, this._wrapDecodeDict(args.success), args.fail);
+        return this.post(['data', table, encode_id(row)], this.encvalues(args.data), this._wrapDecodeDict(args.success), args.fail);
     };
     this.deleteRow = function (table, row, args) {
         //args: success, fail
@@ -93,11 +89,7 @@ function PicarusClient(args) {
     this.postSlice = function (table, startRow, stopRow, args) {
         //args: success, fail, data
         args = this._argsDefaults(args);
-        if (!_.isUndefined(args)) {
-            if (_.has(args.data, 'model'))
-                args.data.model = base64.encode(args.data.model);
-        }
-        return this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], args.data, this._wrapParseJSON(args.success), args.fail);
+        return this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], this.encvalues(args.data), this._wrapParseJSON(args.success), args.fail);
     };
 
     this.patchRow = function (table, row, args) {
@@ -106,10 +98,19 @@ function PicarusClient(args) {
         return this.patch(['data', table, encode_id(row)], this.encdict(args.data), this._wrapDecodeValues(args.success), args.fail);
     };
     this.encdict = function (d) {
+        // TODO: Add same logic as the python library for upgrading to file blobs
         return _.object(_.map(d, function (v, k) {
             if (!_.isObject(v)) // NOTE(brandyn): The reason is that files are "object" type
                 v = base64.encode(v);
             return [base64.encode(k), v];
+        }));
+    };
+    this.encvalues = function (d) {
+        // TODO: Add same logic as the python library for upgrading to file blobs
+        return _.object(_.map(d, function (v, k) {
+            if (!_.isObject(v)) // NOTE(brandyn): The reason is that files are "object" type
+                v = base64.encode(v);
+            return [k, v];
         }));
     };
     this.getRow = function (table, row, args) {
