@@ -491,14 +491,14 @@ function render_annotate_list() {
     }
     new RowsView({collection: ANNOTATIONS, el: $('#annotations'), extraColumns: [workerColumn], postRender: postRender, deleteRows: true});
 }
-function render_annotate_entity() {
+function render_annotate_class() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
         var imageColumn = 'thum:image_150sq';
         var numTasks = Number($('#num_tasks').val());
-        var entityColumn = $('#entity').val();
+        var classColumn = $('#class').val();
         function success(response) {
             ANNOTATIONS.fetch();
             $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
