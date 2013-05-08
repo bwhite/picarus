@@ -277,6 +277,7 @@
       <h3>Options</h3>
       <input class="input-small" type="text" placeholder="Class Column" id="class" value="meta:class" hint="Column to get image class from">
       <input class="input-small" type="text" placeholder="Num Tasks" id="num_tasks" value="25" hint="User has to annotate this many times before finishing">
+      <select class="input-small" id="modeSelect"><option value="amt">amt</option><option value="standalone">standalone</option></select>
       <textarea id="instructions" rows="5" hint="Instructions shown to annotator">Determine if the image has or is representative of the class specified below.  A 'class' could be in the image (e.g., object, scene) or a property of the image (e.g., image quality, image source).  Hotkeys are provided to allow you to select and submit results.  If you are unsure then skip.</textarea>
       <%=runButton%>
     </div>
