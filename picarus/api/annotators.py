@@ -111,7 +111,7 @@ def main():
     subparser.set_defaults(func=_destroy)
 
     args = parser.parse_args()
-    users = Annotators(args.redis_host, args.redis_port, args.redis_db)
+    users = Annotators(args.redis_host, args.redis_port)
     args.func(args, users)
 
 if __name__ == '__main__':
