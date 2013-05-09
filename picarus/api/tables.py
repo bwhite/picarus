@@ -307,6 +307,23 @@ class AnnotationsTable(BaseTableSmall):
         ANNOTATORS.delete_task(row, self.owner)
         return {}
 
+    def post_row(self, row, params, files):
+        if files:
+            bottle.abort(400)
+        params = {k: base64.b64decode(v) for k, v in params.items()}
+        action = params['action']
+        manager = ANNOTATORS.get_manager_check(row, self.owner)
+        if action == 'io/sync':
+            manager.sync()
+            return {}
+        elif action == 'io/priority':
+            data_row = params['row']
+            priority = int(params['priority'])
+            manager.row_increment_priority(data_row, priority)
+            return {}
+        else:
+            bottle.abort(400)
+
 
 class AnnotationDataTable(BaseTableSmall):
 
@@ -687,7 +704,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 p['mode'] = params['mode']
                 p['task_key'] = task
                 redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p)
-                p['reset'] = True
+                p['sync'] = True
                 p['secret'] = secret
                 p['redis_address'] = redis_host
                 p['redis_port'] = int(redis_port)

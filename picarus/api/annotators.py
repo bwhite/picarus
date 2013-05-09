@@ -48,12 +48,18 @@ class Annotators(object):
         except KeyError:
             data = self.db.hgetall(task + ':annot')
             p = json.loads(data['params'])
-            p['reset'] = False
+            p['sync'] = False
             p['secret'] = data['_secret']
             p['redis_address'] = self.redis_host
             p['redis_port'] = int(self.redis_port)
             self.cache[task] = mturk_vision.manager(data=data['_data'], **p)
             return self.cache[task]
+
+    def get_manager_check(self, task, owner):
+        self.exists(task)
+        if self.db.hget(task + ':annot', 'owner') != owner:
+            raise UnauthorizedException
+        return self.get_manager(task)
 
     def get_task_secret(self, task, owner):
         self.exists(task)
