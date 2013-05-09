@@ -8,7 +8,7 @@ function render_annotate_list() {
         $('.tasks-sync').click(function (data) {
             var row = decode_id(data.target.getAttribute('row'));
             var model = ANNOTATIONS.get(row);
-            PICARUS.post_row('annotations', row, {'action': 'io/sync'});
+            PICARUS.postRow('annotations', row, {'action': 'io/sync'});
         });
     }
     new RowsView({collection: ANNOTATIONS, el: $('#annotations'), extraColumns: [workerColumn, syncColumn], postRender: postRender, deleteRows: true});
