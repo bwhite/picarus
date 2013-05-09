@@ -70,7 +70,7 @@ class User(object):
         self._login_key_prefix = 'login:'
         self._enabled_col = 'enabled'
         self.key_length = 15
-        self._tables = ('images', 'videos')
+        self._tables = ('images',)
         assert self.key_length % 3 == 0
         assert self.key_length > 0
         if setup:
