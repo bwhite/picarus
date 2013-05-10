@@ -164,22 +164,6 @@ PARAM_SCHEMAS.append({'type': 'factory',
                       'params': {'max_results': {'type': 'int', 'min': 1, 'max': 64}}})
 
 
-#PARAM_SCHEMAS.append({'type': 'factory',
-#                      'name': 'rrmedian',
-#                      'kind': 'hasher',
-#                      'data': 'slices',
-#                      'input_types': ['feature'],
-#                      'params': {'hash_bits': {'type': 'int', 'min': 1, 'max': 513}, 'normalize_features': {'type': 'const', 'value': False}}})
-
-
-# TODO: need to update this, think about what output_type should be
-#PARAM_SCHEMAS.append({'type': 'factory',
-#                      'path': 'linear',
-#                      'kind': 'index',
-#                      'data': 'slices',
-#                      'input_types': ['hash', 'meta'],
-#                      'params': {}})
-
 
 
 PARAM_SCHEMAS_SERVE = {}

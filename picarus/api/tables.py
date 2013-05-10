@@ -654,6 +654,8 @@ class ImagesHBaseTable(DataHBaseTable):
                     bottle.abort(400)  # Either we don't have a default or the user provided an empty key
                 if 'hasGeo' in params:
                     p['has_geo'] = params['hasGeo'] == '1'
+                if 'onePerOwner' in params:
+                    p['one_per_owner'] = params['onePerOwner'] == '1'
                 try:
                     p['min_upload_date'] = int(params['minUploadDate'])
                 except KeyError:

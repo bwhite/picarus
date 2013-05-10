@@ -107,6 +107,12 @@ function render_data_flickr() {
             var minUploadDate = parseInt((new Date().getTime() / 1000 - min_time) * Math.random() + min_time - timeRadius);
             var maxUploadDate = parseInt(timeRadius * 2 + minUploadDate);
             var p = {action: 'o/crawl/flickr', hasGeo: Number($('#demogeo').is(':checked')), query: state.query, minUploadDate: minUploadDate, maxUploadDate: maxUploadDate};
+            var apiKey = $('#demoapikey').val();
+            var apiSecret = $('#demoapisecret').val();
+            if (apiKey && apiSecret) {
+                p.apiKey = apiKey;
+                p.apiSecret = apiSecret;
+            }
             if (state.className.length)
                 p.className = state.className;
             if (latitude && longitude) {
