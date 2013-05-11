@@ -489,6 +489,15 @@ class DataHBaseTable(HBaseTable):
                     thrift.mutateRow(self.table, row, mutations)
         return {}
 
+    def delete_slice(self, start_row, stop_row):
+        self._slice_validate(start_row, stop_row, 'w')
+        # NOTE: This only fetches rows that have a column in data:image (it is a significant optimization)
+        # NOTE: Only parameters allowed, no "files" due to memory restrictions
+        with thrift_lock() as thrift:
+            for row, _ in hadoopy_hbase.scanner(thrift, self.table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()'):
+                thrift.deleteAllRow(self.table, row)
+        return {}
+
 
 class ImagesHBaseTable(DataHBaseTable):
 

@@ -189,6 +189,8 @@ def data_slice(_auth_user, table_name, start_row, stop_row):
         return table.get_slice(start_row, stop_row, parse_columns(), *parse_params_files())
     elif method == 'PATCH':
         return table.patch_slice(start_row, stop_row, *parse_params_files())
+    elif method == 'DELETE':
+        return table.delete_slice(start_row, stop_row)
     elif method == 'POST':
         return table.post_slice(start_row, stop_row, *parse_params_files())
     else:

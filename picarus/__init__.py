@@ -123,6 +123,9 @@ class PicarusClient(object):
     def patch_slice(self, table, start_row, stop_row, data=None):
         return self.patch(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=self.encdict(data))
 
+    def delete_slice(self, table, start_row, stop_row):
+        return self.delete(('slice', table, self.encurl(start_row), self.encurl(stop_row)))
+
     def scanner(self, table, start_row, stop_row, columns=None, data=None):
         if data is None:
             data = {}

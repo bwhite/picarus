@@ -132,6 +132,11 @@ function PicarusClient(args) {
         args = this._argsDefaults(args);
         return this.patch(['slice', table, encode_id(startRow), encode_id(stopRow)], this.encdict(args.data), this._wrapNull(args.success), args.fail);
     };
+    this.deleteSlice = function (table, startRow, stopRow, args) {
+        //args: success, fail, columns, data
+        args = this._argsDefaults(args);
+        return this.del(['slice', table, encode_id(startRow), encode_id(stopRow)], {}, this._wrapNull(args.success), args.fail);
+    };
     this.scanner = function (table, startRow, stopRow, args) {
         // args: success, fail, done, maxRows, maxRowsIter, filter, resume
         args = this._argsDefaults(args);
