@@ -324,7 +324,7 @@ class AnnotationsTable(BaseTableSmall):
         else:
             bottle.abort(400)
 
-    def post_table(self, row, params, files):
+    def post_table(self, params, files):
         if files:
             bottle.abort(400)
         params = {k: base64.b64decode(v) for k, v in params.items()}
