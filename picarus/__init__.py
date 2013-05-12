@@ -160,13 +160,12 @@ class PicarusClient(object):
             return {}
         out = {}
         for k, v in d.items():
-            if isinstance(v, (str, unicode)):
-                if len(v) > 1024 * 8:
-                    out[k] = StringIO.StringIO(v)
-                else:
-                    out[k] = self.enc(v)
+            assert isinstance(v, (str, unicode, int, float))
+            v = str(v)
+            if len(v) > 1024 * 8:
+                out[k] = StringIO.StringIO(v)
             else:
-                out[k] = v
+                out[k] = self.enc(v)
         return out
 
     def decdict(self, d):
