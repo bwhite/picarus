@@ -160,7 +160,8 @@ class PicarusClient(object):
             return {}
         out = {}
         for k, v in d.items():
-            assert isinstance(v, (str, unicode, int, float))
+            if not isinstance(v, (str, unicode, int, float)) and not hasattr(v, 'read'):
+                raise ValueError('Value must be a string/unicode/int/float/file[%r]' % v)
             v = str(v)
             if len(v) > 1024 * 8:
                 out[k] = StringIO.StringIO(v)
