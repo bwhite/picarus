@@ -324,6 +324,57 @@ class AnnotationsTable(BaseTableSmall):
         else:
             bottle.abort(400)
 
+    def post_table(self, row, params, files):
+        if files:
+            bottle.abort(400)
+        params = {k: base64.b64decode(v) for k, v in params.items()}
+        action = params['action']
+        start_stop_rows = parse_slices('slices')
+        if action in ('io/images/class',):
+            data_table = get_table(self._auth_user, action.split('/')[1])
+            for start_row, stop_row in start_stop_rows:
+                data_table._slice_validate(start_row, stop_row, 'r')
+            # We never need to decode these, they just need to be
+            # random strings that can be in a url
+            secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
+            task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
+            p = {}
+            image_column = params['imageColumn']
+            ub64 = base64.urlsafe_b64encode
+            if action == 'io/images/class':
+                class_column = params['classColumn']
+                assert class_column.startswith('meta:')
+                suffix = '/'.join(ub64(x) + '/' + ub64(y) for x, y in start_stop_rows)
+                data = 'hbase://localhost:9090/images/%s?class=%s&image=%s' % (suffix,
+                                                                               ub64(class_column), ub64(image_column))
+                p['type'] = 'image_class'
+                try:
+                    p['class_descriptions'] = params['classDescriptions']
+                except KeyError:
+                    pass
+                try:
+                    p['class_thumbnails'] = params['classThumbnails']
+                except KeyError:
+                    pass
+            else:
+                bottle.abort(400)
+            if 'instructions' in params:
+                p['instructions'] = params['instructions']
+            p['num_tasks'] = int(params['numTasks'])
+            assert 0 < p['num_tasks']
+            assert params['mode'] in ('standalone', 'amt')
+            p['mode'] = params['mode']
+            p['task_key'] = task
+            redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p)
+            p['sync'] = True
+            p['secret'] = secret
+            p['redis_address'] = redis_host
+            p['redis_port'] = int(redis_port)
+            mturk_vision.manager(data=data, **p)
+            return {'task': task}
+        else:
+            bottle.abort(400)
+
 
 class AnnotationDataTable(BaseTableSmall):
 
@@ -682,51 +733,11 @@ class ImagesHBaseTable(DataHBaseTable):
                 except KeyError:
                     pass
                 return {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name=class_name, query=query, **p)}
-            elif action in ('io/annotate/image/class'):
-                self._slice_validate(start_row, stop_row, 'r')
-                # We never need to decode these, they just need to be
-                # random strings that can be in a url
-                secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
-                task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
-                p = {}
-                image_column = params['imageColumn']
-                ub64 = base64.urlsafe_b64encode
-                if action == 'io/annotate/image/class':
-                    class_column = params['classColumn']
-                    assert class_column.startswith('meta:')
-                    data = 'hbase://localhost:9090/images/%s/%s?class=%s&image=%s' % (ub64(start_row), ub64(stop_row),
-                                                                                      ub64(class_column), ub64(image_column))
-                    p['type'] = 'image_class'
-                    try:
-                        p['class_descriptions'] = params['classDescriptions']
-                    except KeyError:
-                        pass
-                    try:
-                        p['class_thumbnails'] = params['classThumbnails']
-                    except KeyError:
-                        pass
-                else:
-                    bottle.abort(400)
-                if 'instructions' in params:
-                    p['instructions'] = params['instructions']
-                p['num_tasks'] = int(params['numTasks'])
-                assert 0 < p['num_tasks']
-                assert params['mode'] in ('standalone', 'amt')
-                p['mode'] = params['mode']
-                p['task_key'] = task
-                redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p)
-                p['sync'] = True
-                p['secret'] = secret
-                p['redis_address'] = redis_host
-                p['redis_port'] = int(redis_port)
-                mturk_vision.manager(data=data, **p)
-                return {'task': task}
             else:
                 bottle.abort(400)
 
 
-def parse_slices():
-    k = base64.b64encode('slices')
+def parse_slices(k):
     if bottle.request.content_type == "application/json":
         out = bottle.request.json[k]
     else:
@@ -786,7 +797,7 @@ class ModelsHBaseTable(HBaseTable):
                 return _create_model_from_params(manager, self.owner, path, params)
             elif path.startswith('factory/'):
                 table = params['table']
-                start_stop_rows = parse_slices()
+                start_stop_rows = parse_slices(base64.b64encode('slices'))
                 data_table = get_table(self._auth_user, table)
                 for start_row, stop_row in start_stop_rows:
                     data_table._slice_validate(start_row, stop_row, 'r')
