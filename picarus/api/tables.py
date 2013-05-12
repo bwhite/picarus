@@ -372,7 +372,7 @@ class AnnotationsTable(BaseTableSmall):
             p['redis_address'] = redis_host
             p['redis_port'] = int(redis_port)
             mturk_vision.manager(data=data, **p)
-            return {'task': task}
+            return {'task': base64.b64encode(task)}
         else:
             bottle.abort(400)
 
