@@ -328,10 +328,10 @@ class AnnotationsTable(BaseTableSmall):
         if files:
             bottle.abort(400)
         params = {k: base64.b64decode(v) for k, v in params.items()}
-        action = params['action']
+        path = params['path']
         start_stop_rows = parse_slices('slices')
-        if action in ('io/images/class',):
-            data_table = get_table(self._auth_user, action.split('/')[1])
+        if path in ('images/class',):
+            data_table = get_table(self._auth_user, path.split('/', 1)[0])
             for start_row, stop_row in start_stop_rows:
                 data_table._slice_validate(start_row, stop_row, 'r')
             # We never need to decode these, they just need to be
@@ -341,7 +341,7 @@ class AnnotationsTable(BaseTableSmall):
             p = {}
             image_column = params['imageColumn']
             ub64 = base64.urlsafe_b64encode
-            if action == 'io/images/class':
+            if path == 'images/class':
                 class_column = params['classColumn']
                 assert class_column.startswith('meta:')
                 suffix = '/'.join(ub64(x) + '/' + ub64(y) for x, y in start_stop_rows)
