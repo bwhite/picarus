@@ -160,6 +160,8 @@ class PicarusClient(object):
             return {}
         out = {}
         for k, v in d.items():
+            if isinstance(v, (list, dict)):
+                v = json.dumps(v, separators=(',', ':'))
             if not isinstance(v, (str, unicode, int, float)) and not hasattr(v, 'read'):
                 raise ValueError('Value must be a string/unicode/int/float/file[%r]' % v)
             v = str(v)
