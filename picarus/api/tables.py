@@ -327,9 +327,9 @@ class AnnotationsTable(BaseTableSmall):
     def post_table(self, params, files):
         if files:
             bottle.abort(400)
-        params = {k: base64.b64decode(v) for k, v in params.items()}
+        params = {base64.b64decode(k): base64.b64decode(v) for k, v in params.items()}
         path = params['path']
-        start_stop_rows = parse_slices('slices')
+        start_stop_rows = parse_slices()
         if path in ('images/class',):
             data_table = get_table(self._auth_user, path.split('/', 1)[0])
             for start_row, stop_row in start_stop_rows:
@@ -737,7 +737,8 @@ class ImagesHBaseTable(DataHBaseTable):
                 bottle.abort(400)
 
 
-def parse_slices(k):
+def parse_slices():
+    k = base64.b64encode('slices')
     if bottle.request.content_type == "application/json":
         out = bottle.request.json[k]
     else:
@@ -797,7 +798,7 @@ class ModelsHBaseTable(HBaseTable):
                 return _create_model_from_params(manager, self.owner, path, params)
             elif path.startswith('factory/'):
                 table = params['table']
-                start_stop_rows = parse_slices(base64.b64encode('slices'))
+                start_stop_rows = parse_slices()
                 data_table = get_table(self._auth_user, table)
                 for start_row, stop_row in start_stop_rows:
                     data_table._slice_validate(start_row, stop_row, 'r')
