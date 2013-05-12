@@ -295,6 +295,7 @@ class AnnotationsTable(BaseTableSmall):
     def __init__(self, _auth_user):
         super(AnnotationsTable, self).__init__()
         self.owner = _auth_user.email
+        self._auth_user = _auth_user
 
     def _get_table(self):
         try:
