@@ -1378,7 +1378,7 @@ function render_visualize_annotations_loaded() {
         // Only count explicit marks
         var scores = {};
 
-        results.each(function (x) {
+        _.each(results, function (x) {
             var annotation = x.get('userData');
             if (_.isUndefined(annotation))
                 return;
