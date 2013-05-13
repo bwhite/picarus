@@ -10,7 +10,6 @@ function render_visualize_annotations_loaded() {
                 users_filtered[x.get('row')] = [];
         });
         results.each(function (x) {
-            // TODO: Fix this encoding mismatch
             var i = x.escape('userId');
             if (_.has(users_filtered, i) && (!onlyAnnotated || x.escape('endTime'))) {
                 users_filtered[i].push(x);
@@ -29,7 +28,7 @@ function render_visualize_annotations_loaded() {
         });
         return users_filtered;
     }
-    function image_class_score(users, results) {
+    function image_class_score(results) {
         // Only count explicit marks
         var scores = {};
 
@@ -38,7 +37,7 @@ function render_visualize_annotations_loaded() {
             if (_.isUndefined(annotation))
                 return;
             annotation = JSON.parse(annotation);
-            var image = x.escape('image');
+            var image = x.get('image');
             var cls = x.escape('class');
             if (!_.has(scores, cls)) {
                 scores[cls] = {scoresPos: {}, scoresNeg: {}, scoresTotal: {}};
@@ -73,15 +72,15 @@ function render_visualize_annotations_loaded() {
         $('#posPct').change(data_change);
         $('#posCnt').change(data_change);
         $('#negCnt').change(data_change);
-        $('#unclicked').change(data_change);
         function data_change() {
-            var unclicked = $('#unclicked').is(':checked')
-            var classes = get_classes(results);
+            user_annotations = collect_users(users, results, true, true);
+            clean_results = _.flatten(_.values(user_annotations), true);
+            var classes = get_classes(clean_results);
             var select_template = "{{#classes}}<option value='{{.}}'>{{.}}</option>{{/classes}};"
             $('#class_select').html(Mustache.render(select_template, {classes: classes}));
             $('#class_select').unbind();
             $('#class_select').change(class_select_change);
-            class_scores = get_scores(users, results, unclicked);
+            class_scores = get_scores(clean_results);
             class_select_change();
             var scores = _.map(class_scores, function (s, class_name) {
                 var out = {pos: 0, neg: 0, total: 0, unique: _.size(s.scoresTotal)};
@@ -103,7 +102,6 @@ function render_visualize_annotations_loaded() {
             var scores_template = "<table><tr><td>Name</td><td>Pos Annot.</td><td>Neg Annot.</td><td>Tot Annot.</td><td>Unique</td></tr>{{#scores}}<tr><td>{{class_name}}</td><td>{{pos}}</td><td>{{neg}}</td><td>{{total}}</td><td>{{unique}}</td></tr>{{/scores}}</table>";
             $('#annotation-stats').html(Mustache.render(scores_template, {scores: scores}));
             // Update user annotation time vs iteration
-            user_annotations = collect_users(users, results, true, true);
             annotation_times = {};
             _.each(user_annotations, function (z) {
                 _.each(z, function(x, y) {
@@ -131,7 +129,6 @@ function render_visualize_annotations_loaded() {
             posPct = Number($('#posPct').val());
             negCnt = Math.max(1, Number($('#negCnt').val()));
             posCnt = Math.max(1, Number($('#posCnt').val()));
-            unclicked = $('#unclicked').is(':checked');
             scores = class_scores[class_name];
             if (_.isUndefined(scores))
                 return;
