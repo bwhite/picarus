@@ -581,7 +581,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 binary_input = thrift.get(self.table, row, chain_input)[0].value  # TODO: Check val
                 model = picarus_takeout.ModelChain(msgpack.dumps([model_link]))
                 bottle.response.headers["Content-type"] = "application/json"
-                return json.dumps({params['model']: base64.b64encode(model.process_binary(binary_input))})
+                return json.dumps({base64.b64encode(params['model']): base64.b64encode(model.process_binary(binary_input))})
             elif action == 'i/chain':
                 self._row_validate(row, 'r')
                 # TODO: Get this directly from model
@@ -591,7 +591,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 model = picarus_takeout.ModelChain(msgpack.dumps(model_chain))
                 bottle.response.headers["Content-type"] = "application/json"
                 v = base64.b64encode(model.process_binary(binary_input))
-                return json.dumps({params['model']: v})
+                return json.dumps({base64.b64encode(params['model']): v})
             else:
                 bottle.abort(400)
 
