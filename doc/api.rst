@@ -184,6 +184,7 @@ The table below contains the data commands for Picarus.  GET/PATCH/DELETE are id
 *  "b64/b64": key/value pairs that are both base64 encoded.
 *  "raw/b64": keys that are plaintext and values that are base64 encoded.
 *  "row list": outputs a json list of objects, each with an attribute of "row" that is the base64 encoded row key.  All other key/values are base64 encoded.
+*  In the url "table" is plaintext.  "row", "column", "startRow", and "stopRow" are ub64.
 
 Row Operations
 --------------
