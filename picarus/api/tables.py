@@ -102,7 +102,14 @@ def _parse_params(params, schema):
     kw = {}
     schema_params = schema['params']
     prefix = 'param'
-    get_param = lambda x: params[prefix + '-' + x]
+
+    def get_param(x, func=str, exception=False):
+        try:
+            return func(params[prefix + '-' + x])
+        except (KeyError, ValueError):
+            if exception:
+                raise
+            bottle.abort(400)
     for param_name, param in schema_params.items():
         if param['type'] == 'enum':
             param_value = get_param(param_name)
@@ -110,12 +117,12 @@ def _parse_params(params, schema):
                 bottle.abort(400)
             kw[param_name] = param_value
         elif param['type'] == 'int':
-            param_value = int(get_param(param_name))
+            param_value = get_param(param_name, int)
             if not (param['min'] <= param_value < param['max']):
                 bottle.abort(400)
             kw[param_name] = param_value
         elif param['type'] == 'float':
-            param_value = float(get_param(param_name))
+            param_value = get_param(param_name, float)
             if not (param['min'] <= param_value < param['max']):
                 bottle.abort(400)
             kw[param_name] = param_value
@@ -123,7 +130,10 @@ def _parse_params(params, schema):
             param_value = {}
             for x in range(param['max_size']):
                 try:
-                    bin_value = int(get_param(param_name + ':' + str(x)))
+                    try:
+                        bin_value = get_param(param_name + ':' + str(x), int, True)
+                    except ValueError:
+                        bottle.abort(400)
                     if not (param['min'] <= bin_value < param['max']):
                         bottle.abort(400)
                     param_value[x] = bin_value
