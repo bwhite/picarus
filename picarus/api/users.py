@@ -174,16 +174,16 @@ class User(object):
         return self.login_key == self._hash_key(key)
 
     def _sanitize_path(self):
-        r = re.search('(/.+/data/[^/]+)', bottle.request.path)
+        r = re.search('(/[^/]+/data/[^/]+)', bottle.request.path)
         if r:
             return r.group(1)
-        r = re.search('(/.+/data/[^/]+/)[^/]+', bottle.request.path)
+        r = re.search('(/[^/]+/data/[^/]+/)[^/]+', bottle.request.path)
         if r:
             return r.group(1) + ':row'
-        r = re.search('(/.+/data/[^/]+/)[^/]+/[^/]+', bottle.request.path)
+        r = re.search('(/[^/]+/data/[^/]+/)[^/]+/[^/]+', bottle.request.path)
         if r:
             return r.group(1) + ':row/:column'
-        r = re.search('(/.+/slices/[^/]+/)[^/]+/[^/]+', bottle.request.path)
+        r = re.search('(/[^/]+/slice/[^/]+/)[^/]+/[^/]+', bottle.request.path)
         if r:
             return r.group(1) + ':startRow/:stopRow'
         return bottle.request.path
