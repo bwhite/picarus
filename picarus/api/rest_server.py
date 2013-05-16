@@ -21,12 +21,19 @@ import glob
 
 def check_version(func):
 
+    def func_raven(*args, **kw):
+        try:
+            return func(*args, **kw)
+        except:
+            RAVEN.captureException()
+    func2 = func_raven if ARGS.raven else func
+
     def inner(version, *args, **kw):
         if ARGS.debug:
             print_request()
         if version != VERSION:
             bottle.abort(400)
-        return func(*args, **kw)
+            return func2(*args, **kw)
     return inner
 
 
@@ -70,6 +77,9 @@ if __name__ == "__main__":
     parser.add_argument('--thrift_server', default='localhost')
     parser.add_argument('--thrift_port', default='9090')
     ARGS = parser.parse_args()
+    if ARGS.raven:
+        import raven
+        RAVEN = raven.Client(ARGS.raven)
     THRIFT_POOL = gevent.queue.Queue()
     THRIFT_CONSTRUCTOR = lambda : hadoopy_hbase.connect(ARGS.thrift_server, ARGS.thrift_port)
     for x in range(5):
@@ -337,11 +347,5 @@ def annotation_result(task):
 
 if __name__ == '__main__':
     import gevent.pywsgi
-    if ARGS.raven:
-        import raven.middleware
-        SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port),
-                                          raven.middleware.Sentry(bottle.app(),
-                                                                  client=raven.Client(ARGS.raven)))
-    else:
-        SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app())
+    SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app())
     SERVER.serve_forever()
