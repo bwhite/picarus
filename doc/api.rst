@@ -1,6 +1,8 @@
 API
 ===
 
+There are Python and Javascript libraries available for communicating with Picarus and they are kept in sync with the server.  As the API is being changed somewhat frequently at this point, it is best to use these libraries for communication.  The documentation below explains the encodings, REST calls, and parameters available.
+
 Data access
 -----------
 You can access data by row (/data/:table/:row) or by slice (/slice/:table/:startRow/:stopRow which is [startRow, stopRow)).  Slices exploit the contiguous nature of the rows in HBase and allow for batch execution on Hadoop.
@@ -102,7 +104,6 @@ Python
     json_ub64_b64_dec = lambda x: {ub64_dec(k): b64_dec(v)
                                    for k, v in json.loads(x).items()}
 
-
 Javascript
 ^^^^^^^^^^
 .. code-block:: javascript
@@ -142,24 +143,6 @@ Standard status codes used are 400, 401, 403, 404, and 500.  In general 4xx is a
 Column Semantics
 ----------------
 In several API calls a "columns" parameter is available, each column is b64 encoded and separated by commas (,).  The parameter itself is optional (i.e., if not specified, all columns are returned).  For GET operations, a row will be returned if it contains a single of the specified columns or any columns at all if there are none specified.  As these columns are used in HBase, the column family may also be specified and has the same semantics as they do with the Thrift API (i.e., has the effect of returning all columns in the column family); however, this property only holds for tables stored in HBase.
-
-HBase Filters
--------------
-The GET /slice/:table/:startRow/:stopRow command takes in a filter argument that can be any valid HBase Thrift filter.  While documentation is available (http://hbase.apache.org/book/thrift.html) it is partially out of date (see https://issues.apache.org/jira/browse/HBASE-5946) so some caution must be taken.  Below are a few examples that work and using them as a guide the documentation can help elaborate on what else can be done.  This feature is new for HBase and has limitations, for example only ASCII characters may be used, while HBase rows/columns are represented as raw binary values.
-
-.. code-block:: bash
-
-    # Only output rows where column meta:class is exactly equal to 'dinner',
-    # and if the meta:class column is missing, then include it
-    SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner')
-
-    # Only output rows where column meta:class is exactly equal to 'dinner'
-    # and if the meta:class column is missing, then don't include it
-    SingleColumnValueFilter ('meta', 'class', =, 'binary:dinner', true, true)
-
-    # Only output rows where column meta:class starts with 'a'
-    SingleColumnValueFilter ('meta', 'class', =, 'binaryprefix:a')
-
 
 Content-Type: application/json
 ------------------------------
