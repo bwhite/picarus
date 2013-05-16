@@ -33,7 +33,7 @@ def check_version(func):
             print_request()
         if version != VERSION:
             bottle.abort(400)
-            return func2(*args, **kw)
+        return func2(*args, **kw)
     return inner
 
 
