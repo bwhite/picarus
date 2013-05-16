@@ -24,6 +24,8 @@ def check_version(func):
     def func_raven(*args, **kw):
         try:
             return func(*args, **kw)
+        except bottle.HTTPError:
+            raise
         except:
             RAVEN.captureException()
             raise
