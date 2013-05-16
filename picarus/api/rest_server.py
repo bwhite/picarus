@@ -26,6 +26,7 @@ def check_version(func):
             return func(*args, **kw)
         except:
             RAVEN.captureException()
+            raise
     func2 = func_raven if ARGS.raven else func
 
     def inner(version, *args, **kw):
