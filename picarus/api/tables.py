@@ -512,15 +512,13 @@ class DataHBaseTable(HBaseTable):
         max_rows = min(10000, int(params.get('maxRows', 1)))
         print('MaxRows[%d]' % max_rows)
         max_bytes = min(5242880, int(params.get('maxBytes', 5242880)))
-        filter_string = params.get('filter')
-        print('filter string[%s]' % filter_string)
         exclude_start = bool(int(params.get('excludeStart', 0)))
         out = []
         per_call = 1
         max_byte_count = 0
         with thrift_lock() as thrift:
             scanner = hadoopy_hbase.scanner(thrift, self.table, per_call=per_call, columns=columns,
-                                            start_row=start_row, stop_row=stop_row, filter=filter_string)
+                                            start_row=start_row, stop_row=stop_row)
             cur_row = start_row
             byte_count = 0
             for row_num, (cur_row, cur_columns) in enumerate(scanner, 1):
@@ -540,7 +538,6 @@ class DataHBaseTable(HBaseTable):
 
     def patch_slice(self, start_row, stop_row, params, files):
         self._slice_validate(start_row, stop_row, 'w')
-        # NOTE: This only fetches rows that have a column in data:image (it is a significant optimization)
         # NOTE: Only parameters allowed, no "files" due to memory restrictions
         mutations = []
         for x, y in params.items():

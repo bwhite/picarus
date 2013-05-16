@@ -59,9 +59,6 @@ function render_visualize_exif() {
                 images.add(columns);
         }
         var params = {success: success, maxRows: 1000, done: done, columns: [exif_column]};
-        var filter = unescape($('#filter').val());
-        if (filter.length > 0)
-            params.filter = filter;
         PICARUS.scanner("images", startRow, stopRow, params)
     });
 }

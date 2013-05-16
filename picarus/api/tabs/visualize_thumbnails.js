@@ -39,10 +39,6 @@ function render_visualize_thumbnails() {
                 getMoreData = callback;
         }
         var params = {success: success, columns: [imageColumn], resume: resume};
-        var filter = unescape($('#filter').val());
-        if (filter.length > 0) {
-            params.filter = filter;
-        }
         $el.infiniteScroll({threshold: 1024, onEnd: function () {
             console.log('No more results');
         }, onBottom: function (callback) {
