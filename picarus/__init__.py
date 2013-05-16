@@ -106,6 +106,9 @@ class PicarusClient(object):
     def delete_row(self, table, row):
         return self.delete(('data', table, self.encurl(row)))
 
+    def delete_column(self, table, row, column):
+        return self.delete(('data', table, self.encurl(row), self.encurl(column)))
+
     def patch_row(self, table, row, data=None):
         return self.patch(('data', table, self.encurl(row)), data=self.encdict(data))
 

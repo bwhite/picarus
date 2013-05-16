@@ -150,36 +150,40 @@ If the request "Content-Type" is set to "application/json" then JSON parameters 
 
 Table Permissions
 -----------------
-The table below contains the data commands for Picarus.  GET/PATCH/DELETE are idempotent (multiple applications have the same impact as one).  Params marked with a value of \* accepts column/value pairs, where the column name is ub64 encoded and the value is b64 encoded (see Encodings).  Each table defines which columns can be modified directly by a user.  Params marked with a value of \- do not accept parameters and ... means that additional parameters are available and specified below.  Params with "column" accept ub64 encoded column names and the parameter is optional and may be repeated for multiple columns.
+The table below contains the data commands for Picarus.  GET/PATCH/DELETE are idempotent (multiple applications have the same impact as one).  Each table defines which columns can be modified directly by a user (see individual table docs for details).
 
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| Verb    | Path                             | Table                                                       | Params                  |
-+         +                                  +-----------+---------+---------+------------+----------------+                         +
-|         |                                  |  images   | models  | users   | parameters | annotations-\* |                         |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| GET     | /data/:table                     | N         | Y       | N       | Y          | Y              | columns (optional)      |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| GET     | /data/:table/:row                | Y         | Y       | Y       | N          | N              | columns (optional)      |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| POST    | /data/:table                     | Y         | Y       | N       | N          | N              | \*                      |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| POST    | /data/:table/:row                | Y         | N       | N       | N          | N              | action (required), ...  |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| PATCH   | /data/:table/:row                | Y         | Y       | N       | N          | N              | \*                      |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| DELETE  | /data/:table/:row                | Y         | Y       | N       | N          | N              | \-                      |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| DELETE  | /data/:table/:row/:column        | Y         | Y       | N       | N          | N              | \-                      |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| GET     | /slice/:table/:startRow/:stopRow | Y         | N       | N       | N          | N              | columns (optional), ... |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| POST    | /slice/:table/:startRow/:stopRow | Y         | N       | N       | N          | N              | action (required), ...  |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| PATCH   | /slice/:table/:startRow/:stopRow | Y         | N       | N       | N          | N              | \*                      |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
-| DELETE  | /slice/:table/:startRow/:stopRow | N         | N       | N       | N          | N              | \-                      |
-+---------+----------------------------------+-----------+---------+---------+------------+----------------+-------------------------+
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| Verb    | Path                             | Table                                             | Encoding                |
++         +                                  +-----------+---------+------------+----------------+-------------+-----------+
+|         |                                  |  images   | models  | parameters | annotations-\* | Input       | Output    |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| GET     | /data/:table                     | N         | Y       | Y          | Y              | col         | row list  |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| POST    | /data/:table                     | Y         | Y       | N          | N              | b64/b64     | {row: b64}|
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| GET     | /data/:table/:row                | Y         | Y       | N          | N              | col         | b64/b64   |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| POST    | /data/:table/:row                | Y         | N       | N          | N              | raw/b64     | b64/b64   |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| PATCH   | /data/:table/:row                | Y         | Y       | N          | N              | b64/b64     | {}        |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| DELETE  | /data/:table/:row                | Y         | Y       | N          | N              | none        | {}        |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| DELETE  | /data/:table/:row/:column        | Y         | Y       | N          | N              | none        | {}        |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| GET     | /slice/:table/:startRow/:stopRow | Y         | N       | N          | N              | col+raw/raw | row list  |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| POST    | /slice/:table/:startRow/:stopRow | Y         | N       | N          | N              | raw/b64     | b64/b64   |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| PATCH   | /slice/:table/:startRow/:stopRow | Y         | N       | N          | N              | b64/b64     | {}        |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
+| DELETE  | /slice/:table/:startRow/:stopRow | N         | N       | N          | N              | none        | {}        |
++---------+----------------------------------+-----------+---------+------------+----------------+-------------+-----------+
 
+*  "col": a key of "columns" with a value that is b64'd columns separated by commas. 
+*  "b64/b64": key/value pairs that are both base64 encoded.
+*  "raw/b64": keys that are plaintext and values that are base64 encoded.
+*  "row list": outputs a json list of objects, each with an attribute of "row" that is the base64 encoded row key.  All other key/values are base64 encoded.
 
 Row Operations
 --------------
