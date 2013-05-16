@@ -190,7 +190,7 @@ class User(object):
 
     @contextlib.contextmanager
     def _api_stats(self):
-        path_sanitized = self._sanitize_request()
+        path_sanitized = self._sanitize_path()
         out = {'method': bottle.request.method, 'path': bottle.request.path}
         if path_sanitized:
             out['pathSanitized'] = path_sanitized
