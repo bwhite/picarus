@@ -8,9 +8,10 @@ import redis
 import argparse
 import json
 import logging
-    
+import re
 
-def email_auth_factory(email_auth_fn='email_auth.js'):        
+
+def email_auth_factory(email_auth_fn='email_auth.js'):
     try:
         EMAIL = json.load(open(email_auth_fn))  # keys as key, secret, admin, url, name
     except IOError:
@@ -63,9 +64,8 @@ class User(object):
         self._user_db = user_db
         self.email = email
         self.upload_row_prefix = 'userupload%s:' % base64.urlsafe_b64encode(hashlib.sha1(email).digest())[:-1]
-        self._stat_keys = ('start', 'finish', 'total_time')
         self._user_prefix = 'user:'
-        self._stat_prefix = 'stat:'
+        self._usage_prefix = 'usage:'
         self._api_key_prefix = 'auth:'
         self._login_key_prefix = 'login:'
         self._enabled_col = 'enabled'
@@ -77,6 +77,7 @@ class User(object):
             self.enable()
         if not self._exists():
             raise UnknownUser
+        self._user_db.delete('stat:' + self.email)
 
     def _exists(self):
         return self._user_db.exists(self._user_prefix + self.email) == 1
@@ -107,7 +108,7 @@ class User(object):
 
     def delete(self):
         self._user_db.delete(self._user_prefix + self.email,
-                             self._stat_prefix + self.email,
+                             self._usage_prefix + self.email,
                              self._api_key_prefix + self.email,
                              self._login_key_prefix + self.email)
 
@@ -172,17 +173,39 @@ class User(object):
     def verify_login_key(self, key):
         return self.login_key == self._hash_key(key)
 
-    def stats(self):
-        return dict((x, self.hget(self._stat_prefix + x)) for x in self._stat_keys)
+    def _sanitize_path(self):
+        r = re.search('(/.+/data/[^/]+)', bottle.request.path)
+        if r:
+            return r.group(1)
+        r = re.search('(/.+/data/[^/]+/)[^/]+', bottle.request.path)
+        if r:
+            return r.group(1) + ':row'
+        r = re.search('(/.+/data/[^/]+/)[^/]+/[^/]+', bottle.request.path)
+        if r:
+            return r.group(1) + ':row/:column'
+        r = re.search('(/.+/slices/[^/]+/)[^/]+/[^/]+', bottle.request.path)
+        if r:
+            return r.group(1) + ':startRow/:stopRow'
+        return bottle.request.path
 
     @contextlib.contextmanager
     def _api_stats(self):
-        self._user_db.hincrby(self._user_prefix + self.email, self._stat_prefix + 'start', 1)
+        path_sanitized = self._sanitize_request()
+        out = {'method': bottle.request.method, 'path': bottle.request.path}
+        if path_sanitized:
+            out['pathSanitized'] = path_sanitized
         st = time.time()
-        yield
-        self._user_db.hincrby(self._user_prefix + self.email, self._stat_prefix + 'finish', 1)
-        self._user_db.hincrbyfloat(self._user_prefix + self.email, self._stat_prefix + 'total_time', time.time() - st)
-        # TODO: Add min/max response times, compute std
+        status_code = 200
+        try:
+            yield
+        except bottle.HTTPError, e:
+            status_code = e.status_code
+            raise
+        finally:
+            out['time'] = time.time() - st
+            out['status_code'] = status_code
+            self._user_db.lpush(self._usage_prefix + self.email, json.dumps(out))
+            self._user_db.ltrim(self._usage_prefix + self.email, 100000)
 
     def _key_gen(self):
         # Replaces +/ with ab so that keys are easily selected, can compensate with keylength
