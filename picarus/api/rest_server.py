@@ -64,6 +64,7 @@ if __name__ == "__main__":
     parser.add_argument('--yubikey_redis_db', type=int, help='Redis DB', default=1)
     parser.add_argument('--annotations_redis_host', help='Annotations Host', default='localhost')
     parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
+    parser.add_argument('--raven', help='URL to the Raven/Sentry logging server')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--port', default='80', type=int)
     parser.add_argument('--thrift_server', default='localhost')
@@ -336,5 +337,11 @@ def annotation_result(task):
 
 if __name__ == '__main__':
     import gevent.pywsgi
-    SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app())
+    if ARGS.raven:
+        import raven.middleware
+        SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port),
+                                          raven.middleware.Sentry(bottle.app(),
+                                                                  client=raven.Client(ARGS.raven)))
+    else:
+        SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app())
     SERVER.serve_forever()
