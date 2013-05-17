@@ -199,16 +199,27 @@ class User(object):
         return self.login_key == self._hash_key(key)
 
     def _sanitize_path(self):
-        r = re.search('(/[^/]+/data/[^/]+)', bottle.request.path)
+        path = bottle.request.path
+        try:
+            match = re.finditer('/[^/]+/data/annotations\-results\-([^/]+)', path)
+            path = '%s*%s' % (path[:match.start()], path[match.end():])
+        except StopIteration:
+            pass
+        try:
+            match = re.finditer('/[^/]+/data/annotations\-users\-([^/]+)', path)
+            path = '%s*%s' % (path[:match.start()], path[match.end():])
+        except StopIteration:
+            pass
+        r = re.search('(/[^/]+/data/[^/]+)', path)
         if r:
             return r.group(1)
-        r = re.search('(/[^/]+/data/[^/]+/)[^/]+', bottle.request.path)
+        r = re.search('(/[^/]+/data/[^/]+/)[^/]+', path)
         if r:
             return r.group(1) + ':row'
-        r = re.search('(/[^/]+/data/[^/]+/)[^/]+/[^/]+', bottle.request.path)
+        r = re.search('(/[^/]+/data/[^/]+/)[^/]+/[^/]+', path)
         if r:
             return r.group(1) + ':row/:column'
-        r = re.search('(/[^/]+/slice/[^/]+/)[^/]+/[^/]+', bottle.request.path)
+        r = re.search('(/[^/]+/slice/[^/]+/)[^/]+/[^/]+', path)
         if r:
             return r.group(1) + ':startRow/:stopRow'
         return bottle.request.path
