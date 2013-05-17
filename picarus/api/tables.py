@@ -234,7 +234,7 @@ class UsageTable(BaseTableSmall):
 
     def __init__(self, _auth_user):
         super(UsageTable, self).__init__()
-        self._table = dod_to_lod_b64(self._auth_user.usage())
+        self._table = dod_to_lod_b64(_auth_user.usage())
 
     def _get_table(self):
         return self._table
