@@ -752,7 +752,7 @@ function app_main() {
 }
 
 function refresh_models() {
-    _.each([PROJECTS, PREFIXES, ANNOTATIONS, PARAMETERS, MODELS], function (x) {x.fetch()});
+    _.each([PROJECTS, PREFIXES, ANNOTATIONS, PARAMETERS, MODELS, USAGE], function (x) {x.fetch()});
 }
 
 function app_main_postauth(email_auth) {
@@ -760,6 +760,7 @@ function app_main_postauth(email_auth) {
     PREFIXES = new PicarusRows([], {'table': 'prefixes'});
     ANNOTATIONS = new PicarusRows([], {'table': 'annotations'});
     PARAMETERS = new PicarusRows([], {'table': 'parameters'});
+    USAGE = new PicarusRows([], {'table': 'usage'});
     MODELS = new PicarusRows([], {'table': 'models', columns: ['meta:']});
     refresh_models();
     project_selector();
