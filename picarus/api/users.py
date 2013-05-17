@@ -175,7 +175,7 @@ class User(object):
         for k, v in out.items():
             n = float(len(v['times']))
             v['times'].sort()
-            pct = lambda x: min(max(0, int(round(n * x))), n - 1)
+            pct = lambda x: int(min(max(0, int(round(n * x))), n - 1))
             v['time:50th'] = v['times'][pct(.5)]
             v['time:80th'] = v['times'][pct(.8)]
             v['time:90th'] = v['times'][pct(.9)]
