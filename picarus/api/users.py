@@ -201,12 +201,12 @@ class User(object):
     def _sanitize_path(self):
         path = bottle.request.path
         try:
-            match = re.finditer('/[^/]+/data/annotations\-results\-([^/]+)', path)
+            match = re.finditer('/[^/]+/data/annotations\-results\-([^/]+)', path).next()
             path = '%s*%s' % (path[:match.start()], path[match.end():])
         except StopIteration:
             pass
         try:
-            match = re.finditer('/[^/]+/data/annotations\-users\-([^/]+)', path)
+            match = re.finditer('/[^/]+/data/annotations\-users\-([^/]+)', path).next()
             path = '%s*%s' % (path[:match.start()], path[match.end():])
         except StopIteration:
             pass
