@@ -202,12 +202,14 @@ class User(object):
         path = bottle.request.path
         try:
             match = re.finditer('/[^/]+/data/annotations\-results\-([^/]+)', path).next()
-            path = '%s*%s' % (path[:match.start()], path[match.end():])
+            regs = match.regs[1]
+            path = '%s*%s' % (path[:regs[0]], path[regs[1]:])
         except StopIteration:
             pass
         try:
             match = re.finditer('/[^/]+/data/annotations\-users\-([^/]+)', path).next()
-            path = '%s*%s' % (path[:match.start()], path[match.end():])
+            regs = match.regs[1]
+            path = '%s*%s' % (path[:regs[0]], path[regs[1]:])
         except StopIteration:
             pass
         r = re.search('(/[^/]+/data/[^/]+)', path)
