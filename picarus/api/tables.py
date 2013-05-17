@@ -230,6 +230,16 @@ class ParametersTable(BaseTableSmall):
         return self._params
 
 
+class UsageTable(BaseTableSmall):
+
+    def __init__(self, _auth_user):
+        super(UsageTable, self).__init__()
+        self._table = dod_to_lod_b64(self._auth_user.usage())
+
+    def _get_table(self):
+        return self._table
+
+
 class RedisUsersTable(BaseTableSmall):
 
     def __init__(self, _auth_user, table, set_column, del_column):
@@ -826,6 +836,8 @@ def get_table(_auth_user, table):
         return ImagesHBaseTable(_auth_user)
     elif table == 'models':
         return ModelsHBaseTable(_auth_user)
+    elif table == 'usage':
+        return UsageTable(_auth_user)
     elif table == 'prefixes':
         return PrefixesTable(_auth_user)
     elif table == 'projects':

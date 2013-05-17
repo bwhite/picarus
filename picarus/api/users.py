@@ -160,6 +160,31 @@ class User(object):
     def projects(self, table):
         return self._user_db.hgetall(self._table_project(table) + self.email)
 
+    def usage(self):
+        out = {}
+        for data in self._user_db.lrange(self._usage_prefix + self.email, 0, -1):
+            data = json.loads(data)
+            k = '%s %s' % (data['method'], data['pathSanitized'])
+            row = out.setdefault(k, {'times': []})
+            status_code_key = 'status:%d' % data['status_code']
+            try:
+                row[status_code_key] += 1
+            except KeyError:
+                row[status_code_key] = 1
+            row['times'].append(data['time'])
+        for k, v in out.items():
+            n = float(len(v['times']))
+            v['times'].sort()
+            pct = lambda x: min(max(0, int(round(n * x))), n - 1)
+            v['time:50th'] = v['times'][pct(.5)]
+            v['time:80th'] = v['times'][pct(.8)]
+            v['time:90th'] = v['times'][pct(.9)]
+            v['time:95th'] = v['times'][pct(.95)]
+            v['time:99th'] = v['times'][pct(.99)]
+            del v['times']
+        print(out)
+        return out
+
     @property
     def login_key(self):
         return self._user_db.get(self._login_key_prefix + self.email)
