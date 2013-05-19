@@ -2,27 +2,25 @@ import base64
 import annotators
 import bottle
 import json
-import hadoopy_hbase
 import time
 import uuid
 import hashlib
 import mturk_vision
-import picarus.api
-import numpy as np
 import crawlers
 import re
 import gipc
 import picarus_takeout
 import logging
 import functools
-import msgpack # TODO: Abstract these operations
+import msgpack
 from driver import PicarusManager
-from picarus._importer import call_import
+
 try:
     from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
 except ImportError:
     logging.warn('No default flickr keys found in flickr_keys.py, see flickr_keys.example.py')
     FLICKR_API_KEY, FLICKR_API_SECRET = '', ''
+
 from parameters import PARAM_SCHEMAS_SERVE
 from model_factories import FACTORIES
 
@@ -31,11 +29,6 @@ thrift_lock = None
 thrift_new = None
 VERSION = None
 ANNOTATORS = None
-
-
-class PrettyFloat(float):
-    def __repr__(self):
-        return '%.15g' % self
 
 
 def dod_to_lod_b64(dod):
@@ -428,44 +421,38 @@ class HBaseTable(object):
     def patch_row(self, row, params, files):
         with thrift_lock() as thrift:
             self._row_validate(row, 'rw', thrift)
-            mutations = []
+            mutations = {}
             for x, y in files.items():
                 cur_column = base64.b64decode(x)
                 self._column_write_validate(cur_column)
                 v = y.file.read()
-                thrift.mutateRow(self.table, row, [hadoopy_hbase.Mutation(column=cur_column, value=v)])
+                thrift.mutate_row(self.table, row, {cur_column: v})
             for x, y in params.items():
                 cur_column = base64.b64decode(x)
                 self._column_write_validate(cur_column)
-                mutations.append(hadoopy_hbase.Mutation(column=cur_column, value=base64.b64decode(y)))
+                mutations[cur_column] = base64.b64decode(y)
             if mutations:
-                thrift.mutateRow(self.table, row, mutations)
+                thrift.mutate_row(self.table, row, mutations)
         return {}
 
     def delete_row(self, row):
         with thrift_lock() as thrift:
             self._row_validate(row, 'rw', thrift)
-            thrift.deleteAllRow(self.table, row)
+            thrift.delete_row(self.table, row)
             return {}
 
     def delete_column(self, row, column):
         with thrift_lock() as thrift:
             self._row_validate(row, 'rw', thrift)
-            thrift.mutateRow(self.table, row, [hadoopy_hbase.Mutation(column=column, isDelete=True)])
+            thrift.delete_column(self.table, row, column)
             return {}
 
     def get_row(self, row, columns):
         with thrift_lock() as thrift:
             self._row_validate(row, 'r', thrift)
-            if columns:
-                result = thrift.getRowWithColumns(self.table, row, columns)
-            else:
-                result = thrift.getRow(self.table, row)
-        if not result:
-            bottle.abort(404)
-        # TODO: Should this produce 'row' also?  Check backbone.js
+            result = thrift.get_row(self.table, row, columns)
         return {base64.b64encode(x): base64.b64encode(y.value)
-                for x, y in result[0].columns.items()}
+                for x, y in result.items()}
 
 
 class DataHBaseTable(HBaseTable):
@@ -527,8 +514,8 @@ class DataHBaseTable(HBaseTable):
         per_call = 1
         max_byte_count = 0
         with thrift_lock() as thrift:
-            scanner = hadoopy_hbase.scanner(thrift, self.table, per_call=per_call, columns=columns,
-                                            start_row=start_row, stop_row=stop_row)
+            scanner = thrift.scanner(self.table, per_call=per_call, columns=columns,
+                                     start_row=start_row, stop_row=stop_row)
             cur_row = start_row
             byte_count = 0
             for row_num, (cur_row, cur_columns) in enumerate(scanner, 1):
@@ -549,13 +536,13 @@ class DataHBaseTable(HBaseTable):
     def patch_slice(self, start_row, stop_row, params, files):
         self._slice_validate(start_row, stop_row, 'w')
         # NOTE: Only parameters allowed, no "files" due to memory restrictions
-        mutations = []
+        mutations = {}
         for x, y in params.items():
-            mutations.append(hadoopy_hbase.Mutation(column=base64.b64decode(x), value=base64.b64decode(y)))
+            mutations[base64.b64decode(x)] = base64.b64decode(y)
         if mutations:
             with thrift_lock() as thrift:
-                for row, _ in hadoopy_hbase.scanner(thrift, self.table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()', columns=['meta:']):
-                    thrift.mutateRow(self.table, row, mutations)
+                for row, _ in thrift.scanner(self.table, start_row=start_row, stop_row=stop_row, keys_only=True):
+                    thrift.mutate_row(self.table, row, mutations)
         return {}
 
     def delete_slice(self, start_row, stop_row):
@@ -563,8 +550,8 @@ class DataHBaseTable(HBaseTable):
         # NOTE: This only fetches rows that have a column in data:image (it is a significant optimization)
         # NOTE: Only parameters allowed, no "files" due to memory restrictions
         with thrift_lock() as thrift:
-            for row, _ in hadoopy_hbase.scanner(thrift, self.table, start_row=start_row, stop_row=stop_row, filter='KeyOnlyFilter()'):
-                thrift.deleteAllRow(self.table, row)
+            for row, _ in thrift.scanner(self.table, start_row=start_row, stop_row=stop_row, keys_only=True):
+                thrift.delete_row(self.table, row)
         return {}
 
 
@@ -595,7 +582,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 self._row_validate(row, 'r')
                 # TODO: Get this directly from model
                 chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
-                binary_input = thrift.get(self.table, row, chain_input)[0].value  # TODO: Check val
+                binary_input = thrift.get_column(self.table, row, chain_input)
                 model = picarus_takeout.ModelChain(msgpack.dumps([model_link]))
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps({base64.b64encode(params['model']): base64.b64encode(model.process_binary(binary_input))})
@@ -603,7 +590,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 self._row_validate(row, 'r')
                 # TODO: Get this directly from model
                 chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
-                binary_input = thrift.get(self.table, row, chain_inputs[0])[0].value  # TODO: Check val
+                binary_input = thrift.get_column(self.table, row, chain_inputs[0])
                 model_chain = list(model_chain)
                 model = picarus_takeout.ModelChain(msgpack.dumps(model_chain))
                 bottle.response.headers["Content-type"] = "application/json"
@@ -639,57 +626,15 @@ class ImagesHBaseTable(DataHBaseTable):
                 chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
                 manager.takeout_chain_job(list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row)
                 return {}
-            elif action == 'i/faces':
-                # TODO: Temporary, remove when done
-                names = set(['George_W_Bush', 'Colin_Powell', 'Tony_Blair', 'Donald_Rumsfeld', 'Gerhard_Schroeder',
-                             'Ariel_Sharon', 'Hugo_Chavez', 'Junichiro_Koizumi', 'Serena_Williams', 'John_Ashcroft'])
-                self._slice_validate(start_row, stop_row, 'r')
-                import cv2
-                r = None
-                labels = {}
-                pos = 0
-                neg = 0
-                data = []
-                lab = []
-                num_train = 2000
-                for n, (cur_row, cur_cols) in enumerate(hadoopy_hbase.scanner(thrift, self.table,
-                                                                              start_row=start_row, per_call=10,
-                                                                              stop_row=stop_row, columns=['data:image', 'meta:class'])):
-                    cur_class = cur_cols['meta:class']
-                    if cur_class not in names:
-                        continue
-                    if cur_class not in labels:
-                        labels[cur_class] = len(labels)
-                    label = labels[cur_class]
-                    image = cv2.imdecode(np.fromstring(cur_cols['data:image'], np.uint8), 0)
-                    # Crop
-                    image = np.ascontiguousarray(image[62:-62, 62:-62])
-                    #if n == 0:
-                    #    cv2.imwrite('out.png', image)
-                    if n < num_train:
-                        lab.append(label)
-                        data.append(image)
-                    else:
-                        if r is None:
-                            r = cv2.createLBPHFaceRecognizer()
-                            r.train(data, np.array(lab))
-                            print('TRAINED-----------------------')
-                        pred = r.predict(image)[0]
-                        print((pred, label))
-                        if pred == label:
-                            pos += 1
-                        else:
-                            neg += 1
-                    print((cur_class, image.shape, n, pos, neg, pos / float(pos + neg + .00000001)))
             elif action == 'io/garbage':
                 self._slice_validate(start_row, stop_row, 'rw')
                 columns_removed = set()
                 columns_kept = set()
                 # TODO: Get all user models and save those too
                 active_models = set()
-                for cur_row, cur_cols in hadoopy_hbase.scanner(thrift, self.table, filter='KeyOnlyFilter()',
-                                                               start_row=start_row, per_call=10,
-                                                               stop_row=stop_row):
+                for cur_row, cur_cols in thrift.scanner(self.table,
+                                                        start_row=start_row,
+                                                        stop_row=stop_row, keys_only=True):
                     for k in cur_cols.keys():
                         if not (k.startswith('meta:') or k.startswith('thum:') or k == 'data:image' or k in active_models):
                             if k not in columns_removed:
@@ -707,10 +652,10 @@ class ImagesHBaseTable(DataHBaseTable):
                 col = params['column']
                 features = {}
                 dedupe_feature = lambda x, y: features.setdefault(base64.b64encode(hashlib.md5(y).digest()), []).append(base64.b64encode(x))
-                for cur_row, cur_col in hadoopy_hbase.scanner_row_column(thrift, self.table, column=col,
-                                                                         start_row=start_row, per_call=10,
-                                                                         stop_row=stop_row):
-                    dedupe_feature(cur_row, cur_col)
+                for cur_row, cur_columns in thrift.scanner(self.table, columns=[col],
+                                                           start_row=start_row, per_call=10,
+                                                           stop_row=stop_row):
+                    dedupe_feature(cur_row, cur_columns[col])
                 bottle.response.headers["Content-type"] = "application/json"
                 return json.dumps([{'rows': y} for x, y in features.items() if len(y) > 1])
             elif action == 'o/crawl/flickr':
@@ -781,23 +726,23 @@ class ModelsHBaseTable(HBaseTable):
         bottle.abort(403)
 
     def _row_validate(self, row, permissions, thrift):
-        results = thrift.get(self.table, row, 'user:' + self.owner)
-        if not results:
+        try:
+            results = thrift.get_column(self.table, row, 'user:' + self.owner)
+        except bottle.HTTPError:
             bottle.abort(403)
-        if not results[0].value.startswith(permissions):
+        if not results.startswith(permissions):
             bottle.abort(403)
 
     def get_table(self, columns):
         user_column = 'user:' + self.owner
         output_user = user_column in columns or not columns or 'user:' in columns
-        hbase_filter = "SingleColumnValueFilter ('user', '%s', =, 'binaryprefix:r', true, true)" % self.owner
         outs = []
         if columns:
             columns = columns + [user_column]
         else:
             columns = None
         with thrift_lock() as thrift:
-            for row, cols in hadoopy_hbase.scanner(thrift, self.table, columns=columns, filter=hbase_filter):
+            for row, cols in thrift.scanner(self.table, columns=columns, column_filter=(user_column, 'startswith', 'r')):
                 self._row_validate(row, 'r', thrift)
                 if not output_user:
                     del cols[user_column]
