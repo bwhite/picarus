@@ -3,27 +3,19 @@ from gevent import monkey
 monkey.patch_all()
 import bottle
 bottle.BaseRequest.MEMFILE_MAX = 10 * 1024 ** 2  # 10MB file cap
-import os
 import argparse
 import gevent.queue
 import base64
-import hadoopy_hbase
 import gevent
 import mturk_vision
 from users import Users, UnknownUser
 from yubikey import Yubikey
+from databases import HBaseDB, RedisDB
 import annotators
 import logging
 import contextlib
 import tables
 import glob
-import re
-import random
-import time
-import zlib
-import tempfile
-import msgpack
-import pickle
 
 
 def check_version(func):
@@ -45,94 +37,6 @@ def check_version(func):
             bottle.abort(400)
         return func2(*args, **kw)
     return inner
-
-
-def _tempfile(data, suffix=''):
-    fp = tempfile.NamedTemporaryFile(suffix=suffix)
-    fp.write(data)
-    fp.flush()
-    return fp
-
-
-def model_tofile(model):
-    if isinstance(model, dict) or isinstance(model, list):
-        return _tempfile(zlib.compress(msgpack.dumps(model)), suffix='.msgpack.gz')
-    else:
-        return _tempfile(zlib.compress(pickle.dumps(model)), suffix='.pkl.gz')
-
-
-class HBaseDB(object):
-
-    def __init__(self, server, port):
-        self.__thrift = hadoopy_hbase.connect(server, port)
-
-    def mutate_row(self, table, row, mutations):
-        mutations = [hadoopy_hbase.Mutation(column=x, value=y) for x, y in mutations.items()]
-        self.__thrift.mutateRow(table, row, mutations)
-
-    def delete_row(self, table, row):
-        self.__thrift.deleteAllRow(table, row)
-
-    def delete_column(self, table, row, column):
-        self.__thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=column, isDelete=True)])
-
-    def get_row(self, table, row, columns=None):
-        if columns:
-            result = self.__thrift.getRowWithColumns(table, row, columns)
-        else:
-            result = self.__thrift.getRow(table, row)
-        if not result:
-            bottle.abort(404)
-        return {x: y.value for x, y in result[0].columns.items()}
-
-    def get_column(self, table, row, column):
-        try:
-            return self.__thrift.get(table, row, column)[0].value
-        except IndexError:
-            bottle.abort(404)
-
-    def scanner(self, table, start_row=None, stop_row=None, columns=None, keys_only=False, per_call=1, column_filter=None):
-        filts = ['KeyOnlyFilter()'] if keys_only else []
-        if column_filter:
-            sanitary = lambda x: re.search("^[a-zA-Z0-9@\.:]+$", x)
-            filter_family, filter_column = column_filter[0].split(':')
-            if column_filter[1] == '=':
-                filter_relation = '='
-                filter_value = 'binary:' + column_filter[2]
-            elif column_filter[1] == '!=':
-                filter_relation = '!='
-                filter_value = 'binary:' + column_filter[2]
-            elif column_filter[1] == 'startswith':
-                filter_relation = '='
-                filter_value = 'binaryprefix:' + column_filter[2]
-            else:
-                bottle.abort(400)  # Bad filter
-            if any(not sanitary(x) for x in [filter_family, filter_column, filter_value]):
-                bottle.abort(400)
-            filts.append("SingleColumnValueFilter ('%s', '%s', %s, '%s', true, true)" % (filter_family, filter_column, filter_relation, filter_value))
-        filt = ' AND '.join(filts)
-        if not filt:
-            filt = None
-        return hadoopy_hbase.scanner(self.__thrift, table, columns=columns,
-                                     start_row=start_row, stop_row=stop_row, filter=filt, per_call=per_call)
-
-    def image_exif(self, start_row, stop_row):
-        cmdenvs = {'HBASE_TABLE': self.images_table,
-                   'HBASE_OUTPUT_COLUMN': base64.b64encode('meta:exif')}
-        output_hdfs = 'picarus_temp/%f/' % time.time()
-        hadoopy_hbase.launch('images', output_hdfs + str(random.random()), 'hadoop/image_exif.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, columns=['data:image'], single_value=True,
-                             cmdenvs=cmdenvs, check_script=False, make_executable=False)
-
-    def image_takeout_chain_job(self, model, input_column, output_column, start_row, stop_row):
-        output_hdfs = 'picarus_temp/%f/' % time.time()
-        model_fp = model_tofile(model)
-        cmdenvs = {'HBASE_TABLE': self.images_table,
-                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
-                   'MODEL_FN': os.path.basename(model_fp.name)}
-        hadoopy_hbase.launch('images', output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
-                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, check_script=False, make_executable=False)
 
 
 @contextlib.contextmanager
@@ -162,11 +66,15 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser(description='Run Picarus REST Frontend')
     parser.add_argument('--users_redis_host', help='Redis Host', default='localhost')
-    parser.add_argument('--users_redis_port', type=int, help='Redis Port', default=6380)
+    parser.add_argument('--users_redis_port', type=int, help='Redis Port', default=6379)
     parser.add_argument('--users_redis_db', type=int, help='Redis DB', default=0)
     parser.add_argument('--yubikey_redis_host', help='Redis Host', default='localhost')
-    parser.add_argument('--yubikey_redis_port', type=int, help='Redis Port', default=6380)
+    parser.add_argument('--yubikey_redis_port', type=int, help='Redis Port', default=6379)
     parser.add_argument('--yubikey_redis_db', type=int, help='Redis DB', default=1)
+    parser.add_argument('--data_redis_host', help='Redis Host', default='localhost')
+    parser.add_argument('--data_redis_port', type=int, help='Redis Port', default=6379)
+    parser.add_argument('--data_redis_db', type=int, help='Redis DB', default=2)
+    parser.add_argument('--redis_data', action='store_true')
     parser.add_argument('--annotations_redis_host', help='Annotations Host', default='localhost')
     parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
     parser.add_argument('--raven', help='URL to the Raven/Sentry logging server')
@@ -179,7 +87,12 @@ if __name__ == "__main__":
         import raven
         RAVEN = raven.Client(ARGS.raven)
     THRIFT_POOL = gevent.queue.Queue()
-    THRIFT_CONSTRUCTOR = lambda : HBaseDB(ARGS.thrift_server, ARGS.thrift_port)
+
+    def THRIFT_CONSTRUCTOR():
+        if ARGS.redis_data:
+            return RedisDB(ARGS.data_redis_host, ARGS.data_redis_port, ARGS.data_redis_db)
+        else:
+            return HBaseDB(ARGS.thrift_server, ARGS.thrift_port)
     for x in range(5):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     USERS = Users(ARGS.users_redis_host, ARGS.users_redis_port, ARGS.users_redis_db)
