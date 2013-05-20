@@ -2,12 +2,12 @@
 import hadoopy
 import picarus_takeout
 import os
-import picarus.api
+import picarus
 import zlib
 import sys
 
 
-class Mapper(picarus.api.HBaseMapper):
+class Mapper(picarus.HBaseMapper):
 
     def __init__(self):
         super(Mapper, self).__init__()

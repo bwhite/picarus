@@ -1,1 +1,0 @@
-{"man-made structure": {"color": [161, 161, 161], "mask_num": 0}, "sky": {"color": [9, 0, 255], "mask_num": 1}, "water": {"color": [28, 12, 165], "mask_num": 2}, "ground": {"color": [225, 255, 0], "mask_num": 3}, "vegetation": {"color": [13, 255, 0], "mask_num": 4}}

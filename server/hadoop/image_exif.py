@@ -4,11 +4,11 @@ from PIL.ExifTags import TAGS
 from PIL import Image
 import cStringIO as StringIO
 import json
-import picarus.api
+import picarus
 import base64
 
 
-class Mapper(picarus.api.HBaseMapper):
+class Mapper(picarus.HBaseMapper):
 
     def __init__(self):
         super(Mapper, self).__init__()

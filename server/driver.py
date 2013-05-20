@@ -6,9 +6,7 @@ import zlib
 import os
 import random
 import cPickle as pickle
-import picarus.api
 import base64
-import picarus.modules
 import hashlib
 import subprocess
 import msgpack
@@ -56,15 +54,10 @@ class PicarusManager(object):
         self.models_table = 'models'
         self.hb = thrift if thrift is not None else hadoopy_hbase.connect()
         self.max_cell_size = 1024 * 1024  # 1MB
-        # Feature Settings
-        self.superpixel_column = 'feat:superpixel'
         # Feature Hasher settings
         self.hb = hadoopy_hbase.connect()
         # Feature Classifier settings
         self.feature_classifier_row = self.images_table
-        # Mask Hasher settings
-        #self.texton_classes = json.load(open('class_colors.js'))
-        #self.texton_num_classes = len(self.texton_classes)
         # Index Settings
         self.class_column = 'meta:class_2'
         self.indoor_class_column = 'meta:class_0'
