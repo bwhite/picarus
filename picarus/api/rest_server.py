@@ -91,6 +91,8 @@ class HBaseDB(object):
                 bottle.abort(400)
             filts.append("SingleColumnValueFilter ('%s', '%s', %s, '%s', true, true)" % (filter_family, filter_column, filter_relation, filter_value))
         filt = ' AND '.join(filts)
+        if not filt:
+            filt = None
         return hadoopy_hbase.scanner(self.__thrift, table, columns=columns,
                                      start_row=start_row, stop_row=stop_row, filter=filt, per_call=per_call)
 
