@@ -158,7 +158,6 @@ def hasher_spherical(queue, params, inputs, schema, start_stop_rows, table, owne
     out = picarus_takeout.spherical_hasher_train(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
     out = {'pivots': out['pivots'].ravel().tolist(),
            'threshs': out['threshs'].tolist()}
-    #out = picarus.modules.spherical_hash.train_takeout(features, params['num_pivots'], params['eps_m'], params['eps_s'], params['max_iters'])
     factory_info = {'slices': slices, 'num_features': len(features), 'data': 'slices', 'params': params, 'inputs': inputsb64}
     model_link = {'name': 'picarus.SphericalHasher', 'kw': out}
     model_chain = tables._takeout_model_chain_from_key(manager, inputs['feature']) + [model_link]
