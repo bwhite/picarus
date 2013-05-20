@@ -162,6 +162,7 @@ class HBaseDB(object):
 
     def __init__(self, server, port):
         self.__thrift = hadoopy_hbase.connect(server, port)
+        self.num_mappers = 6
 
     def mutate_row(self, table, row, mutations):
         mutations = [hadoopy_hbase.Mutation(column=x, value=y) for x, y in mutations.items()]
