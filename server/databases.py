@@ -119,8 +119,8 @@ class RedisDB(object):
                 continue
             yield clean_row, cur_row
 
-    def _image_job(self, start_row, stop_row, input_column, output_column, func):
-        for row, columns in self.scanner('images', start_row, stop_row, columns=[input_column]):
+    def _job(self, table, start_row, stop_row, input_column, output_column, func):
+        for row, columns in self.scanner(table, start_row, stop_row, columns=[input_column]):
             try:
                 input_data = columns[input_column]
             except KeyError:
@@ -134,7 +134,7 @@ class RedisDB(object):
                 continue
             self.mutate_row(row, {output_column: output_data})
 
-    def image_exif(self, start_row, stop_row):
+    def exif_job(self, start_row, stop_row):
 
         def func(input_data):
             image = Image.open(StringIO.StringIO(input_data))
@@ -148,14 +148,14 @@ class RedisDB(object):
                     return json.dumps({name: base64.b64encode(image_tags[id]) if isinstance(image_tags[id], str) else image_tags[id]
                                        for id, name in TAGS.items()
                                        if id in image_tags})
-        self._image_job(start_row, stop_row, 'data:image', 'meta:exif', func)
+        self._job('images', start_row, stop_row, 'data:image', 'meta:exif', func)
 
-    def image_takeout_chain_job(self, model, input_column, output_column, start_row, stop_row):
+    def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row):
         model = picarus_takeout.ModelChain(msgpack.dumps(model))
 
         def func(input_data):
             return model.process_binary(input_data)
-        self._image_job(start_row, stop_row, input_column, output_column, func)
+        self._job(table, start_row, stop_row, input_column, output_column, func)
 
 
 class HBaseDB(object):
@@ -213,7 +213,7 @@ class HBaseDB(object):
         return hadoopy_hbase.scanner(self.__thrift, table, columns=columns,
                                      start_row=start_row, stop_row=stop_row, filter=filt, per_call=per_call)
 
-    def image_exif(self, start_row, stop_row):
+    def exif_job(self, start_row, stop_row):
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode('meta:exif')}
         output_hdfs = 'picarus_temp/%f/' % time.time()
@@ -221,12 +221,12 @@ class HBaseDB(object):
                              num_mappers=self.num_mappers, columns=['data:image'], single_value=True,
                              cmdenvs=cmdenvs, check_script=False, make_executable=False)
 
-    def image_takeout_chain_job(self, model, input_column, output_column, start_row, stop_row):
+    def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row):
         output_hdfs = 'picarus_temp/%f/' % time.time()
         model_fp = model_tofile(model)
         cmdenvs = {'HBASE_TABLE': self.images_table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
                    'MODEL_FN': os.path.basename(model_fp.name)}
-        hadoopy_hbase.launch('images', output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
+        hadoopy_hbase.launch(table, output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
                              jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, check_script=False, make_executable=False)
