@@ -214,7 +214,7 @@ class HBaseDB(object):
                                      start_row=start_row, stop_row=stop_row, filter=filt, per_call=per_call)
 
     def exif_job(self, start_row, stop_row):
-        cmdenvs = {'HBASE_TABLE': self.images_table,
+        cmdenvs = {'HBASE_TABLE': 'images',
                    'HBASE_OUTPUT_COLUMN': base64.b64encode('meta:exif')}
         output_hdfs = 'picarus_temp/%f/' % time.time()
         hadoopy_hbase.launch('images', output_hdfs + str(random.random()), 'hadoop/image_exif.py', libjars=['hadoopy_hbase.jar'],
@@ -224,7 +224,7 @@ class HBaseDB(object):
     def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row):
         output_hdfs = 'picarus_temp/%f/' % time.time()
         model_fp = model_tofile(model)
-        cmdenvs = {'HBASE_TABLE': self.images_table,
+        cmdenvs = {'HBASE_TABLE': table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
                    'MODEL_FN': os.path.basename(model_fp.name)}
         hadoopy_hbase.launch(table, output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
