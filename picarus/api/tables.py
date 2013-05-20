@@ -451,7 +451,7 @@ class HBaseTable(object):
         with thrift_lock() as thrift:
             self._row_validate(row, 'r', thrift)
             result = thrift.get_row(self.table, row, columns)
-        return {base64.b64encode(x): base64.b64encode(y.value)
+        return {base64.b64encode(x): base64.b64encode(y)
                 for x, y in result.items()}
 
 
