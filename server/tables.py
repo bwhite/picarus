@@ -608,23 +608,25 @@ class ImagesHBaseTable(DataHBaseTable):
             manager = PicarusManager(thrift=thrift)
             if action == 'io/thumbnail':
                 self._slice_validate(start_row, stop_row, 'rw')
-                manager.image_thumbnail(start_row=start_row, stop_row=stop_row)
+                # Makes 150x150 thumbnails from the data:image column
+                model = [{'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}}]
+                thrift.takeout_chain_job(model, 'data:image', 'thum:image_150sq', start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/exif':
                 self._slice_validate(start_row, stop_row, 'rw')
-                manager.image_exif(start_row=start_row, stop_row=stop_row)
+                thrift.image_exif(start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/link':
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = params['model']
                 chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
-                manager.takeout_chain_job([model_link], chain_input, model_key, start_row=start_row, stop_row=stop_row)
+                thrift.takeout_chain_job([model_link], chain_input, model_key, start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/chain':
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = params['model']
                 chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
-                manager.takeout_chain_job(list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row)
+                thrift.takeout_chain_job(list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row)
                 return {}
             elif action == 'io/garbage':
                 self._slice_validate(start_row, stop_row, 'rw')

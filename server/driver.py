@@ -13,37 +13,6 @@ import msgpack
 
 logging.basicConfig(level=logging.DEBUG)
 
-output_hdfs = 'picarus_temp/%f/' % time.time()
-
-
-def get_version(module_name):
-    prev_dir = os.path.abspath('.')
-    try:
-        module_dir = __import__(module_name).__path__[0]
-    except ImportError:
-        raise ValueError('Module [%s] could not be imported!' % module_name)
-    except AttributeError:
-        raise ValueError('Module [%s] directory could not be found!' % module_name)
-    try:
-        os.chdir(module_dir)
-        return subprocess.Popen('git log -1 --pretty=format:%H'.split(), stdout=subprocess.PIPE).communicate()[0]
-    finally:
-        os.chdir(prev_dir)
-
-
-def _tempfile(data, suffix=''):
-    fp = tempfile.NamedTemporaryFile(suffix=suffix)
-    fp.write(data)
-    fp.flush()
-    return fp
-
-
-def model_tofile(model):
-    if isinstance(model, dict) or isinstance(model, list):
-        return _tempfile(zlib.compress(msgpack.dumps(model)), suffix='.msgpack.gz')
-    else:
-        return _tempfile(zlib.compress(pickle.dumps(model)), suffix='.pkl.gz')
-
 
 class PicarusManager(object):
 
@@ -150,27 +119,6 @@ class PicarusManager(object):
         chunks = [(int(x.split('-')[1]), y.value) for x, y in self.hb.getRowWithColumns(self.models_table, key, model_chunk_columns)[0].columns.items()]
         chunks.sort()
         return ''.join([x[1] for x in chunks]), columns
-
-    def image_thumbnail(self, **kw):
-        # Makes 150x150 thumbnails from the data:image column
-        model = [{'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}}]
-        self.takeout_chain_job(model, 'data:image', 'thum:image_150sq', **kw)
-
-    def image_exif(self, **kw):
-        cmdenvs = {'HBASE_TABLE': self.images_table,
-                   'HBASE_OUTPUT_COLUMN': base64.b64encode('meta:exif')}
-        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/image_exif.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, columns=['data:image'], single_value=True,
-                             cmdenvs=cmdenvs, check_script=False, make_executable=False, **kw)
-
-    def takeout_chain_job(self, model, input_column, output_column, **kw):
-        model_fp = model_tofile(model)
-        cmdenvs = {'HBASE_TABLE': self.images_table,
-                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
-                   'MODEL_FN': os.path.basename(model_fp.name)}
-        hadoopy_hbase.launch(self.images_table, output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
-                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, check_script=False, make_executable=False, **kw)
 
     def model_to_name(self, model):
         args = list(model.get('args', []))

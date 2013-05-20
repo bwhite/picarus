@@ -18,6 +18,12 @@ import contextlib
 import tables
 import glob
 import re
+import random
+import time
+import zlib
+import tempfile
+import msgpack
+import pickle
 
 
 def check_version(func):
@@ -39,6 +45,20 @@ def check_version(func):
             bottle.abort(400)
         return func2(*args, **kw)
     return inner
+
+
+def _tempfile(data, suffix=''):
+    fp = tempfile.NamedTemporaryFile(suffix=suffix)
+    fp.write(data)
+    fp.flush()
+    return fp
+
+
+def model_tofile(model):
+    if isinstance(model, dict) or isinstance(model, list):
+        return _tempfile(zlib.compress(msgpack.dumps(model)), suffix='.msgpack.gz')
+    else:
+        return _tempfile(zlib.compress(pickle.dumps(model)), suffix='.pkl.gz')
 
 
 class HBaseDB(object):
@@ -95,6 +115,24 @@ class HBaseDB(object):
             filt = None
         return hadoopy_hbase.scanner(self.__thrift, table, columns=columns,
                                      start_row=start_row, stop_row=stop_row, filter=filt, per_call=per_call)
+
+    def image_exif(self, start_row, stop_row):
+        cmdenvs = {'HBASE_TABLE': self.images_table,
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode('meta:exif')}
+        output_hdfs = 'picarus_temp/%f/' % time.time()
+        hadoopy_hbase.launch('images', output_hdfs + str(random.random()), 'hadoop/image_exif.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, columns=['data:image'], single_value=True,
+                             cmdenvs=cmdenvs, check_script=False, make_executable=False)
+
+    def image_takeout_chain_job(self, model, input_column, output_column, start_row, stop_row):
+        output_hdfs = 'picarus_temp/%f/' % time.time()
+        model_fp = model_tofile(model)
+        cmdenvs = {'HBASE_TABLE': self.images_table,
+                   'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
+                   'MODEL_FN': os.path.basename(model_fp.name)}
+        hadoopy_hbase.launch('images', output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
+                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
+                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, check_script=False, make_executable=False)
 
 
 @contextlib.contextmanager
