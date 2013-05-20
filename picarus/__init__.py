@@ -4,13 +4,13 @@ import urllib
 import json
 import cStringIO as StringIO
 import os
-import hadoopy_hbase
 
 
 class HBaseMapper(object):
 
     def __init__(self):
         super(HBaseMapper, self).__init__()
+        import hadoopy_hbase
         self._hbase = hadoopy_hbase.HBaseRowDict(os.environ['HBASE_TABLE'], base64.b64decode(os.environ['HBASE_OUTPUT_COLUMN']))
 
     def map(self, row, value):
