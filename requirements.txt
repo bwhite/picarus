@@ -10,6 +10,7 @@ flickrapi>=1.4.2
 -e git+https://github.com/surfly/gevent.git#egg=gevent-dev
 gipc>=0.3.1
 greenlet>=0.4.0
+-e git+https://github.com/bwhite/kernels.git#egg=kernels-dev
 -e git+https://github.com/bwhite/hadoopy.git#egg=hadoopy-dev
 -e git+https://github.com/bwhite/hadoopy_hbase.git#egg=hadoopy_hbase-dev
 -e git+https://github.com/bwhite/crawlers.git#egg=crawlers-dev
