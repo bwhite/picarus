@@ -67,7 +67,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run Picarus REST Frontend')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
     parser.add_argument('--redis_port', type=int, help='Redis Port', default=6379)
-    parser.add_argument('--redis_data', action='store_true')
     parser.add_argument('--annotations_redis_host', help='Annotations Host', default='localhost')
     parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
     parser.add_argument('--raven', help='URL to the Raven/Sentry logging server')
@@ -75,6 +74,7 @@ if __name__ == "__main__":
     parser.add_argument('--port', default='80', type=int)
     parser.add_argument('--thrift_server', default='localhost')
     parser.add_argument('--thrift_port', default='9090')
+    parser.add_argument('--database', choices=['hbase', 'redis'], help='Select which database to use as our backend')
     ARGS = parser.parse_args()
     if ARGS.raven:
         import raven
@@ -82,10 +82,11 @@ if __name__ == "__main__":
     THRIFT_POOL = gevent.queue.Queue()
 
     def THRIFT_CONSTRUCTOR():
-        if ARGS.redis_data:
+        if ARGS.database == 'redis':
             return RedisDB(ARGS.redis_host, ARGS.redis_port, 2)
-        else:
+        if ARGS.database == 'hbase':
             return HBaseDB(ARGS.thrift_server, ARGS.thrift_port)
+        raise ValueError('Unknown option[%s]' % ARGS.database)
     for x in range(5):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     USERS = Users(ARGS.redis_host, ARGS.redis_port, 0)
