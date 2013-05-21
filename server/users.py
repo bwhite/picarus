@@ -115,19 +115,21 @@ class User(object):
     def hset(self, key, val):
         return self._user_db.hset(self._user_prefix + self.email, key, val)
 
-    def create_api_key(self, ttl=None):
+    def create_api_key(self, ttl=None, key=None):
         if ttl is None:
             ttl = 86400
         ttl = max(1, min(int(ttl), 604800))  # 1sec <= x <= 1week
-        key = self._key_gen()
+        if key is None:
+            key = self._key_gen()
         k = self._api_key_prefix + self.email
         cur_time = time.time()
         self._user_db.zremrangebyscore(k, -float('inf'), cur_time)
         self._user_db.zadd(k, str(cur_time + ttl), self._hash_key(key))
         return key
 
-    def create_login_key(self):
-        key = self._key_gen()
+    def create_login_key(self, key=None):
+        if key is None:
+            key = self._key_gen()
         self._user_db.set(self._login_key_prefix + self.email, self._hash_key(key))
         return key
 
@@ -354,8 +356,8 @@ def main():
             user = users.add_user(x)
             for x in user._tables:
                 user.add_prefix(x, user.upload_row_prefix, 'rw')
-                user.add_prefix(x, user.upload_row_prefix, 'rw')
-            users.email_login_api_key(user)
+            if not args.noemail:
+                users.email_login_api_key(user)
 
     def _add_user_prefix(args, users):
         user = users.get_user(args.email)
@@ -364,7 +366,6 @@ def main():
     def _add_upload_prefix(args, users):
         user = users.get_user(args.email)
         for x in user._tables:
-            user.add_prefix(x, user.upload_row_prefix, 'rw')
             user.add_prefix(x, user.upload_row_prefix, 'rw')
 
     def _remove_user_prefix(args, users):
@@ -390,6 +391,18 @@ def main():
     def _remove_user(args, users):
         for x in args.emails:
             users.remove_user(x)
+
+    def _force_api_key(args, users):
+        if not re.search('^[a-zA-Z0-9]+$', args.api_key):
+            raise ValueError('Invalid key')
+        user = users.get_user(args.email)
+        user.create_api_key(args.ttl, key=args.api_key)
+
+    def _force_login_key(args, users):
+        if not re.search('^[a-zA-Z0-9]+$', args.login_key):
+            raise ValueError('Invalid key')
+        user = users.get_user(args.email)
+        user.create_login_key(key=args.login_key)
 
     parser = argparse.ArgumentParser(description='Picarus user operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
@@ -427,8 +440,20 @@ def main():
     subparser.add_argument('ttl', help='Time to live (sec)')
     subparser.set_defaults(func=_api_key)
 
+    subparser = subparsers.add_parser('force_api_key', help='Create a specific api_key key for a user')
+    subparser.add_argument('email', help='email')
+    subparser.add_argument('ttl', help='Time to live (sec)')
+    subparser.add_argument('api_key', help='API key to use. Must be [a-zA-Z0-9].')
+    subparser.set_defaults(func=_force_api_key)
+
+    subparser = subparsers.add_parser('force_login_key', help='Create a specific login_key key for a user')
+    subparser.add_argument('email', help='email')
+    subparser.add_argument('login_key', help='Login key to use. Must be [a-zA-Z0-9].')
+    subparser.set_defaults(func=_force_login_key)
+
     subparser = subparsers.add_parser('add', help='Add users')
     subparser.add_argument('emails', nargs='+', help='emails')
+    subparser.add_argument('--noemail', action='store_true', help='Do not email the users their keys')
     subparser.set_defaults(func=_add_user)
 
     subparser = subparsers.add_parser('remove', help='Remove users')

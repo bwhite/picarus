@@ -1,8 +1,8 @@
 *~
 build
-picarus/api/flickr_keys.py
-picarus/api/email_auth.js
 *.pyc
-old/
 dist/
 picarus.egg-info/
+server/email_auth.js
+server/flickr_keys.py
+old/
