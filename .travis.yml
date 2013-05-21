@@ -5,9 +5,8 @@ python:
 
 before_install:
  - sudo apt-get update -qq
- - sudo apt-get install libmsgpack-dev libblas-dev cmake libfftw3-dev python-numpy valgrind
- - sudo apt-get remove libjpeg-turbo8-dev libjpeg-turbo8
- - wget -nc http://downloads.sourceforge.net/project/libjpeg-turbo/1.2.90%20%281.3beta1%29/libjpeg-turbo_1.2.90_amd64.deb && sudo dpkg -i libjpeg-turbo_1.2.90_amd64.deb
+ - sudo apt-get install libmsgpack-dev libblas-dev cmake libfftw3-dev python-numpy valgrind libevent-dev
+ - wget -nc http://downloads.sourceforge.net/project/libjpeg-turbo/1.2.90%20%281.3beta1%29/libjpeg-turbo_1.2.90_amd64.deb && sudo dpkg -i --force-overwrite libjpeg-turbo_1.2.90_amd64.deb
  - pip install -r requirements.txt --use-mirrors
  - wget http://downloads.sourceforge.net/project/opencvlibrary/opencv-unix/2.4.5/opencv-2.4.5.tar.gz && tar -xzf opencv-2.4.5.tar.gz && mkdir opencv-2.4.5/build && pushd opencv-2.4.5/build && cmake -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_java=OFF -D  BUILD_opencv_apps=OFF -D BUILD_opencv_calib3d=OFF -D  BUILD_opencv_contrib=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_legacy=OFF -D BUILD_opencv_ml=OFF -D BUILD_opencv_nonfree=OFF -D BUILD_opencv_photo=OFF -D BUILD_opencv_stitching=OFF -D BUILD_opencv_superres=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_video=OFF -D BUILD_opencv_videostab=OFF -D BUILD_FAT_JAVA_LIB=OFF -D CMAKE_INSTALL_PREFIX=/usr .. -DWITH_JPEG=ON -DBUILD_JPEG=OFF -DJPEG_INCLUDE_DIR=/opt/libjpeg-turbo/include/ -DJPEG_LIBRARY=/usr/lib/libturbojpeg.a && make -j 8 && sudo make install && popd
  - git clone git://github.com/bwhite/picarus_takeout.git && pushd picarus_takeout && pip install -r requirements.txt --use-mirrors && cmake . -DCMAKE_BUILD_TYPE=release && make && sudo make install && popd
