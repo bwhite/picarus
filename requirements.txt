@@ -8,6 +8,7 @@ gipc>=0.3.1
 greenlet>=0.4.0
 -e git+https://github.com/bwhite/hadoopy.git#egg=hadoopy-dev
 -e git+https://github.com/bwhite/hadoopy_hbase.git#egg=hadoopy_hbase-dev
+-e git+https://github.com/bwhite/crawlers.git#egg=crawlers-dev
 hiredis>=0.1.1
 msgpack-python>=0.3.0
 -e git+https://github.com/bwhite/data_sources.git#egg=data_sources-dev
