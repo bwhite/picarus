@@ -9,6 +9,7 @@ greenlet>=0.4.0
 -e git+https://github.com/bwhite/hadoopy_hbase.git#egg=hadoopy_hbase-dev
 hiredis>=0.1.1
 msgpack-python>=0.3.0
+-e git+https://github.com/bwhite/data_sources.git#egg=data_sources-dev
 -e git+https://github.com/bwhite/mturk_vision.git#egg=mturk_vision-dev
 raven>=3.3.7
 redis>=2.7.5
