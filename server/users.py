@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import bottle
 import hashlib
 import os
@@ -406,8 +407,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='Picarus user operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
-    parser.add_argument('--redis_port', type=int, help='Redis Port', default=6380)
-    parser.add_argument('--redis_db', type=int, help='Redis DB', default=0)
+    parser.add_argument('--redis_port', type=int, help='Redis Port', default=6379)
     subparsers = parser.add_subparsers(help='Commands')
 
     subparser = subparsers.add_parser('add_prefix', help='Add prefix')
@@ -463,7 +463,7 @@ def main():
     subparser = subparsers.add_parser('stats', help='Get user stats')
     subparser.set_defaults(func=_stats)
     args = parser.parse_args()
-    users = Users(args.redis_host, args.redis_port, args.redis_db)
+    users = Users(args.redis_host, args.redis_port, 0)
     args.func(args, users)
 
 if __name__ == '__main__':

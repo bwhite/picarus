@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Based on https://code.google.com/p/yubikey-python/source/browse/trunk/decrypt.py
 import re
 import base64
@@ -91,8 +92,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description='Picarus yubikey operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
-    parser.add_argument('--redis_port', type=int, help='Redis Port', default=6380)
-    parser.add_argument('--redis_db', type=int, help='Redis DB', default=1)
+    parser.add_argument('--redis_port', type=int, help='Redis Port', default=6379)
     subparsers = parser.add_subparsers(help='Commands')
 
     subparser = subparsers.add_parser('add', help='Add yubikey')
@@ -107,7 +107,7 @@ def main():
     subparser.set_defaults(func=_verify)
 
     args = parser.parse_args()
-    yk = Yubikey(args.redis_host, args.redis_port, args.redis_db)
+    yk = Yubikey(args.redis_host, args.redis_port, 1)
     args.func(args, yk)
 
 

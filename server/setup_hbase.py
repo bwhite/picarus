@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import hadoopy_hbase
 import argparse
 
