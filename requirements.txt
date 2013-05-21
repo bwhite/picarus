@@ -4,6 +4,7 @@ boto>=2.9.3
 pycrypto>=2.4.1
 bottle>=0.11.6
 numpy>=1.6.0
+scipy>=0.9.0
 scikit-learn>=0.13.1
 flickrapi>=1.4.2
 -e git+https://github.com/surfly/gevent.git#egg=gevent-dev

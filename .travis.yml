@@ -11,8 +11,8 @@ services:
 # -DJPEG_INCLUDE_DIR=/opt/libjpeg-turbo/include/ -DJPEG_LIBRARY=/usr/lib/libturbojpeg.a 
 before_install:
  - sudo apt-get update -qq
- - sudo apt-get install libmsgpack-dev libblas-dev cmake libfftw3-dev valgrind liblapack-dev gfortran python-numpy python-scipy
- - pip install -r requirements.txt --use-mirrors
+ - sudo apt-get install libmsgpack-dev libblas-dev cmake libfftw3-dev valgrind liblapack-dev gfortran python-numpy
+ - pip install -r requirements.txt --use-mirrors | grep Downloading
  - wget http://downloads.sourceforge.net/project/opencvlibrary/opencv-unix/2.4.5/opencv-2.4.5.tar.gz && tar -xzf opencv-2.4.5.tar.gz && mkdir opencv-2.4.5/build && pushd opencv-2.4.5/build && cmake -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_java=OFF -D  BUILD_opencv_apps=OFF -D BUILD_opencv_calib3d=OFF -D  BUILD_opencv_contrib=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_legacy=OFF -D BUILD_opencv_ml=OFF -D BUILD_opencv_nonfree=OFF -D BUILD_opencv_photo=OFF -D BUILD_opencv_stitching=OFF -D BUILD_opencv_superres=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_video=OFF -D BUILD_opencv_videostab=OFF -D BUILD_FAT_JAVA_LIB=OFF -D CMAKE_INSTALL_PREFIX=/usr .. -DWITH_JPEG=ON -DBUILD_JPEG=ON > /dev/null && make -j 8 && sudo make install && popd
  - git clone git://github.com/bwhite/picarus_takeout.git && pushd picarus_takeout && pip -q install -r requirements.txt --use-mirrors && cmake . -DCMAKE_BUILD_TYPE=release && make && sudo make install && popd
 
