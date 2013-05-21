@@ -298,7 +298,10 @@ class Users(object):
         except ValueError:
             bottle.abort(401)
         print('Email[%s]' % email)
-        user = self.get_user(email)
+        try:
+            user = self.get_user(email)
+        except UnknownUser:
+            bottle.abort(401)
         if not user.verify_login_key(login_key):
             bottle.abort(401)
         return user
