@@ -65,15 +65,8 @@ def load_site():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser(description='Run Picarus REST Frontend')
-    parser.add_argument('--users_redis_host', help='Redis Host', default='localhost')
-    parser.add_argument('--users_redis_port', type=int, help='Redis Port', default=6379)
-    parser.add_argument('--users_redis_db', type=int, help='Redis DB', default=0)
-    parser.add_argument('--yubikey_redis_host', help='Redis Host', default='localhost')
-    parser.add_argument('--yubikey_redis_port', type=int, help='Redis Port', default=6379)
-    parser.add_argument('--yubikey_redis_db', type=int, help='Redis DB', default=1)
-    parser.add_argument('--data_redis_host', help='Redis Host', default='localhost')
-    parser.add_argument('--data_redis_port', type=int, help='Redis Port', default=6379)
-    parser.add_argument('--data_redis_db', type=int, help='Redis DB', default=2)
+    parser.add_argument('--redis_host', help='Redis Host', default='localhost')
+    parser.add_argument('--redis_port', type=int, help='Redis Port', default=6379)
     parser.add_argument('--redis_data', action='store_true')
     parser.add_argument('--annotations_redis_host', help='Annotations Host', default='localhost')
     parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
@@ -90,13 +83,13 @@ if __name__ == "__main__":
 
     def THRIFT_CONSTRUCTOR():
         if ARGS.redis_data:
-            return RedisDB(ARGS.data_redis_host, ARGS.data_redis_port, ARGS.data_redis_db)
+            return RedisDB(ARGS.redis_host, ARGS.redis_port, 2)
         else:
             return HBaseDB(ARGS.thrift_server, ARGS.thrift_port)
     for x in range(5):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
-    USERS = Users(ARGS.users_redis_host, ARGS.users_redis_port, ARGS.users_redis_db)
-    YUBIKEY = Yubikey(ARGS.yubikey_redis_host, ARGS.yubikey_redis_port, ARGS.yubikey_redis_db)
+    USERS = Users(ARGS.redis_host, ARGS.redis_port, 0)
+    YUBIKEY = Yubikey(ARGS.redis_host, ARGS.redis_port, 1)
     ANNOTATORS = annotators.Annotators(ARGS.annotations_redis_host, ARGS.annotations_redis_port)
     SITE = load_site()
     # Set necessary globals in tables module

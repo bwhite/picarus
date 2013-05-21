@@ -1,0 +1,16 @@
+Pillow>=1.7.7
+boto>=2.9.3
+bottle>=0.11.6
+flickrapi>=1.4.2
+gevent>=0.13.8
+gipc>=0.3.1
+greenlet>=0.4.0
+-e git+https://github.com/bwhite/hadoopy.git#egg=hadoopy-dev
+-e git+https://github.com/bwhite/hadoopy_hbase.git#egg=hadoopy_hbase-dev
+hiredis>=0.1.1
+msgpack-python>=0.3.0
+-e git+https://github.com/bwhite/mturk_vision.git#egg=mturk_vision-dev
+raven>=3.3.7
+redis>=2.7.5
+requests>=1.2.0
+thrift>=0.9.0
