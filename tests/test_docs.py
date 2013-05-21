@@ -3,6 +3,7 @@ try:
 except ImportError:
     import unittest
 
+
 def parse_tests(fn, language='python'):
     pattern = '.. code-block:: %s' % language
     with open(fn) as fp:
@@ -47,7 +48,10 @@ class Test(unittest.TestCase):
 
         def test_failed():
             print('\033[91mTest Failed\033[0m')
-        otp = raw_input('Yubikey OTP: ')
+        if 'OTP' not in os.environ:
+            otp = raw_input('Yubikey OTP: ')
+        else:
+            otp = os.environ['OTP']
         for doc_fn in glob.glob('../doc/*.rst'):
             for source in parse_tests(doc_fn):
                 source = '\n'.join(prefix + source)

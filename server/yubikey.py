@@ -4,6 +4,7 @@ import re
 import base64
 import Crypto.Cipher.AES
 import redis
+import json
 
 RE_TOKEN = re.compile(r'^[cbdefghijklnrtuv]{32,64}$')
 
@@ -13,6 +14,14 @@ def _modhex_decode(input):
     chars = 'cbdefghijklnrtuv'
     for first, second in zip(it, it):
         yield chr(chars.index(first) * 16 + chars.index(second))
+
+
+def _modhex_encode(input):
+    chars = 'cbdefghijklnrtuv'
+    for i in input:
+        v = ord(i)
+        yield chars[v // 16]
+        yield chars[v % 16]
 
 
 def _crc_check(decoded):
@@ -25,6 +34,20 @@ def _crc_check(decoded):
             if test:
                 m_crc ^= 0x8408
     return m_crc == 0xf0b8
+
+
+def _crc(decoded):
+    # From http://static.yubico.com/var/uploads/YubiKey_manual-2.0.pdf
+    # Page 25
+    m_crc = 0x5af0
+    for c in decoded:
+        m_crc ^= ord(c) & 0xff
+        for i in range(0, 8):
+            test = m_crc & 1
+            m_crc >>= 1
+            if test:
+                m_crc ^= 0x8408
+    return m_crc
 
 
 class Yubikey(object):
@@ -82,12 +105,59 @@ def yubikey_decrypt(input, aes_key):
     return out
 
 
+def yubikey_encrypt(public_id, secret_id, session_counter, timecode, token_counter, random_number, aes_key):
+    assert 0 < len(public_id) <= 16
+    assert len(aes_key) == 16
+    assert len(secret_id) == 6
+    assert 0 <= session_counter < 65536
+    assert 0 <= timecode < 16777216
+    assert 0 <= token_counter < 256
+    assert 0 <= random_number < 65536
+    decoded = [secret_id]  # [0:6]
+    decoded.append(chr(session_counter % 256))   # [6]
+    decoded.append(chr(session_counter // 256))  # [7]
+    decoded.append(chr(timecode % 256))   # [8]
+    decoded.append(chr((timecode // 256) % 256))  # [9]
+    decoded.append(chr(timecode // 65536))  # [10]
+    decoded.append(chr(token_counter))  # [11]
+    decoded.append(chr(random_number % 256))  # [12]
+    decoded.append(chr(random_number // 256))  # [13]
+    crc = _crc(''.join(decoded))
+    print(crc)
+    decoded.append(chr(crc % 256))  # [14]
+    decoded.append(chr(crc // 256))  # [15]
+    decoded = ''.join(decoded)
+    token = ''.join(_modhex_encode(Crypto.Cipher.AES.new(aes_key, Crypto.Cipher.AES.MODE_ECB).encrypt(decoded)))
+    assert len(token) == 32
+    return ''.join(_modhex_encode(public_id)) + token
+
+
 def main():
-    def _add_yubikey(args, yk):
+    def _add_yubikey(args):
+        yk = Yubikey(args.redis_host, args.redis_port, 1)
         yk.add_yubikey(args.user, base64.b64decode(args.public_id), base64.b64decode(args.secret_id), base64.b64decode(args.aes_key))
 
-    def _verify(args, yk):
+    def _verify(args):
+        yk = Yubikey(args.redis_host, args.redis_port, 1)
         print yk.verify(args.input)
+
+    def _encrypt(args):
+        vargs = vars(args)
+        del vargs['func']
+        del vargs['redis_host']
+        del vargs['redis_port']
+        for k in ['secret_id', 'aes_key']:
+            vargs[k] = base64.b16decode(vargs[k])
+        otp = yubikey_encrypt(**vargs)
+        # Check that it decrypts ok
+        out = yubikey_decrypt(otp, args.aes_key)
+        assert out['public_id'] == args.public_id
+        assert out['secret_id'] == args.secret_id
+        assert out['timecode'] == args.timecode
+        assert out['token_counter'] == args.token_counter
+        assert out['random_number'] == args.random_number
+        assert out['crc_ok']
+        print(json.dumps({'otp': otp}))
 
     import argparse
     parser = argparse.ArgumentParser(description='Picarus yubikey operations')
@@ -106,9 +176,18 @@ def main():
     subparser.add_argument('input', help='OTP Input')
     subparser.set_defaults(func=_verify)
 
+    subparser = subparsers.add_parser('encrypt', help='Generate an otp from parts (for testing purposes)')
+    subparser.add_argument('public_id', help='ASCII characters (0 < x <= 16)')
+    subparser.add_argument('aes_key', help='16 binary bytes encoded at 32 hex characters')
+    subparser.add_argument('secret_id', help='6 binary bytes encoded at 12 hex characters')
+    subparser.add_argument('session_counter', type=int, help='0 <= x < 65536')
+    subparser.add_argument('token_counter', type=int, help='0 <= x < 256')
+    subparser.add_argument('timecode', type=int, help='0 <= x < 16777216')
+    subparser.add_argument('random_number', type=int, help='0 <= x < 65536')
+    subparser.set_defaults(func=_encrypt)
+
     args = parser.parse_args()
-    yk = Yubikey(args.redis_host, args.redis_port, 1)
-    args.func(args, yk)
+    args.func(args)
 
 
 if __name__ == '__main__':

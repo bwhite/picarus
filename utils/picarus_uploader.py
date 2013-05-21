@@ -22,7 +22,6 @@ def main(email, table, prefix, path, picarus_server, api_key=None, login_key=Non
         client.patch_row(table, row, columns)
 
 if __name__ == '__main__':
-    
     parser = argparse.ArgumentParser(description='Picarus bulk directory uploader.  Path points to a directory encoded as <path>/<ub64row>/<ub64col> for each column, with the file contents the binary column value (not encoded).  ub64 refers to urlsafe b64 encoding.')
     parser.add_argument('email')
     parser.add_argument('table', choices=['images'])
