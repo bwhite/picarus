@@ -792,4 +792,5 @@ def get_table(_auth_user, table):
     elif table == 'parameters':
         return ParametersTable()
     else:
+        print('Table not found[%s]' % table)
         bottle.abort(404)
