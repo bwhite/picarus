@@ -17,6 +17,7 @@ def parse():
     parser.add_argument('--picarus_server', default='http://localhost')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
     parser.add_argument('--redis_port', type=int, help='Redis Port', default=6379)
+    parser.add_argument('--root', help='Root path of picarus directory (e.g., .. if pwd is tests or . if pwd is root)', default='..')
     return vars(parser.parse_args())
 
 
@@ -27,6 +28,7 @@ def _key_gen():
 def setup(args):
     print(args)
     num_otp = 2
+    args['root'] = os.path.abspath(args['root']) + '/'
     if (args['login_key'] is None or args['api_key'] is None or len(args['otp']) < num_otp) and not args['setup_user']:
         raise ValueError('Must specify login_key/api_key and |otp| >= num_otp if setup_user=False' % num_otp)
     if args['login_key'] is None:
@@ -35,9 +37,7 @@ def setup(args):
         args['api_key'] = _key_gen()
     if args['setup_user']:
         # Allow script to be executed in picarus or picarus/tests
-        users_script, yubikey_script = '../server/users.py', '../server/yubikey.py'
-        if not os.path.exists(users_script) or not os.path.exists(yubikey_script):
-            users_script, yubikey_script = 'server/users.py', 'server/yubikey.py'
+        users_script, yubikey_script = args['root'] + 'server/users.py', args['root'] + 'server/yubikey.py'
         assert os.path.exists(users_script) and os.path.exists(yubikey_script)
         redis_args = ['--redis_host', args['redis_host'], '--redis_port', str(args['redis_port'])]
         users_func = lambda x: subprocess.call([users_script] + redis_args + x.split())
@@ -71,7 +71,7 @@ def run(args):
                                                       'LOGIN_KEY': args['login_key'],
                                                       'API_KEY': args['api_key'],
                                                       'OTP': args['otp'][0]}).wait()
-    os.chdir('casperjs/bin')
+    os.chdir(args['prefix'] + 'tests/casperjs/bin')
     cmd = './casperjs picarus.js --email=%s --login_key=%s --api_key=%s --otp=%s' % (args['email'], args['login_key'],
                                                                                      args['api_key'], args['otp'][1])
     subprocess.Popen(cmd.split()).wait()

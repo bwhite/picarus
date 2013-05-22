@@ -23,4 +23,4 @@ install:
  - sleep 3
  - cd ..
 
-script: "python tests/run_tests.py testuser@dappervision.com testuserprefix: --setup_user"
+script: "python tests/run_tests.py testuser@dappervision.com testuserprefix: --setup_user --root ."
