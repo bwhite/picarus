@@ -72,11 +72,11 @@ def run(args):
                 'LOGIN_KEY': args['login_key'],
                 'API_KEY': args['api_key'],
                 'OTP': args['otp'][0]})
-    subprocess.Popen(['python', args['root'] + 'tests/test_docs.py'], env=env).wait()
+    assert subprocess.Popen(['python', args['root'] + 'tests/test_docs.py'], env=env).wait() == 0
     os.chdir(args['root'] + 'tests/casperjs/bin')
     cmd = './casperjs picarus.js --email=%s --login_key=%s --api_key=%s --otp=%s' % (args['email'], args['login_key'],
                                                                                      args['api_key'], args['otp'][1])
-    subprocess.Popen(cmd.split()).wait()
+    assert subprocess.Popen(cmd.split()).wait() == 0
 
 
 def main():
