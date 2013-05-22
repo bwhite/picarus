@@ -21,7 +21,6 @@ install:
 
 script:
  - pushd server
- - python users.py add testuser@dappervision.com --noemail
- - python users.py force_login_key testuser@dappervision.com loginkey
- - python users.py force_api_key testuser@dappervision.com 86400 apikey
- - nohup python rest_server.py --database redis --port 15000 &
+ - sudo nohup python rest_server.py --database redis &
+ - popd && pushd tests
+ - python run_tests.py testuser@dappervision.com testuserprefix: --setup_user
