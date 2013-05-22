@@ -18,9 +18,10 @@ before_install:
 
 install:
  - pip install .
+ - cd server
+ - sudo nohup python rest_server.py --database redis &
+ - sleep 3
+ - cd ..
 
 script:
- - pushd server
- - sudo nohup python rest_server.py --database redis &
- - popd && pushd tests
- - python run_tests.py testuser@dappervision.com testuserprefix: --setup_user
+ - python tests/run_tests.py testuser@dappervision.com testuserprefix: --setup_user
