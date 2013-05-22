@@ -123,7 +123,6 @@ def yubikey_encrypt(public_id, secret_id, session_counter, timecode, token_count
     decoded.append(chr(random_number % 256))  # [12]
     decoded.append(chr(random_number // 256))  # [13]
     crc = _crc(''.join(decoded))
-    print(crc)
     decoded.append(chr(crc % 256))  # [14]
     decoded.append(chr(crc // 256))  # [15]
     decoded = ''.join(decoded)

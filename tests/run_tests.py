@@ -20,21 +20,26 @@ def parse():
     return vars(parser.parse_args())
 
 
+def _key_gen():
+    return base64.b64encode(os.urandom(15), 'ab')
+
+
 def setup(args):
     print(args)
     num_otp = 2
     if (args['login_key'] is None or args['api_key'] is None or len(args['otp']) < num_otp) and not args['setup_user']:
         raise ValueError('Must specify login_key/api_key and |otp| >= num_otp if setup_user=False' % num_otp)
     if args['login_key'] is None:
-        args['login_key'] = 'loginkey'
+        args['login_key'] = _key_gen()
     if args['api_key'] is None:
-        args['api_key'] = 'apikey'
+        args['api_key'] = _key_gen()
     if args['setup_user']:
         users_script = '../server/users.py'
         yubikey_script = '../server/yubikey.py'
         assert os.path.exists(users_script) and os.path.exists(yubikey_script)
-        users_func = lambda x: subprocess.call([users_script] + x.split())
-        yubikey_func = lambda x: subprocess.Popen([yubikey_script] + x.split(), stdout=subprocess.PIPE).communicate()[0]
+        redis_args = ['--redis_host', args['redis_host'], '--redis_port', str(args['redis_port'])]
+        users_func = lambda x: subprocess.call([users_script] + redis_args + x.split())
+        yubikey_func = lambda x: subprocess.Popen([yubikey_script] + redis_args + x.split(), stdout=subprocess.PIPE).communicate()[0]
         users_func('add %s --noemail' % args['email'])
         users_func('force_login_key %s %s' % (args['email'], args['login_key']))
         users_func('force_api_key %s 86400 %s' % (args['email'], args['api_key']))
@@ -53,8 +58,10 @@ def setup(args):
                 session_counter += 1
                 timecode += 1
                 random_number = random.randint(0, 65535)
-                yield json.loads(yubikey_func('encode %s %s %s %s' % (public_id, secret_id, aes_key, session_counter, token_counter, timecode, random_number)))['otp']
+                print('encrypt %s %s %s %d %d %d %d' % (public_id, secret_id, aes_key, session_counter, token_counter, timecode, random_number))
+                yield str(json.loads(yubikey_func('encrypt %s %s %s %d %d %d %d' % (public_id, secret_id, aes_key, session_counter, token_counter, timecode, random_number)))['otp'])
         args['otp'] = [otp for _, otp in zip(range(num_otp), yubikey_iter())]
+        print(args)
 
 
 def run(args):
@@ -71,6 +78,7 @@ def run(args):
 def main():
     args = parse()
     setup(args)
+    # TODO: Populate with data
     run(args)
 
 if __name__ == '__main__':
