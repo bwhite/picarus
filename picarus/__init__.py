@@ -28,7 +28,7 @@ class PicarusClient(object):
         self.version = 'a1'
         import requests
         self.requests = requests
-        self.timeout = 600  # 10 min
+        self.timeout = 3600  # 60 min
 
     def _check_status(self, response):
         if response.status_code != 200:
