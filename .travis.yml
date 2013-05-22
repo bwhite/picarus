@@ -17,7 +17,7 @@ before_install:
  - git clone git://github.com/bwhite/picarus_takeout.git && pushd picarus_takeout && pip -q install -r requirements.txt --use-mirrors && cmake . -DCMAKE_BUILD_TYPE=release && make && sudo make install && popd
 
 install:
- - pip install .
+ - python setup.py install
  - cd server
  - sudo nohup python rest_server.py --database redis &
  - sleep 3
