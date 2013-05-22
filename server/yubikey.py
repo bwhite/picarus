@@ -146,8 +146,8 @@ def main():
         del vargs['func']
         del vargs['redis_host']
         del vargs['redis_port']
-        for k in ['secret_id', 'aes_key']:
-            vargs[k] = base64.b16decode(vargs[k])
+        for k in ['public_id', 'secret_id', 'aes_key']:
+            vargs[k] = base64.b64decode(vargs[k])
         otp = yubikey_encrypt(**vargs)
         # Check that it decrypts ok
         out = yubikey_decrypt(otp, args.aes_key)
@@ -177,9 +177,9 @@ def main():
     subparser.set_defaults(func=_verify)
 
     subparser = subparsers.add_parser('encrypt', help='Generate an otp from parts (for testing purposes)')
-    subparser.add_argument('public_id', help='ASCII characters (0 < x <= 16)')
-    subparser.add_argument('aes_key', help='16 binary bytes encoded at 32 hex characters')
-    subparser.add_argument('secret_id', help='6 binary bytes encoded at 12 hex characters')
+    subparser.add_argument('public_id', help='(0, 16] bytes (b64 encoded)')
+    subparser.add_argument('secret_id', help='6 binary bytes (b64 encoded)')
+    subparser.add_argument('aes_key', help='16 binary bytes (b64 encoded)')
     subparser.add_argument('session_counter', type=int, help='0 <= x < 65536')
     subparser.add_argument('token_counter', type=int, help='0 <= x < 256')
     subparser.add_argument('timecode', type=int, help='0 <= x < 16777216')

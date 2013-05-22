@@ -60,9 +60,7 @@ class Test(unittest.TestCase):
                 exec(compile(source, 'blah.py', 'exec'), {}, {'email': email,
                                                               'login_key': login_key,
                                                               'api_key': api_key,
-                                                              'otp': otp,
-                                                              'test_passed': test_passed,
-                                                              'test_failed': test_failed})
+                                                              'otp': otp})
 
 if __name__ == '__main__':
     unittest.main()

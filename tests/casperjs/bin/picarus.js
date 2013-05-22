@@ -3,9 +3,10 @@ var casper = require('casper').create({
     logLevel: "debug"
 });
 
-EMAIL = 'testuser@dappervision.com'
-API_KEY = 'apikey'
-LOGIN_KEY = 'loginkey'
+EMAIL = casper.cli.get('email')
+API_KEY = casper.cli.get('api_key')
+LOGIN_KEY = casper.cli.get('login_key')
+OTP = casper.cli.get('otp')
 
 casper.start('https://api.picar.us', function() {
     /*
