@@ -34,8 +34,10 @@ def setup(args):
     if args['api_key'] is None:
         args['api_key'] = _key_gen()
     if args['setup_user']:
-        users_script = '../server/users.py'
-        yubikey_script = '../server/yubikey.py'
+        # Allow script to be executed in picarus or picarus/tests
+        users_script, yubikey_script = '../server/users.py', '../server/yubikey.py'
+        if not os.path.exists(users_script) or not os.path.exists(yubikey_script):
+            users_script, yubikey_script = 'server/users.py', 'server/yubikey.py'
         assert os.path.exists(users_script) and os.path.exists(yubikey_script)
         redis_args = ['--redis_host', args['redis_host'], '--redis_port', str(args['redis_port'])]
         users_func = lambda x: subprocess.call([users_script] + redis_args + x.split())
