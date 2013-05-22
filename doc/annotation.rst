@@ -15,8 +15,6 @@ Every row in the Redis annotation db's is prefixed with the annotation task as a
 +--------------+------------------------------------------------------------------------------------------------------+
 | path_to_key  | Maps from b64(row) + ' ' + b64(column) to a random key                                               |
 +--------------+------------------------------------------------------------------------------------------------------+
-| tasks        |                                                                                                      |
-+--------------+------------------------------------------------------------------------------------------------------+
 
 
 The state is the global memory of the task as it is being executed.  Below is a table of the state rows.

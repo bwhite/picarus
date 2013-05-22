@@ -774,11 +774,11 @@ class ModelsHBaseTable(HBaseTable):
 
 
 def get_table(_auth_user, table):
-    annotation_re = re.search('annotations\-(results|users)\-([a-zA-Z0-9_\-]+)', table)
+    annotation_re = re.search('annotation\-(results|users)\-([a-zA-Z0-9_\-]+)', table)
     if annotation_re:
         return AnnotationDataTable(_auth_user, *annotation_re.groups())
-    elif table == 'annotations':
-        return AnnotationsTable(_auth_user)
+    elif table == 'jobs':
+        return JobsTable(_auth_user)
     elif table == 'images':
         return ImagesHBaseTable(_auth_user)
     elif table == 'models':

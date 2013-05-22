@@ -65,8 +65,8 @@ function render_visualize_annotations_loaded() {
         return scores;
     }
     function display_annotation_task(task, get_classes, get_scores) {
-        results = new PicarusRows([], {'table': 'annotations-results-' + task});
-        users = new PicarusRows([], {'table': 'annotations-users-' + task});
+        results = new PicarusRows([], {'table': 'annotation-results-' + task});
+        users = new PicarusRows([], {'table': 'annotation-users-' + task});
         var imageColumn = 'thum:image_150sq';
         $('#negPct').change(data_change);
         $('#posPct').change(data_change);
