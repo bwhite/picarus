@@ -28,6 +28,7 @@ class PicarusClient(object):
         self.version = 'a1'
         import requests
         self.requests = requests
+        self.timeout = 600  # 10 min
 
     def _check_status(self, response):
         if response.status_code != 200:
@@ -60,27 +61,27 @@ class PicarusClient(object):
     # raw
     def get(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = self.requests.get('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), params=data)
+        r = self.requests.get('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), params=data, timeout=self.timeout)
         return self._check_status(r)
 
     def post(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), **self._split_data(data))
+        r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), timeout=self.timeout, **self._split_data(data))
         return self._check_status(r)
 
     def post_login(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.login_key), **self._split_data(data))
+        r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.login_key), timeout=self.timeout, **self._split_data(data))
         return self._check_status(r)
 
     def delete(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = self.requests.delete('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data)
+        r = self.requests.delete('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data, timeout=self.timeout)
         return self._check_status(r)
 
     def patch(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
-        r = self.requests.patch('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), **self._split_data(data))
+        r = self.requests.patch('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), timeout=self.timeout, **self._split_data(data))
         return self._check_status(r)
 
     def _encode_columns(self, columns):
