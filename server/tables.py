@@ -379,7 +379,7 @@ class JobsTable(BaseTableSmall):
             assert params['mode'] in ('standalone', 'amt')
             p['mode'] = params['mode']
             p['task_key'] = task
-            redis_host, redis_port = JOBS.add_task(task, self.owner, secret, data, p)
+            redis_host, redis_port = JOBS.add_task(task, 'annotation', self.owner, params=p, secret_params={'secret': secret, 'data': data})
             p['sync'] = True
             p['secret'] = secret
             p['redis_address'] = redis_host

@@ -98,11 +98,12 @@ class Jobs(object):
         except KeyError:
             data = self.db.hgetall(self._task_prefix + task)
             p = json.loads(data['params'])
+            ps = json.loads(data['_params'])
             p['sync'] = False
-            p['secret'] = data['_params']['secret']
+            p['secret'] = ps['secret']
             p['redis_address'] = self.redis_host
             p['redis_port'] = int(self.redis_port)
-            self.annotation_cache[task] = mturk_vision.manager(data=data['_params']['data'], **p)
+            self.annotation_cache[task] = mturk_vision.manager(data=ps['data'], **p)
             return self.annotation_cache[task]
 
     def get_annotation_manager_check(self, task, owner):
