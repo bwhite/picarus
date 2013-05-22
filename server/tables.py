@@ -1,5 +1,5 @@
 import base64
-import annotators
+import jobs
 import bottle
 import json
 import time
@@ -28,7 +28,7 @@ from model_factories import FACTORIES
 thrift_lock = None
 thrift_new = None
 VERSION = None
-ANNOTATORS = None
+JOBS = None
 
 
 def dod_to_lod_b64(dod):
@@ -303,22 +303,22 @@ class ProjectsTable(RedisUsersTable):
         return
 
 
-class AnnotationsTable(BaseTableSmall):
+class JobsTable(BaseTableSmall):
 
     def __init__(self, _auth_user):
-        super(AnnotationsTable, self).__init__()
+        super(JobsTable, self).__init__()
         self.owner = _auth_user.email
         self._auth_user = _auth_user
 
     def _get_table(self):
         try:
-            cur_table = ANNOTATORS.get_tasks(self.owner)
-        except annotators.UnauthorizedException:
+            cur_table = JOBS.get_tasks(self.owner)
+        except jobs.UnauthorizedException:
             bottle.abort(401)
         return dod_to_lod_b64(cur_table)
 
     def delete_row(self, row):
-        ANNOTATORS.delete_task(row, self.owner)
+        JOBS.delete_task(row, self.owner)
         return {}
 
     def post_row(self, row, params, files):
@@ -326,11 +326,11 @@ class AnnotationsTable(BaseTableSmall):
             bottle.abort(400)
         params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
-        manager = ANNOTATORS.get_manager_check(row, self.owner)
-        if action == 'io/sync':
+        manager = JOBS.get_annotation_manager_check(row, self.owner)
+        if action == 'io/annotation/sync':  # TODO
             manager.sync()
             return {}
-        elif action == 'io/priority':
+        elif action == 'io/annotation/priority':  # TODO
             data_row = params['row']
             priority = int(params['priority'])
             manager.row_increment_priority(data_row, priority)
@@ -344,7 +344,7 @@ class AnnotationsTable(BaseTableSmall):
         params = {base64.b64decode(k): base64.b64decode(v) for k, v in params.items()}
         path = params['path']
         start_stop_rows = parse_slices()
-        if path in ('images/class',):
+        if path in ('annotation/images/class',):
             data_table = get_table(self._auth_user, path.split('/', 1)[0])
             for start_row, stop_row in start_stop_rows:
                 data_table._slice_validate(start_row, stop_row, 'r')
@@ -355,7 +355,7 @@ class AnnotationsTable(BaseTableSmall):
             p = {}
             image_column = params['imageColumn']
             ub64 = base64.urlsafe_b64encode
-            if path == 'images/class':
+            if path == 'annotation/images/class':  # TODO
                 class_column = params['classColumn']
                 assert class_column.startswith('meta:')
                 suffix = '/'.join(ub64(x) + '/' + ub64(y) for x, y in start_stop_rows)
@@ -379,13 +379,13 @@ class AnnotationsTable(BaseTableSmall):
             assert params['mode'] in ('standalone', 'amt')
             p['mode'] = params['mode']
             p['task_key'] = task
-            redis_host, redis_port = ANNOTATORS.add_task(task, self.owner, secret, data, p)
+            redis_host, redis_port = JOBS.add_task(task, self.owner, secret, data, p)
             p['sync'] = True
             p['secret'] = secret
             p['redis_address'] = redis_host
             p['redis_port'] = int(redis_port)
             mturk_vision.manager(data=data, **p)
-            return {'task': base64.b64encode(task)}
+            return {'row': base64.b64encode(task)}
         else:
             bottle.abort(400)
 
@@ -400,13 +400,13 @@ class AnnotationDataTable(BaseTableSmall):
 
     def _get_table(self):
         try:
-            secret = ANNOTATORS.get_task_secret(self.task, self.owner)
-        except annotators.UnauthorizedException:
+            secret = JOBS.get_task_secret(self.task, self.owner)['secret']
+        except jobs.UnauthorizedException:
             bottle.abort(401)
         if self.table == 'results':
-            table = ANNOTATORS.get_manager(self.task).admin_results(secret)
+            table = JOBS.get_annotation_manager(self.task).admin_results(secret)
         elif self.table == 'users':
-            table = ANNOTATORS.get_manager(self.task).admin_users(secret)
+            table = JOBS.get_annotation_manager(self.task).admin_users(secret)
         else:
             bottle.abort(500)
         return dod_to_lod_b64(table)

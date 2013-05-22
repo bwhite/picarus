@@ -25,7 +25,7 @@ class PicarusClient(object):
         self.api_key = api_key
         self.login_key = login_key
         self.server = server
-        self.version = 'a1'
+        self.version = 'v0'
         import requests
         self.requests = requests
         self.timeout = 3600  # 60 min

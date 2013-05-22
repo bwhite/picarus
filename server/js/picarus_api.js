@@ -7,7 +7,7 @@ function decode_id(data) {
 }
 
 function PicarusClient(args) {
-    this.version = 'a1';
+    this.version = 'v0';
 
     this.setAuth = function (email, key) {
         $.ajaxSetup({'beforeSend': function (xhr) {

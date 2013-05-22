@@ -8,9 +8,9 @@ function render_annotate_class() {
         var classColumn = $('#class').val();
         var mode = $('#modeSelect').val();
         function success(response) {
-            ANNOTATIONS.fetch();
-            $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
+            JOBS.fetch();
+            $('#results').append($('<a>').attr('href', '/v0/annotation/' + response.row + '/index.html').text('Worker').attr('target', '_blank'));
         }
-        PICARUS.postTable('annotations', {success: success, data: {path: 'images/class', slices: slices_selector_get().join(';'), imageColumn: imageColumn, classColumn: classColumn, instructions: $('#instructions').val(), numTasks: numTasks, mode: mode}});
+        PICARUS.postTable('jobs', {success: success, data: {path: 'annotation/images/class', slices: slices_selector_get().join(';'), imageColumn: imageColumn, classColumn: classColumn, instructions: $('#instructions').val(), numTasks: numTasks, mode: mode}});
     });
 }

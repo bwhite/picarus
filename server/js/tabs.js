@@ -503,18 +503,19 @@ function render_process_copy() {
 }
 function render_annotate_list() {
     var workerColumn = {header: "Worker", getFormatted: function() {
-        return Mustache.render("<a href='/a1/annotate/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.escape('row')});
+        return Mustache.render("<a href='/v0/annotation/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.escape('row')});
     }};
     var syncColumn = {header: "Sync", getFormatted: function() { return '<span style="font-size:5px"><a class="tasks-sync" row="' + encode_id(this.get('row')) + '">sync</a></span>'}};
 
     function postRender() {
         $('.tasks-sync').click(function (data) {
             var row = decode_id(data.target.getAttribute('row'));
-            var model = ANNOTATIONS.get(row);
-            PICARUS.postRow('annotations', row, {data: {'action': 'io/sync'}});
+            var model = JOBS.get(row);
+            PICARUS.postRow('annotations', row, {data: {'action': 'io/annotation/sync'}});
         });
     }
-    new RowsView({collection: ANNOTATIONS, el: $('#annotations'), extraColumns: [workerColumn, syncColumn], postRender: postRender, deleteRows: true});
+    // TODO: Filter based on type == annotation
+    new RowsView({collection: JOBS, el: $('#annotations'), extraColumns: [workerColumn, syncColumn], postRender: postRender, deleteRows: true});
 }
 function render_annotate_class() {
     slices_selector();
@@ -526,10 +527,10 @@ function render_annotate_class() {
         var classColumn = $('#class').val();
         var mode = $('#modeSelect').val();
         function success(response) {
-            ANNOTATIONS.fetch();
-            $('#results').append($('<a>').attr('href', '/a1/annotate/' + response.task + '/index.html').text('Worker').attr('target', '_blank'));
+            JOBS.fetch();
+            $('#results').append($('<a>').attr('href', '/v0/annotation/' + response.row + '/index.html').text('Worker').attr('target', '_blank'));
         }
-        PICARUS.postTable('annotations', {success: success, data: {path: 'images/class', slices: slices_selector_get().join(';'), imageColumn: imageColumn, classColumn: classColumn, instructions: $('#instructions').val(), numTasks: numTasks, mode: mode}});
+        PICARUS.postTable('jobs', {success: success, data: {path: 'annotation/images/class', slices: slices_selector_get().join(';'), imageColumn: imageColumn, classColumn: classColumn, instructions: $('#instructions').val(), numTasks: numTasks, mode: mode}});
     });
 }
 function render_visualize_thumbnails() {
