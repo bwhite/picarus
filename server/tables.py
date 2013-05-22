@@ -345,7 +345,7 @@ class JobsTable(BaseTableSmall):
         path = params['path']
         start_stop_rows = parse_slices()
         if path in ('annotation/images/class',):
-            data_table = get_table(self._auth_user, path.split('/', 1)[0])
+            data_table = get_table(self._auth_user, path.split('/', 2)[0])
             for start_row, stop_row in start_stop_rows:
                 data_table._slice_validate(start_row, stop_row, 'r')
             # We never need to decode these, they just need to be

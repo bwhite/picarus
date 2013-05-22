@@ -7,8 +7,9 @@ EMAIL = casper.cli.get('email')
 API_KEY = casper.cli.get('api_key')
 LOGIN_KEY = casper.cli.get('login_key')
 OTP = casper.cli.get('otp')
+SERVER = casper.cli.get('server')
 
-casper.start('https://api.picar.us', function() {
+casper.start(SERVER, function() {
     /*
     this.echo(this.evaluate(function (otp, email, loginKey) {
         $('#email').val(email);
