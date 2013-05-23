@@ -84,10 +84,11 @@ class Jobs(object):
         outs = {}
         for job_key in self.db.smembers(self._owner_prefix + owner):
             # TODO: Error check if something gets removed while we are accumulating
-            if self.db.hget(job_key, 'owner') == owner:
-                out = self.db.hgetall(job_key)
+            task = self._task_prefix + job_key
+            if self.db.hget(task, 'owner') == owner:
+                out = self.db.hgetall(task)
                 out = {k: v for k, v in out.items() if not k.startswith('_')}
-                outs[job_key.split(':', 1)[0]] = out
+                outs[task.split(':', 1)[1]] = out
         return outs
 
     def get_annotation_manager(self, task):
