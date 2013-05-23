@@ -1077,7 +1077,7 @@ function render_visualize_annotations_loaded() {
             }
             display_annotation_task(task, get_classes, get_scores);
         }
-        PICARUS.getRow("annotations", task, {success: success_annotation});
+        PICARUS.getRow("jobs", task, {success: success_annotation});
     }
     // TODO: Need to filter based on type == annotation
     rows_dropdown(JOBS, {el: $('#annotator_select'), text: function (x) {
