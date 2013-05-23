@@ -96,6 +96,8 @@ if __name__ == "__main__":
     tables.thrift_lock = thrift_lock
     tables.thrift_new = thrift_new
     tables.JOBS = JOBS
+    tables.ANNOTATION_HOST = ARGS.annotations_redis_host
+    tables.ANNOTATION_PORT = ARGS.annotations_redis_port
 
 
 def print_request():

@@ -29,6 +29,8 @@ thrift_lock = None
 thrift_new = None
 VERSION = None
 JOBS = None
+ANNOTATION_HOST = None
+ANNOTATION_PORT = None
 
 
 def dod_to_lod_b64(dod):
@@ -379,11 +381,11 @@ class JobsTable(BaseTableSmall):
             assert params['mode'] in ('standalone', 'amt')
             p['mode'] = params['mode']
             p['task_key'] = task
-            redis_host, redis_port = JOBS.add_task(task, 'annotation', self.owner, params=p, secret_params={'secret': secret, 'data': data})
+            JOBS.add_task(task, 'annotation', self.owner, params=p, secret_params={'secret': secret, 'data': data})
             p['sync'] = True
             p['secret'] = secret
-            p['redis_address'] = redis_host
-            p['redis_port'] = int(redis_port)
+            p['redis_address'] = ANNOTATION_HOST
+            p['redis_port'] = int(ANNOTATION_PORT)
             mturk_vision.manager(data=data, **p)
             return {'row': base64.b64encode(task)}
         else:

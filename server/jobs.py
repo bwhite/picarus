@@ -33,7 +33,6 @@ class Jobs(object):
         # TODO: Do these atomically
         self.db.hmset(self._task_prefix + task, data)
         self.db.sadd(self._owner_prefix + owner, task)
-        return self.redis_host, self.redis_port
 
     def _check_owner(self, task, owner):
         if self.db.hget(self._task_prefix + task, 'owner') != owner:
