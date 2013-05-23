@@ -206,7 +206,8 @@ function render_visualize_annotations_loaded() {
         }
         PICARUS.getRow("annotations", task, {success: success_annotation});
     }
-    rows_dropdown(ANNOTATIONS, {el: $('#annotator_select'), text: function (x) {
+    // TODO: Need to filter based on type == annotation
+    rows_dropdown(JOBS, {el: $('#annotator_select'), text: function (x) {
         var p = JSON.parse(x.get('params'));
         if (p.type == "image_class")
             return p.type + ' ' + p.num_tasks;
