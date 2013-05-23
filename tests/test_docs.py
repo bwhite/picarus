@@ -36,9 +36,10 @@ class Test(unittest.TestCase):
         import picarus
         email = os.environ['EMAIL']
         login_key = os.environ['LOGIN_KEY']
+        server = os.environ['SERVER']
         if 'API_KEY' not in os.environ:
             otp = raw_input('Yubikey OTP: ')
-            api_key = picarus.PicarusClient(email=email, login_key=login_key).auth_yubikey(otp)['apiKey']
+            api_key = picarus.PicarusClient(server=server, email=email, login_key=login_key).auth_yubikey(otp)['apiKey']
         else:
             api_key = os.environ['API_KEY']
         prefix = ['import picarus']
@@ -60,6 +61,7 @@ class Test(unittest.TestCase):
                 exec(compile(source, 'blah.py', 'exec'), {}, {'email': email,
                                                               'login_key': login_key,
                                                               'api_key': api_key,
+                                                              'server': server,
                                                               'otp': otp})
 
 if __name__ == '__main__':

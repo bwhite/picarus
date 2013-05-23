@@ -38,14 +38,14 @@ Example: Python
 """"""""""""""""
 .. code-block:: python
 
-    r = picarus.PicarusClient(email=email, login_key=login_key).auth_email_api_key()
+    r = picarus.PicarusClient(server=server, email=email, login_key=login_key).auth_email_api_key()
     assert r == {}
 
 Example: Javascript
 """""""""""""""""""
 .. code-block:: javascript
 
-    p = new PicarusClient()
+    p = new PicarusClient(server=server)
     p.setAuth(email, loginKey)
     p.authEmailAPIKey({success: testPassed, fail: testFailed})
 
@@ -72,14 +72,14 @@ Example: Python
 """"""""""""""""
 .. code-block:: python
 
-    r = picarus.PicarusClient(email=email, login_key=login_key).auth_yubikey(otp)
+    r = picarus.PicarusClient(server=server, email=email, login_key=login_key).auth_yubikey(otp)
     assert 'apiKey' in r
 
 Example: Javascript
 """""""""""""""""""
 .. code-block:: javascript
 
-    p = new PicarusClient()
+    p = new PicarusClient(server=server)
     p.setAuth(email, loginKey)
     p.authYubikey({success: function (r) {if (_.has(r, 'apiKey')) testPassed() else testFailed()}, fail: testFailed})
 
@@ -268,7 +268,7 @@ Example: Python
 """"""""""""""""
 .. code-block:: python
 
-    c = picarus.PicarusClient(email=email, api_key=api_key)
+    c = picarus.PicarusClient(server=server, email=email, api_key=api_key)
     # POST /data/images
     r = c.post_table('images', {'meta:class': 'horse', 'data:image': 'not image'})
     assert 'row' in r

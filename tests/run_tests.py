@@ -71,7 +71,8 @@ def run(args):
     env.update({'EMAIL': args['email'],
                 'LOGIN_KEY': args['login_key'],
                 'API_KEY': args['api_key'],
-                'OTP': args['otp'][0]})
+                'OTP': args['otp'][0],
+                'SERVER': args['picarus_server']})
     assert subprocess.Popen(['python', args['root'] + 'tests/test_docs.py'], env=env).wait() == 0
     os.chdir(args['root'] + 'tests/casperjs/bin')
     cmd = './casperjs picarus.js --server=%s --email=%s --login_key=%s --api_key=%s --otp=%s' % (args['picarus_server'], args['email'], args['login_key'],
