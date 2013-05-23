@@ -511,7 +511,7 @@ function render_annotate_list() {
         $('.tasks-sync').click(function (data) {
             var row = decode_id(data.target.getAttribute('row'));
             var model = JOBS.get(row);
-            PICARUS.postRow('annotations', row, {data: {'action': 'io/annotation/sync'}});
+            PICARUS.postRow('jobs', row, {data: {'action': 'io/annotation/sync'}});
         });
     }
     // TODO: Filter based on type == annotation
@@ -938,8 +938,8 @@ function render_visualize_annotations_loaded() {
         return scores;
     }
     function display_annotation_task(task, get_classes, get_scores) {
-        results = new PicarusRows([], {'table': 'annotations-results-' + task});
-        users = new PicarusRows([], {'table': 'annotations-users-' + task});
+        results = new PicarusRows([], {'table': 'annotation-results-' + task});
+        users = new PicarusRows([], {'table': 'annotation-users-' + task});
         var imageColumn = 'thum:image_150sq';
         $('#negPct').change(data_change);
         $('#posPct').change(data_change);

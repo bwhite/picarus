@@ -8,7 +8,7 @@ function render_annotate_list() {
         $('.tasks-sync').click(function (data) {
             var row = decode_id(data.target.getAttribute('row'));
             var model = JOBS.get(row);
-            PICARUS.postRow('annotations', row, {data: {'action': 'io/annotation/sync'}});
+            PICARUS.postRow('jobs', row, {data: {'action': 'io/annotation/sync'}});
         });
     }
     // TODO: Filter based on type == annotation
