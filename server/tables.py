@@ -355,7 +355,7 @@ class JobsTable(BaseTableSmall):
             p = {}
             image_column = params['imageColumn']
             ub64 = base64.urlsafe_b64encode
-            if path == 'annotation/images/class':  # TODO
+            if path == 'annotation/images/class':
                 class_column = params['classColumn']
                 assert class_column.startswith('meta:')
                 suffix = '/'.join(ub64(x) + '/' + ub64(y) for x, y in start_stop_rows)
