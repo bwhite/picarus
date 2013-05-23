@@ -185,7 +185,6 @@ class User(object):
             v['time:95th'] = v['times'][pct(.95)]
             v['time:99th'] = v['times'][pct(.99)]
             del v['times']
-        print(out)
         return out
 
     @property

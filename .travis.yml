@@ -19,8 +19,8 @@ before_install:
 install:
  - python setup.py install
  - cd server
- - sudo nohup python rest_server.py --database redis &
+ - nohup python rest_server.py --database redis --port 15000 &
  - sleep 3
  - cd ..
 
-script: "python tests/run_tests.py testuser@dappervision.com testuserprefix: --setup_user --root ."
+script: "python tests/run_tests.py testuser@dappervision.com testuserprefix: --setup_user --root . --picarus_server http://localhost:15000"
