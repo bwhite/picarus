@@ -16,7 +16,7 @@ class NotFoundException(Exception):
 
 class Jobs(object):
 
-    def __init__(self, host, port, db):
+    def __init__(self, host, port, db, annotation_redis_host, annotation_redis_port):
         self.redis_host = host
         self.redis_port = port
         self.db = redis.StrictRedis(host=host, port=port, db=db)
@@ -24,6 +24,8 @@ class Jobs(object):
         self._owner_prefix = 'owner:'
         self._task_prefix = 'task:'
         self._lock_prefix = 'lock:'
+        self.annotation_redis_host = annotation_redis_host
+        self.annotation_redis_port = annotation_redis_port
 
     def add_task(self, task, type, owner, params, secret_params):
         data = {'owner': owner, '_params': json.dumps(secret_params),
@@ -90,7 +92,7 @@ class Jobs(object):
                 outs[task.split(':', 1)[1]] = out
         return outs
 
-    def get_annotation_manager(self, task):
+    def get_annotation_manager(self, task, sync=False):
         self._exists(task)
         self._check_type(task, 'annotation')
         try:
@@ -99,10 +101,10 @@ class Jobs(object):
             data = self.db.hgetall(self._task_prefix + task)
             p = json.loads(data['params'])
             ps = json.loads(data['_params'])
-            p['sync'] = False
+            p['sync'] = sync
             p['secret'] = str(ps['secret'])
-            p['redis_address'] = self.redis_host
-            p['redis_port'] = int(self.redis_port)
+            p['redis_address'] = self.annotation_redis_host
+            p['redis_port'] = int(self.annotation_redis_port)
             self.annotation_cache[task] = mturk_vision.manager(data=str(ps['data']), **p)
             return self.annotation_cache[task]
 

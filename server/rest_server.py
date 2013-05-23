@@ -89,15 +89,13 @@ if __name__ == "__main__":
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     USERS = Users(ARGS.redis_host, ARGS.redis_port, 0)
     YUBIKEY = Yubikey(ARGS.redis_host, ARGS.redis_port, 1)
-    JOBS = jobs.Jobs(ARGS.redis_host, ARGS.redis_port, 3)
+    JOBS = jobs.Jobs(ARGS.redis_host, ARGS.redis_port, 3, ARGS.annotations_redis_host, ARGS.annotations_redis_port)
     SITE = load_site()
     # Set necessary globals in tables module
     tables.VERSION = VERSION = 'v0'
     tables.thrift_lock = thrift_lock
     tables.thrift_new = thrift_new
     tables.JOBS = JOBS
-    tables.ANNOTATION_HOST = ARGS.annotations_redis_host
-    tables.ANNOTATION_PORT = ARGS.annotations_redis_port
 
 
 def print_request():
