@@ -6,6 +6,7 @@ import json
 import cStringIO as StringIO
 import os
 import logging
+import random
 
 
 class HBaseMapper(object):
@@ -40,8 +41,9 @@ def retry(func):
             except ErrorStatus:
                 if attempt >= self.max_attempts:
                     raise
-                logging.warn('picarus_api: retrying in %d sec.' % attempt_sleep)
-                time.sleep(attempt_sleep)
+                cur_sleep = attempt_sleep * (1 + random.random())
+                logging.warn('picarus_api: retrying in %d sec.' % cur_sleep)
+                time.sleep(cur_sleep)
                 attempt_sleep *= 2
                 # Rewind all file pointers
                 if 'data' in kw and kw['data'] is not None:
