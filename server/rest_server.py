@@ -16,18 +16,22 @@ import logging
 import contextlib
 import tables
 import glob
-import signal
+import os
 
 MAX_CONNECTIONS = 10000  # gevent pool size
 
 
-def graceful_shutdown():
-    logging.warn('Shutting down because of signal')
+def watch_quit_file():
+    # NOTE: Tried signals, but it inturrupted the running task, this is safer
+    while not os.path.exists('QUIT'):
+        gevent.sleep(5)
+    os.remove('QUIT')
+    logging.warn('Shutting down because QUIT exists')
     SERVER.close()
     if SERVER.pool is not None:
         SERVER.pool.join()
     logging.warn('Shut down successful')
-gevent.signal(signal.SIGQUIT, graceful_shutdown)
+gevent.spawn(watch_quit_file)
 
 
 def check_version(func):
