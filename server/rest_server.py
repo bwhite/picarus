@@ -16,7 +16,6 @@ import logging
 import contextlib
 import tables
 import glob
-import signal
 
 MAX_CONNECTIONS = 10000  # gevent pool size
 
@@ -27,7 +26,7 @@ def graceful_shutdown(signum, frame):
     if SERVER.pool is not None:
         SERVER.pool.join()
     logging.warn('Shut down successful')
-signal.signal(3, graceful_shutdown)
+gevent.signal(3, graceful_shutdown)
 
 
 def check_version(func):
