@@ -1,9 +1,11 @@
-from picarus_takeout import *
+from picarus_takeout import ModelChain, spherical_hasher_train
 import base64
 import urllib
+import time
 import json
 import cStringIO as StringIO
 import os
+import logging
 
 
 class HBaseMapper(object):
@@ -18,9 +20,35 @@ class HBaseMapper(object):
             self._hbase[row] = out
 
 
+class FatalErrorStatus(Exception):
+    """Return status that cannot be retried"""
+
+
+class ErrorStatus(Exception):
+    """Return status that can be retried"""
+
+
+def retry(func):
+
+    def inner(self, *args, **kw):
+        attempt = 0
+        attempt_sleep = self.attempt_sleep
+        while 1:
+            attempt += 1
+            try:
+                return func(*args, **kw)
+            except ErrorStatus:
+                if attempt >= self.max_attempts:
+                    raise
+                logging.warn('picarus_api: retrying in %d sec.' % attempt_sleep)
+                time.sleep(attempt_sleep)
+                attempt_sleep *= 2
+    return inner
+
+
 class PicarusClient(object):
 
-    def __init__(self, email, api_key=None, login_key=None, server="https://api.picar.us"):
+    def __init__(self, email, api_key=None, login_key=None, server="https://api.picar.us", max_attempts=10):
         self.email = email
         self.api_key = api_key
         self.login_key = login_key
@@ -29,10 +57,14 @@ class PicarusClient(object):
         import requests
         self.requests = requests
         self.timeout = 3600  # 60 min
+        self.max_attempts = max_attempts
+        self.attempt_sleep = 1.
 
     def _check_status(self, response):
+        if response.status_code in (502, 503, 429, 408):
+            raise ErrorStatus('picarus_api: returned [%d]' % (response.status_code))
         if response.status_code != 200:
-            raise RuntimeError('picarus_api: returned [%d]' % (response.status_code))
+            raise FatalErrorStatus('picarus_api: returned [%d]' % (response.status_code))
         return json.loads(response.content)
 
     def _decode_lod(self, lod):
@@ -59,26 +91,31 @@ class PicarusClient(object):
         return {'data': data_out, 'files': files_out}
 
     # raw
+    @retry
     def get(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
         r = self.requests.get('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), params=data, timeout=self.timeout)
         return self._check_status(r)
 
+    @retry
     def post(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
         r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), timeout=self.timeout, **self._split_data(data))
         return self._check_status(r)
 
+    @retry
     def post_login(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
         r = self.requests.post('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.login_key), timeout=self.timeout, **self._split_data(data))
         return self._check_status(r)
 
+    @retry
     def delete(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
         r = self.requests.delete('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), data=data, timeout=self.timeout)
         return self._check_status(r)
 
+    @retry
     def patch(self, path, data=None):
         path = '/'.join(map(urllib.quote_plus, path))
         r = self.requests.patch('%s/%s/%s' % (self.server, self.version, path), auth=(self.email, self.api_key), timeout=self.timeout, **self._split_data(data))
