@@ -20,6 +20,7 @@ import os
 
 MAX_CONNECTIONS = 10000  # gevent pool size
 
+
 def check_version(func):
 
     def func_raven(*args, **kw):
@@ -365,10 +366,12 @@ if __name__ == '__main__':
         except OSError:
             logging.warn('Could not remove QUIT file')
         logging.warn('Shutting down because QUIT exists')
-        SERVER._stop_event.set()
+        logging.warn('Stopped Accepting')
         SERVER.stop_accepting()
         if SERVER.pool is not None:
+            logging.warn('Pool joined')
             SERVER.pool.join()
+        logging.warn('Calling close')
         SERVER.close()
         logging.warn('Shut down successful')
     gevent.spawn(watch_quit_file)
