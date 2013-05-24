@@ -30,7 +30,7 @@ def watch_quit_file():
     except OSError:
         logging.warn('Could not remove QUIT file')
     logging.warn('Shutting down because QUIT exists')
-    SERVER.close()
+    SERVER.stop_accepting()
     if SERVER.pool is not None:
         SERVER.pool.join()
     logging.warn('Shut down successful')
