@@ -16,6 +16,15 @@ import logging
 import contextlib
 import tables
 import glob
+import signal
+
+
+def graceful_shutdown(signum, frame):
+    logging.warn('Shutting down because of signal')
+    while SERVER.started:
+        SERVER.stop()
+    logging.warn('Shut down successful')
+signal.signal(3, graceful_shutdown)
 
 
 def check_version(func):
