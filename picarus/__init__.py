@@ -36,7 +36,7 @@ def retry(func):
         while 1:
             attempt += 1
             try:
-                return func(*args, **kw)
+                return func(self, *args, **kw)
             except ErrorStatus:
                 if attempt >= self.max_attempts:
                     raise
