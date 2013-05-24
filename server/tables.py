@@ -422,12 +422,6 @@ class HBaseTable(object):
                 cur_column = base64.b64decode(x)
                 self._column_write_validate(cur_column)
                 v = y.file.read()
-                l = open('/tmp/plog', 'a+')
-                l.write('File Len[%d]\n' % len(v))
-                l.write(json.dumps(y.headers.items()) + '\n')
-                if not len(v):
-                    l.write('Telling user to try again\n')
-                    bottle.abort(503)  # TODO: Need a better status code for "retry"
                 thrift.mutate_row(self.table, row, {cur_column: v})
             for x, y in params.items():
                 cur_column = base64.b64decode(x)
