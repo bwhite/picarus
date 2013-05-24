@@ -24,7 +24,7 @@ MAX_CONNECTIONS = 10000  # gevent pool size
 def graceful_shutdown(signum, frame):
     logging.warn('Shutting down because of signal')
     SERVER.close()
-    if SERVER.poll is not None:
+    if SERVER.pool is not None:
         SERVER.pool.join()
     logging.warn('Shut down successful')
 signal.signal(3, graceful_shutdown)
