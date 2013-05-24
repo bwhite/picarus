@@ -21,8 +21,8 @@ import signal
 
 def graceful_shutdown(signum, frame):
     logging.warn('Shutting down because of signal')
-    while SERVER.started:
-        SERVER.stop()
+    SERVER.close()
+    SERVER.pool.join()
     logging.warn('Shut down successful')
 signal.signal(3, graceful_shutdown)
 
