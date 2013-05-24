@@ -20,23 +20,6 @@ import os
 
 MAX_CONNECTIONS = 10000  # gevent pool size
 
-
-def watch_quit_file():
-    # NOTE: Tried signals, but it inturrupted the running task, this is safer
-    while not (os.path.exists('QUIT') and open('QUIT').read().strip() == str(os.getpid())):
-        gevent.sleep(5)
-    try:
-        os.remove('QUIT')
-    except OSError:
-        logging.warn('Could not remove QUIT file')
-    logging.warn('Shutting down because QUIT exists')
-    SERVER.stop_accepting()
-    if SERVER.pool is not None:
-        SERVER.pool.join()
-    logging.warn('Shut down successful')
-gevent.spawn(watch_quit_file)
-
-
 def check_version(func):
 
     def func_raven(*args, **kw):
@@ -372,4 +355,21 @@ if __name__ == '__main__':
     import gevent.pywsgi
     SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app(),
                                       spawn=MAX_CONNECTIONS)
+
+    def watch_quit_file():
+        # NOTE: Tried signals, but it inturrupted the running task, this is safer
+        while not (os.path.exists('QUIT') and open('QUIT').read().strip() == str(os.getpid())):
+            gevent.sleep(5)
+        try:
+            os.remove('QUIT')
+        except OSError:
+            logging.warn('Could not remove QUIT file')
+        logging.warn('Shutting down because QUIT exists')
+        SERVER._stop_event.set()
+        SERVER.stop_accepting()
+        if SERVER.pool is not None:
+            SERVER.pool.join()
+        SERVER.close()
+        logging.warn('Shut down successful')
+    gevent.spawn(watch_quit_file)
     SERVER.serve_forever()
