@@ -18,11 +18,14 @@ import tables
 import glob
 import signal
 
+MAX_CONNECTIONS = 10000  # gevent pool size
+
 
 def graceful_shutdown(signum, frame):
     logging.warn('Shutting down because of signal')
     SERVER.close()
-    SERVER.pool.join()
+    if SERVER.poll is not None:
+        SERVER.pool.join()
     logging.warn('Shut down successful')
 signal.signal(3, graceful_shutdown)
 
@@ -360,5 +363,6 @@ def annotation_result(task):
 
 if __name__ == '__main__':
     import gevent.pywsgi
-    SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app())
+    SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app(),
+                                      spawn=MAX_CONNECTIONS)
     SERVER.serve_forever()
