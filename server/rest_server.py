@@ -23,7 +23,7 @@ MAX_CONNECTIONS = 10000  # gevent pool size
 
 def watch_quit_file():
     # NOTE: Tried signals, but it inturrupted the running task, this is safer
-    while not (os.path.exists('QUIT') and open('QUIT').read() == str(os.getpid())):
+    while not (os.path.exists('QUIT') and open('QUIT').read().strip() == str(os.getpid())):
         gevent.sleep(5)
     try:
         os.remove('QUIT')
