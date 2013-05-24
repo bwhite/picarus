@@ -48,7 +48,7 @@ def retry(func):
 
 class PicarusClient(object):
 
-    def __init__(self, email, api_key=None, login_key=None, server="https://api.picar.us", max_attempts=10):
+    def __init__(self, email, api_key=None, login_key=None, server="https://api.picar.us", max_attempts=5):
         self.email = email
         self.api_key = api_key
         self.login_key = login_key
