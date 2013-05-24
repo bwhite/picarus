@@ -43,6 +43,11 @@ def retry(func):
                 logging.warn('picarus_api: retrying in %d sec.' % attempt_sleep)
                 time.sleep(attempt_sleep)
                 attempt_sleep *= 2
+                # Rewind all file pointers
+                if 'data' in kw and kw['data'] is not None:
+                    for k, v in kw['data'].items():
+                        if hasattr(v, 'seek'):
+                            v.seek(0)
     return inner
 
 
