@@ -359,7 +359,8 @@ if __name__ == '__main__':
 
     def watch_quit_file():
         # NOTE: Tried signals, but it inturrupted the running task, this is safer
-        while not (os.path.exists('QUIT') and open('QUIT').read().strip() == str(os.getpid())):
+        my_pid = str(os.getpid())
+        while not (os.path.exists('QUIT') and my_pid in open('QUIT').read().strip().split()):
             gevent.sleep(5)
         try:
             os.remove('QUIT')
