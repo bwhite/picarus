@@ -604,7 +604,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 self._slice_validate(start_row, stop_row, 'rw')
                 # Makes 150x150 thumbnails from the data:image column
                 model = [{'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}}]
-                job_row = jobs.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
+                job_row = JOBS.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
                                                                 'stopRow': base64.b64encode(stop_row),
                                                                 'table': self.table,
                                                                 'action': action}, {})
@@ -612,7 +612,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 return {'row': base64.b64encode(job_row), 'table': 'jobs'}
             elif action == 'io/exif':
                 self._slice_validate(start_row, stop_row, 'rw')
-                job_row = jobs.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
+                job_row = JOBS.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
                                                                 'stopRow': base64.b64encode(stop_row),
                                                                 'table': self.table,
                                                                 'action': action}, {})
@@ -622,7 +622,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = params['model']
                 chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
-                job_row = jobs.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
+                job_row = JOBS.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
                                                                 'stopRow': base64.b64encode(stop_row),
                                                                 'table': self.table,
                                                                 'action': action}, {})
@@ -632,7 +632,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = params['model']
                 chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
-                job_row = jobs.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
+                job_row = JOBS.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
                                                                 'stopRow': base64.b64encode(stop_row),
                                                                 'table': self.table,
                                                                 'action': action}, {})
