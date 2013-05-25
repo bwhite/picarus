@@ -31,6 +31,16 @@ def model_tofile(model):
         return _tempfile(zlib.compress(pickle.dumps(model)), suffix='.pkl.gz')
 
 
+def hadoop_wait_till_started(launch_out):
+    process = launch_out['process']
+    stdout = process.stdout
+    while process.poll() is None:
+        if stdout.readline().find('Tracking URL:') != -1:
+            break
+    if process.poll() > 0:
+        raise RuntimeError('Hadoop task could not start')
+
+
 class RedisDB(object):
 
     def __init__(self, server, port, db):
@@ -218,10 +228,10 @@ class HBaseDB(object):
         cmdenvs = {'HBASE_TABLE': 'images',
                    'HBASE_OUTPUT_COLUMN': base64.b64encode('meta:exif')}
         output_hdfs = 'picarus_temp/%f/' % time.time()
-        hadoopy_hbase.launch('images', output_hdfs + str(random.random()), 'hadoop/image_exif.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, columns=['data:image'], single_value=True,
-                             jobconfs={'mapred.task.timeout': '6000000', 'picarus.job.row': job_row}, cmdenvs=cmdenvs, check_script=False,
-                             make_executable=False, start_row=start_row, stop_row=stop_row, name=job_row)
+        hadoop_wait_till_started(hadoopy_hbase.launch('images', output_hdfs + str(random.random()), 'hadoop/image_exif.py', libjars=['hadoopy_hbase.jar'],
+                                                      num_mappers=self.num_mappers, columns=['data:image'], single_value=True,
+                                                      jobconfs={'mapred.task.timeout': '6000000', 'picarus.job.row': job_row}, cmdenvs=cmdenvs, check_script=False,
+                                                      make_executable=False, start_row=start_row, stop_row=stop_row, name=job_row, wait=False))
 
     def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row, job_row):
         output_hdfs = 'picarus_temp/%f/' % time.time()
@@ -229,8 +239,8 @@ class HBaseDB(object):
         cmdenvs = {'HBASE_TABLE': table,
                    'HBASE_OUTPUT_COLUMN': base64.b64encode(output_column),
                    'MODEL_FN': os.path.basename(model_fp.name)}
-        hadoopy_hbase.launch(table, output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
-                             num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
-                             jobconfs={'mapred.task.timeout': '6000000', 'picarus.job.row': job_row}, cmdenvs=cmdenvs, dummy_fp=model_fp,
-                             check_script=False, make_executable=False,
-                             start_row=start_row, stop_row=stop_row, name=job_row)
+        hadoop_wait_till_started(hadoopy_hbase.launch(table, output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
+                                                      num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
+                                                      jobconfs={'mapred.task.timeout': '6000000', 'picarus.job.row': job_row}, cmdenvs=cmdenvs, dummy_fp=model_fp,
+                                                      check_script=False, make_executable=False,
+                                                      start_row=start_row, stop_row=stop_row, name=job_row, wait=False))
