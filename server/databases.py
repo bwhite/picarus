@@ -221,7 +221,7 @@ class HBaseDB(object):
         hadoopy_hbase.launch('images', output_hdfs + str(random.random()), 'hadoop/image_exif.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=['data:image'], single_value=True,
                              jobconfs={'mapred.task.timeout': '6000000', 'picarus.job.row': job_row}, cmdenvs=cmdenvs, check_script=False,
-                             make_executable=False, start_row=start_row, stop_row=stop_row, wait=False)
+                             make_executable=False, start_row=start_row, stop_row=stop_row, name=job_row)
 
     def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row, job_row):
         output_hdfs = 'picarus_temp/%f/' % time.time()
@@ -233,4 +233,4 @@ class HBaseDB(object):
                              num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
                              jobconfs={'mapred.task.timeout': '6000000', 'picarus.job.row': job_row}, cmdenvs=cmdenvs, dummy_fp=model_fp,
                              check_script=False, make_executable=False,
-                             start_row=start_row, stop_row=stop_row, wait=False)
+                             start_row=start_row, stop_row=stop_row, name=job_row)
