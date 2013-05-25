@@ -33,7 +33,7 @@ def model_tofile(model):
 
 def hadoop_wait_till_started(launch_out):
     process = launch_out['process']
-    stdout = process.stdout
+    stdout = process.stderr
     while process.poll() is None:
         if stdout.readline().find('Tracking URL:') != -1:
             break
