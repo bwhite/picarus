@@ -361,6 +361,7 @@ if __name__ == '__main__':
         import gevent_inotifyx as inotify
         fd = inotify.init()
         inotify.add_watch(fd, '../.git/logs/HEAD', inotify.IN_MODIFY)
+        inotify.add_watch(fd, '.reloader', inotify.IN_MODIFY | inotify.IN_ATTRIB)
         inotify.get_events(fd)
         logging.warn('Shutting down due to new update')
         SERVER.stop_accepting()
