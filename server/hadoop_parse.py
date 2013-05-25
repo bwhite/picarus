@@ -49,8 +49,6 @@ def parse_jobs(server):
             pass
         type_jobs[status_type] = jobs
     return type_jobs
-    # NOTE: This is coarser and returns all jobs
-    #return set(re.findall('job_[0-9]+_[0-9]+', requests.get(server + '/jobtracker.jsp').content))
 
 
 def fetch_counters(server, jobid):
