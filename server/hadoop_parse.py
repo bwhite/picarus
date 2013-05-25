@@ -73,7 +73,6 @@ def fetch_config(server, jobid):
 
 
 def scrape_hadoop_jobs(server):
-    # Collect
     out = {}
     for status, jobids in parse_jobs(server).items():
         for jobid in jobids:
@@ -94,6 +93,7 @@ def scrape_hadoop_jobs(server):
             except:
                 pass
     print(out)
+    # TODO: Output with status value, etc.
 
 
 def main():
