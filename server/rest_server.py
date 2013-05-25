@@ -16,7 +16,6 @@ import logging
 import contextlib
 import tables
 import glob
-import os
 
 MAX_CONNECTIONS = 10000  # gevent pool size
 
@@ -72,6 +71,7 @@ if __name__ == "__main__":
     parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
     parser.add_argument('--raven', help='URL to the Raven/Sentry logging server')
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--reloader', action='store_true', help='If true, enable stopping on git/QUIT changes.  Server should be run in a loop.')
     parser.add_argument('--port', default='80', type=int)
     parser.add_argument('--thrift_server', default='localhost')
     parser.add_argument('--thrift_port', default='9090')
@@ -357,23 +357,21 @@ if __name__ == '__main__':
     SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app(),
                                       spawn=MAX_CONNECTIONS)
 
-    def watch_quit_file():
-        # NOTE: Tried signals, but it inturrupted the running task, this is safer
-        my_pid = str(os.getpid())
-        while not (os.path.exists('QUIT') and my_pid in open('QUIT').read().strip().split()):
-            gevent.sleep(5)
-        try:
-            os.remove('QUIT')
-        except OSError:
-            logging.warn('Could not remove QUIT file')
-        logging.warn('Shutting down because QUIT exists')
-        logging.warn('Stopped Accepting')
-        SERVER.stop_accepting()
-        if SERVER.pool is not None:
-            logging.warn('Pool joined')
-            SERVER.pool.join()
-        logging.warn('Calling close')
-        SERVER.close()
-        logging.warn('Shut down successful')
-    gevent.spawn(watch_quit_file)
+    def reloader():
+        import pyinotify
+        
+        class EventHandler(pyinotify.ProcessEvent):
+            def process_IN_MODIFY(self, event):
+                logging.warn('Shutting down due to new update')
+                SERVER.stop_accepting()
+                SERVER.pool.join()
+                SERVER.close()
+                logging.warn('Shut down successful')
+        wm = pyinotify.WatchManager()  # Watch Manager
+        handler = EventHandler()
+        notifier = pyinotify.Notifier(wm, handler)
+        wm.add_watch(['../.git/logs/HEAD', 'QUIT'], pyinotify.IN_MODIFY)
+        notifier.loop()
+    if ARGS.reloader:
+        gevent.spawn(reloader)
     SERVER.serve_forever()
