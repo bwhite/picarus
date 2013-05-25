@@ -89,7 +89,7 @@ function PicarusClient(args) {
     this.postSlice = function (table, startRow, stopRow, args) {
         //args: success, fail, data
         args = this._argsDefaults(args);
-        return this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], this.encvalues(args.data), this._wrapParseJSON(args.success), args.fail);
+        return this.post(['slice', table, encode_id(startRow), encode_id(stopRow)], this.encvalues(args.data), this._wrapDecodeDict(args.success), args.fail);
     };
 
     this.patchRow = function (table, row, args) {

@@ -177,7 +177,7 @@ class PicarusClient(object):
         return self._decode_lod(self.get(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=column_data))
 
     def post_slice(self, table, start_row, stop_row, data=None):
-        return self.post(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=self.encvalues(data))
+        return self.decdict(self.post(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=self.encvalues(data)))
 
     def patch_slice(self, table, start_row, stop_row, data=None):
         return self.patch(('slice', table, self.encurl(start_row), self.encurl(stop_row)), data=self.encdict(data))
