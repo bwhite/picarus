@@ -358,20 +358,15 @@ if __name__ == '__main__':
                                       spawn=MAX_CONNECTIONS)
 
     def reloader():
-        import pyinotify
-        
-        class EventHandler(pyinotify.ProcessEvent):
-            def process_IN_MODIFY(self, event):
-                logging.warn('Shutting down due to new update')
-                SERVER.stop_accepting()
-                SERVER.pool.join()
-                SERVER.close()
-                logging.warn('Shut down successful')
-        wm = pyinotify.WatchManager()  # Watch Manager
-        handler = EventHandler()
-        notifier = pyinotify.Notifier(wm, handler)
-        wm.add_watch(['../.git/logs/HEAD', 'QUIT'], pyinotify.IN_MODIFY)
-        notifier.loop()
+        import gevent_inotifyx as inotify
+        fd = inotify.init()
+        inotify.add_watch(fd, '../.git/logs/HEAD', inotify.IN_MODIFY)
+        inotify.get_events(fd)
+        logging.warn('Shutting down due to new update')
+        SERVER.stop_accepting()
+        SERVER.pool.join()
+        SERVER.close()
+        logging.warn('Shut down successful')
     if ARGS.reloader:
         gevent.spawn(reloader)
     SERVER.serve_forever()
