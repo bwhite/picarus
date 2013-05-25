@@ -351,7 +351,6 @@ class JobsTable(BaseTableSmall):
             # We never need to decode these, they just need to be
             # random strings that can be in a url
             secret = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
-            task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
             p = {}
             image_column = params['imageColumn']
             ub64 = base64.urlsafe_b64encode
@@ -378,8 +377,7 @@ class JobsTable(BaseTableSmall):
             assert 0 < p['num_tasks']
             assert params['mode'] in ('standalone', 'amt')
             p['mode'] = params['mode']
-            p['task_key'] = task
-            JOBS.add_task(task, 'annotation', self.owner, params=p, secret_params={'secret': secret, 'data': data})
+            task = JOBS.add_task('annotation', self.owner, params=p, secret_params={'secret': secret, 'data': data})
             JOBS.get_annotation_manager(task, sync=True)
             return {'row': base64.b64encode(task)}
         else:
@@ -606,28 +604,45 @@ class ImagesHBaseTable(DataHBaseTable):
                 self._slice_validate(start_row, stop_row, 'rw')
                 # Makes 150x150 thumbnails from the data:image column
                 model = [{'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}}]
-                thrift.takeout_chain_job('images', model, 'data:image', 'thum:image_150sq', start_row=start_row, stop_row=stop_row)
-                return {}
+                job_row = jobs.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
+                                                                'stopRow': base64.b64encode(stop_row),
+                                                                'table': self.table,
+                                                                'action': action}, {})
+                thrift.takeout_chain_job('images', model, 'data:image', 'thum:image_150sq', start_row=start_row, stop_row=stop_row, job_row=job_row)
+                return {'row': base64.b64encode(job_row), 'table': 'jobs'}
             elif action == 'io/exif':
                 self._slice_validate(start_row, stop_row, 'rw')
-                thrift.exif_job(start_row=start_row, stop_row=stop_row)
-                return {}
+                job_row = jobs.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
+                                                                'stopRow': base64.b64encode(stop_row),
+                                                                'table': self.table,
+                                                                'action': action}, {})
+                thrift.exif_job(start_row=start_row, stop_row=stop_row, job_row=job_row)
+                return {'row': base64.b64encode(job_row), 'table': 'jobs'}
             elif action == 'io/link':
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = params['model']
                 chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
-                thrift.takeout_chain_job('images', [model_link], chain_input, model_key, start_row=start_row, stop_row=stop_row)
-                return {}
+                job_row = jobs.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
+                                                                'stopRow': base64.b64encode(stop_row),
+                                                                'table': self.table,
+                                                                'action': action}, {})
+                thrift.takeout_chain_job('images', [model_link], chain_input, model_key, start_row=start_row, stop_row=stop_row, job_row=job_row)
+                return {'row': base64.b64encode(job_row), 'table': 'jobs'}
             elif action == 'io/chain':
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = params['model']
                 chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
-                thrift.takeout_chain_job('images', list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row)
-                return {}
+                job_row = jobs.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
+                                                                'stopRow': base64.b64encode(stop_row),
+                                                                'table': self.table,
+                                                                'action': action}, {})
+                thrift.takeout_chain_job('images', list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row, job_row=job_row)
+                return {'row': base64.b64encode(job_row), 'table': 'jobs'}
             elif action == 'io/garbage':
                 self._slice_validate(start_row, stop_row, 'rw')
                 columns_removed = set()
                 columns_kept = set()
+                # TODO: Update these to use the new job system
                 # TODO: Get all user models and save those too
                 active_models = set()
                 for cur_row, cur_cols in thrift.scanner(self.table,
@@ -647,6 +662,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 return {'columnsRemoved': list(columns_removed), 'columnsKept': list(columns_kept)}
             elif action == 'i/dedupe/identical':
                 self._slice_validate(start_row, stop_row, 'r')
+                # TODO: Update these to use the new job system
                 col = params['column']
                 features = {}
                 dedupe_feature = lambda x, y: features.setdefault(base64.b64encode(hashlib.md5(y).digest()), []).append(base64.b64encode(x))
@@ -658,6 +674,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 return json.dumps([{'rows': y} for x, y in features.items() if len(y) > 1])
             elif action == 'o/crawl/flickr':
                 self._slice_validate(start_row, stop_row, 'w')
+                # TODO: Update these to use the new job system
                 # Only slices where the start_row can be used as a prefix may be used
                 assert start_row and ord(start_row[-1]) != 255 and start_row[:-1] + chr(ord(start_row[-1]) + 1) == stop_row
                 p = {}

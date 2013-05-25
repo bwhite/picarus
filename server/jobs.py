@@ -4,6 +4,8 @@ import json
 import argparse
 import pprint
 import mturk_vision
+import base64
+import uuid
 
 
 class UnauthorizedException(Exception):
@@ -27,7 +29,8 @@ class Jobs(object):
         self.annotation_redis_host = annotation_redis_host
         self.annotation_redis_port = annotation_redis_port
 
-    def add_task(self, task, type, owner, params, secret_params):
+    def add_task(self, type, owner, params, secret_params):
+        task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
         data = {'owner': owner, '_params': json.dumps(secret_params),
                 'params': json.dumps(params), 'type': type}
         if not self.db.set(self._lock_prefix + task, '', nx=True):
@@ -35,6 +38,7 @@ class Jobs(object):
         # TODO: Do these atomically
         self.db.hmset(self._task_prefix + task, data)
         self.db.sadd(self._owner_prefix + owner, task)
+        return task
 
     def _check_owner(self, task, owner):
         if self.db.hget(self._task_prefix + task, 'owner') != owner:

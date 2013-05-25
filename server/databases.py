@@ -214,15 +214,16 @@ class HBaseDB(object):
         return hadoopy_hbase.scanner(self.__thrift, table, columns=columns,
                                      start_row=start_row, stop_row=stop_row, filter=filt, per_call=per_call)
 
-    def exif_job(self, start_row, stop_row):
+    def exif_job(self, start_row, stop_row, job_row):
         cmdenvs = {'HBASE_TABLE': 'images',
                    'HBASE_OUTPUT_COLUMN': base64.b64encode('meta:exif')}
         output_hdfs = 'picarus_temp/%f/' % time.time()
         hadoopy_hbase.launch('images', output_hdfs + str(random.random()), 'hadoop/image_exif.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, columns=['data:image'], single_value=True,
-                             cmdenvs=cmdenvs, check_script=False, make_executable=False, start_row=start_row, stop_row=stop_row)
+                             jobconfs={'mapred.task.timeout': '6000000', 'picarus.job.row': job_row}, cmdenvs=cmdenvs, check_script=False,
+                             make_executable=False, start_row=start_row, stop_row=stop_row, wait=False)
 
-    def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row):
+    def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row, job_row):
         output_hdfs = 'picarus_temp/%f/' % time.time()
         model_fp = model_tofile(model)
         cmdenvs = {'HBASE_TABLE': table,
@@ -230,5 +231,6 @@ class HBaseDB(object):
                    'MODEL_FN': os.path.basename(model_fp.name)}
         hadoopy_hbase.launch(table, output_hdfs + str(random.random()), 'hadoop/takeout_chain_job.py', libjars=['hadoopy_hbase.jar'],
                              num_mappers=self.num_mappers, files=[model_fp.name], columns=[input_column], single_value=True,
-                             jobconfs={'mapred.task.timeout': '6000000'}, cmdenvs=cmdenvs, dummy_fp=model_fp, check_script=False, make_executable=False,
-                             start_row=start_row, stop_row=stop_row)
+                             jobconfs={'mapred.task.timeout': '6000000', 'picarus.job.row': job_row}, cmdenvs=cmdenvs, dummy_fp=model_fp,
+                             check_script=False, make_executable=False,
+                             start_row=start_row, stop_row=stop_row, wait=False)

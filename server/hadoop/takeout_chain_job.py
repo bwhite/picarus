@@ -19,9 +19,10 @@ class Mapper(picarus.HBaseMapper):
             yield row, self.job.process_binary(input_binary)
         except:
             sys.stdout.flush()
-            hadoopy.counter('ERROR', 'BadRow')
+            hadoopy.counter('STATUS', 'badRow')
         else:
-            hadoopy.counter('STATUS', 'GoodRow')
+            sys.stdout.flush()
+            hadoopy.counter('STATUS', 'goodRow')
 
 if __name__ == '__main__':
     hadoopy.run(Mapper, required_cmdenvs=['HBASE_TABLE', 'HBASE_OUTPUT_COLUMN', 'MODEL_FN'])
