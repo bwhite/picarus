@@ -327,10 +327,10 @@ class JobsTable(BaseTableSmall):
         params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
         manager = JOBS.get_annotation_manager_check(row, self.owner)
-        if action == 'io/annotation/sync':  # TODO
+        if action == 'io/annotation/sync':
             manager.sync()
             return {}
-        elif action == 'io/annotation/priority':  # TODO
+        elif action == 'io/annotation/priority':
             data_row = params['row']
             priority = int(params['priority'])
             manager.row_increment_priority(data_row, priority)

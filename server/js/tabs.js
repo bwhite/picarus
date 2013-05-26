@@ -346,7 +346,7 @@ function render_models_slice() {
         if ($('#chainCheck').is(':checked'))
             action = 'io/chain';
         var model = decode_id($('#model_select').find(":selected").val());
-        PICARUS.postSlice('images', startRow, stopRow, {success: button_reset, fail: button_error, data: {action: action, model: model}});
+        PICARUS.postSlice('images', startRow, stopRow, {success: jobs_status, fail: button_error, data: {action: action, model: model}});
     });
 }
 function render_process_thumbnail() {
@@ -367,29 +367,13 @@ function render_process_delete() {
         PICARUS.deleteSlice('images', startRow, stopRow, {success: button_reset, fail: button_error})
     });
 }
-function render_process_garbage() {
-    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
-    $('#runButton').click(function () {
-        button_running();
-        var startRow = $('#startRow').val();
-        var stopRow = $('#stopRow').val();
-        function success(xhr) {
-            response = JSON.parse(xhr.responseText);
-            button_reset();
-            _.each(response.columns, function (x) {
-                $('#results').append(x + '<br>');
-            });
-        }
-        PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/garbage'}, success: button_reset, fail: button_error})
-    });
-}
 function render_process_exif() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
-        PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/exif'}, success: button_reset, fail: button_error})
+        PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/exif'}, success: jobs_status, fail: button_error})
     });
 }
 function render_process_modify() {
