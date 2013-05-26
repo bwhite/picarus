@@ -73,11 +73,13 @@ def scrape_hadoop_jobs(server, completed_jobs=None):
     out = {}
     completed_jobs = set(completed_jobs) if completed_jobs is not None else set()
     for status, jobids in parse_jobs(server).items():
-        for jobid in set(jobids) - completed_jobs:
+        for jobid in set(jobids):
             try:
                 columns = {'status': status}
                 config = fetch_config(server, jobid)
                 row = str(config['picarus.job.row'])
+                if row in completed_jobs:
+                    continue
                 try:
                     status_counters = fetch_counters(server, jobid)['STATUS']
                 except KeyError:
