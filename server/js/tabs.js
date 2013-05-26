@@ -432,9 +432,15 @@ function render_process_copy() {
 }
 function render_jobs_list() {
     var workerColumn = {header: "Worker", getFormatted: function() {
+        if (JOBS.get(this.get('row')).get('type') != 'annotation')
+            return '';
         return Mustache.render("<a href='/v0/annotation/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.escape('row')});
     }};
-    var syncColumn = {header: "Sync", getFormatted: function() { return '<span style="font-size:5px"><a class="tasks-sync" row="' + encode_id(this.get('row')) + '">sync</a></span>'}};
+    var syncColumn = {header: "Sync", getFormatted: function() {
+        if (JOBS.get(this.get('row')).get('type') != 'annotation')
+            return '';
+        return '<span style="font-size:5px"><a class="tasks-sync" row="' + encode_id(this.get('row')) + '">sync</a></span>';
+    }};
 
     function postRender() {
         $('.tasks-sync').click(function (data) {
