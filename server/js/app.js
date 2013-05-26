@@ -169,17 +169,19 @@ function jobs_status(data) {
             var goodRows = 0;
             var badRows = 0;
             if (_.has(pollData, 'goodRows'))
-                console.log('GoodRows ' + pollData.goodRows);
+                goodRows = Number(pollData.goodRows);
             if (_.has(pollData, 'badRows'))
+                badRows = Number(pollData.badRows);
                 console.log('BadRows ' + pollData.badRows);
             if (_.has(pollData, 'status')) {
                 console.log('Status ' + pollData.status);
                 if (pollData.status == 'completed' || pollData.status == 'failed')
                     return;
             }
+            console.log('Good ' + goodRows + ' Bad ' + badRows);
             $('#results').html('');
             if (goodRows + badRows) {
-                $('#results').append($('<span>', {'class': 'pie', 'id': 'resultsPie'}).text(goodRows + ',' + badRows));
+                $('#results').append($('<span>', {'class': 'pie', 'id': 'resultsPie', 'data-colours': '["green", "red"]'}).text(goodRows + ',' + badRows));
                 $("#resultsPie").peity("pie");
             }
             _.delay(poll_jobs_status, 1000);
