@@ -1,4 +1,4 @@
-function render_annotate_list() {
+function render_jobs_list() {
     var workerColumn = {header: "Worker", getFormatted: function() {
         return Mustache.render("<a href='/v0/annotation/{{task}}/index.html' target='_blank'>Worker</a>", {task: this.escape('row')});
     }};

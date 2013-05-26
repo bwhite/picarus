@@ -1,4 +1,4 @@
-function render_annotate_class() {
+function render_jobs_class() {
     slices_selector();
     $('#runButton').click(function () {
         var startRow = $('#startRow').val();

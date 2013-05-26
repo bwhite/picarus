@@ -105,30 +105,6 @@
   <div id="usage"></div>
 </script>
 
-<script type="text/html" id="tpl_data_flickr">
-  <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
-    <div class="span3">
-      <%=prefixSelect%>
-    </div>
-    <div class="span8">
-      <h3>Options</h3>
-      <input class="input-small" type="text" placeholder="Iterations" hint="Crawl iterations" id="demoiters" value="1">
-      <input class="input-large" type="text" placeholder="Class Name" hint="Class name (put in meta:class)" id="democlass" value="">
-      <input class="input-large" type="text" placeholder="Query" hint="Query used for search (put in meta:query)" id="demoquery" value="">
-      <input class="input-large" type="text" placeholder="Latitude" hint="Latitude (decimal)" id="demolat" value="">
-      <input class="input-large" type="text" placeholder="Longitude" hint="Longitude (decimal)" id="demolon" value="">
-      <input class="input-large" type="text" placeholder="Key" hint="Flickr API Key" id="demoapikey" value="">
-      <input class="input-large" type="text" placeholder="Secret" hint="Flickr API Secret" id="demoapisecret" value="">
-      <label class="checkbox" style="margin-bottom: 0px;" hint="Geotagged images only" for="demogeo">
-        <input type="checkbox" value="" id="demogeo"> Geotagged
-      </label>
-      <%=runButton%>
-    </div>
-    <div class="clearfix span12 skinny" id="results"></div>
-    <div class="clearfix span12 skinny" id="numRows"></div>
-  </div>
-</script>
-
 <script type="text/html" id="tpl_models_list">
   <div id="models"></div>
   <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -286,13 +262,37 @@
   <div class="clearfix span12 skinny" id="results"></div>
 </script>
 
-<script type="text/html" id="tpl_annotate_list">
+<script type="text/html" id="tpl_jobs_list">
   <div class="clearfix span12 skinny" id="results">
     <div id="annotations"></div>
   </div>
 </script>
 
-<script type="text/html" id="tpl_annotate_class">
+<script type="text/html" id="tpl_jobs_flickr">
+  <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
+    <div class="span3">
+      <%=prefixSelect%>
+    </div>
+    <div class="span8">
+      <h3>Options</h3>
+      <input class="input-small" type="text" placeholder="Iterations" hint="Crawl iterations" id="demoiters" value="1">
+      <input class="input-large" type="text" placeholder="Class Name" hint="Class name (put in meta:class)" id="democlass" value="">
+      <input class="input-large" type="text" placeholder="Query" hint="Query used for search (put in meta:query)" id="demoquery" value="">
+      <input class="input-large" type="text" placeholder="Latitude" hint="Latitude (decimal)" id="demolat" value="">
+      <input class="input-large" type="text" placeholder="Longitude" hint="Longitude (decimal)" id="demolon" value="">
+      <input class="input-large" type="text" placeholder="Key" hint="Flickr API Key" id="demoapikey" value="">
+      <input class="input-large" type="text" placeholder="Secret" hint="Flickr API Secret" id="demoapisecret" value="">
+      <label class="checkbox" style="margin-bottom: 0px;" hint="Geotagged images only" for="demogeo">
+        <input type="checkbox" value="" id="demogeo"> Geotagged
+      </label>
+      <%=runButton%>
+    </div>
+    <div class="clearfix span12 skinny" id="results"></div>
+    <div class="clearfix span12 skinny" id="numRows"></div>
+  </div>
+</script>
+
+<script type="text/html" id="tpl_jobs_class">
   <div class="span12 well" style="padding: 0px; margin: 0px; border: 0px">
     <div class="span8">
       <%=slicesSelect%>
