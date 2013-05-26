@@ -164,7 +164,23 @@ function button_running() {
 }
 
 function jobs_status(data) {
-    process_jobs = data;
+    function poll_jobs_status() {
+        PICARUS.getRow(data.table, data.row, {success: function (pollData) {
+            if (_.has(pollData, 'goodRows'))
+                console.log('GoodRows ' + pollData.goodRows);
+            if (_.has(pollData, 'badRows'))
+                console.log('BadRows ' + pollData.badRows);
+            if (_.has(pollData, 'status')) {
+                console.log('Status ' + pollData.status);
+                if (pollData.status == 'completed' || pollData.status == 'failed')
+                    return;
+            }
+            poll_jobs_status();
+            
+        }, fail: function () {
+            console.log('Poll Failed');
+        }});
+    }
     $('#runButton').button('reset');
 }
 
