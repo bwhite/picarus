@@ -164,11 +164,11 @@ function button_running() {
 }
 
 function jobs_status(data) {
+    var keepRunning = true;
+    $('#results').unload(function () {
+        keepRunning = false;
+    });
     function poll_jobs_status() {
-        var keepRunning = true;
-        $('#results').unload(function () {
-            keepRunning = false;
-        });
         PICARUS.getRow(data.table, data.row, {success: function (pollData) {
             if (!keepRunning)
                 return;
@@ -194,7 +194,7 @@ function jobs_status(data) {
             console.log('Poll Failed');
         }});
     }
-    $('#results').html('Job started...waiting for status');
+    $('#results').html('Job started, waiting for status...')
     poll_jobs_status();
     $('#runButton').button('reset');
 }
