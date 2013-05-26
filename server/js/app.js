@@ -165,7 +165,13 @@ function button_running() {
 
 function jobs_status(data) {
     function poll_jobs_status() {
+        var keepRunning = true;
+        $('#results').unload(function () {
+            keepRunning = false;
+        });
         PICARUS.getRow(data.table, data.row, {success: function (pollData) {
+            if (!keepRunning)
+                return;
             var goodRows = 0;
             var badRows = 0;
             var status = '';
@@ -173,18 +179,15 @@ function jobs_status(data) {
                 goodRows = Number(pollData.goodRows);
             if (_.has(pollData, 'badRows'))
                 badRows = Number(pollData.badRows);
-                console.log('BadRows ' + pollData.badRows);
-            if (_.has(pollData, 'status')) {
-                console.log('Status ' + pollData.status);
+            if (_.has(pollData, 'status'))
                 status = pollData.status;
-                if (pollData.status == 'completed' || pollData.status == 'failed')
-                    return;
-            }
+            if (pollData.status == 'completed' || pollData.status == 'failed')
+                return;
             $('#results').html('');
             if (goodRows + badRows) {
                 $('#results').append($('<span>', {'class': 'pie', 'id': 'resultsPie', 'data-colours': '["green", "red"]'}).text(goodRows + ',' + badRows));
                 $("#resultsPie").peity("pie");
-                $('#results').append('Good[' + goodRows + '] Bad[' + badRows + ']' + 'Status[' + _.escape(status) + ']' + ' Row[' + _.escape(data.row) + ']');
+                $('#results').append('Good[' + goodRows + '] Bad[' + badRows + '] Status[' + _.escape(status) + '] Row[' + _.escape(data.row) + ']');
             }
             _.delay(poll_jobs_status, 1000);
         }, fail: function () {
