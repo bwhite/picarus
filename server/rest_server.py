@@ -63,7 +63,7 @@ def load_site():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.WARN)
     parser = argparse.ArgumentParser(description='Run Picarus REST Frontend')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
     parser.add_argument('--redis_port', type=int, help='Redis Port', default=6379)
