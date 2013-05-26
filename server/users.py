@@ -176,14 +176,16 @@ class User(object):
                 row[status_code_key] = 1
             row['times'].append(data['time'])
         for k, v in out.items():
-            n = float(len(v['times']))
+            n = len(v['times'])
             v['times'].sort()
-            pct = lambda x: int(min(max(0, int(round(n * x))), n - 1))
-            v['time:50th'] = v['times'][pct(.5)]
-            v['time:80th'] = v['times'][pct(.8)]
-            v['time:90th'] = v['times'][pct(.9)]
-            v['time:95th'] = v['times'][pct(.95)]
-            v['time:99th'] = v['times'][pct(.99)]
+
+            def pct(x):
+                # Ensure that we even have data in that segment
+                if len(v['times']) < 1. / (1. - x / 100.):
+                    return
+                v['time:%dth' % x] = v['times'][min(int(round(n * x / 100.)), n - 1)]
+            for x in [50, 80, 90, 95, 99]:
+                pct(x)
             del v['times']
         return out
 
