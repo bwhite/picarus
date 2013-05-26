@@ -175,12 +175,12 @@ function jobs_status(data) {
                 if (pollData.status == 'completed' || pollData.status == 'failed')
                     return;
             }
-            poll_jobs_status();
-            
+            _.delay(poll_jobs_status, 1000);
         }, fail: function () {
             console.log('Poll Failed');
         }});
     }
+    poll_jobs_status();
     $('#runButton').button('reset');
 }
 
