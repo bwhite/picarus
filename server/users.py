@@ -245,7 +245,7 @@ class User(object):
             out['time'] = time.time() - st
             out['status_code'] = status_code
             self._user_db.lpush(self._usage_prefix + self.email, json.dumps(out))
-            self._user_db.ltrim(self._usage_prefix + self.email, 0, 100000)
+            self._user_db.ltrim(self._usage_prefix + self.email, 0, 10000)
 
     def _key_gen(self):
         # Replaces +/ with ab so that keys are easily selected, can compensate with keylength
