@@ -6,6 +6,7 @@ import pprint
 import mturk_vision
 import base64
 import uuid
+from hadoop_parse import scrape_hadoop_jobs
 
 
 class UnauthorizedException(Exception):
@@ -84,6 +85,16 @@ class Jobs(object):
                 del self.annotation_cache[task]
             except KeyError:
                 pass
+
+    def update_hadoop_jobs(self, hadoop_jobtracker):
+        for row, columns in scrape_hadoop_jobs(hadoop_jobtracker).items():
+            if self._exists(row):
+                try:
+                    self._check_type(row, 'process')
+                except NotFoundException:
+                    continue
+                # TODO: Need to do this atomically with the exists check
+                self.db.hmset(self._task_prefix + row, columns)
 
     def get_tasks(self, owner):
         outs = {}

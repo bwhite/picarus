@@ -74,7 +74,7 @@ def scrape_hadoop_jobs(server):
     for status, jobids in parse_jobs(server).items():
         for jobid in jobids:
             try:
-                columns = {}
+                columns = {'status': status}
                 config = fetch_config(server, jobid)
                 row = config['picarus.job.row']
                 try:
@@ -83,14 +83,13 @@ def scrape_hadoop_jobs(server):
                     pass
                 for x in ['goodRow', 'badRow']:
                     try:
-                        columns[x] = status_counters[x]
+                        columns[x] = str(status_counters[x][2])
                     except KeyError:
                         pass
                 out[row] = columns
             except:
                 pass
-    print(out)
-    # TODO: Output with status value, etc.
+    return out
 
 
 def main():
