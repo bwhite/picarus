@@ -90,6 +90,9 @@ class Jobs(object):
     def update_hadoop_jobs(self, hadoop_jobtracker):
         for row, columns in scrape_hadoop_jobs(hadoop_jobtracker, self.hadoop_completed_jobs_cache).items():
             print(repr((row, columns)))
+            # NOTE: We do this at this point as a job may not exist but is finished completed/failed in hadoop
+            if columns.get('status', '') in ('completed', 'failed'):
+                self.hadoop_completed_jobs_cache.add(row)
             try:
                 self._exists(row)
                 self._check_type(row, 'process')
@@ -97,8 +100,6 @@ class Jobs(object):
                 continue
             # TODO: Need to do this atomically with the exists check
             self.db.hmset(self._task_prefix + row, columns)
-            if columns.get('status', '') in ('completed', 'failed'):
-                self.hadoop_completed_jobs_cache.add(row)
 
     def get_tasks(self, owner):
         outs = {}
