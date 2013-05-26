@@ -69,10 +69,11 @@ def fetch_config(server, jobid):
         pass
 
 
-def scrape_hadoop_jobs(server):
+def scrape_hadoop_jobs(server, completed_jobs=None):
     out = {}
+    completed_jobs = set(completed_jobs) if completed_jobs is not None else set()
     for status, jobids in parse_jobs(server).items():
-        for jobid in jobids:
+        for jobid in set(jobids) - completed_jobs:
             try:
                 columns = {'status': status}
                 config = fetch_config(server, jobid)

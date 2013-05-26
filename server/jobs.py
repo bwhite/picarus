@@ -29,6 +29,7 @@ class Jobs(object):
         self._lock_prefix = 'lock:'
         self.annotation_redis_host = annotation_redis_host
         self.annotation_redis_port = annotation_redis_port
+        self.hadoop_completed_jobs_cache = set()
 
     def add_task(self, type, owner, params, secret_params):
         task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
@@ -87,17 +88,17 @@ class Jobs(object):
                 pass
 
     def update_hadoop_jobs(self, hadoop_jobtracker):
-        for row, columns in scrape_hadoop_jobs(hadoop_jobtracker).items():
+        for row, columns in scrape_hadoop_jobs(hadoop_jobtracker, self.hadoop_completed_jobs_cache).items():
             print((row, columns))
-            if self._exists(row):
-                print('Row exists')
-                try:
-                    self._check_type(row, 'process')
-                except NotFoundException:
-                    continue
-                print('Writing')
-                # TODO: Need to do this atomically with the exists check
-                self.db.hmset(self._task_prefix + row, columns)
+            try:
+                self._exists(row)
+                self._check_type(row, 'process')
+            except NotFoundException:
+                continue
+            # TODO: Need to do this atomically with the exists check
+            self.db.hmset(self._task_prefix + row, columns)
+            if columns.get('status', '') in ('completed', 'failed'):
+                self.hadoop_completed_jobs_cache.add(row)
 
     def get_tasks(self, owner):
         outs = {}
