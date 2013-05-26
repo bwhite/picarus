@@ -355,7 +355,7 @@ function render_process_thumbnail() {
         button_running();
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
-        PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/thumbnail'}, success: button_reset, fail: button_error})
+        PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/thumbnail'}, success: jobs_status, fail: button_error})
     });
 }
 function render_process_delete() {

@@ -15,8 +15,6 @@ import jobs
 import logging
 import contextlib
 import tables
-import glob
-import time
 
 MAX_CONNECTIONS = 10000  # gevent pool size
 

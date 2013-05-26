@@ -163,6 +163,11 @@ function button_running() {
     $('#runButton').button('loading');
 }
 
+function jobs_status(data) {
+    process_jobs = data;
+    $('#runButton').button('reset');
+}
+
 function button_reset() {
     $('#runButton').button('reset');
 }
