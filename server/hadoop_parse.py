@@ -43,7 +43,6 @@ def parse_jobs(server):
         try:
             table = pq('h2#%s_jobs' % status_type).next()[0]
             for row in list(list(table)[1]):
-                print([x.text for x in list(list(row))])
                 jobid = list(list(row)[0])[0].text
                 job_row = list(row)[3].text
                 jobs.add((jobid, job_row))

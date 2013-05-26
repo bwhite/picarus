@@ -89,7 +89,6 @@ class Jobs(object):
 
     def update_hadoop_jobs(self, hadoop_jobtracker):
         for row, columns in scrape_hadoop_jobs(hadoop_jobtracker, self.hadoop_completed_jobs_cache).items():
-            print(repr((row, columns)))
             # NOTE: We do this at this point as a job may not exist but is finished completed/failed in hadoop
             if columns.get('status', '') in ('completed', 'failed'):
                 self.hadoop_completed_jobs_cache.add(row)
