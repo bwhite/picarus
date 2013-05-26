@@ -43,7 +43,10 @@ def parse_jobs(server):
         try:
             table = pq('h2#%s_jobs' % status_type).next()[0]
             for row in list(list(table)[1]):
-                jobs.add(list(list(row)[0])[0].text)
+                print([x.text for x in list(list(row))])
+                jobid = list(list(row)[0])[0].text
+                job_row = list(row)[3].text
+                jobs.add((jobid, job_row))
         except IndexError:
             pass
         type_jobs[status_type] = jobs
@@ -73,11 +76,11 @@ def scrape_hadoop_jobs(server, completed_jobs=None):
     out = {}
     completed_jobs = set(completed_jobs) if completed_jobs is not None else set()
     for status, jobids in parse_jobs(server).items():
-        for jobid in set(jobids):
+        for jobid, row in set(jobids):
             try:
                 columns = {'status': status}
-                config = fetch_config(server, jobid)
-                row = str(config['picarus.job.row'])
+                #config = fetch_config(server, jobid)
+                #row = str(config['picarus.job.row'])
                 if row in completed_jobs:
                     continue
                 try:
@@ -97,7 +100,7 @@ def scrape_hadoop_jobs(server, completed_jobs=None):
 
 def main():
     server = 'http://localhost:50030'
-    scrape_hadoop_jobs(server)
+    print(scrape_hadoop_jobs(server))
 
 if __name__ == '__main__':
     main()
