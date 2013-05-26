@@ -73,7 +73,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--reloader', action='store_true', help='If true, enable stopping on git/QUIT changes.  Server should be run in a loop.')
     parser.add_argument('--port', default='80', type=int)
-    parser.add_argument('--hadoop_jobtracker', help='Path to Hadoop Jobtracker Webserver', default='http://hadoopnameserver:50030')
+    parser.add_argument('--hadoop_jobtracker', help='Path to Hadoop Jobtracker Webserver', default='http://localhost:50030')
     parser.add_argument('--thrift_server', default='localhost')
     parser.add_argument('--thrift_port', default='9090')
     parser.add_argument('--database', choices=['hbase', 'redis'], help='Select which database to use as our backend')

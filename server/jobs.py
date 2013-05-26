@@ -88,6 +88,7 @@ class Jobs(object):
 
     def update_hadoop_jobs(self, hadoop_jobtracker):
         for row, columns in scrape_hadoop_jobs(hadoop_jobtracker).items():
+            print((row, columns))
             if self._exists(row):
                 try:
                     self._check_type(row, 'process')
