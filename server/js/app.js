@@ -166,6 +166,8 @@ function button_running() {
 function jobs_status(data) {
     function poll_jobs_status() {
         PICARUS.getRow(data.table, data.row, {success: function (pollData) {
+            var goodRows = 0;
+            var badRows = 0;
             if (_.has(pollData, 'goodRows'))
                 console.log('GoodRows ' + pollData.goodRows);
             if (_.has(pollData, 'badRows'))
@@ -174,6 +176,11 @@ function jobs_status(data) {
                 console.log('Status ' + pollData.status);
                 if (pollData.status == 'completed' || pollData.status == 'failed')
                     return;
+            }
+            $('#results').html('');
+            if (goodRows + badRows) {
+                $('#results').append($('<span>', {'class': 'pie', 'id': 'resultsPie'}).text(goodRows + ',' + badRows));
+                $("#resultsPie").peity("pie");
             }
             _.delay(poll_jobs_status, 1000);
         }, fail: function () {

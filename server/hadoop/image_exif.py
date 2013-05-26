@@ -29,10 +29,10 @@ class Mapper(picarus.HBaseMapper):
                                            if id in image_tags})
         except:
             sys.stdout.flush()
-            hadoopy.counter('STATUS', 'badRow')
+            hadoopy.counter('STATUS', 'badRows')
         else:
             sys.stdout.flush()
-            hadoopy.counter('STATUS', 'goodRow')
+            hadoopy.counter('STATUS', 'goodRows')
 
 if __name__ == '__main__':
     hadoopy.run(Mapper, required_cmdenvs=['HBASE_TABLE', 'HBASE_OUTPUT_COLUMN'])

@@ -86,7 +86,7 @@ def scrape_hadoop_jobs(server, completed_jobs=None):
                     status_counters = fetch_counters(server, jobid)['STATUS']
                 except KeyError:
                     pass
-                for x in ['goodRow', 'badRow']:
+                for x in ['goodRows', 'badRows']:
                     try:
                         columns[x] = str(status_counters[x][2])
                     except KeyError:
