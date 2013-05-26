@@ -90,10 +90,12 @@ class Jobs(object):
         for row, columns in scrape_hadoop_jobs(hadoop_jobtracker).items():
             print((row, columns))
             if self._exists(row):
+                print('Row exists')
                 try:
                     self._check_type(row, 'process')
                 except NotFoundException:
                     continue
+                print('Writing')
                 # TODO: Need to do this atomically with the exists check
                 self.db.hmset(self._task_prefix + row, columns)
 
