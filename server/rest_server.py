@@ -280,7 +280,7 @@ def auth_yubikey(_auth_user):
 def annotate_index(task):
     try:
         return JOBS.get_annotation_manager(task).index
-    except KeyError:
+    except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
 
 
@@ -289,7 +289,7 @@ def annotate_index(task):
 def annotation_static(task, file_name):
     try:
         JOBS.get_annotation_manager(task)
-    except KeyError:
+    except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
     root = mturk_vision.__path__[0] + '/static'
     return bottle.static_file(file_name, root)
@@ -300,7 +300,7 @@ def annotation_static(task, file_name):
 def annotation_user(task):
     try:
         return JOBS.get_annotation_manager(task).user(bottle.request)
-    except KeyError:
+    except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
 
 
@@ -309,7 +309,7 @@ def annotation_user(task):
 def annotation_config(task):
     try:
         return JOBS.get_annotation_manager(task).config
-    except KeyError:
+    except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
 
 
@@ -318,7 +318,7 @@ def annotation_config(task):
 def annotation_data(task, user_id):
     try:
         return JOBS.get_annotation_manager(task).make_data(user_id)
-    except KeyError:
+    except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
 
 
@@ -328,7 +328,7 @@ def annotation_image_get(task, image_key):
     try:
         data_key = image_key.rsplit('.', 1)[0]
         cur_data = JOBS.get_annotation_manager(task).read_data(data_key)
-    except KeyError:
+    except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
     bottle.response.content_type = "image/jpeg"
     return cur_data
@@ -339,7 +339,7 @@ def annotation_image_get(task, image_key):
 def annotation_data_get(task, data_key):
     try:
         cur_data = JOBS.get_annotation_manager(task).read_data(data_key)
-    except KeyError:
+    except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
     return cur_data
 
@@ -349,7 +349,7 @@ def annotation_data_get(task, data_key):
 def annotation_result(task):
     try:
         return JOBS.get_annotation_manager(task).result(**bottle.request.json)
-    except KeyError:
+    except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
 
 
