@@ -185,7 +185,7 @@ function jobs_status(data) {
                 return;
             $('#results').html('');
             if (goodRows + badRows) {
-                $('#results').append($('<span>', {'class': 'pie', 'id': 'resultsPie', 'data-colours': '["green", "red"]'}).text(goodRows + ',' + badRows));
+                $('#results').append($('<span>', {'data-diameter': '60', 'class': 'pie', 'id': 'resultsPie', 'data-colours': '["green", "red"]'}).text(goodRows + ',' + badRows));
                 $("#resultsPie").peity("pie");
                 $('#results').append('Good[' + goodRows + '] Bad[' + badRows + '] Status[' + _.escape(status) + '] Row[' + _.escape(data.row) + ']');
             }
@@ -194,6 +194,7 @@ function jobs_status(data) {
             console.log('Poll Failed');
         }});
     }
+    $('#results').html('Job started...waiting for status');
     poll_jobs_status();
     $('#runButton').button('reset');
 }
