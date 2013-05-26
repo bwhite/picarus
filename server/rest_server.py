@@ -16,6 +16,7 @@ import logging
 import contextlib
 import tables
 import glob
+import time
 
 MAX_CONNECTIONS = 10000  # gevent pool size
 
@@ -54,14 +55,6 @@ def thrift_lock():
 def thrift_new():
     yield THRIFT_CONSTRUCTOR()
 
-
-def load_site():
-    site = {}
-    for x in glob.glob('static/*'):
-        site[x] = open(x).read()
-    return site
-
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARN)
     parser = argparse.ArgumentParser(description='Run Picarus REST Frontend')
@@ -94,7 +87,6 @@ if __name__ == "__main__":
     USERS = Users(ARGS.redis_host, ARGS.redis_port, 0)
     YUBIKEY = Yubikey(ARGS.redis_host, ARGS.redis_port, 1)
     JOBS = jobs.Jobs(ARGS.redis_host, ARGS.redis_port, 3, ARGS.annotations_redis_host, ARGS.annotations_redis_port)
-    SITE = load_site()
     # Set necessary globals in tables module
     tables.VERSION = VERSION = 'v0'
     tables.thrift_lock = thrift_lock
@@ -219,17 +211,10 @@ def data_slice(_auth_user, table_name, start_row, stop_row):
 
 @bottle.get('/static/<name:re:[^/]+>')
 def static(name):
+
     try:
         bottle.response.headers['Cache-Control'] = 'public, max-age=3600, must-revalidate'
-        if name.endswith('.js'):
-            bottle.response.headers["Content-type"] = "application/javascript"
-        elif name.endswith('.css'):
-            bottle.response.headers["Content-type"] = "text/css"
-        elif name.endswith('.png'):
-            bottle.response.headers["Content-type"] = "image/png"
-        elif name.endswith('.svg'):
-            bottle.response.headers["Content-type"] = "image/svg+xml"
-        return SITE['static/' + name]
+        return bottle.static_file(name, 'static/')
     except KeyError:
         bottle.abort(404)
 
@@ -238,7 +223,7 @@ def static(name):
 def index():
     try:
         bottle.response.headers['Cache-Control'] = 'public, max-age=3600, must-revalidate'
-        return SITE['static/app.html']
+        return bottle.static_file('app.html', 'static/')
     except KeyError:
         bottle.abort(404)
 
