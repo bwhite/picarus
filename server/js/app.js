@@ -192,7 +192,8 @@ function watchJob(options, data) {
             JOBS.add(_.extend(pollData, {row: data.row}), {merge: true});
             if (!_.isUndefined(options.success))
                 options.success(data, pollData);
-            _.delay(pollJobsStatus, 1000);
+            if (pollData.status != 'completed' && pollData.status != 'failed')
+                _.delay(pollJobsStatus, 1000);
         }, fail: function () {
             console.log('Poll Failed');
         }});
