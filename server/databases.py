@@ -63,7 +63,7 @@ class BaseDB(object):
                 continue
             if output_data is None:
                 continue
-            self.mutate_row(row, {output_column: output_data})
+            self.mutate_row(table, row, {output_column: output_data})
             good_rows += 1
             self._jobs.update_job(job_row, {'goodRows': good_rows, 'badRows': total_rows - good_rows, 'status': 'running'})
         self._jobs.update_job(job_row, {'goodRows': good_rows, 'badRows': total_rows - good_rows, 'status': 'completed'})
