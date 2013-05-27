@@ -177,7 +177,7 @@ class BaseDB(object):
     @async
     def create_model_job(self, create_model, params, inputs, schema, start_stop_rows, table, email, job_row):
         # Give the model creator an iterator of row, cols (where cols are the input names)
-        columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
+        job_columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
         os.nice(5)  # These are background tasks, don't let the CPU get too crazy
 
         def inner():
@@ -188,23 +188,23 @@ class BaseDB(object):
                     total_rows += 1
                     try:
                         yield row, {pretty_column: columns[raw_column] for pretty_column, raw_column in inputs.items()}
-                        columns['goodRows'] += 1
-                        columns['badRows'] = total_rows - columns['goodRows']
-                        self._jobs.update_job(job_row, columns)
+                        job_columns['goodRows'] += 1
+                        job_columns['badRows'] = total_rows - job_columns['goodRows']
+                        self._jobs.update_job(job_row, job_columns)
                     except KeyError:
                         continue
         input_type, output_type, model_link = create_model(inner(), params)
         print(model_link)
         slices = [base64.b64encode(start_row) + ',' + base64.b64encode(stop_row) for start_row, stop_row in start_stop_rows]
         inputsb64 = {k: base64.b64encode(v) for k, v in inputs.items()}
-        factory_info = {'slices': slices, 'num_rows': columns['goodRows'], 'data': 'slices', 'params': params, 'inputs': inputsb64}
+        factory_info = {'slices': slices, 'num_rows': job_columns['goodRows'], 'data': 'slices', 'params': params, 'inputs': inputsb64}
         manager = driver.PicarusManager(db=self)
         model_chain = tables._takeout_model_chain_from_key(manager, inputs[input_type]) + [model_link]
-        columns['modelRow'] = manager.input_model_param_to_key(**{'input': inputs[input_type], 'model_link': model_link, 'model_chain': model_chain, 'input_type': input_type,
+        job_columns['modelRow'] = manager.input_model_param_to_key(**{'input': inputs[input_type], 'model_link': model_link, 'model_chain': model_chain, 'input_type': input_type,
                                                                   'output_type': output_type, 'email': email, 'name': manager.model_to_name(model_link),
                                                                   'factory_info': json.dumps(factory_info)})
-        columns['status'] = 'completed'
-        self._jobs.update_job(job_row, columns)
+        job_columns['status'] = 'completed'
+        self._jobs.update_job(job_row, job_columns)
 
 
 class RedisDB(BaseDB):
