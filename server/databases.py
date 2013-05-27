@@ -204,7 +204,7 @@ class BaseDB(object):
                                                                   'output_type': output_type, 'email': email, 'name': manager.model_to_name(model_link),
                                                                   'factory_info': json.dumps(factory_info)})
         columns['status'] = 'completed'
-        db._jobs.update_job(job_row, columns)
+        self._jobs.update_job(job_row, columns)
 
 
 class RedisDB(BaseDB):
