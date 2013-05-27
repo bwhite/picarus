@@ -700,7 +700,8 @@ class ModelsHBaseTable(HBaseTable):
                     job_row = JOBS.add_task('model', self.owner, {'slices': ';'.join(slices),
                                                                   'table': self.table,
                                                                   'path': path}, {})
-                    return _create_model_from_factory(manager, self.owner, path, FACTORIES[path], params, start_stop_rows, data_table.table, job_row)
+                    #email, db, path, create_model, params, start_stop_rows, table, job_row
+                    return _create_model_from_factory(self.owner, thrift, path, FACTORIES[path], params, start_stop_rows, data_table.table, job_row)
                 except KeyError:
                     bottle.abort(400)
 
