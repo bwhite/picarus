@@ -83,17 +83,6 @@ if __name__ == "__main__":
     tables.thrift_new = thrift_new
     tables.JOBS = JOBS
 
-    def THRIFT_CONSTRUCTOR():
-        if ARGS.database == 'redis':
-            return RedisDB(ARGS.redis_host, ARGS.redis_port, 2, JOBS)
-        if ARGS.database == 'hbase':
-            return HBaseDB(ARGS.thrift_server, ARGS.thrift_port, JOBS)
-        if ARGS.database == 'hbasehadoop':
-            return HBaseDBHadoop(ARGS.thrift_server, ARGS.thrift_port, JOBS)
-        raise ValueError('Unknown option[%s]' % ARGS.database)
-    for x in range(5):
-        THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
-
 
 def print_request():
     ks = ['auth', 'content_length', 'content_type', 'environ', 'fullpath', 'is_ajax', 'is_xhr', 'method', 'path', 'query_string', 'remote_addr', 'remote_route', 'script_name', 'url', 'urlparts']
@@ -369,4 +358,15 @@ if __name__ == '__main__':
         gevent.spawn(reloader)
     if ARGS.hadoop_jobtracker and ARGS.database.endswith('hadoop'):
         gevent.spawn(refresh_hadoop_jobs)
+    
+    def THRIFT_CONSTRUCTOR():
+        if ARGS.database == 'redis':
+            return RedisDB(ARGS.redis_host, ARGS.redis_port, 2, JOBS, SERVER.spawn)
+        if ARGS.database == 'hbase':
+            return HBaseDB(ARGS.thrift_server, ARGS.thrift_port, JOBS, SERVER.spawn)
+        if ARGS.database == 'hbasehadoop':
+            return HBaseDBHadoop(ARGS.thrift_server, ARGS.thrift_port, JOBS, SERVER.spawn)
+        raise ValueError('Unknown option[%s]' % ARGS.database)
+    for x in range(5):
+        THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     SERVER.serve_forever()
