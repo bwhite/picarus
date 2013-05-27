@@ -552,7 +552,7 @@ class ImagesHBaseTable(DataHBaseTable):
         params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
         with thrift_lock() as thrift:
-            manager = PicarusManager(thrift=thrift)
+            manager = PicarusManager(db=thrift)
             print(params)
             model_key = params['model']
             print('ModelKey[%r]' % model_key)
@@ -584,7 +584,7 @@ class ImagesHBaseTable(DataHBaseTable):
         params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
         with thrift_new() as thrift:
-            manager = PicarusManager(thrift=thrift)
+            manager = PicarusManager(db=thrift)
             if action == 'io/thumbnail':
                 self._slice_validate(start_row, stop_row, 'rw')
                 # Makes 150x150 thumbnails from the data:image column
@@ -686,7 +686,7 @@ class ModelsHBaseTable(HBaseTable):
         params = {base64.b64decode(k): base64.b64decode(v) for k, v in params.items()}
         path = params['path']
         with thrift_lock() as thrift:
-            manager = PicarusManager(thrift=thrift)
+            manager = PicarusManager(db=thrift)
             if path.startswith('model/'):
                 return _create_model_from_params(manager, self.owner, path, params)
             elif path.startswith('factory/'):

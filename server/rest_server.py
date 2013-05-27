@@ -358,7 +358,7 @@ if __name__ == '__main__':
         gevent.spawn(reloader)
     if ARGS.hadoop_jobtracker and ARGS.database.endswith('hadoop'):
         gevent.spawn(refresh_hadoop_jobs)
-    
+
     def THRIFT_CONSTRUCTOR():
         if ARGS.database == 'redis':
             return RedisDB(ARGS.redis_host, ARGS.redis_port, 2, JOBS, SERVER._spawn)
