@@ -193,7 +193,7 @@ class BaseDB(object):
                         self._jobs.update_job(job_row, columns)
                     except KeyError:
                         continue
-        input_type, output_type, model_link = model_link = create_model(inner(), params)
+        input_type, output_type, model_link = create_model(inner(), params)
         print(model_link)
         slices = [base64.b64encode(start_row) + ',' + base64.b64encode(stop_row) for start_row, stop_row in start_stop_rows]
         inputsb64 = {k: base64.b64encode(v) for k, v in inputs.items()}
