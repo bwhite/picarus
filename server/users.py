@@ -168,6 +168,11 @@ class User(object):
         for data in self._user_db.lrange(self._usage_prefix + self.email, 0, -1):
             data = json.loads(data)
             k = '%s %s' % (data['method'], data['pathSanitized'])
+            # Fix issues where the data is not ascii, e.g., invalid table value
+            try:
+                k.decode('ascii')
+            except UnicodeDecodeError:
+                continue
             row = out.setdefault(k, {'times': []})
             status_code_key = 'status:%d' % data['status_code']
             try:

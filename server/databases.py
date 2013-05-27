@@ -75,7 +75,6 @@ def async(func):
 class BaseDB(object):
 
     def __init__(self, jobs, spawn):
-        spawn = None
         if hasattr(self, 'args'):
             self.args += [jobs, None]
         else:
