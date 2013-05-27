@@ -55,7 +55,8 @@ function render_models_create() {
             params.table = 'images';
             params.slices = slices_selector_get().join(';');
             p = params;
-            PICARUS.postTable('models', {success: success, data: params});
+            // TODO: Need to update MODELS by calling success
+            PICARUS.postTable('models', {success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results'))}), data: params});
         } else {
             PICARUS.postTable('models', {success: success, data: params});
         }
