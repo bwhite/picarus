@@ -57,7 +57,7 @@ def job_runner(*args, **kw):
 
 def job_worker(db, method, method_args, method_kwargs):
     print('job_worker: db[%s] method[%s] args[%s] kw[%s]' % (db, method, method_args, method_kwargs))
-    getattr(db, method)(*method_args, **method_kwargs)
+    getattr(db, method)(db, *method_args, **method_kwargs)
 
 
 def async(func):
