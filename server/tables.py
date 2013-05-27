@@ -696,7 +696,11 @@ class ModelsHBaseTable(HBaseTable):
                 for start_row, stop_row in start_stop_rows:
                     data_table._slice_validate(start_row, stop_row, 'r')
                 try:
-                    return _create_model_from_factory(manager, self.owner, path, FACTORIES[path], params, start_stop_rows, data_table.table)
+                    slices = [base64.b64encode(start_row) + ',' + base64.b64encode(stop_row) for start_row, stop_row in start_stop_rows]
+                    job_row = JOBS.add_task('model', self.owner, {'slices': ';'.join(slices),
+                                                                  'table': self.table,
+                                                                  'path': path}, {})
+                    return _create_model_from_factory(manager, self.owner, path, FACTORIES[path], params, start_stop_rows, data_table.table, job_row)
                 except KeyError:
                     bottle.abort(400)
 
