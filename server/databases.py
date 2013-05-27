@@ -64,7 +64,7 @@ def async(func):
     def inner(self, *args, **kw):
         if self._spawn is None:
             return func(*args, **kw)
-        self._spawn(job_runner, db=self, method=func.__func__.__name__,
+        self._spawn(job_runner, db=self, method=func.__name__,
                     method_args=args, method_kwargs=kw)
     return inner
 
