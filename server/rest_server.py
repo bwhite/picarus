@@ -367,6 +367,6 @@ if __name__ == '__main__':
             gevent.sleep(5.)
     if ARGS.reloader:
         gevent.spawn(reloader)
-    if ARGS.hadoop_jobtracker and ARGS.database == 'hbase':
+    if ARGS.hadoop_jobtracker and ARGS.database.endswith('hadoop'):
         gevent.spawn(refresh_hadoop_jobs)
     SERVER.serve_forever()
