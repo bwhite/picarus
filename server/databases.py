@@ -16,6 +16,15 @@ import hadoopy_hbase
 import os
 import re
 import gipc
+import crawlers
+import logging
+import driver
+import tables
+try:
+    from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
+except ImportError:
+    logging.warn('No default flickr keys found in flickr_keys.py, see flickr_keys.example.py')
+    FLICKR_API_KEY, FLICKR_API_SECRET = '', ''
 
 
 def _tempfile(data, suffix=''):
@@ -43,14 +52,21 @@ def hadoop_wait_till_started(launch_out):
 
 
 def job_runner(*args, **kw):
-    with gipc.pipe() as (reader, writer):
-        p = gipc.start_process(target=job_worker, args=args, kwargs=kw)
-        reader.get()
-        p.join()
+    gipc.start_process(target=job_worker, args=args, kwargs=kw).join()
 
 
-def job_worker(db, method, method_args):
-    getattr(db, method)(*method_args)
+def job_worker(db, method, method_args, method_kwargs):
+    getattr(db, method)(*method_args, **method_kwargs)
+
+
+def async(func):
+
+    def inner(self, *args, **kw):
+        if self._spawn is None:
+            return func(*args, **kw)
+        self._spawn(job_runner, db=self, method=func.__func__.__name__,
+                    method_args=args, method_kwargs=kw)
+    return inner
 
 
 class BaseDB(object):
@@ -67,9 +83,8 @@ class BaseDB(object):
     def __reduce__(self):
         return (BaseDB, self.args)
 
-    def _job(self, table, start_row, stop_row, input_column, output_column, func, job_row):
-        good_rows = 0
-        total_rows = 0
+    def _row_job(self, table, start_row, stop_row, input_column, output_column, func, job_row):
+        good_rows, total_rows = 0, 0
         for row, columns in self.scanner(table, start_row, stop_row, columns=[input_column]):
             total_rows += 1
             try:
@@ -88,6 +103,7 @@ class BaseDB(object):
             self._jobs.update_job(job_row, {'goodRows': good_rows, 'badRows': total_rows - good_rows, 'status': 'running'})
         self._jobs.update_job(job_row, {'goodRows': good_rows, 'badRows': total_rows - good_rows, 'status': 'completed'})
 
+    @async
     def exif_job(self, start_row, stop_row, job_row):
 
         def func(input_data):
@@ -104,12 +120,85 @@ class BaseDB(object):
                                        if id in image_tags})
         self._job('images', start_row, stop_row, 'data:image', 'meta:exif', func, job_row)
 
+    @async
     def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row, job_row):
         model = picarus_takeout.ModelChain(msgpack.dumps(model))
 
         def func(input_data):
             return model.process_binary(input_data)
         self._job(table, start_row, stop_row, input_column, output_column, func, job_row)
+
+    @async
+    def flickr_job(self, params, start_row, stop_row, job_row):
+        # Only slices where the start_row can be used as a prefix may be used
+        assert start_row and ord(start_row[-1]) != 255 and start_row[:-1] + chr(ord(start_row[-1]) + 1) == stop_row
+        p = {}
+        row_prefix = start_row
+        assert row_prefix.find(':') != -1
+        print('params[%r]' % params)
+        class_name = params.get('className')
+        query = params['query']
+        p['lat'] = params.get('lat')
+        p['lon'] = params.get('lon')
+        p['radius'] = params.get('radius')
+        p['api_key'] = params.get('apiKey', FLICKR_API_KEY)
+        p['api_secret'] = params.get('apiSecret', FLICKR_API_SECRET)
+        if not p['api_key'] or not p['api_secret']:
+            bottle.abort(400)  # Either we don't have a default or the user provided an empty key
+        if 'hasGeo' in params:
+            p['has_geo'] = params['hasGeo'] == '1'
+        if 'onePerOwner' in params:
+            p['one_per_owner'] = params['onePerOwner'] == '1'
+        try:
+            p['min_upload_date'] = int(params['minUploadDate'])
+        except KeyError:
+            pass
+        try:
+            p['max_rows'] = int(params['maxRows'])
+        except KeyError:
+            pass
+        try:
+            p['max_upload_date'] = int(params['maxUploadDate'])
+        except KeyError:
+            pass
+        try:
+            p['page'] = int(params['page'])
+        except KeyError:
+            pass
+        # TODO: Fix to use database and to update status
+        out = {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name=class_name, query=query, **p)}
+        return {base64.b64encode(k): base64.b64encode(v) for k, v in out.items()}
+
+    @async
+    def create_model_job(self, create_model, params, inputs, schema, start_stop_rows, table, email, job_row):
+        # Give the model creator an iterator of row, cols (where cols are the input names)
+        columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
+        os.nice(5)  # These are background tasks, don't let the CPU get too crazy
+
+        def inner():
+            total_rows = 0
+            for start_row, stop_row in start_stop_rows:
+                row_cols = self.scanner(table, columns=inputs.values(), start_row=start_row, stop_row=stop_row)
+                for row, columns in row_cols:
+                    total_rows += 1
+                    try:
+                        yield row, {pretty_column: columns[raw_column] for pretty_column, raw_column in inputs.items()}
+                        columns['goodRows'] += 1
+                        columns['badRows'] = total_rows - columns['goodRows']
+                        self._jobs.update_job(job_row, columns)
+                    except KeyError:
+                        continue
+        input_type, output_type, model_link = model_link = create_model(inner(), params)
+        slices = [base64.b64encode(start_row) + ',' + base64.b64encode(stop_row) for start_row, stop_row in start_stop_rows]
+        inputsb64 = {k: base64.b64encode(v) for k, v in inputs.items()}
+        factory_info = {'slices': slices, 'num_rows': columns['goodRows'], 'data': 'slices', 'params': params, 'inputs': inputsb64}
+        manager = driver.PicarusManager(db=self)
+        model_chain = tables._takeout_model_chain_from_key(manager, inputs[input_type]) + [model_link]
+        columns['modelRow'] = manager.input_model_param_to_key(**{'input': inputs[input_type], 'model_link': model_link, 'model_chain': model_chain, 'input_type': input_type,
+                                                                  'output_type': output_type, 'email': email, 'name': manager.model_to_name(model_link),
+                                                                  'factory_info': json.dumps(factory_info)})
+        columns['status'] = 'completed'
+        db._jobs.update_job(job_row, columns)
 
 
 class RedisDB(BaseDB):

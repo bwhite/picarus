@@ -1,14 +1,7 @@
-import hadoopy_hbase
 import logging
 import time
-import tempfile
-import zlib
 import os
-import random
-import cPickle as pickle
-import base64
 import hashlib
-import subprocess
 import msgpack
 
 logging.basicConfig(level=logging.DEBUG)
@@ -16,15 +9,14 @@ logging.basicConfig(level=logging.DEBUG)
 
 class PicarusManager(object):
 
-    def __init__(self, thrift=None):
+    def __init__(self, db):
         self.image_orig_column = 'data:image'
         self.image_column = 'data:image_320'
         self.images_table = 'images'
         self.models_table = 'models'
-        self.hb = thrift if thrift is not None else hadoopy_hbase.connect()
+        self.db = db
         self.max_cell_size = 1024 * 1024  # 1MB
         # Feature Hasher settings
-        self.hb = hadoopy_hbase.connect()
         # Feature Classifier settings
         self.feature_classifier_row = self.images_table
         # Index Settings
@@ -64,17 +56,17 @@ class PicarusManager(object):
         dumps = lambda x: msgpack.dumps(x)
         prefix = self.output_type_to_prefix(output_type)
         model_key = prefix + os.urandom(16)
-        cols = []
+        cols = {}
 
         def save_model(model_str, model_column, model_chunks_column, model_sha1_column, model_size_column):
-            cols.append(hadoopy_hbase.Mutation(column=model_sha1_column, value=hashlib.sha1(model_str).hexdigest()))
-            cols.append(hadoopy_hbase.Mutation(column=model_size_column, value=str(len(model_str))))
+            cols[model_sha1_column] = hashlib.sha1(model_str).hexdigest()
+            cols[model_size_column] = str(len(model_str))
             chunk_count = 0
             while model_str:
-                self.hb.mutateRow(self.models_table, model_key, [hadoopy_hbase.Mutation(column=model_column + '-%d' % chunk_count, value=model_str[:self.max_cell_size])])
+                self.db.mutate_row(self.models_table, model_key, {model_column + '-%d' % chunk_count: model_str[:self.max_cell_size]})
                 model_str = model_str[self.max_cell_size:]
                 chunk_count += 1
-            cols.append(hadoopy_hbase.Mutation(column=model_chunks_column, value=str(chunk_count)))
+            cols[model_chunks_column] = str(chunk_count)
         try:
             # Save the models ASAP chunk by chunk to reduce memory usage
             if check_model(model_link) and all(map(check_model, model_chain)):
@@ -83,27 +75,27 @@ class PicarusManager(object):
                 save_model(dumps(model_chain), self.model_chain_column, self.model_chain_chunks_column, self.model_chain_sha1_column, self.model_chain_size_column)
             else:
                 raise ValueError('Model must be a dict!')
-            cols += [hadoopy_hbase.Mutation(column=self.input_column, value=input),
-                     hadoopy_hbase.Mutation(column=self.input_type_column, value=input_type),
-                     hadoopy_hbase.Mutation(column=self.output_type_column, value=output_type),
-                     hadoopy_hbase.Mutation(column=self.model_link_type_column, value=model_link_type),
-                     hadoopy_hbase.Mutation(column=self.model_chain_type_column, value=model_chain_type),
-                     hadoopy_hbase.Mutation(column=self.creation_time_column, value=str(time.time())),
-                     hadoopy_hbase.Mutation(column=self.notes_column, value=notes),
-                     hadoopy_hbase.Mutation(column=self.name_column, value=name),
-                     hadoopy_hbase.Mutation(column=self.tags_column, value=tags),
-                     hadoopy_hbase.Mutation(column='user:' + email, value='rw')]
+            cols.update({self.input_column: input,
+                         self.input_type_column: input_type,
+                         self.output_type_column: output_type,
+                         self.model_link_type_column: model_link_type,
+                         self.model_chain_type_column: model_chain_type,
+                         self.creation_time_column: str(time.time()),
+                         self.notes_column: notes,
+                         self.name_column: name,
+                         self.tags_column: tags,
+                         'user:' + email: 'rw'})
             if factory_info is not None:
-                cols.append(hadoopy_hbase.Mutation(column=self.factory_info_column, value=factory_info))
-            self.hb.mutateRow(self.models_table, model_key, cols)
+                cols[self.factory_info_column] = factory_info
+            self.db.mutate_row(self.models_table, model_key, cols)
             return model_key
         except:
             print('Deleting model [%r] due to exception' % model_key)
-            self.hb.deleteAllRow(self.models_table, model_key)
+            self.db.delete_row(self.models_table, model_key)
             raise
 
     def key_to_model(self, key, model_type=None):
-        columns = {x[5:]: y.value for x, y in self.hb.getRowWithColumns(self.models_table, key, ['meta:'])[0].columns.items()}
+        columns = {x[5:]: y for x, y in self.db.get_row(self.models_table, key, ['meta:']).items()}
         if model_type is None:
             return columns
         if model_type == 'link':
@@ -116,7 +108,7 @@ class PicarusManager(object):
             raise ValueError
         model_chunks = int(columns[model_chunks_column])
         model_chunk_columns = [model_column + '-%d' % x for x in range(model_chunks)]
-        chunks = [(int(x.split('-')[1]), y.value) for x, y in self.hb.getRowWithColumns(self.models_table, key, model_chunk_columns)[0].columns.items()]
+        chunks = [(int(x.split('-')[1]), y) for x, y in self.db.get_row(self.models_table, key, model_chunk_columns).items()]
         chunks.sort()
         return ''.join([x[1] for x in chunks]), columns
 

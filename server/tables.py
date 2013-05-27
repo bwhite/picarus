@@ -4,23 +4,11 @@ import bottle
 import json
 import time
 import uuid
-import hashlib
-import mturk_vision
-import crawlers
 import re
-import gipc
 import picarus_takeout
-import logging
 import functools
 import msgpack
 from driver import PicarusManager
-
-try:
-    from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
-except ImportError:
-    logging.warn('No default flickr keys found in flickr_keys.py, see flickr_keys.example.py')
-    FLICKR_API_KEY, FLICKR_API_SECRET = '', ''
-
 from parameters import PARAM_SCHEMAS_SERVE
 from model_factories import FACTORIES
 
@@ -166,15 +154,12 @@ def _create_model_from_params(manager, email, path, params):
         bottle.abort(500)
 
 
-def _create_model_from_factory(manager, email, path, create_model, params, start_stop_rows, table):
+def _create_model_from_factory(email, db, path, create_model, params, start_stop_rows, table, job_row):
     schema = PARAM_SCHEMAS_SERVE[path]
     model_params = _parse_params(params, schema)
     inputs = {x: _get_input(params, x) for x in schema['input_types']}
-    with gipc.pipe() as (reader, writer):
-        p = gipc.start_process(target=create_model, args=(writer, model_params, inputs, schema, start_stop_rows, table, email))
-        row = reader.get()
-        p.join()
-    return {'row': base64.b64encode(row)}
+    db.create_model_job(create_model, model_params, inputs, schema, start_stop_rows, table, email, job_row)
+    return {'row': base64.b64encode(job_row), 'table': 'jobs'}
 
 
 class BaseTableSmall(object):
@@ -640,44 +625,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
             elif action == 'o/crawl/flickr':
                 self._slice_validate(start_row, stop_row, 'w')
-                # TODO: Update these to use the new job system
-                # Only slices where the start_row can be used as a prefix may be used
-                assert start_row and ord(start_row[-1]) != 255 and start_row[:-1] + chr(ord(start_row[-1]) + 1) == stop_row
-                p = {}
-                row_prefix = start_row
-                assert row_prefix.find(':') != -1
-                print('params[%r]' % params)
-                class_name = params.get('className')
-                query = params['query']
-                p['lat'] = params.get('lat')
-                p['lon'] = params.get('lon')
-                p['radius'] = params.get('radius')
-                p['api_key'] = params.get('apiKey', FLICKR_API_KEY)
-                p['api_secret'] = params.get('apiSecret', FLICKR_API_SECRET)
-                if not p['api_key'] or not p['api_secret']:
-                    bottle.abort(400)  # Either we don't have a default or the user provided an empty key
-                if 'hasGeo' in params:
-                    p['has_geo'] = params['hasGeo'] == '1'
-                if 'onePerOwner' in params:
-                    p['one_per_owner'] = params['onePerOwner'] == '1'
-                try:
-                    p['min_upload_date'] = int(params['minUploadDate'])
-                except KeyError:
-                    pass
-                try:
-                    p['max_rows'] = int(params['maxRows'])
-                except KeyError:
-                    pass
-                try:
-                    p['max_upload_date'] = int(params['maxUploadDate'])
-                except KeyError:
-                    pass
-                try:
-                    p['page'] = int(params['page'])
-                except KeyError:
-                    pass
-                out = {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name=class_name, query=query, **p)}
-                return {base64.b64encode(k): base64.b64encode(v) for k, v in out.items()}
+
             else:
                 bottle.abort(400)
 
