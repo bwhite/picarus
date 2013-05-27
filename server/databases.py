@@ -87,6 +87,7 @@ class BaseDB(object):
         return (BaseDB, self.args)
 
     def _row_job(self, table, start_row, stop_row, input_column, output_column, func, job_row):
+        print('In row_job')
         good_rows, total_rows = 0, 0
         for row, columns in self.scanner(table, start_row, stop_row, columns=[input_column]):
             total_rows += 1
