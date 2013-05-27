@@ -15,6 +15,7 @@ import base64
 import hadoopy_hbase
 import os
 import re
+import gipc
 
 
 def _tempfile(data, suffix=''):
@@ -41,11 +42,30 @@ def hadoop_wait_till_started(launch_out):
         raise RuntimeError('Hadoop task could not start')
 
 
+def job_runner(*args, **kw):
+    with gipc.pipe() as (reader, writer):
+        p = gipc.start_process(target=job_worker, args=args, kwargs=kw)
+        reader.get()
+        p.join()
+
+
+def job_worker(db, method, method_args):
+    getattr(db, method)(*method_args)
+
+
 class BaseDB(object):
 
-    def __init__(self, jobs):
+    def __init__(self, jobs, spawn):
+        if hasattr(self, 'args'):
+            self.args += [jobs, None]
+        else:
+            self.args = [jobs, None]
         self._jobs = jobs
+        self._spawn = spawn
         super(BaseDB, self).__init__()
+
+    def __reduce__(self):
+        return (BaseDB, self.args)
 
     def _job(self, table, start_row, stop_row, input_column, output_column, func, job_row):
         good_rows = 0
@@ -94,10 +114,17 @@ class BaseDB(object):
 
 class RedisDB(BaseDB):
 
-    def __init__(self, server, port, db, jobs):
+    def __init__(self, server, port, db, *args, **kw):
+        if hasattr(self, 'args'):
+            self.args += [server, port, db]
+        else:
+            self.args = [server, port, db]
         self.__redis = redis.StrictRedis(host=server, port=port, db=db)
         # redis[table:row] -> data[table][row]
-        super(RedisDB, self).__init__(jobs)
+        super(RedisDB, self).__init__(*args, **kw)
+
+    def __reduce__(self):
+        return (RedisDB, self.args)
 
     def _get_columns(self, table, row, columns, keys_only=False):
         table_row = table + ':' + row
@@ -184,10 +211,17 @@ class RedisDB(BaseDB):
 
 class HBaseDB(BaseDB):
 
-    def __init__(self, server, port, jobs):
+    def __init__(self, server, port, *args, **kw):
+        if hasattr(self, 'args'):
+            self.args += [server, port]
+        else:
+            self.args = [server, port]
         self.__thrift = hadoopy_hbase.connect(server, port)
         self.num_mappers = 6
-        super(HBaseDB, self).__init__(jobs)
+        super(HBaseDB, self).__init__(*args, **kw)
+
+    def __reduce__(self):
+        return (HBaseDB, self.args)
 
     def mutate_row(self, table, row, mutations):
         mutations = [hadoopy_hbase.Mutation(column=x, value=y) for x, y in mutations.items()]
@@ -242,8 +276,11 @@ class HBaseDB(BaseDB):
 
 class HBaseDBHadoop(HBaseDB):
 
-    def __init__(self, server, port, jobs):
-        super(HBaseDBHadoop, self).__init__(server, port, jobs)
+    def __init__(self, *args, **kw):
+        super(HBaseDBHadoop, self).__init__(*args, **kw)
+
+    def __reduce__(self):
+        return (HBaseDBHadoop, self.args)
 
     def exif_job(self, start_row, stop_row, job_row):
         cmdenvs = {'HBASE_TABLE': 'images',

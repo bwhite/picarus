@@ -20,6 +20,7 @@ class NotFoundException(Exception):
 class Jobs(object):
 
     def __init__(self, host, port, db, annotation_redis_host, annotation_redis_port):
+        self.args = [host, port, db, annotation_redis_host, annotation_redis_port]
         self.redis_host = host
         self.redis_port = port
         self.db = redis.StrictRedis(host=host, port=port, db=db)
@@ -30,6 +31,9 @@ class Jobs(object):
         self.annotation_redis_host = annotation_redis_host
         self.annotation_redis_port = annotation_redis_port
         self.hadoop_completed_jobs_cache = set()
+
+    def __reduce__(self):
+        return (Jobs, self.args)
 
     def add_task(self, type, owner, params, secret_params):
         task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
