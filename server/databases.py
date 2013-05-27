@@ -121,7 +121,7 @@ class BaseDB(object):
                     return json.dumps({name: base64.b64encode(image_tags[id]) if isinstance(image_tags[id], str) else image_tags[id]
                                        for id, name in TAGS.items()
                                        if id in image_tags})
-        self._job('images', start_row, stop_row, 'data:image', 'meta:exif', func, job_row)
+        self._row_job('images', start_row, stop_row, 'data:image', 'meta:exif', func, job_row)
 
     @async
     def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row, job_row):
@@ -129,7 +129,7 @@ class BaseDB(object):
 
         def func(input_data):
             return model.process_binary(input_data)
-        self._job(table, start_row, stop_row, input_column, output_column, func, job_row)
+        self._row_job(table, start_row, stop_row, input_column, output_column, func, job_row)
 
     @async
     def flickr_job(self, params, start_row, stop_row, job_row):
