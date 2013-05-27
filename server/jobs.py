@@ -87,6 +87,9 @@ class Jobs(object):
             except KeyError:
                 pass
 
+    def update_job(self, row, columns):
+        self.db.hmset(self._task_prefix + row, columns)
+
     def update_hadoop_jobs(self, hadoop_jobtracker):
         for row, columns in scrape_hadoop_jobs(hadoop_jobtracker, self.hadoop_completed_jobs_cache).items():
             # NOTE: We do this at this point as a job may not exist but is finished completed/failed in hadoop
@@ -98,7 +101,7 @@ class Jobs(object):
             except NotFoundException:
                 continue
             # TODO: Need to do this atomically with the exists check
-            self.db.hmset(self._task_prefix + row, columns)
+            self.update_job(row, columns)
 
     def get_tasks(self, owner):
         outs = {}

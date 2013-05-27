@@ -41,11 +41,63 @@ def hadoop_wait_till_started(launch_out):
         raise RuntimeError('Hadoop task could not start')
 
 
-class RedisDB(object):
+class BaseDB(object):
 
-    def __init__(self, server, port, db):
+    def __init__(self, jobs):
+        self._jobs = jobs
+        super(BaseDB, self).__init__()
+
+    def _job(self, table, start_row, stop_row, input_column, output_column, func, job_row):
+        good_rows = 0
+        total_rows = 0
+        for row, columns in self.scanner(table, start_row, stop_row, columns=[input_column]):
+            total_rows += 1
+            try:
+                input_data = columns[input_column]
+            except KeyError:
+                continue
+            try:
+                output_data = func(input_data)
+            except:
+                # TODO: We need some way of reporting exceptions back
+                continue
+            if output_data is None:
+                continue
+            self.mutate_row(row, {output_column: output_data})
+            good_rows += 1
+            self._jobs.update_job(job_row, {'goodRows': good_rows, 'badRows': total_rows - good_rows, 'status': 'running'})
+        self._jobs.update_job(job_row, {'goodRows': good_rows, 'badRows': total_rows - good_rows, 'status': 'completed'})
+
+    def exif_job(self, start_row, stop_row, job_row):
+
+        def func(input_data):
+            image = Image.open(StringIO.StringIO(input_data))
+            if not hasattr(image, '_getexif'):
+                return json.dumps({})
+            else:
+                image_tags = image._getexif()
+                if image_tags is None:
+                    return json.dumps({})
+                else:
+                    return json.dumps({name: base64.b64encode(image_tags[id]) if isinstance(image_tags[id], str) else image_tags[id]
+                                       for id, name in TAGS.items()
+                                       if id in image_tags})
+        self._job('images', start_row, stop_row, 'data:image', 'meta:exif', func, job_row)
+
+    def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row, job_row):
+        model = picarus_takeout.ModelChain(msgpack.dumps(model))
+
+        def func(input_data):
+            return model.process_binary(input_data)
+        self._job(table, start_row, stop_row, input_column, output_column, func, job_row)
+
+
+class RedisDB(BaseDB):
+
+    def __init__(self, server, port, db, jobs):
         self.__redis = redis.StrictRedis(host=server, port=port, db=db)
         # redis[table:row] -> data[table][row]
+        super(RedisDB, self).__init__(jobs)
 
     def _get_columns(self, table, row, columns, keys_only=False):
         table_row = table + ':' + row
@@ -129,50 +181,13 @@ class RedisDB(object):
                 continue
             yield clean_row, cur_row
 
-    def _job(self, table, start_row, stop_row, input_column, output_column, func):
-        for row, columns in self.scanner(table, start_row, stop_row, columns=[input_column]):
-            try:
-                input_data = columns[input_column]
-            except KeyError:
-                continue
-            try:
-                output_data = func(input_data)
-            except:
-                # TODO: We need some way of reporting exceptions back
-                continue
-            if output_data is None:
-                continue
-            self.mutate_row(row, {output_column: output_data})
 
-    def exif_job(self, start_row, stop_row):
+class HBaseDB(BaseDB):
 
-        def func(input_data):
-            image = Image.open(StringIO.StringIO(input_data))
-            if not hasattr(image, '_getexif'):
-                return json.dumps({})
-            else:
-                image_tags = image._getexif()
-                if image_tags is None:
-                    return json.dumps({})
-                else:
-                    return json.dumps({name: base64.b64encode(image_tags[id]) if isinstance(image_tags[id], str) else image_tags[id]
-                                       for id, name in TAGS.items()
-                                       if id in image_tags})
-        self._job('images', start_row, stop_row, 'data:image', 'meta:exif', func)
-
-    def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row):
-        model = picarus_takeout.ModelChain(msgpack.dumps(model))
-
-        def func(input_data):
-            return model.process_binary(input_data)
-        self._job(table, start_row, stop_row, input_column, output_column, func)
-
-
-class HBaseDB(object):
-
-    def __init__(self, server, port):
+    def __init__(self, server, port, jobs):
         self.__thrift = hadoopy_hbase.connect(server, port)
         self.num_mappers = 6
+        super(HBaseDB, self).__init__(jobs)
 
     def mutate_row(self, table, row, mutations):
         mutations = [hadoopy_hbase.Mutation(column=x, value=y) for x, y in mutations.items()]
@@ -223,6 +238,12 @@ class HBaseDB(object):
             filt = None
         return hadoopy_hbase.scanner(self.__thrift, table, columns=columns,
                                      start_row=start_row, stop_row=stop_row, filter=filt, per_call=per_call)
+
+
+class HBaseDBHadoop(HBaseDB):
+
+    def __init__(self, server, port, jobs):
+        super(HBaseDBHadoop, self).__init__(server, port, jobs)
 
     def exif_job(self, start_row, stop_row, job_row):
         cmdenvs = {'HBASE_TABLE': 'images',

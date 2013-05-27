@@ -10,7 +10,7 @@ import gevent
 import mturk_vision
 from users import Users, UnknownUser
 from yubikey import Yubikey
-from databases import HBaseDB, RedisDB
+from databases import HBaseDB, RedisDB, HBaseDBHadoop
 import jobs
 import logging
 import contextlib
@@ -67,21 +67,13 @@ if __name__ == "__main__":
     parser.add_argument('--hadoop_jobtracker', help='Path to Hadoop Jobtracker Webserver', default='http://localhost:50030')
     parser.add_argument('--thrift_server', default='localhost')
     parser.add_argument('--thrift_port', default='9090')
-    parser.add_argument('--database', choices=['hbase', 'redis'], help='Select which database to use as our backend')
+    parser.add_argument('--database', choices=['hbase', 'hbasehadoop', 'redis'], default='hbasehadoop', help='Select which database to use as our backend.  Those ending in hadoop use it for job processing.')
     ARGS = parser.parse_args()
     if ARGS.raven:
         import raven
         RAVEN = raven.Client(ARGS.raven)
     THRIFT_POOL = gevent.queue.Queue()
 
-    def THRIFT_CONSTRUCTOR():
-        if ARGS.database == 'redis':
-            return RedisDB(ARGS.redis_host, ARGS.redis_port, 2)
-        if ARGS.database == 'hbase':
-            return HBaseDB(ARGS.thrift_server, ARGS.thrift_port)
-        raise ValueError('Unknown option[%s]' % ARGS.database)
-    for x in range(5):
-        THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     USERS = Users(ARGS.redis_host, ARGS.redis_port, 0)
     YUBIKEY = Yubikey(ARGS.redis_host, ARGS.redis_port, 1)
     JOBS = jobs.Jobs(ARGS.redis_host, ARGS.redis_port, 3, ARGS.annotations_redis_host, ARGS.annotations_redis_port)
@@ -90,6 +82,17 @@ if __name__ == "__main__":
     tables.thrift_lock = thrift_lock
     tables.thrift_new = thrift_new
     tables.JOBS = JOBS
+
+    def THRIFT_CONSTRUCTOR():
+        if ARGS.database == 'redis':
+            return RedisDB(ARGS.redis_host, ARGS.redis_port, 2, JOBS)
+        if ARGS.database == 'hbase':
+            return HBaseDB(ARGS.thrift_server, ARGS.thrift_port, JOBS)
+        if ARGS.database == 'hbasehadoop':
+            return HBaseDBHadoop(ARGS.thrift_server, ARGS.thrift_port, JOBS)
+        raise ValueError('Unknown option[%s]' % ARGS.database)
+    for x in range(5):
+        THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
 
 
 def print_request():
