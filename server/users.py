@@ -171,7 +171,7 @@ class User(object):
             # Fix issues where the data is not ascii, e.g., invalid table value
             try:
                 k.decode('ascii')
-            except UnicodeDecodeError:
+            except UnicodeEncodeError:
                 continue
             row = out.setdefault(k, {'times': []})
             status_code_key = 'status:%d' % data['status_code']
