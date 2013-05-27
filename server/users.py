@@ -187,6 +187,7 @@ class User(object):
             for x in [50, 80, 90, 95, 99]:
                 pct(x)
             del v['times']
+        print(out)
         return out
 
     @property
