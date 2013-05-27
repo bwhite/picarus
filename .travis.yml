@@ -19,8 +19,7 @@ before_install:
 install:
  - python setup.py install
  - cd server
- - python rest_server.py --database redis --port 15000
-# - nohup python rest_server.py --database redis --port 15000 &
+ - nohup python rest_server.py --database redis --port 15000 &
  - sleep 3
  - cd ..
 
