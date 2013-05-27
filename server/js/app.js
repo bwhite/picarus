@@ -166,6 +166,7 @@ function button_running() {
 function updateJobStatus($el, data, pollData) {
     if (!$.contains(document.documentElement, $el[0]))
         return;
+    button_reset();
     var goodRows = 0;
     var badRows = 0;
     var status = '';
