@@ -163,40 +163,40 @@ function button_running() {
     $('#runButton').button('loading');
 }
 
-function jobs_status(data) {
-    var keepRunning = true;
-    $('#results').unload(function () {
-        keepRunning = false;
-    });
-    function poll_jobs_status() {
+function updateJobStatus($el, data, pollData) {
+    if (!$.contains(document.documentElement, $el[0]))
+        return;
+    var goodRows = 0;
+    var badRows = 0;
+    var status = '';
+    if (_.has(pollData, 'goodRows'))
+        goodRows = Number(pollData.goodRows);
+    if (_.has(pollData, 'badRows'))
+        badRows = Number(pollData.badRows);
+    if (_.has(pollData, 'status'))
+        status = pollData.status;
+    if (pollData.status == 'completed' || pollData.status == 'failed')
+        return;
+    $el.html('');
+    if (goodRows + badRows) {
+        $('#results').append($('<span>', {'data-diameter': '60', 'class': 'pie', 'id': 'resultsPie', 'data-colours': '["green", "red"]'}).text(goodRows + ',' + badRows));
+        $("#resultsPie").peity("pie");
+        $('#results').append('Good[' + goodRows + '] Bad[' + badRows + '] Status[' + _.escape(status) + '] Row[' + _.escape(data.row) + ']');
+    }
+}
+
+function watchJob(options, data) {
+    function pollJobsStatus() {
         PICARUS.getRow(data.table, data.row, {success: function (pollData) {
-            if (!keepRunning)
-                return;
-            var goodRows = 0;
-            var badRows = 0;
-            var status = '';
-            if (_.has(pollData, 'goodRows'))
-                goodRows = Number(pollData.goodRows);
-            if (_.has(pollData, 'badRows'))
-                badRows = Number(pollData.badRows);
-            if (_.has(pollData, 'status'))
-                status = pollData.status;
-            if (pollData.status == 'completed' || pollData.status == 'failed')
-                return;
-            $('#results').html('');
-            if (goodRows + badRows) {
-                $('#results').append($('<span>', {'data-diameter': '60', 'class': 'pie', 'id': 'resultsPie', 'data-colours': '["green", "red"]'}).text(goodRows + ',' + badRows));
-                $("#resultsPie").peity("pie");
-                $('#results').append('Good[' + goodRows + '] Bad[' + badRows + '] Status[' + _.escape(status) + '] Row[' + _.escape(data.row) + ']');
-            }
-            _.delay(poll_jobs_status, 1000);
+            JOBS.add(_.extend(pollData, {row: data.row}), {merge: true});
+            if (!_.isUndefined(options.success))
+                options.success(data, pollData);
+            _.delay(pollJobsStatus, 1000);
         }, fail: function () {
             console.log('Poll Failed');
         }});
     }
-    $('#results').html('Job started, waiting for status...')
-    poll_jobs_status();
-    $('#runButton').button('reset');
+    pollJobsStatus();
 }
 
 function button_reset() {
