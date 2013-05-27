@@ -159,7 +159,7 @@ def _create_model_from_factory(email, db, path, create_model, params, start_stop
     model_params = _parse_params(params, schema)
     inputs = {x: _get_input(params, x) for x in schema['input_types']}
     db.create_model_job(create_model, model_params, inputs, schema, start_stop_rows, table, email, job_row)
-    return {'row': base64.b64encode(job_row), 'table': 'jobs'}
+    return {'row': base64.b64encode(job_row), 'table': base64.b64encode('jobs')}
 
 
 class BaseTableSmall(object):
