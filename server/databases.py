@@ -321,7 +321,7 @@ class RedisDB(BaseDB):
 class HBaseDB(BaseDB):
 
     def __init__(self, server, port, *args, **kw):
-        print('Args[%r]' % (server, port, args, kw))
+        print('Args[%s]' % repr(server, port, args, kw))
         if hasattr(self, 'args'):
             self.args += [server, port]
         else:
