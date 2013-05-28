@@ -164,8 +164,10 @@ function button_running() {
 }
 
 function updateJobStatus($el, data, pollData) {
-    if (!$.contains(document.documentElement, $el[0]))
+    if (!$.contains(document.documentElement, $el[0])) {
+        console.log('Dom does not contain element');
         return;
+    }
     button_reset();
     var goodRows = 0;
     var badRows = 0;
@@ -195,8 +197,10 @@ function watchJob(options, data) {
                 options.success(data, pollData);
             if (pollData.status != 'completed' && pollData.status != 'failed')
                 _.delay(pollJobsStatus, 1000);
-            if (pollData.status == 'completed' && !_.isUndefined(options.done))
+            if (pollData.status == 'completed' && !_.isUndefined(options.done)) {
+                console.log('Calling done');
                 options.done();
+            }
         }, fail: function () {
             console.log('Poll Failed');
         }});

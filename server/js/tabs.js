@@ -472,7 +472,7 @@ function render_jobs_flickr() {
         states = _.shuffle(states);
         simul = Math.min(simul, states.length);
         function call_api(state) {
-            var timeRadius = 60 * 60 * 24 * 30 * 3; // 3 months
+            var timeRadius = 60 * 60 * 24 * 30 * 6; // 6 months
             var minUploadDate = parseInt((new Date().getTime() / 1000 - min_time) * Math.random() + min_time - timeRadius);
             var maxUploadDate = parseInt(timeRadius * 2 + minUploadDate);
             var p = {action: 'o/crawl/flickr', hasGeo: Number($('#demogeo').is(':checked')), query: state.query, minUploadDate: minUploadDate, maxUploadDate: maxUploadDate};
