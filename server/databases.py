@@ -57,7 +57,11 @@ def job_runner(*args, **kw):
 
 def job_worker(db, method, method_args, method_kwargs):
     print('job_worker: db[%s] method[%s] args[%s] kw[%s]' % (db, method, method_args, method_kwargs))
-    getattr(db, method)(*method_args, **method_kwargs)
+    try:
+        getattr(db, method)(*method_args, **method_kwargs)
+    except Exception, e:
+        print(e)
+        raise
 
 
 def async(func):
@@ -75,7 +79,7 @@ def async(func):
 class BaseDB(object):
 
     def __init__(self, jobs, spawn):
-        spawn = None
+        #spawn = None
         if hasattr(self, 'args'):
             self.args += [jobs, None]
         else:
