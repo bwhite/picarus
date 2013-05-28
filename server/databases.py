@@ -51,7 +51,7 @@ def hadoop_wait_till_started(launch_out):
         raise RuntimeError('Hadoop task could not start')
 
 
-def job_runner(*kw):
+def job_runner(**kw):
     gipc.start_process(target=job_worker, args=(pickle.dumps(kw),)).join()
 
 
