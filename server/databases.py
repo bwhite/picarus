@@ -183,7 +183,7 @@ class BaseDB(object):
             for x, y in kw.items():
                 cols['meta:' + x] = y
             row = row_prefix + cur_md5
-            self.mutate_row(self.table, row, cols)
+            self.mutate_row('images', row, cols)
             job_columns['goodRows'] += 1
             self._jobs.update_job(job_row, job_columns)
         crawlers.flickr_crawl(store, class_name=class_name, query=query, **p)
