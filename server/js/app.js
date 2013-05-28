@@ -180,9 +180,10 @@ function updateJobStatus($el, data, pollData) {
         return;
     $el.html('');
     if (goodRows + badRows) {
-        $('#results').append($('<span>', {'data-diameter': '60', 'class': 'pie', 'id': 'resultsPie', 'data-colours': '["green", "red"]'}).text(goodRows + ',' + badRows));
-        $("#resultsPie").peity("pie");
-        $('#results').append('Good[' + goodRows + '] Bad[' + badRows + '] Status[' + _.escape(status) + '] Row[' + _.escape(data.row) + ']');
+        var pie = $('<span>', {'data-diameter': '60', 'class': 'pie', 'data-colours': '["green", "red"]'}).text(goodRows + ',' + badRows);
+        $el.append(pie);
+        pie.peity("pie");
+        $el.append('Good[' + goodRows + '] Bad[' + badRows + '] Status[' + _.escape(status) + '] Row[' + _.escape(data.row) + ']');
     }
 }
 
