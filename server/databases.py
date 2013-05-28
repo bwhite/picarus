@@ -55,11 +55,11 @@ def job_runner(*args, **kw):
     gipc.start_process(target=job_worker, args=args, kwargs=kw).join()
 
 
-def job_worker(db, method, method_args, method_kwargs):
-    print('job_worker: db[%s] method[%s] args[%s] kw[%s]' % (db, method, method_args, method_kwargs))
+def job_worker(db, func, method_args, method_kwargs):
+    print('job_worker: db[%s] func[%s] args[%s] kw[%s]' % (db, func, method_args, method_kwargs))
     print(os.getpid())
     try:
-        getattr(db, method)(db, *method_args, **method_kwargs)
+        func(db, *method_args, **method_kwargs)
     except Exception, e:
         print(e)
         raise
@@ -73,7 +73,7 @@ def async(func):
         print(os.getpid())
         if self._spawn is None:
             return func(self, *args, **kw)
-        self._spawn(job_runner, db=self, method=func.__name__,
+        self._spawn(job_runner, db=self, func=func,
                     method_args=args, method_kwargs=kw)
     return inner
 
