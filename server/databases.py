@@ -65,6 +65,7 @@ def job_worker(db, func, method_args, method_kwargs):
         import sys
         sys.stdout.flush()
         raise
+    print('job worker done')
 
 
 def async(func):
@@ -194,6 +195,7 @@ class BaseDB(object):
             for start_row, stop_row in start_stop_rows:
                 row_cols = self.scanner(table, columns=inputs.values(), start_row=start_row, stop_row=stop_row)
                 for row, columns in row_cols:
+                    print(row)
                     total_rows += 1
                     try:
                         yield row, {pretty_column: columns[raw_column] for pretty_column, raw_column in inputs.items()}
@@ -202,6 +204,8 @@ class BaseDB(object):
                         self._jobs.update_job(job_row, job_columns)
                     except KeyError:
                         continue
+        print('Pre model')
+        print(params)
         input_type, output_type, model_link = create_model(inner(), params)
         print(model_link)
         slices = [base64.b64encode(start_row) + ',' + base64.b64encode(stop_row) for start_row, stop_row in start_stop_rows]
