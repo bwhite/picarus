@@ -8,6 +8,7 @@ import kernels
 
 
 def classifier_sklearn(row_cols, params):
+    print('In SKLearn')
     label_features = {0: [], 1: []}
     for row, columns in row_cols:
         label = int(columns['meta'] == params['class_positive'])
