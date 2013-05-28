@@ -57,8 +57,9 @@ def job_runner(*args, **kw):
 
 def job_worker(db, method, method_args, method_kwargs):
     print('job_worker: db[%s] method[%s] args[%s] kw[%s]' % (db, method, method_args, method_kwargs))
+    print(os.getpid())
     try:
-        getattr(db, method)(*method_args, **method_kwargs)
+        getattr(db, method)(db, *method_args, **method_kwargs)
     except Exception, e:
         print(e)
         raise
@@ -69,6 +70,7 @@ def async(func):
     def inner(self, *args, **kw):
         print('async: spawn[%s] [%s] [%s] [%s]' % (self._spawn, func.__name__,
                                                    args, kw))
+        print(os.getpid())
         if self._spawn is None:
             return func(self, *args, **kw)
         self._spawn(job_runner, db=self, method=func.__name__,
