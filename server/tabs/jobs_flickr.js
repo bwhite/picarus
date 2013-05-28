@@ -16,7 +16,7 @@ function render_jobs_flickr() {
             display_alert('Iters must be 0 < x <= 20');
             return;
         }
-        $('#numRows').html('');
+        $('#results').html('');
         /* Check input */
         //reset_state();
         var min_time = 1232170610;
@@ -55,7 +55,7 @@ function render_jobs_flickr() {
                     return d.toString();
                 }
                 var data = {minUploadDate: etod(minUploadDate), maxUploadDate: etod(maxUploadDate)};
-                $('#numRows').append('Crawl Finished : ' + state.query + ' '+ JSON.stringify(data) + '<br>');
+                $('#results').append('Crawl Finished : ' + state.query + ' '+ JSON.stringify(data) + '<br>');
                 if (!states.length) {
                     simul -= 1;
                     if (!simul)
@@ -64,7 +64,9 @@ function render_jobs_flickr() {
                 }
                 call_api(states.pop());
             }
-            PICARUS.postSlice('images', row_prefix, prefix_to_stop_row(row_prefix), {success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: success}), data: p});
+            var graphDiv = $('<div>');
+            $('#results').append(graphDiv);
+            PICARUS.postSlice('images', row_prefix, prefix_to_stop_row(row_prefix), {success: _.partial(watchJob, {success: _.partial(updateJobStatus, graphDiv), done: success}), data: p});
         }
         _.each(_.range(simul), function () {call_api(states.pop())});
     });
