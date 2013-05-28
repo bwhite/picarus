@@ -94,7 +94,7 @@ class BaseDB(object):
         super(BaseDB, self).__init__()
 
     def __reduce__(self):
-        return (BaseDB, self.args)
+        return (BaseDB, tuple(self.args))
 
     def _row_job(self, table, start_row, stop_row, input_column, output_column, func, job_row):
         print('In row_job')
@@ -233,7 +233,7 @@ class RedisDB(BaseDB):
         super(RedisDB, self).__init__(*args, **kw)
 
     def __reduce__(self):
-        return (RedisDB, self.args)
+        return (RedisDB, tuple(self.args))
 
     def _get_columns(self, table, row, columns, keys_only=False):
         table_row = table + ':' + row
@@ -331,7 +331,7 @@ class HBaseDB(BaseDB):
         super(HBaseDB, self).__init__(*args, **kw)
 
     def __reduce__(self):
-        return (HBaseDB, self.args)
+        return (HBaseDB, tuple(self.args))
 
     def mutate_row(self, table, row, mutations):
         mutations = [hadoopy_hbase.Mutation(column=x, value=y) for x, y in mutations.items()]
@@ -390,7 +390,7 @@ class HBaseDBHadoop(HBaseDB):
         super(HBaseDBHadoop, self).__init__(*args, **kw)
 
     def __reduce__(self):
-        return (HBaseDBHadoop, self.args)
+        return (HBaseDBHadoop, tuple(self.args))
 
     def exif_job(self, start_row, stop_row, job_row):
         cmdenvs = {'HBASE_TABLE': 'images',
