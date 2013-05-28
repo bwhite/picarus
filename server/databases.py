@@ -51,12 +51,13 @@ def hadoop_wait_till_started(launch_out):
         raise RuntimeError('Hadoop task could not start')
 
 
-def job_runner(*args):
-    gipc.start_process(target=job_worker, args=(pickle.dumps(args),)).join()
+def job_runner(*kw):
+    gipc.start_process(target=job_worker, args=(pickle.dumps(kw),)).join()
 
 
 def job_worker(data):
-    db, func, method_args, method_kwargs = pickle.loads(data)
+    data = pickle.loads(data)
+    db, func, method_args, method_kwargs = data['db'], data['func'], data['method_args'], data['method_kwargs']
     db = pickle.loads(db)
     print('job_worker: db[%s] func[%s] args[%s] kw[%s]' % (db, func, method_args, method_kwargs))
     print(os.getpid())
