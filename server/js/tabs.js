@@ -196,7 +196,7 @@ function render_models_create() {
             params.slices = slices_selector_get().join(';');
             p = params;
             // TODO: Need to update MODELS by calling success
-            PICARUS.postTable('models', {success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results'))}), data: params});
+            PICARUS.postTable('models', {success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: button_reset}), data: params});
         } else {
             PICARUS.postTable('models', {success: success, data: params});
         }
@@ -347,7 +347,7 @@ function render_models_slice() {
         if ($('#chainCheck').is(':checked'))
             action = 'io/chain';
         var model = decode_id($('#model_select').find(":selected").val());
-        PICARUS.postSlice('images', startRow, stopRow, {success: jobs_status, fail: button_error, data: {action: action, model: model}});
+        PICARUS.postSlice('images', startRow, stopRow, {success:  _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: button_reset}), fail: button_error, data: {action: action, model: model}});
     });
 }
 function render_process_thumbnail() {
@@ -357,7 +357,7 @@ function render_process_thumbnail() {
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
         PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/thumbnail'},
-                                                        success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results'))}), fail: button_error})
+                                                        success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: button_reset}), fail: button_error})
     });
 }
 function render_process_delete() {
@@ -375,7 +375,7 @@ function render_process_exif() {
         button_running();
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
-        PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/exif'}, success: jobs_status, fail: button_error})
+        PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/exif'}, success:  _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: button_reset}), fail: button_error})
     });
 }
 function render_process_modify() {

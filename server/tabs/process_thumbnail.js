@@ -5,6 +5,6 @@ function render_process_thumbnail() {
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
         PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/thumbnail'},
-                                                        success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results'))}), fail: button_error})
+                                                        success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: button_reset}), fail: button_error})
     });
 }

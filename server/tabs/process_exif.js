@@ -4,6 +4,6 @@ function render_process_exif() {
         button_running();
         var startRow = $('#startRow').val();
         var stopRow = $('#stopRow').val();
-        PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/exif'}, success: jobs_status, fail: button_error})
+        PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/exif'}, success:  _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: button_reset}), fail: button_error})
     });
 }
