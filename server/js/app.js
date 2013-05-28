@@ -164,10 +164,8 @@ function button_running() {
 }
 
 function updateJobStatus($el, data, pollData) {
-    if (!$.contains(document.documentElement, $el[0])) {
-        console.log('Dom does not contain element');
+    if (!$.contains(document.documentElement, $el[0]))
         return;
-    }
     button_reset();
     var goodRows = 0;
     var badRows = 0;
@@ -178,8 +176,6 @@ function updateJobStatus($el, data, pollData) {
         badRows = Number(pollData.badRows);
     if (_.has(pollData, 'status'))
         status = pollData.status;
-    if (pollData.status == 'completed' || pollData.status == 'failed')
-        return;
     $el.html('');
     if (goodRows + badRows) {
         var pie = $('<span>', {'data-diameter': '60', 'class': 'pie', 'data-colours': '["green", "red"]'}).text(goodRows + ',' + badRows);
@@ -187,6 +183,8 @@ function updateJobStatus($el, data, pollData) {
         pie.peity("pie");
         $el.append('Good[' + goodRows + '] Bad[' + badRows + '] Status[' + _.escape(status) + '] Row[' + _.escape(data.row) + ']');
     }
+    if (pollData.status == 'completed' || pollData.status == 'failed')
+        return;
 }
 
 function watchJob(options, data) {
@@ -197,10 +195,8 @@ function watchJob(options, data) {
                 options.success(data, pollData);
             if (pollData.status != 'completed' && pollData.status != 'failed')
                 _.delay(pollJobsStatus, 1000);
-            if (pollData.status == 'completed' && !_.isUndefined(options.done)) {
-                console.log('Calling done');
+            if (pollData.status == 'completed' && !_.isUndefined(options.done))
                 options.done();
-            }
         }, fail: function () {
             console.log('Poll Failed');
         }});
