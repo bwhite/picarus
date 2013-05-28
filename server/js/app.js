@@ -194,6 +194,8 @@ function watchJob(options, data) {
                 options.success(data, pollData);
             if (pollData.status != 'completed' && pollData.status != 'failed')
                 _.delay(pollJobsStatus, 1000);
+            if (pollData.status == 'completed' && !_.isUndefined(options.done))
+                options.done();
         }, fail: function () {
             console.log('Poll Failed');
         }});

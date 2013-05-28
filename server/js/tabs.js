@@ -488,13 +488,13 @@ function render_jobs_flickr() {
                 p.lat = String(latitude);
                 p.lon = String(longitude);
             }
-            function success(response) {
+            function success() {          
                 function etod(e) {
                     var d = new Date(0);
                     d.setUTCSeconds(e);
                     return d.toString();
                 }
-                var data = {minUploadDate: etod(minUploadDate), maxUploadDate: etod(maxUploadDate), numRows: response.numRows};
+                var data = {minUploadDate: etod(minUploadDate), maxUploadDate: etod(maxUploadDate)};
                 $('#numRows').append('Crawl Finished : ' + state.query + ' '+ JSON.stringify(data) + '<br>');
                 if (!states.length) {
                     simul -= 1;
@@ -504,7 +504,7 @@ function render_jobs_flickr() {
                 }
                 call_api(states.pop());
             }
-            PICARUS.postSlice('images', row_prefix, prefix_to_stop_row(row_prefix), {success: success, data: p});
+            PICARUS.postSlice('images', row_prefix, prefix_to_stop_row(row_prefix), {success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: success}), data: p});
         }
         _.each(_.range(simul), function () {call_api(states.pop())});
     });
