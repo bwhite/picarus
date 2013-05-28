@@ -62,6 +62,8 @@ def job_worker(db, func, method_args, method_kwargs):
         func(db, *method_args, **method_kwargs)
     except Exception, e:
         print(e)
+        import sys
+        sys.stdout.flush()
         raise
 
 
@@ -185,6 +187,7 @@ class BaseDB(object):
         # Give the model creator an iterator of row, cols (where cols are the input names)
         job_columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
         os.nice(5)  # These are background tasks, don't let the CPU get too crazy
+        print('In create model job')
 
         def inner():
             total_rows = 0
