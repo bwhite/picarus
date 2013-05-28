@@ -193,6 +193,7 @@ class BaseDB(object):
         def inner():
             total_rows = 0
             for start_row, stop_row in start_stop_rows:
+                print((start_row, stop_row, inputs.values(), table))
                 row_cols = self.scanner(table, columns=inputs.values(), start_row=start_row, stop_row=stop_row)
                 for row, columns in row_cols:
                     print(row)
