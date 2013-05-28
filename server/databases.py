@@ -20,6 +20,7 @@ import crawlers
 import logging
 import driver
 import tables
+import hashlib
 try:
     from flickr_keys import FLICKR_API_KEY, FLICKR_API_SECRET
 except ImportError:
@@ -167,9 +168,27 @@ class BaseDB(object):
             p['page'] = int(params['page'])
         except KeyError:
             pass
-        # TODO: Fix to use database and to update status
-        out = {'numRows': crawlers.flickr_crawl(crawlers.HBaseCrawlerStore(thrift, row_prefix), class_name=class_name, query=query, **p)}
-        return {base64.b64encode(k): base64.b64encode(v) for k, v in out.items()}
+        job_columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
+
+        def store(image, class_name, source, query, **kw):
+            cols = {}
+            md5 = lambda x: hashlib.md5(x).digest()
+            cur_md5 = md5(image)
+            cols['data:image'] = image
+            if class_name is not None:
+                cols['meta:class'] = class_name
+            cols['meta:query'] = query
+            cols['meta:source'] = source
+            cols['hash:md5'] = cur_md5
+            for x, y in kw.items():
+                cols['meta:' + x] = y
+            row = row_prefix + cur_md5
+            self.mutate_row(self.table, row, cols)
+            job_columns['goodRows'] += 1
+            self._jobs.update_job(job_row, job_columns)
+        crawlers.flickr_crawl(store, class_name=class_name, query=query, **p)
+        job_columns['status'] = 'completed'
+        self._jobs.update_job(job_row, job_columns)
 
     @async
     def create_model_job(self, create_model, params, inputs, schema, start_stop_rows, table, email, job_row):

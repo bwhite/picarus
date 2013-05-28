@@ -625,7 +625,11 @@ class ImagesHBaseTable(DataHBaseTable):
                 return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
             elif action == 'o/crawl/flickr':
                 self._slice_validate(start_row, stop_row, 'w')
-
+                job_row = JOBS.add_task('crawl', self.owner, {'startRow': base64.b64encode(start_row),
+                                                              'stopRow': base64.b64encode(stop_row),
+                                                              'table': self.table,
+                                                              'action': action}, {})
+                thrift.flickr_job(params, start_row, stop_row, job_row)
             else:
                 bottle.abort(400)
 
