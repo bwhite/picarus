@@ -506,6 +506,7 @@ function render_jobs_flickr() {
             }
             var graphDiv = $('<div>');
             $('#results').append(graphDiv);
+            $('#results').append($('<br>'));
             PICARUS.postSlice('images', row_prefix, prefix_to_stop_row(row_prefix), {success: _.partial(watchJob, {success: _.partial(updateJobStatus, graphDiv), done: success}), data: p});
         }
         _.each(_.range(simul), function () {call_api(states.pop())});
