@@ -336,7 +336,8 @@ class HBaseDB(BaseDB):
 
     def __reduce__(self):
         print('Reduce called 0')
-        return (HBaseDB, tuple(self.args))
+        print((HBaseDB, tuple(self.args)))
+        return HBaseDB, tuple(self.args)
 
     def mutate_row(self, table, row, mutations):
         mutations = [hadoopy_hbase.Mutation(column=x, value=y) for x, y in mutations.items()]
