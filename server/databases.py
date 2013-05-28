@@ -58,7 +58,6 @@ def job_runner(**kw):
 def job_worker(data):
     data = pickle.loads(data)
     db, func, method_args, method_kwargs = data['db'], data['func'], data['method_args'], data['method_kwargs']
-    db = pickle.loads(db)
     print('job_worker: db[%s] func[%s] args[%s] kw[%s]' % (db, func, method_args, method_kwargs))
     print(os.getpid())
     try:
