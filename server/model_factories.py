@@ -8,23 +8,18 @@ import kernels
 
 
 def classifier_sklearn(row_cols, params):
-    print('In SKLearn')
     label_features = {0: [], 1: []}
     for row, columns in row_cols:
-        print('0: %s' % repr(row))
         label = int(columns['meta'] == params['class_positive'])
         label_features[label].append(columns['feature'])
-    print('Here[0]')
     labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
     features = label_features[0] + label_features[1]
     features = np.asfarray([msgpack.loads(x)[0] for x in features])
-    print('Here[1]')
     import sklearn.svm
     classifier = sklearn.svm.LinearSVC()
     classifier.fit(features, np.asarray(labels))
     model_link = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': classifier.coef_.tolist()[0],
                                                              'intercept': classifier.intercept_[0]}}
-    print('Here[2]')
     return 'feature', 'binary_class_confidence', model_link
 
 

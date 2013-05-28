@@ -58,24 +58,12 @@ def job_runner(**kw):
 def job_worker(data):
     data = pickle.loads(data)
     db, func, method_args, method_kwargs = data['db'], data['func'], data['method_args'], data['method_kwargs']
-    print('job_worker: db[%s] func[%s] args[%s] kw[%s]' % (db, func, method_args, method_kwargs))
-    print(os.getpid())
-    try:
-        getattr(db, func)(*method_args, **method_kwargs)
-    except Exception, e:
-        print(e)
-        import sys
-        sys.stdout.flush()
-        raise
-    print('job worker done')
+    getattr(db, func)(*method_args, **method_kwargs)
 
 
 def async(func):
 
     def inner(self, *args, **kw):
-        print('async: spawn[%s] [%s] [%s] [%s]' % (self._spawn, func.__name__,
-                                                   args, kw))
-        print(os.getpid())
         if self._spawn is None:
             return func(self, *args, **kw)
         self._spawn(job_runner, db=self, func=func.__name__,
@@ -96,11 +84,9 @@ class BaseDB(object):
         super(BaseDB, self).__init__()
 
     def __reduce__(self):
-        print('Reduce BaseDB')
         return (BaseDB, tuple(self.args))
 
     def _row_job(self, table, start_row, stop_row, input_column, output_column, func, job_row):
-        print('In row_job')
         good_rows, total_rows = 0, 0
         for row, columns in self.scanner(table, start_row, stop_row, columns=[input_column]):
             total_rows += 1
@@ -152,7 +138,6 @@ class BaseDB(object):
         p = {}
         row_prefix = start_row
         assert row_prefix.find(':') != -1
-        print('params[%r]' % params)
         class_name = params.get('className')
         query = params['query']
         p['lat'] = params.get('lat')
@@ -191,15 +176,12 @@ class BaseDB(object):
         # Give the model creator an iterator of row, cols (where cols are the input names)
         job_columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
         os.nice(5)  # These are background tasks, don't let the CPU get too crazy
-        print('In create model job')
 
         def inner():
             total_rows = 0
             for start_row, stop_row in start_stop_rows:
-                print((start_row, stop_row, inputs.values(), table))
                 row_cols = self.scanner(table, columns=inputs.values(), start_row=start_row, stop_row=stop_row)
                 for row, columns in row_cols:
-                    print(row)
                     total_rows += 1
                     try:
                         yield row, {pretty_column: columns[raw_column] for pretty_column, raw_column in inputs.items()}
@@ -208,10 +190,7 @@ class BaseDB(object):
                         self._jobs.update_job(job_row, job_columns)
                     except KeyError:
                         continue
-        print('Pre model')
-        print(params)
         input_type, output_type, model_link = create_model(inner(), params)
-        print(model_link)
         slices = [base64.b64encode(start_row) + ',' + base64.b64encode(stop_row) for start_row, stop_row in start_stop_rows]
         inputsb64 = {k: base64.b64encode(v) for k, v in inputs.items()}
         factory_info = {'slices': slices, 'num_rows': job_columns['goodRows'], 'data': 'slices', 'params': params, 'inputs': inputsb64}
@@ -324,7 +303,6 @@ class RedisDB(BaseDB):
 class HBaseDB(BaseDB):
 
     def __init__(self, server, port, *args, **kw):
-        print('Args[%s]' % repr((server, port, args, kw)))
         if hasattr(self, 'args'):
             self.args += [server, port]
         else:
@@ -334,8 +312,6 @@ class HBaseDB(BaseDB):
         super(HBaseDB, self).__init__(*args, **kw)
 
     def __reduce__(self):
-        print('Reduce called 0')
-        print((HBaseDB, tuple(self.args)))
         return HBaseDB, tuple(self.args)
 
     def mutate_row(self, table, row, mutations):
@@ -395,7 +371,6 @@ class HBaseDBHadoop(HBaseDB):
         super(HBaseDBHadoop, self).__init__(*args, **kw)
 
     def __reduce__(self):
-        print('Reduce called 1')
         return (HBaseDBHadoop, tuple(self.args))
 
     def exif_job(self, start_row, stop_row, job_row):
