@@ -52,10 +52,11 @@ def hadoop_wait_till_started(launch_out):
 
 
 def job_runner(*args, **kw):
-    gipc.start_process(target=job_worker, args=args, kwargs=kw).join()
+    gipc.start_process(target=pickle.dumps(job_worker), args=args, kwargs=kw).join()
 
 
 def job_worker(db, func, method_args, method_kwargs):
+    db = pickle.loads(db)
     print('job_worker: db[%s] func[%s] args[%s] kw[%s]' % (db, func, method_args, method_kwargs))
     print(os.getpid())
     try:
@@ -94,6 +95,7 @@ class BaseDB(object):
         super(BaseDB, self).__init__()
 
     def __reduce__(self):
+        print('Reduce BaseDB')
         return (BaseDB, tuple(self.args))
 
     def _row_job(self, table, start_row, stop_row, input_column, output_column, func, job_row):
