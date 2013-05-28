@@ -630,6 +630,7 @@ class ImagesHBaseTable(DataHBaseTable):
                                                               'table': self.table,
                                                               'action': action}, {})
                 thrift.flickr_job(params, start_row, stop_row, job_row)
+                return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
             else:
                 bottle.abort(400)
 
