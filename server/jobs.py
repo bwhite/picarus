@@ -20,7 +20,7 @@ class NotFoundException(Exception):
 class Jobs(object):
 
     def __init__(self, host, port, db, annotation_redis_host, annotation_redis_port):
-        self.args = [host, port, db, annotation_redis_host, annotation_redis_port]
+        self.args = (host, port, db, annotation_redis_host, annotation_redis_port)
         self.redis_host = host
         self.redis_port = port
         self.db = redis.StrictRedis(host=host, port=port, db=db)
