@@ -331,6 +331,7 @@ class HBaseDB(BaseDB):
         super(HBaseDB, self).__init__(*args, **kw)
 
     def __reduce__(self):
+        print('Reduce called 0')
         return (HBaseDB, tuple(self.args))
 
     def mutate_row(self, table, row, mutations):
@@ -390,6 +391,7 @@ class HBaseDBHadoop(HBaseDB):
         super(HBaseDBHadoop, self).__init__(*args, **kw)
 
     def __reduce__(self):
+        print('Reduce called 1')
         return (HBaseDBHadoop, tuple(self.args))
 
     def exif_job(self, start_row, stop_row, job_row):
