@@ -216,8 +216,8 @@ class BaseDB(object):
         manager = driver.PicarusManager(db=self)
         model_chain = tables._takeout_model_chain_from_key(manager, inputs[input_type]) + [model_link]
         job_columns['modelRow'] = manager.input_model_param_to_key(**{'input': inputs[input_type], 'model_link': model_link, 'model_chain': model_chain, 'input_type': input_type,
-                                                                  'output_type': output_type, 'email': email, 'name': manager.model_to_name(model_link),
-                                                                  'factory_info': json.dumps(factory_info)})
+                                                                      'output_type': output_type, 'email': email, 'name': manager.model_to_name(model_link),
+                                                                      'factory_info': json.dumps(factory_info)})
         job_columns['status'] = 'completed'
         self._jobs.update_job(job_row, job_columns)
 

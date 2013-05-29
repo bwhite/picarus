@@ -178,10 +178,14 @@ function render_models_create() {
     $('#runButton').click(function () {
         var params = model_create_selector_get($('#params'))
         function success(response) {
-            var model = new PicarusRow({row: response.row}, {table: 'models', columns: ['meta:']});
+            var row = response.row;
+            if (_.isUndefined(row))
+                row = response.modelRow;
+            var model = new PicarusRow({row: row}, {table: 'models', columns: ['meta:']});
             MODELS.add(model);
             model.fetch();
             $('#results').html(response.row);
+            button_reset();
         }
         var model_kind = $('#kind_select option:selected').val();
         var name = $('#name_select option:selected').val();
@@ -195,8 +199,7 @@ function render_models_create() {
             params.table = 'images';
             params.slices = slices_selector_get().join(';');
             p = params;
-            // TODO: Need to update MODELS by calling success
-            PICARUS.postTable('models', {success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: button_reset}), data: params});
+            PICARUS.postTable('models', {success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: success}), data: params});
         } else {
             PICARUS.postTable('models', {success: success, data: params});
         }
