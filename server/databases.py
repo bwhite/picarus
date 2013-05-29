@@ -86,8 +86,8 @@ class BaseDB(object):
         else:
             self.args = [jobs, None, raven]
         if raven is not None:
-            import raven
-            self.raven = raven.Client(raven)
+            import raven as _raven
+            self.raven = _raven.Client(raven)
         else:
             self.raven = None
         self._jobs = jobs
