@@ -70,6 +70,7 @@ def setup(args):
 
 def load_data(args):
     os.environ['VISION_DATA_ROOT'] = tempfile.mkdtemp()
+    print('Vision Data Root[%s]' % os.environ['VISION_DATA_ROOT'])
     vision_data.picarus_loader(args['images_prefix'] + 'caltech256:', 'Caltech256', args['email'], args['picarus_server'], args['api_key'], download=True)
     print('Done loading data')
 
