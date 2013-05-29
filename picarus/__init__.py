@@ -194,8 +194,8 @@ class PicarusClient(object):
             row_columns = self.get_slice(table, start_row, stop_row, columns=columns, data=data)
             if not row_columns:
                 break
-            for row, columns in row_columns:
-                yield row, columns
+            for row, cur_columns in row_columns:
+                yield row, cur_columns
             start_row = row
             data['excludeStart'] = '1'
 
