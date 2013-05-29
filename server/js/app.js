@@ -771,6 +771,7 @@ function app_main() {
             if (typeof prev_key != 'undefined') {
                 flush_dropdown(this.$el);
             }
+            $('.dropdown-toggle').dropdown()
         }
     });
     
