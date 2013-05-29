@@ -66,7 +66,12 @@ def async(func):
 
     def inner(self, *args, **kw):
         if self._spawn is None:
-            return func(self, *args, **kw)
+            try:
+                return func(self, *args, **kw)
+            except:
+                if self.raven:
+                    self.raven.captureException()
+                    raise
         self._spawn(job_runner, db=self, func=func.__name__,
                     method_args=args, method_kwargs=kw)
     return inner
@@ -74,12 +79,17 @@ def async(func):
 
 class BaseDB(object):
 
-    def __init__(self, jobs, spawn):
+    def __init__(self, jobs, spawn, raven=None):
         #spawn = None
         if hasattr(self, 'args'):
-            self.args += [jobs, None]
+            self.args += [jobs, None, raven]
         else:
-            self.args = [jobs, None]
+            self.args = [jobs, None, raven]
+        if raven is not None:
+            import raven
+            self.raven = raven.Client(raven)
+        else:
+            self.raven = None
         self._jobs = jobs
         self._spawn = spawn
         super(BaseDB, self).__init__()
