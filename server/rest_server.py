@@ -361,11 +361,11 @@ if __name__ == '__main__':
 
     def THRIFT_CONSTRUCTOR():
         if ARGS.database == 'redis':
-            return RedisDB(ARGS.redis_host, ARGS.redis_port, 2, JOBS, SERVER._spawn)
+            return RedisDB(ARGS.redis_host, ARGS.redis_port, 2, JOBS, SERVER._spawn, ARGS.raven)
         if ARGS.database == 'hbase':
-            return HBaseDB(ARGS.thrift_server, ARGS.thrift_port, JOBS, SERVER._spawn)
+            return HBaseDB(ARGS.thrift_server, ARGS.thrift_port, JOBS, SERVER._spawn, ARGS.raven)
         if ARGS.database == 'hbasehadoop':
-            return HBaseDBHadoop(ARGS.thrift_server, ARGS.thrift_port, JOBS, SERVER._spawn)
+            return HBaseDBHadoop(ARGS.thrift_server, ARGS.thrift_port, JOBS, SERVER._spawn, ARGS.raven)
         raise ValueError('Unknown option[%s]' % ARGS.database)
     for x in range(5):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
