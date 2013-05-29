@@ -4,6 +4,8 @@ import argparse
 import random
 import json
 import base64
+import vision_data
+import tempfile
 
 
 def parse():
@@ -66,6 +68,11 @@ def setup(args):
         print(args)
 
 
+def load_data(args):
+    os.environ['VISION_DATA_ROOT'] = tempfile.mkdtemp()
+    vision_data.picarus_loader(args['images_prefix'] + 'caltech256:', 'Caltech256', args['email'], args['picarus_server'], args['api_key'], download=True)
+
+
 def run(args):
     env = dict(os.environ)
     env.update({'EMAIL': args['email'],
@@ -83,7 +90,7 @@ def run(args):
 def main():
     args = parse()
     setup(args)
-    # TODO: Populate with data
+    load_data(args)
     run(args)
 
 if __name__ == '__main__':
