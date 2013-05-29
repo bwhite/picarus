@@ -15,6 +15,7 @@ def classifier_sklearn(row_cols, params):
     labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
     features = label_features[0] + label_features[1]
     features = np.asfarray([msgpack.loads(x)[0] for x in features])
+    print('Feature Shape[%s]' % repr(features.shape))
     import sklearn.svm
     classifier = sklearn.svm.LinearSVC()
     classifier.fit(features, np.asarray(labels))
@@ -32,6 +33,7 @@ def classifier_kernel_sklearn(row_cols, params):
     labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
     features = label_features[0] + label_features[1]
     features = np.asfarray([msgpack.loads(x)[0] for x in features])
+    print('Feature Shape[%s]' % repr(features.shape))
     gram = kernel(features, features)
     import sklearn.svm
     classifier = sklearn.svm.SVC(kernel='precomputed')
