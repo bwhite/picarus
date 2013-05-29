@@ -80,12 +80,11 @@ def async(func):
 class BaseDB(object):
 
     def __init__(self, jobs, spawn, raven=None):
-        #spawn = None
         if hasattr(self, 'args'):
             self.args += [jobs, None, raven]
         else:
             self.args = [jobs, None, raven]
-        if raven is not None:
+        if raven is not None and spawn is not None:
             import raven as _raven
             self.raven = _raven.Client(raven)
         else:
