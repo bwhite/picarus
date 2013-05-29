@@ -10,27 +10,19 @@ OTP = casper.cli.get('otp')
 SERVER = casper.cli.get('server')
 
 casper.start(SERVER, function() {
-    /*
-    this.echo(this.evaluate(function (otp, email, loginKey) {
-        $('#email').val(email);
-        $('#loginKey').val(loginKey);
-        $('#otp').val(otp);
-        $('#otp').trigger('keypress');
-    }, OTP, EMAIL, LOGIN_KEY));
-    */
-    this.evaluate(function (apiKey, email, loginKey) {
-        $('#email').val(email);
-        $('#loginKey').val(loginKey);
-        $('#apiKey').val(apiKey);
-        $('#apiKey').trigger('keypress');
-    }, API_KEY, EMAIL, LOGIN_KEY);
-    this.waitWhileVisible('#authModal', function () {
+    this.waitUntilVisible('#authModal', function () {
+        this.evaluate(function (apiKey, email, loginKey) {
+            $('#email').val(email);
+            $('#loginKey').val(loginKey);
+            $('#apiKey').val(apiKey);
+            $('#apiKey').trigger('keypress');
+        }, API_KEY, EMAIL, LOGIN_KEY);
+    }, function () {}, 15000);
+    this.waitUntilVisible('#results', function () {
         email_auth = this.getGlobal('EMAIL_AUTH')
         this.echo(JSON.stringify(email_auth));
         this.test.assertEquals(email_auth.email, EMAIL);
         this.test.assertEquals(email_auth.auth, API_KEY);
-    });
-    this.waitUntilVisible('#results', function () {
         this.test.pass('Results visible');
     });
     
