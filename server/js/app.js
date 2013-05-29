@@ -704,7 +704,6 @@ function app_main() {
             this.$el.html(this.content[route]);
             // Post-process the DOM for Picarus specific helpers
             wrap_hints();
-            custom_checkbox_and_radio();
             // Handles post render javascript calls if available
             if (route === "")
                 route = 'models/list';
