@@ -42,11 +42,11 @@ casper.start(SERVER, function() {
     this.waitForSelector('#runButton', function () {
         this.evaluate(function () {
             $('#runButton').click();
-        });
+        }, function () {}, 15000);
     });
     this.waitForSelector('#runButton:disabled', function () {
         this.test.pass('Job Started');
-    });
+    }, function () {}, 15000);
     this.waitWhileSelector('#runButton:disabled', function () {
         this.test.pass('Job done');
     }, function () {}, 120000);
