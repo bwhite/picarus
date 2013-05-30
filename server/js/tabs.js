@@ -140,13 +140,28 @@ function render_models_list() {
                 var model = MODELS.get(row);
                 var dataTable = $('#globalDataTableDrop').val();
                 var projectNames = _.keys(_.omit(PROJECTS.get(dataTable).attributes, 'row'));
-                var template = "<select class='multiselect' multiple='multiple' row='{{row}}'>{{#projects}}<option>{{.}}</option>{{/projects}}</select>";
+                var selectedProjectsPrevious = [];
+                if (!_.isUndefined(model.get('meta:projects'))) {
+                    selectedProjectsPrevious = _.map(model.get('meta:projects').split(','), function (x) {return base64.decode(x)});
+                }
+                projectNames = _.map(projectNames, function (x) {
+                    if (_.contains(selectedProjectsPrevious, x))
+                        return {name: x, selected: "selected='selected'"};
+                    else
+                        return {name: x, selected: ''};
+                });
+                var template = "<select class='multiselect' multiple='multiple' row='{{row}}'>{{#projects}}<option {{selected}}>{{name}}</option>{{/projects}}</select>";
+                //selected="selected"
                 //$('#modal_content_projects').val(model.escape(col)); // TODO: Determine which to click
+                //_.map($('#modal_content_projects option:selected'), function (x) {return $(x).val()})
                 $('#modal_content_projects').html(Mustache.render(template, {projects: projectNames}));
+                $('.multiselect').multiselect();
                 $('#save_button_projects').unbind();
                 $('#save_button_projects').click(function () {
                     var attributes = {};
-                    attributes[col] = $('#modal_content_projects').val();
+                    var selectedProjects = _.map($('#modal_content_projects option:selected'), function (x) {return base64.encode($(x).val())}).join(',');
+                    console.log(selectedProjects)
+                    attributes['meta:projects'] = selectedProjects;
                     model.save(attributes, {patch: true});
                     $('#myModalProjects').modal('hide');
                 });
