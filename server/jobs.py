@@ -52,7 +52,6 @@ class Jobs(object):
 
     def _get_task_type(self, task):
         out = self.db.hgetall(self._task_prefix + task)
-        print(out)
         out = self.db.hget(self._task_prefix + task, 'type')
         if out is None:
             raise NotFoundException
@@ -81,20 +80,20 @@ class Jobs(object):
     def delete_task(self, task, owner):
         self._exists(task)
         self._check_owner(task, owner)
-        if self._get_task_type(task) == 'annotation':
+        task_type = self._get_task_type(task)
+        if task_type == 'annotation':
             manager = self.get_annotation_manager(task)
         # TODO: Do these atomically
         self.db.delete(self._task_prefix + task, self._lock_prefix + task)
         self.db.srem(self._owner_prefix + owner, task)
-        if self._get_task_type(task) == 'annotation':
+        if task_type == 'annotation':
             manager.destroy()  # TODO: MTurk specific
             try:
                 del self.annotation_cache[task]
             except KeyError:
                 pass
         # TODO: For Hadoop jobs kill the task if it is running
-        # TODO: For worker jobs kill the worker process or send it a signal
-        
+        # TODO: For worker/crawl/model jobs kill the worker process or send it a signal
 
     def update_job(self, row, columns):
         self.db.hmset(self._task_prefix + row, columns)
