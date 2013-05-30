@@ -17,9 +17,7 @@ def render_app():
         scripts.append(open(fn).read())
     open('static/app.html', 'w').write(app_template.replace('{{ TEMPLATES }}', '\n'.join(templates)))
     open('js/tabs.js', 'w').write('\n'.join(scripts))
-    include_less = ['scheme.less', 'bootstrap.less', 'responsive.less', '1pxdeep.less']
-    open('static/style.less', 'w').write('\n'.join([open('less/' + x).read() for x in include_less]))
-    preinclude_css = ['hint.min.css', 'custom.css']
+    preinclude_css = ['bootstrap.css', 'hint.min.css', 'custom.css']
     open('static/style.css', 'w').write('\n'.join([open('css/' + x).read() for x in preinclude_css]))
 
 
@@ -29,7 +27,7 @@ def main():
                         help="Don't minify the source")
     args = parser.parse_args()
     render_app()
-    preinclude = ['jquery.min.js', 'less-1.3.3.min.js', 'bootstrap.min.js', 'underscore-min.js', 'backbone-min.js', 'base64.js', 'jquery.cookie.min.js']
+    preinclude = ['jquery.min.js', 'bootstrap.min.js', 'underscore-min.js', 'backbone-min.js', 'base64.js', 'jquery.cookie.min.js']
     preinclude = ['js/' + x for x in preinclude]
     postinclude = ['picarus_api.js', 'app.js']
     postinclude = ['js/' + x for x in postinclude]
