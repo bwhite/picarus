@@ -886,4 +886,4 @@ th { font-weight: bold; }
 th, td { padding: 5px 10px; }
 th+th, td+td { border-left: 1px solid #FFF; }
 .skinny {border: 0px; padding: 0px; margin: 0px}
-
+.picarus-table {overflow:auto; overflow-y:hidden}

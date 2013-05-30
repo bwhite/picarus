@@ -78,7 +78,7 @@
     <h3>Prefixes Table</h3>
     </div>
   </div>
-  <div id="prefixes" style="overflow:auto; overflow-y:hidden" class="span12 skinny"></div>
+  <div id="prefixes" class="span12 skinny picarus-table"></div>
 </script>
 
 <script type="text/html" id="tpl_data_projects">
@@ -93,7 +93,7 @@
     <h3>Projects Table</h3>
     </div>
   </div>
-  <div id="prefixes"></div>
+  <div id="prefixes" class="span12 skinny picarus-table"></div>
 </script>
 
 <script type="text/html" id="tpl_data_usage">
@@ -102,7 +102,7 @@
     <h3>Usage Table</h3>
     </div>
   </div>
-  <div id="usage"></div>
+  <div id="usage" class="span12 skinny picarus-table"></div>
 </script>
 
 <script type="text/html" id="tpl_models_list">
@@ -120,7 +120,7 @@
       <button class="btn btn-primary" id="save_button">Save changes</button>
     </div>
   </div>
-  <div id="results" class="container"></div>
+  <div id="results" class="span12 skinny picarus-table"></div>
 </div>
 </script>
 
@@ -254,9 +254,8 @@
       <h3>Options</h3>
        <button class="btn" type="submit" id="clearCompletedButton" style="margin-bottom: 9px">Clear Completed</button>
     </div>
-  <div class="clearfix span12 skinny" id="results">
-    <div id="annotations"></div>
   </div>
+  <div class="span12 skinny picarus-table" id="results">
 </script>
 
 <script type="text/html" id="tpl_jobs_flickr">
@@ -324,7 +323,7 @@
       <button class="btn" type="submit" id="removeButton" style="margin-bottom: 9px" disabled>Remove</button>
     </div>
   </div>
-  <div class="clearfix span12 skinny" id="results"></div>
+  <div class="span12 skinny picarus-table" id="results"></div>
 </script>
 
 <script type="text/html" id="tpl_visualize_exif">
@@ -338,7 +337,7 @@
       <%=runButton%>
     </div>
   </div>
-  <div class="clearfix span12 skinny" id="results"></div>
+  <div class="span12 skinny picarus-table" id="results"></div>
 </script>
 
 <script type="text/html" id="tpl_visualize_locations">
@@ -419,9 +418,9 @@
       <h3>Annotator Stats</h3>
       <div id="annotator_time_graph" style="height:300px;width:900px"></div>
       <h3>Users Table</h3>
-      <div id="annotation-users"></div>
+      <div id="annotation-users" class="span12 skinny picarus-table"></div>
       <h3>Results Table</h3>
-      <div id="annotation-results"></div>
+      <div id="annotation-results" class="span12 skinny picarus-table"></div>
     </div>
 </script>
 

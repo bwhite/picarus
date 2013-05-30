@@ -439,7 +439,7 @@ function render_jobs_list() {
         });
     }
     // TODO: Filter based on type == annotation
-    new RowsView({collection: JOBS, el: $('#annotations'), extraColumns: [workerColumn, syncColumn], postRender: postRender, deleteRows: true});
+    new RowsView({collection: JOBS, el: $('#results'), extraColumns: [workerColumn, syncColumn], postRender: postRender, deleteRows: true});
     var $clearCompletedButton = $('#clearCompletedButton');
     button_confirm_click_reset($clearCompletedButton);
     button_confirm_click($clearCompletedButton, function () {
