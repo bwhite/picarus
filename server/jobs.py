@@ -51,6 +51,8 @@ class Jobs(object):
             raise UnauthorizedException
 
     def _get_task_type(self, task):
+        out = self.db.hgetall(self._task_prefix + task)
+        print(out)
         out = self.db.hget(self._task_prefix + task, 'type')
         if out is None:
             raise NotFoundException
@@ -90,6 +92,9 @@ class Jobs(object):
                 del self.annotation_cache[task]
             except KeyError:
                 pass
+        # TODO: For Hadoop jobs kill the task if it is running
+        # TODO: For worker jobs kill the worker process or send it a signal
+        
 
     def update_job(self, row, columns):
         self.db.hmset(self._task_prefix + row, columns)

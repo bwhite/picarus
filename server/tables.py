@@ -303,7 +303,10 @@ class JobsTable(BaseTableSmall):
         return dod_to_lod_b64(cur_table)
 
     def delete_row(self, row):
-        JOBS.delete_task(row, self.owner)
+        try:
+            JOBS.delete_task(row, self.owner)
+        except jobs.NotFoundException:
+            bottle.abort(404)
         return {}
 
     def post_row(self, row, params, files):
