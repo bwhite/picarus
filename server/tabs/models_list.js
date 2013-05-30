@@ -5,8 +5,9 @@ function render_models_list() {
     var takeoutColumn = {header: "Takeout", getFormatted: function() {
         return Mustache.render("<a class='takeout_link' row='{{row}}'>Link</a>/<a class='takeout_chain' row='{{row}}'>Chain</a>", {row: encode_id(this.get('row'))});
     }};
-    var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('meta:tags') + '<span style="font-size:5px"><a class="modal_link_tags" row="' + encode_id(this.get('row')) + '">edit</a></span>'}};
-    var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('meta:notes') + '<span style="font-size:5px"><a class="modal_link_notes" row="' + encode_id(this.get('row')) + '">edit</a></span>'}};
+    var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('meta:tags') + '<a class="modal_link_tags" row="' + encode_id(this.get('row')) + '">edit</a>'}};
+    var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('meta:notes') + '<a class="modal_link_notes" row="' + encode_id(this.get('row')) + '">edit</a>'}};
+    var projectsColumn = {header: "Projects", className: "models-projects", getFormatted: function() { return '<a class="modal_link_projects" row="' + encode_id(this.get('row')) + '">edit</a>'}};
     var rowB64Column = {header: "RowB64", getFormatted: function() { return base64.encode(this.get('row'))}};
     function postRender() {
         function process_takeout(row, model_chunks_column, model_column, model_type) {
@@ -56,11 +57,12 @@ function render_models_list() {
                     model.save(attributes, {patch: true});
                     $('#myModal').modal('hide');
                 });
-                $('#myModal').modal('show')
+                $('#myModal').modal('show');
             })
         }
         setup_modal($('.modal_link_notes'), 'meta:notes');
         setup_modal($('.modal_link_tags'), 'meta:tags');
+        setup_modal($('.modal_link_projects'), 'meta:projects');
     }
-    new RowsView({collection: MODELS, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, rowB64Column], postRender: postRender, deleteRows: true, columns: columns});
+    new RowsView({collection: MODELS, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, projectsColumn, rowB64Column], postRender: postRender, deleteRows: true, columns: columns});
 }
