@@ -134,9 +134,28 @@ function render_models_list() {
                 $('#myModal').modal('show');
             })
         }
+        function setup_modal_projects(links, col) {
+            links.click(function (data) {
+                var row = decode_id(data.target.getAttribute('row'));
+                var model = MODELS.get(row);
+                var dataTable = $('#globalDataTableDrop').val();
+                var projectNames = _.keys(_.omit(PROJECTS.get(dataTable).attributes, 'row'));
+                var template = "<select class='multiselect' multiple='multiple' row='{{row}}'>{{#projects}}<option>{{.}}</option>{{/projects}}</select>";
+                //$('#modal_content_projects').val(model.escape(col)); // TODO: Determine which to click
+                $('#modal_content_projects').html(Mustache.render(template, {projects: projectNames}));
+                $('#save_button_projects').unbind();
+                $('#save_button_projects').click(function () {
+                    var attributes = {};
+                    attributes[col] = $('#modal_content_projects').val();
+                    model.save(attributes, {patch: true});
+                    $('#myModalProjects').modal('hide');
+                });
+                $('#myModalProjects').modal('show');
+            })
+        }
         setup_modal($('.modal_link_notes'), 'meta:notes');
         setup_modal($('.modal_link_tags'), 'meta:tags');
-        setup_modal($('.modal_link_projects'), 'meta:projects');
+        setup_modal_projects($('.modal_link_projects'), 'meta:projects');
     }
     new RowsView({collection: MODELS, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, projectsColumn, rowB64Column], postRender: postRender, deleteRows: true, columns: columns});
 }
