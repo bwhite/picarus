@@ -7,7 +7,7 @@ function render_models_list() {
     }};
     var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('meta:tags') + '<a class="modal_link_tags" row="' + encode_id(this.get('row')) + '">edit</a>'}};
     var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('meta:notes') + '<a class="modal_link_notes" row="' + encode_id(this.get('row')) + '">edit</a>'}};
-    var projectsColumn = {header: "Projects", className: "models-projects", getFormatted: function() { return decode_projects(this).join(',') + '<a class="modal_link_projects" row="' + encode_id(this.get('row')) + '">edit</a>'}};
+    var projectsColumn = {header: "Projects", className: "models-projects", getFormatted: function() { return _.escape(decode_projects(this).join(',')) + '<a class="modal_link_projects" row="' + encode_id(this.get('row')) + '">edit</a>'}};
     var rowB64Column = {header: "RowB64", getFormatted: function() { return base64.encode(this.get('row'))}};
     function postRender() {
         function process_takeout(row, model_chunks_column, model_column, model_type) {
@@ -68,7 +68,7 @@ function render_models_list() {
                 var projectNames = _.keys(_.omit(PROJECTS.get(dataTable).attributes, 'row'));
                 var selectedProjectsPrevious = [];
                 if (!_.isUndefined(model.get('meta:projects'))) {
-                    selectedProjectsPrevious = _.map(model.get('meta:projects').split(','), function (x) {return base64.decode(x)});
+                    selectedProjectsPrevious = decode_projects(model);
                 }
                 projectNames = _.map(projectNames, function (x) {
                     if (_.contains(selectedProjectsPrevious, x))
@@ -76,6 +76,7 @@ function render_models_list() {
                     else
                         return {name: x, selected: ''};
                 });
+                // NOTE: This does the escaping inside the template
                 var template = "<select class='multiselect' multiple='multiple' row='{{row}}'>{{#projects}}<option {{selected}}>{{name}}</option>{{/projects}}</select>";
                 //selected="selected"
                 //$('#modal_content_projects').val(model.escape(col)); // TODO: Determine which to click
@@ -85,8 +86,7 @@ function render_models_list() {
                 $('#save_button_projects').unbind();
                 $('#save_button_projects').click(function () {
                     var attributes = {};
-                    var selectedProjects = _.map($('#modal_content_projects option:selected'), function (x) {return base64.encode($(x).val())}).join(',');
-                    console.log(selectedProjects)
+                    var selectedProjects = _.map($('#modal_content_projects option:selected'), function (x) {return base64.encode(_.unescape($(x).val()))}).join(',');
                     attributes['meta:projects'] = selectedProjects;
                     model.save(attributes, {patch: true});
                     $('#myModalProjects').modal('hide');
