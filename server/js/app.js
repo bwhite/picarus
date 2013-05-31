@@ -234,10 +234,11 @@ function model_dropdown(args) {
         },
         renderDrop: args.change,
         modelFilter: function (x) {
-            var curProject = this.$projects.val();
+            var curProject = $('#globalProjectDrop').val();
             var modelProjects = decode_projects(x);
             if (curProject === '' || _.contains(modelProjects, curProject))
                 return args.modelFilter(x);
+            return false;
         },
         events: {'change': 'renderDrop'},
         render: function() {
