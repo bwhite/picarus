@@ -609,6 +609,9 @@ function app_main() {
             this.collection.bind('change', this.renderWait);
             this.collection.bind('remove', this.renderWait);
             this.collection.bind('destroy', this.renderWait);
+            // This is becomes many filters will be using the projects info
+            this.$projects = $('#globalProjectDrop');
+            this.$projects.change(this.render);
             this.extraColumns = [];
             this.postRender = function () {};
             this.filter = function (x) {return true};
