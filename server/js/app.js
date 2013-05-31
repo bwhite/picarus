@@ -215,7 +215,7 @@ function decode_projects(x) {
     var projects = x.get('meta:projects');
     if (_.isUndefined(projects))
         return [];
-    return _.map(projects.split(','), function (y) {return base64.decode})
+    return _.map(projects.split(','), function (y) {return base64.decode(y)})
 }
 
 function model_dropdown(args) {
