@@ -611,10 +611,13 @@ function app_main() {
             this.collection.bind('destroy', this.renderWait);
             this.extraColumns = [];
             this.postRender = function () {};
+            this.filter = function (x) {return true};
             this.deleteValues = false;
             this.deleteRows = false;
             if (!_.isUndefined(options.postRender))
                 this.postRender = options.postRender;
+            if (!_.isUndefined(options.filter))
+                this.filter = options.filter;
             if (!_.isUndefined(options.extraColumns))
                 this.extraColumns = options.extraColumns;
             if (options.deleteRows) {
@@ -669,7 +672,7 @@ function app_main() {
                 };
             }).concat(this.extraColumns);
             picarus_table = new Backbone.Table({
-                collection: this.collection,
+                collection: new PicarusRows(this.collection.filter(this.filter), {'table': 'models', columns: ['meta:']}),
                 columns: table_columns
             });
             if (this.collection.length) {
