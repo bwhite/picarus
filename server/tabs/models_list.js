@@ -7,7 +7,7 @@ function render_models_list() {
     }};
     var tagsColumn = {header: "Tags", className: "models-tags", getFormatted: function() { return this.escape('meta:tags') + '<a class="modal_link_tags" row="' + encode_id(this.get('row')) + '">edit</a>'}};
     var notesColumn = {header: "Notes", className: "models-notes", getFormatted: function() { return this.escape('meta:notes') + '<a class="modal_link_notes" row="' + encode_id(this.get('row')) + '">edit</a>'}};
-    var projectsColumn = {header: "Projects", className: "models-projects", getFormatted: function() { return '<a class="modal_link_projects" row="' + encode_id(this.get('row')) + '">edit</a>'}};
+    var projectsColumn = {header: "Projects", className: "models-projects", getFormatted: function() { return decode_projects(this.get('projects')).join(',') + '<a class="modal_link_projects" row="' + encode_id(this.get('row')) + '">edit</a>'}};
     var rowB64Column = {header: "RowB64", getFormatted: function() { return base64.encode(this.get('row'))}};
     function postRender() {
         function process_takeout(row, model_chunks_column, model_column, model_type) {
