@@ -98,6 +98,10 @@ function render_models_list() {
         setup_modal($('.modal_link_tags'), 'meta:tags');
         setup_modal_projects($('.modal_link_projects'), 'meta:projects');
     }
-
+    function filter(x) {
+        var curProject = $('#globalProjectDrop').val();
+        var modelProjects = decode_projects(x);
+        return curProject === '' || _.contains(modelProjects, curProject);
+    }
     new RowsView({collection: MODELS, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, projectsColumn, rowB64Column], postRender: postRender, deleteRows: true, columns: columns, filter: filter});
 }
