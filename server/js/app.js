@@ -176,7 +176,7 @@ function updateJobStatus($el, data, pollData) {
     if (_.has(pollData, 'status'))
         status = pollData.status;
     $el.html('');
-    if (goodRows + badRows) {
+    if (status || goodRows + badRows) {
         var pie = $('<span>', {'data-diameter': '60', 'class': 'pie', 'data-colours': '["green", "red"]'}).text(goodRows + ',' + badRows);
         $el.append(pie);
         pie.peity("pie");
