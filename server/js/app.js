@@ -211,6 +211,13 @@ function button_error() {
     $('#runButton').button('error');
 }
 
+function decode_projects(x) {
+    var projects = x.get('meta:projects');
+    if (_.isUndefined(projects))
+        return [];
+    return _.map(projects.split(','), function (y) {return base64.decode})
+}
+
 function model_dropdown(args) {
     var columns_model = ['meta:'];
     if (typeof args.change === 'undefined') {
@@ -220,11 +227,18 @@ function model_dropdown(args) {
         el: $('#container'),
         initialize: function() {
             _.bindAll(this, 'render');
+            this.$projects = $('#globalProjectDrop');
+            this.$projects.change(this.render);
             this.collection.bind('sync', this.render);
             this.render();
         },
         renderDrop: args.change,
-        modelFilter: args.modelFilter,
+        modelFilter: function (x) {
+            var curProject = this.$projects.val();
+            var modelProjects = decode_projects(x);
+            if (curProject === '' || _.contains(modelProjects, curProject))
+                return args.modelFilter(x);
+        },
         events: {'change': 'renderDrop'},
         render: function() {
             n = this.$el;
