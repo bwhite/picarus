@@ -201,8 +201,10 @@ def data_slice(_auth_user, table_name, start_row, stop_row):
 
 @bottle.get('/static/<name:re:[^/]+>')
 def static(name):
-
     try:
+        # Set far future expiration for static images (glyphs and icons)
+        if name.endswith('.png') or name.endswith('.ico'):
+            bottle.response.headers['Expires'] = 'Sat, 05 Sep 2026 00:00:00 GMT'
         bottle.response.headers['Cache-Control'] = 'public, max-age=3600, must-revalidate'
         return bottle.static_file(name, 'static/')
     except KeyError:
