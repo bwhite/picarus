@@ -830,3 +830,5 @@ function app_main_postauth(email_auth) {
     Backbone.history.start();
     window.onbeforeunload = function() {return "Leaving Picarus..."};
 }
+
+$(document).ready(app_main);
