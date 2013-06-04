@@ -201,6 +201,7 @@ class BaseDB(object):
 
     @async
     def create_model_job(self, create_model, params, inputs, schema, start_stop_rows, table, email, job_row):
+        print('**********************************************Inside model job')
         # Give the model creator an iterator of row, cols (where cols are the input names)
         job_columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
         os.nice(5)  # These are background tasks, don't let the CPU get too crazy

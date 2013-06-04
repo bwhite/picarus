@@ -49,5 +49,4 @@ function render_workflow_classifier() {
         }
     });
     new AppView({collection: PARAMETERS, el: $('#params')});
-    alert('This tab is still being developed, it is currently non-functional')
 }
