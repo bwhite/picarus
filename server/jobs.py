@@ -135,6 +135,7 @@ class Jobs(object):
             p['secret'] = str(ps['secret'])
             p['redis_address'] = self.annotation_redis_host
             p['redis_port'] = int(self.annotation_redis_port)
+            p['task_key'] = task
             self.annotation_cache[task] = mturk_vision.manager(data=str(ps['data']), **p)
             return self.annotation_cache[task]
 
