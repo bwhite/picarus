@@ -506,6 +506,7 @@ function render_workflow_classifier() {
                         r();
                         function runThumbnails() {
                             _.each(slicesData, function (data) {
+                                data.thumbnail = 'Running';r();
                                 PICARUS.postSlice('images', data.startRow, data.stopRow, {data: {action: 'io/thumbnail'},
                                                                                           success: _.partial(watchJob, {done: function () {data.thumbnail = 'Done';r()}})});
                             });
@@ -514,6 +515,7 @@ function render_workflow_classifier() {
                         
                         function runPreprocess(modelPreprocessor) {
                             _.each(slicesData, function (data) {
+                                data.preprocessor = 'Running';r();
                                 PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {data.preprocessor = 'Done';r()}}),
                                                                                           data: {action: 'io/link', model: modelPreprocessor}});
                             });
@@ -523,6 +525,7 @@ function render_workflow_classifier() {
                             params.path = $('#preprocess_select').find(":selected").val();
                             PICARUS.postTable('models', {success: function (x) {runPreprocess(x.row)}, data: params});
                         }
+                        createPreprocessor();
                     }
                 }
                 PICARUS.scanner('images', startRow, stopRow, {success: scanner_success, done: scanner_done, columns: [gtColumn]})
