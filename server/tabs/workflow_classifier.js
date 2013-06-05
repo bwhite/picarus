@@ -90,7 +90,7 @@ function render_workflow_classifier() {
             var names = PARAMETERS.map(function (x) {return {name: x.get('name'), row: x.get('row')}});
             function filterNames(whiteList) {
                 return _.filter(names, function (x) {
-                    return _.contains(whiteList, x.get('name'));
+                    return _.contains(whiteList, x.name);
                 });
             }
             var preprocessors = filterNames(['picarus.ImagePreprocessor']);
