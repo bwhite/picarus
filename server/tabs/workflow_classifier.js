@@ -14,10 +14,29 @@ function render_workflow_classifier() {
             var trainFrac = Number($('#trainFrac').val());
             var gtColumn = $('#gtColumn').val();
             var slices = slices_selector_get(true);
+            var slicesTrain = [];
+            var slicesValidation = [];
             console.log('TrainFrac: ' + trainFrac + ' GT Column: ' + gtColumn);
             _.each(slices, function (slice) {
-                console.log(slice);
+                var startRow = base64.decode(slice[0]);
+                var stopRow = base64.decode(slice[1]);
+                var rows = [];
+                function scanner_success(row, columns) {
+                    rows.push(row);
+                }
+                function scanner_done(data) {
+                    var trainInd = Math.min(rows.length - 1, Math.round(trainFrac * rows.length));
+                    var midRow = rows[trainInd];
+                    if (trainInd) {
+                        slicesTrain.push([startRow, midRow]);
+                        slicesValidation.push([midRow, stopRow]);
+                        console.log('trainInd: ' + trainInd + ' rows: ' + rows.length);
+                    }
+                }
+                CLIENT.scanner('images', startRow, stopRow, {success: scanner_success, done: scanner_done, columns: [gtColumn]})
             });
+            console.log(slicesTrain);
+            console.log(slicesValidation);
         },
         renderPreprocessor: function () {
             $('#params_preprocessor').html('');
