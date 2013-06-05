@@ -519,11 +519,11 @@ function render_workflow_classifier() {
                         function runPreprocess(modelPreprocessor) {
                             _.each(slicesData, function (data) {
                                 data.preprocessor = 'Running';r();
-                                PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {data.preprocessor = 'Done';r()}}),
+                                PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {data.preprocessor = 'Done';r();createFeature(modelPreprocessor)}}),
                                                                                           data: {action: 'io/link', model: modelPreprocessor}});
                             });
                         }
-                        function runFeature(modelFeature) {
+                        function runFeature(modelPreprocessor, modelFeature) {
                             _.each(slicesData, function (data) {
                                 data.preprocessor = 'Running';r();
                                 PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {data.preprocessor = 'Done';r()}}),
@@ -534,13 +534,13 @@ function render_workflow_classifier() {
                             var params = model_create_selector_get($('#params_preprocessor'));
                             params.path = $('#preprocess_select').find(":selected").val();
                             params['input-raw_image'] = 'data:image';
-                            PICARUS.postTable('models', {success: function (x) {modelsData[0].rowb64=x;r();runPreprocess(x.row);createFeature(x.row)}, data: params});
+                            PICARUS.postTable('models', {success: function (x) {modelsData[0].rowb64=x;r();runPreprocess(x.row)}, data: params});
                         }
                         function createFeature(modelPreprocessor) {
                             var params = model_create_selector_get($('#params_feature'));
                             params.path = $('#feature_select').find(":selected").val();
                             params['input-processed_image'] = modelPreprocessor;
-                            PICARUS.postTable('models', {success: function (x) {modelsData[1].rowb64=x;r();runFeature(x.row)}, data: params});
+                            PICARUS.postTable('models', {success: function (x) {modelsData[1].rowb64=x;r();runFeature(modelPreprocessor, x.row)}, data: params});
                         }
                         createPreprocessor();
                     }
