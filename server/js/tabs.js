@@ -518,6 +518,11 @@ function render_workflow_classifier() {
                                                                                           data: {action: 'io/link', model: modelPreprocessor}});
                             });
                         }
+                        function createPreprocessor() {
+                            var params = model_create_selector_get($('#params_preprocessor'));
+                            params.path = $('#preprocess_select').find(":selected").val();
+                            PICARUS.postTable('models', {success: function (x) {runPreprocess(x.row)}, data: params});
+                        }
                     }
                 }
                 PICARUS.scanner('images', startRow, stopRow, {success: scanner_success, done: scanner_done, columns: [gtColumn]})
