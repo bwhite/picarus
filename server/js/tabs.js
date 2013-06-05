@@ -517,30 +517,36 @@ function render_workflow_classifier() {
                         runThumbnails();
                         
                         function runPreprocess(modelPreprocessor) {
+                            var preprocessTodo = slicesData.length;
                             _.each(slicesData, function (data) {
                                 data.preprocessor = 'Running';r();
-                                PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {data.preprocessor = 'Done';r();createFeature(modelPreprocessor)}}),
+                                PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {
+                                    data.preprocessor = 'Done';r();
+                                    preprocessTodo -= 1;
+                                    if (!preprocessTodo)
+                                        createFeature(modelPreprocessor);
+                                }}),
                                                                                           data: {action: 'io/link', model: modelPreprocessor}});
                             });
                         }
-                        function runFeature(modelPreprocessor, modelFeature) {
+                        function runFeature(modelFeature) {
                             _.each(slicesData, function (data) {
-                                data.preprocessor = 'Running';r();
-                                PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {data.preprocessor = 'Done';r()}}),
-                                                                                          data: {action: 'io/link', model: modelPreprocessor}});
+                                data.feature = 'Running';r();
+                                PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {data.feature = 'Done';r()}}),
+                                                                                          data: {action: 'io/link', model: modelFeature}});
                             });
                         }
                         function createPreprocessor() {
                             var params = model_create_selector_get($('#params_preprocessor'));
                             params.path = $('#preprocess_select').find(":selected").val();
                             params['input-raw_image'] = 'data:image';
-                            PICARUS.postTable('models', {success: function (x) {modelsData[0].rowb64=x;r();runPreprocess(x.row)}, data: params});
+                            PICARUS.postTable('models', {success: function (x) {modelsData[0].rowb64=base64.encode(x.row);r();runPreprocess(x.row)}, data: params});
                         }
                         function createFeature(modelPreprocessor) {
                             var params = model_create_selector_get($('#params_feature'));
                             params.path = $('#feature_select').find(":selected").val();
                             params['input-processed_image'] = modelPreprocessor;
-                            PICARUS.postTable('models', {success: function (x) {modelsData[1].rowb64=x;r();runFeature(modelPreprocessor, x.row)}, data: params});
+                            PICARUS.postTable('models', {success: function (x) {modelsData[1].rowb64=base64.encode(x.row);r();runFeature(x.row)}, data: params});
                         }
                         createPreprocessor();
                     }
