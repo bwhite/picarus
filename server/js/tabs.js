@@ -217,7 +217,7 @@ function render_models_create() {
     });
     av = new AppView({collection: PARAMETERS, el: $('#selects')});
     $('#runButton').click(function () {
-        var params = model_create_selector_get($('#params'))
+        var params = model_create_selector_get($('#params'));
         function success(response) {
             var row = response.row;
             if (_.isUndefined(row))
@@ -504,10 +504,20 @@ function render_workflow_classifier() {
                             $('#progressTable').html(Mustache.render(template, {slices: slicesData}));
                         }
                         r();
-                        _.each(slicesData, function (data) {
-                            PICARUS.postSlice('images', data.startRow, data.stopRow, {data: {action: 'io/thumbnail'},
-                                                                                      success: _.partial(watchJob, {done: function () {data.thumbnail = 'Done';r()}})});
-                        })
+                        function runThumbnails() {
+                            _.each(slicesData, function (data) {
+                                PICARUS.postSlice('images', data.startRow, data.stopRow, {data: {action: 'io/thumbnail'},
+                                                                                          success: _.partial(watchJob, {done: function () {data.thumbnail = 'Done';r()}})});
+                            });
+                        }
+                        runThumbnails();
+                        
+                        function runPreprocess(modelPreprocessor) {
+                            _.each(slicesData, function (data) {
+                                PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {data.preprocessor = 'Done';r()}}),
+                                                                                          data: {action: 'io/link', model: modelPreprocessor}});
+                            });
+                        }
                     }
                 }
                 PICARUS.scanner('images', startRow, stopRow, {success: scanner_success, done: scanner_done, columns: [gtColumn]})
@@ -539,11 +549,16 @@ function render_workflow_classifier() {
             $('#slices_select').append(document.getElementById('bpl_slices_select').innerHTML);
             // NOTE(brandyn): Factory parameters needs more specification of output_type
             // as we can't do this automatically without it, for now it is hardcoded
-            var names = PARAMETERS.pluck('name');
-            var preprocessors = _.intersection(names, ['picarus.ImagePreprocessor']);
-            var features = _.intersection(names, ['bovw', 'picarus.GISTImageFeature', 'picarus.HistogramImageFeature']);
-            var classifiers = _.intersection(names, ['svmlinear', 'svmkernel']);
-            var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};" // text is escaped already
+            var names = PARAMETERS.map(function (x) {return {name: x.get('name'), row: x.get('row')}});
+            function filterNames(whiteList) {
+                return _.filter(names, function (x) {
+                    return _.contains(whiteList, x.get('name'));
+                });
+            }
+            var preprocessors = filterNames(['picarus.ImagePreprocessor']);
+            var features = filterNames(['bovw', 'picarus.GISTImageFeature', 'picarus.HistogramImageFeature']);
+            var classifiers = filterNames(['svmlinear', 'svmkernel']);
+            var select_template = "{{#models}}<option value='{{row}}'>{{name}}</option>{{/models}};"
             $('#preprocess_select').html(Mustache.render(select_template, {models: preprocessors}));
             $('#feature_select').html(Mustache.render(select_template, {models: features}));
             $('#classifier_select').html(Mustache.render(select_template, {models: classifiers}));

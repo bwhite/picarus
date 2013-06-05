@@ -36,7 +36,7 @@ function render_models_create() {
     });
     av = new AppView({collection: PARAMETERS, el: $('#selects')});
     $('#runButton').click(function () {
-        var params = model_create_selector_get($('#params'))
+        var params = model_create_selector_get($('#params'));
         function success(response) {
             var row = response.row;
             if (_.isUndefined(row))
