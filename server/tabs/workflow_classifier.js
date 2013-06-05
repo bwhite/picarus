@@ -11,6 +11,13 @@ function render_workflow_classifier() {
                  'click #runButton': 'run'},
         run: function () {
             console.log('Click');
+            var trainFrac = Number($('#trainFrac').val());
+            var gtColumn = $('#gtColumn').val();
+            var slices = slices_selector_get(true);
+            console.log('TrainFrac: ' + trainFrac + ' GT Column: ' + gtColumn);
+            _.each(slices, function (slice) {
+                console.log(slice);
+            });
         },
         renderPreprocessor: function () {
             $('#params_preprocessor').html('');
