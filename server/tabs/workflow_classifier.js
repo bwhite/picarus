@@ -37,9 +37,12 @@ function render_workflow_classifier() {
                         var slicesData = _.map(startMidStopRows, function (x) {
                             return {startRow: x[0], midRow: x[1], stopRow: x[2], thumbnail: '-', preprocessor: '-', feature: '-'};
                         });
-                        var template = "<table><tr><th>trainStart</th><th>trainStop/valStart</th><th>valStop</th><th>Thumb</th><th>Preproc</th><th>Feat</th></tr>{{#slices}}<tr><td>{{startRow}}</td><td>{{midRow}}</td><td>{{stopRow}}</td><td>{{thumbnail}}</td><td>{{preprocessor}}</td><td>{{feature}}</td></tr>{{/slices}}</table>"
+                        var progressTemplate = "<table><tr><th>trainStart</th><th>trainStop/valStart</th><th>valStop</th><th>Thumb</th><th>Preproc</th><th>Feat</th></tr>{{#slices}}<tr><td>{{startRow}}</td><td>{{midRow}}</td><td>{{stopRow}}</td><td>{{thumbnail}}</td><td>{{preprocessor}}</td><td>{{feature}}</td></tr>{{/slices}}</table>"
+                        var modelsTemplate = "<table><tr><th>Name</th><th>Row (b64)</th></tr>{{#models}}<tr><td>{{name}}</td><td>{{rowb64}}</td></tr>{{/models}}</table>";
+                        var modelsData = [{name: 'preprocessor'}, {name: 'feature'}, {name: 'classifier'}];
                         function r() {
-                            $('#progressTable').html(Mustache.render(template, {slices: slicesData}));
+                            $('#progressTable').html(Mustache.render(progressTemplate, {slices: slicesData}));
+                            $('#modelsTable').html(Mustache.render(modelsTemplate, {slices: modelsData}));
                         }
                         r();
                         function runThumbnails() {
@@ -58,11 +61,24 @@ function render_workflow_classifier() {
                                                                                           data: {action: 'io/link', model: modelPreprocessor}});
                             });
                         }
+                        function runFeature(modelFeature) {
+                            _.each(slicesData, function (data) {
+                                data.preprocessor = 'Running';r();
+                                PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {data.preprocessor = 'Done';r()}}),
+                                                                                          data: {action: 'io/link', model: modelPreprocessor}});
+                            });
+                        }
                         function createPreprocessor() {
                             var params = model_create_selector_get($('#params_preprocessor'));
                             params.path = $('#preprocess_select').find(":selected").val();
                             params['input-raw_image'] = 'data:image';
-                            PICARUS.postTable('models', {success: function (x) {runPreprocess(x.row)}, data: params});
+                            PICARUS.postTable('models', {success: function (x) {modelsData[0].rowb64=x;r();runPreprocess(x.row);createFeature(x.row)}, data: params});
+                        }
+                        function createFeature(modelPreprocessor) {
+                            var params = model_create_selector_get($('#params_feature'));
+                            params.path = $('#feature_select').find(":selected").val();
+                            params['input-processed_image'] = modelPreprocessor;
+                            PICARUS.postTable('models', {success: function (x) {modelsData[1].rowb64=x;r();runFeature(x.row)}, data: params});
                         }
                         createPreprocessor();
                     }
