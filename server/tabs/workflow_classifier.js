@@ -61,6 +61,7 @@ function render_workflow_classifier() {
                         function createPreprocessor() {
                             var params = model_create_selector_get($('#params_preprocessor'));
                             params.path = $('#preprocess_select').find(":selected").val();
+                            params['input-raw_image'] = 'data:image';
                             PICARUS.postTable('models', {success: function (x) {runPreprocess(x.row)}, data: params});
                         }
                         createPreprocessor();
