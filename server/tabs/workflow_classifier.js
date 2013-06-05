@@ -63,21 +63,21 @@ function render_workflow_classifier() {
         },
         renderPreprocessor: function () {
             $('#params_preprocessor').html('');
-            var name = $('#preprocess_select').val();
+            var name = $('#preprocess_select').find(":selected").text();
             if (_.isUndefined(name))
                 return;
             model_create_selector($('#slices_select'), $('#params_preprocessor'), 'image_preprocessor', name, true);
         },
         renderFeature: function () {
             $('#params_feature').html('');
-            var name = $('#feature_select').val();
+            var name = $('#feature_select').find(":selected").text();
             if (_.isUndefined(name))
                 return;
             model_create_selector($('#slices_select'), $('#params_feature'), 'feature', name, true);
         },
         renderClassifier: function () {
             $('#params_classifier').html('');
-            var name = $('#classifier_select').val();
+            var name = $('#classifier_select').find(":selected").text();
             if (_.isUndefined(name))
                 return;
             model_create_selector($('#slices_select'), $('#params_classifier'), 'classifier', name, true);
