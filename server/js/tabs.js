@@ -496,11 +496,18 @@ function render_workflow_classifier() {
                     slicesTodo -= 1;
                     if (!slicesTodo) {
                         console.log(startMidStopRows);
-                        var template = "<table><tr><th>trainStart</th><th>trainStop/valStart</th><th>valStop</th><th>Thumb</th><th>Preproc</th><th>Feat</th></tr>{{#slices}}<tr><td>{{startRow}}</td><td>{{midRow}}</td><td>{{stopRow}}</td><td>{{thumbnail}}</td><td>{{preprocessor}}</td><td>{{feature}}</td></tr>{{/slices}}</table>"
                         var slicesData = _.map(startMidStopRows, function (x) {
                             return {startRow: x[0], midRow: x[1], stopRow: x[2], thumbnail: '-', preprocessor: '-', feature: '-'};
                         });
-                        $('#progressTable').html(Mustache.render(template, {slices: slicesData}));
+                        var template = "<table><tr><th>trainStart</th><th>trainStop/valStart</th><th>valStop</th><th>Thumb</th><th>Preproc</th><th>Feat</th></tr>{{#slices}}<tr><td>{{startRow}}</td><td>{{midRow}}</td><td>{{stopRow}}</td><td>{{thumbnail}}</td><td>{{preprocessor}}</td><td>{{feature}}</td></tr>{{/slices}}</table>"
+                        function r() {
+                            $('#progressTable').html(Mustache.render(template, {slices: slicesData}));
+                        }
+                        r();
+                        _.each(slicesData, function (data) {
+                            PICARUS.postSlice('images', data.startRow, data.stopRow, {data: {action: 'io/thumbnail'},
+                                                                                      success: _.partial(watchJob, {done: function () {data.thumbnail = 'Done';r()}})});
+                        })
                     }
                 }
                 PICARUS.scanner('images', startRow, stopRow, {success: scanner_success, done: scanner_done, columns: [gtColumn]})
