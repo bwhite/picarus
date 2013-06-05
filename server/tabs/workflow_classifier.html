@@ -1,6 +1,9 @@
 <script type="text/html" id="tpl_workflow_classifier">
   <div class="span12 well skinny">
     <span id="slices_select"></span>
+    <input class="input-mini" type="text" hint="Train fraction" id="trainFrac" value=".5">
+    <input class="input-small" type="text" placeholder="Positive Class" id="posClass" value="" readonly="readonly">
+    <input class="input-small" type="text" placeholder="GT Column" id="gtColumn" readonly="readonly" value="" >
     <%=runButton%>
   </div>
   <div id="params">
