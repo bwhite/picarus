@@ -42,7 +42,7 @@ function render_workflow_classifier() {
                         var modelsData = [{name: 'preprocessor'}, {name: 'feature'}, {name: 'classifier'}];
                         function r() {
                             $('#progressTable').html(Mustache.render(progressTemplate, {slices: slicesData}));
-                            $('#modelsTable').html(Mustache.render(modelsTemplate, {slices: modelsData}));
+                            $('#modelsTable').html(Mustache.render(modelsTemplate, {models: modelsData}));
                         }
                         r();
                         function runThumbnails() {
