@@ -33,7 +33,7 @@ function render_workflow_classifier() {
                         console.log('trainInd: ' + trainInd + ' rows: ' + rows.length);
                     }
                 }
-                CLIENT.scanner('images', startRow, stopRow, {success: scanner_success, done: scanner_done, columns: [gtColumn]})
+                PICARUS.scanner('images', startRow, stopRow, {success: scanner_success, done: scanner_done, columns: [gtColumn]})
             });
             console.log(slicesTrain);
             console.log(slicesValidation);
