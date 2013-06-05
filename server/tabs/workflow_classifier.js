@@ -7,7 +7,11 @@ function render_workflow_classifier() {
         },
         events: {'change #preprocess_select': 'renderPreprocessor',
                  'change #feature_select': 'renderFeature',
-                 'change #classifier_select': 'renderClassifier'},
+                 'change #classifier_select': 'renderClassifier',
+                 'click #runButton': 'run'},
+        run: function () {
+            console.log('Click');
+        },
         renderPreprocessor: function () {
             $('#params_preprocessor').html('');
             var name = $('#preprocess_select').val();

@@ -1,9 +1,9 @@
 <script type="text/html" id="tpl_workflow_classifier">
   <div class="span12 well skinny">
+    <h2>Binary Classifier Workflow</h2>
     <span id="slices_select"></span>
     <input class="input-mini" type="text" hint="Train fraction" id="trainFrac" value=".5">
-    <input class="input-small" type="text" placeholder="Positive Class" id="posClass" value="" readonly="readonly">
-    <input class="input-small" type="text" placeholder="GT Column" id="gtColumn" readonly="readonly" value="" >
+    <input class="input-small" type="text" hint="GT Column" placeholder="GT Column" id="gtColumn" value="" >
     <%=runButton%>
   </div>
   <div id="params">
