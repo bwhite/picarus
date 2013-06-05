@@ -1,17 +1,19 @@
 <script type="text/html" id="tpl_workflow_classifier">
-  <div class="span12 well skinny">
-    <h2>Binary Classifier Workflow</h2>
-    <span id="slices_select"></span>
-    <input class="input-mini" type="text" hint="Train fraction" id="trainFrac" value=".5">
-    <input class="input-small" type="text" hint="GT Column" placeholder="GT Column" id="gtColumn" value="" >
-    <%=runButton%>
-  </div>
-  <div id="params">
-    <h2>Preprocessor</h2>
-    <select id="preprocess_select"></select><div id="params_preprocessor"></div>
-    <h2>Feature</h2>
-    <select id="feature_select"></select><div id="params_feature"></div>
-    <h2>Classifier</h2>
-    <select id="classifier_select"></select><div id="params_classifier"></div>
+  <div id="params" class="span12 well skinny">
+    <div>
+      <h2>Binary Classifier Workflow</h2>
+      <span id="slices_select"></span>
+      <input class="input-mini" type="text" hint="Train fraction" id="trainFrac" value=".5">
+      <input type="" name="" value="" class="input-small" type="text" hint="GT Column" placeholder="GT Column" id="gtColumn" value="">
+      <%=runButton%>
+    </div>
+    <div>
+      <h2>Preprocessor</h2>
+      <select id="preprocess_select"></select><div id="params_preprocessor"></div>
+      <h2>Feature</h2>
+      <select id="feature_select"></select><div id="params_feature"></div>
+      <h2>Classifier</h2>
+      <select id="classifier_select"></select><div id="params_classifier"></div>
+    </div>
   </div>
 </script>
