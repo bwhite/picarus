@@ -478,6 +478,7 @@ function render_workflow_classifier() {
             var slices = slices_selector_get(true);
             var slicesTrain = [];
             var slicesValidation = [];
+            var slicesTodo = slices.length;
             console.log('TrainFrac: ' + trainFrac + ' GT Column: ' + gtColumn);
             _.each(slices, function (slice) {
                 var startRow = base64.decode(slice[0]);
@@ -494,11 +495,14 @@ function render_workflow_classifier() {
                         slicesValidation.push([midRow, stopRow]);
                         console.log('trainInd: ' + trainInd + ' rows: ' + rows.length);
                     }
+                    slicesTodo -= 1;
+                    if (!slicesTodo) {
+                        console.log(slicesTrain);
+                        console.log(slicesValidation);
+                    }
                 }
                 PICARUS.scanner('images', startRow, stopRow, {success: scanner_success, done: scanner_done, columns: [gtColumn]})
             });
-            console.log(slicesTrain);
-            console.log(slicesValidation);
         },
         renderPreprocessor: function () {
             $('#params_preprocessor').html('');
