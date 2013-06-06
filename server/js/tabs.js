@@ -578,7 +578,10 @@ function render_workflow_classifier() {
                                 return base64.encode(x[0]) + ',' + base64.encode(x[1]);
                             }).join(';');
                             debug_params = params;
-                            PICARUS.postTable('models', {success: function (x) {modelsData[2].rowb64=base64.encode(x.row);r();runClassifier(x.row)}, data: params});
+                            PICARUS.postTable('models', {success:  _.partial(watchJob, {done: function (x) {
+                                modelsData[2].rowb64=base64.encode(x.row);r();
+                                runClassifier(x.row);
+                            }}), data: params});
                         }
                         createPreprocessor();
                     }
