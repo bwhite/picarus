@@ -109,7 +109,8 @@ function render_workflow_classifier() {
                         function createClassifier(modelFeature) {
                             var params = model_create_selector_get($('#params_classifier'));
                             params.path = $('#classifier_select').find(":selected").val();
-                            params['input-feature'] = modelFeature
+                            params['input-feature'] = modelFeature;
+                            params['input-meta'] = gtColumn;
                             params.table = 'images';
                             params.slices = _.map(startMidStopRows, function (x) {
                                 return base64.encode(x[0]) + ',' + base64.encode(x[1]);
