@@ -486,6 +486,11 @@ function render_workflow_classifier() {
                 function scanner_success(row, columns) {
                     rows.push(row);
                 }
+                function add_model(row) {
+                    var model = new PicarusRow({row: row}, {table: 'models', columns: ['meta:']});
+                    MODELS.add(model);
+                    model.fetch();
+                }
                 function scanner_done(data) {
                     var trainInd = Math.min(rows.length - 1, Math.round(trainFrac * rows.length));
                     var midRow = rows[trainInd];
@@ -499,7 +504,7 @@ function render_workflow_classifier() {
                         var slicesData = _.map(startMidStopRows, function (x) {
                             return {startRow: x[0], midRow: x[1], stopRow: x[2], thumbnail: '-', preprocessor: '-', feature: '-', classifier: '-'};
                         });
-                        var progressTemplate = "<table><tr><th>trainStart</th><th>trainStop/valStart</th><th>valStop</th><th>Thumb</th><th>Preproc</th><th>Feat</th><th>Classify</th></tr>{{#slices}}<tr><td>{{startRow}}</td><td>{{midRow}}</td><td>{{stopRow}}</td><td>{{thumbnail}}</td><td>{{preprocessor}}</td><td>{{feature}}</td><td>{{classifier}}</td></tr>{{/slices}}</table>"
+                        var progressTemplate = "<table><tr><th>trainStart</th><th>trainStop/valStart</th><th>valStop</th><th>Thumb</th><th>Preproc</th><th>Feat</th><th>Classify</th></tr>{{#slices}}<tr><td>{{startRow}}</td><td>{{midRow}}</td><td>{{stopRow}}</td><td><span class='label {{thumbnailClass}}'>{{thumbnail}}</span></td><td><span class='label {{preprocessorClass}}'>{{preprocessor}}</span></td><td><span class='label {{featureClass}}'>{{feature}}</span></td><td><span class='label {{classifierClass}}'>{{classifier}}</span></td></tr>{{/slices}}</table>"
                         var modelsTemplate = "<table><tr><th>Name</th><th>Row (b64)</th></tr>{{#models}}<tr><td>{{name}}</td><td>{{rowb64}}</td></tr>{{/models}}</table>";
                         var modelsData = [{name: 'preprocessor'}, {name: 'feature'}, {name: 'classifier'}];
                         function r() {
@@ -509,19 +514,25 @@ function render_workflow_classifier() {
                         r();
                         function runThumbnails() {
                             _.each(slicesData, function (data) {
-                                data.thumbnail = 'Running';r();
+                                data.thumbnail = 'Running';
+                                data.thumbnailClass = 'label-info';
+                                r();
                                 PICARUS.postSlice('images', data.startRow, data.stopRow, {data: {action: 'io/thumbnail'},
-                                                                                          success: _.partial(watchJob, {done: function () {data.thumbnail = 'Done';r()}})});
+                                                                                          success: _.partial(watchJob, {done: function () {data.thumbnailClass = 'label-success';data.thumbnail = 'Done';r()}})});
                             });
                         }
                         runThumbnails();
                         
                         function runPreprocess(modelPreprocessor) {
                             var preprocessTodo = slicesData.length;
+                            data.preprocessor = 'Running';
+                            data.preprocessorClass = 'label-info';
+                            r();
                             _.each(slicesData, function (data) {
-                                data.preprocessor = 'Running';r();
                                 PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {
-                                    data.preprocessor = 'Done';r();
+                                    data.preprocessor = 'Done';
+                                    data.preprocessorClass = 'label-success';
+                                    r();
                                     preprocessTodo -= 1;
                                     if (!preprocessTodo)
                                         createFeature(modelPreprocessor);
@@ -531,10 +542,14 @@ function render_workflow_classifier() {
                         }
                         function runFeature(modelFeature) {
                             var featureTodo = slicesData.length;
+                            data.feature = 'Running';
+                            data.featureClass = 'label-info';
+                            r();
                             _.each(slicesData, function (data) {
-                                data.feature = 'Running';r();
                                 PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {
-                                    data.feature = 'Done';r();
+                                    data.feature = 'Done';
+                                    data.featureClass = 'label-success';
+                                    r();
                                     featureTodo -= 1;
                                     if (!featureTodo)
                                         createClassifier(modelFeature);
@@ -544,13 +559,17 @@ function render_workflow_classifier() {
                         }
                         function runClassifier(modelClassifier) {
                             var classifierTodo = slicesData.length;
+                            data.classifier = 'Running';
+                            data.classifierClass = 'label-info';
+                            r();
                             _.each(slicesData, function (data) {
-                                data.classifier = 'Running';r();
                                 PICARUS.postSlice('images', data.midRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {
-                                    data.classifier = 'Done';r();
+                                    data.classifier = 'Done';
+                                    data.classifierClass = 'label-success';
+                                    r();
                                     classifierTodo -= 1;
                                     if (!classifierTodo) {
-                                        console.log('Done!!')
+                                        alert('Workflow done');
                                     }
                                 }}),
                                                                                           data: {action: 'io/link', model: modelClassifier}});
@@ -560,13 +579,13 @@ function render_workflow_classifier() {
                             var params = model_create_selector_get($('#params_preprocessor'));
                             params.path = $('#preprocess_select').find(":selected").val();
                             params['input-raw_image'] = 'data:image';
-                            PICARUS.postTable('models', {success: function (x) {modelsData[0].rowb64=base64.encode(x.row);r();runPreprocess(x.row)}, data: params});
+                            PICARUS.postTable('models', {success: function (x) {add_model(x.row);modelsData[0].rowb64=base64.encode(x.row);r();runPreprocess(x.row)}, data: params});
                         }
                         function createFeature(modelPreprocessor) {
                             var params = model_create_selector_get($('#params_feature'));
                             params.path = $('#feature_select').find(":selected").val();
                             params['input-processed_image'] = modelPreprocessor;
-                            PICARUS.postTable('models', {success: function (x) {modelsData[1].rowb64=base64.encode(x.row);r();runFeature(x.row)}, data: params});
+                            PICARUS.postTable('models', {success: function (x) {add_model(x.row);modelsData[1].rowb64=base64.encode(x.row);r();runFeature(x.row)}, data: params});
                         }
                         function createClassifier(modelFeature) {
                             var params = model_create_selector_get($('#params_classifier'));
@@ -579,6 +598,7 @@ function render_workflow_classifier() {
                             }).join(';');
                             debug_params = params;
                             PICARUS.postTable('models', {success:  _.partial(watchJob, {done: function (x) {
+                                add_model(x.modelRow);
                                 modelsData[2].rowb64=base64.encode(x.modelRow);r();
                                 runClassifier(x.modelRow);
                             }}), data: params});
