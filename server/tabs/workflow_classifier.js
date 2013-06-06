@@ -35,9 +35,9 @@ function render_workflow_classifier() {
                     if (!slicesTodo) {
                         console.log(startMidStopRows);
                         var slicesData = _.map(startMidStopRows, function (x) {
-                            return {startRow: x[0], midRow: x[1], stopRow: x[2], thumbnail: '-', preprocessor: '-', feature: '-'};
+                            return {startRow: x[0], midRow: x[1], stopRow: x[2], thumbnail: '-', preprocessor: '-', feature: '-', classifier: '-'};
                         });
-                        var progressTemplate = "<table><tr><th>trainStart</th><th>trainStop/valStart</th><th>valStop</th><th>Thumb</th><th>Preproc</th><th>Feat</th></tr>{{#slices}}<tr><td>{{startRow}}</td><td>{{midRow}}</td><td>{{stopRow}}</td><td>{{thumbnail}}</td><td>{{preprocessor}}</td><td>{{feature}}</td></tr>{{/slices}}</table>"
+                        var progressTemplate = "<table><tr><th>trainStart</th><th>trainStop/valStart</th><th>valStop</th><th>Thumb</th><th>Preproc</th><th>Feat</th><th>Classify</th></tr>{{#slices}}<tr><td>{{startRow}}</td><td>{{midRow}}</td><td>{{stopRow}}</td><td>{{thumbnail}}</td><td>{{preprocessor}}</td><td>{{feature}}</td><td>{{classifier}}</td></tr>{{/slices}}</table>"
                         var modelsTemplate = "<table><tr><th>Name</th><th>Row (b64)</th></tr>{{#models}}<tr><td>{{name}}</td><td>{{rowb64}}</td></tr>{{/models}}</table>";
                         var modelsData = [{name: 'preprocessor'}, {name: 'feature'}, {name: 'classifier'}];
                         function r() {
