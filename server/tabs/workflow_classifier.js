@@ -68,10 +68,30 @@ function render_workflow_classifier() {
                             });
                         }
                         function runFeature(modelFeature) {
+                            var featureTodo = slicesData.length;
                             _.each(slicesData, function (data) {
                                 data.feature = 'Running';r();
-                                PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {data.feature = 'Done';r()}}),
+                                PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {
+                                    data.feature = 'Done';r();
+                                    featureTodo -= 1;
+                                    if (!featureTodo)
+                                        createClassifier(modelFeature);
+                                }}),
                                                                                           data: {action: 'io/link', model: modelFeature}});
+                            });
+                        }
+                        function runClassifier(modelClassifier) {
+                            var classifierTodo = slicesData.length;
+                            _.each(slicesData, function (data) {
+                                data.classifier = 'Running';r();
+                                PICARUS.postSlice('images', data.midRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {
+                                    data.classifier = 'Done';r();
+                                    classifierTodo -= 1;
+                                    if (!classifierTodo) {
+                                        console.log('Done!!')
+                                    }
+                                }}),
+                                                                                          data: {action: 'io/link', model: modelClassifier}});
                             });
                         }
                         function createPreprocessor() {
@@ -85,6 +105,17 @@ function render_workflow_classifier() {
                             params.path = $('#feature_select').find(":selected").val();
                             params['input-processed_image'] = modelPreprocessor;
                             PICARUS.postTable('models', {success: function (x) {modelsData[1].rowb64=base64.encode(x.row);r();runFeature(x.row)}, data: params});
+                        }
+                        function createClassifier(modelFeature) {
+                            var params = model_create_selector_get($('#params_classifier'));
+                            params.path = $('#classifier_select').find(":selected").val();
+                            params['input-feature'] = modelFeature
+                            params.table = 'images';
+                            params.slices = _.map(startMidStopRows, function (x) {
+                                return base64.encode(x[0]) + ',' + base64.encode(x[1]);
+                            }).join(';');
+                            debug_params = params;
+                            PICARUS.postTable('models', {success: function (x) {modelsData[2].rowb64=base64.encode(x.row);r();runClassifier(x.row)}, data: params});
                         }
                         createPreprocessor();
                     }
