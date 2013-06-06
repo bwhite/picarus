@@ -67,7 +67,7 @@ function render_models_list() {
                 var dataTable = $('#globalDataTableDrop').val();
                 var projectNames = _.keys(_.omit(PROJECTS.get(dataTable).attributes, 'row'));
                 var selectedProjectsPrevious = [];
-                if (!_.isUndefined(model.get('meta:projects'))) {
+                if (!_.isUndefined(model.get('meta:projects-' + EMAIL_AUTH.email))) {
                     selectedProjectsPrevious = decode_projects(model);
                 }
                 projectNames = _.map(projectNames, function (x) {
@@ -87,7 +87,7 @@ function render_models_list() {
                 $('#save_button_projects').click(function () {
                     var attributes = {};
                     var selectedProjects = _.map($('#modal_content_projects option:selected'), function (x) {return base64.encode(_.unescape($(x).val()))}).join(',');
-                    attributes['meta:projects'] = selectedProjects;
+                    attributes['meta:projects-' + EMAIL_AUTH.email] = selectedProjects;
                     model.save(attributes, {patch: true});
                     $('#myModalProjects').modal('hide');
                 });
@@ -96,7 +96,7 @@ function render_models_list() {
         }
         setup_modal($('.modal_link_notes'), 'meta:notes');
         setup_modal($('.modal_link_tags'), 'meta:tags');
-        setup_modal_projects($('.modal_link_projects'), 'meta:projects');
+        setup_modal_projects($('.modal_link_projects'), 'meta:projects-' + EMAIL_AUTH.email);
     }
     function filter(x) {
         var curProject = $('#globalProjectDrop').val();

@@ -212,7 +212,7 @@ function button_error() {
 }
 
 function decode_projects(x) {
-    var projects = x.get('meta:projects');
+    var projects = x.get('meta:projects-' + EMAIL_AUTH.email);
     if (_.isUndefined(projects))
         return [];
     return _.map(projects.split(','), function (y) {return base64.decode(y)})

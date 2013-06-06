@@ -657,7 +657,7 @@ class ModelsHBaseTable(HBaseTable):
         self._auth_user = _auth_user
 
     def _column_write_validate(self, column):
-        if column in ('meta:notes', 'meta:tags', 'meta:projects'):
+        if column in ('meta:notes', 'meta:tags', 'meta:projects-' + self._auth_user.email):
             return
         if column.startswith('user:'):
             return
