@@ -5,7 +5,10 @@ function render_evaluate_classifier() {
 function render_evaluate_classifier_loaded() {
     model_dropdown({modelFilter: function (x) {return x.escape('meta:output_type') === 'binary_class_confidence'},
                     change: function() {
-                        var row = decode_id(this.$el.find(":selected").val());
+                        var rowub64 = this.$el.find(":selected").val();
+                        if (_.isUndefined(rowub64))
+                            return;
+                        var row = decode_id(rowub64);
                         m = this.collection.get(row);
                         $('#gtColumn').val(JSON.parse(m.get('meta:factory_info')).inputs.meta);
                         $('#posClass').val(JSON.parse(m.get('meta:factory_info')).params.class_positive);
