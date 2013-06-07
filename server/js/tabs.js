@@ -585,7 +585,16 @@ function render_workflow_classifier() {
                             var params = model_create_selector_get($('#params_feature'));
                             params.path = $('#feature_select').find(":selected").val();
                             params['input-processed_image'] = modelPreprocessor;
-                            PICARUS.postTable('models', {success: function (x) {add_model(x.row);modelsData[1].rowb64=base64.encode(x.row);r();runFeature(x.row)}, data: params});
+                            if (PARAMETERS.get(params.path).get('type') == 'model') {
+                                PICARUS.postTable('models', {success: function (x) {add_model(x.row);modelsData[1].rowb64=base64.encode(x.row);r();runFeature(x.row)}, data: params});
+                            } else {
+                                PICARUS.postTable('models', {success: _.partial(watchJob, {done: function (x) {
+                                    add_model(x.modelRow);
+                                    modelsData[1].rowb64=base64.encode(x.modelRow);
+                                    r();
+                                    runFeature(x.modelRow)
+                                }, data: params})});
+                            }
                         }
                         function createClassifier(modelFeature) {
                             var params = model_create_selector_get($('#params_classifier'));
