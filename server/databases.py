@@ -46,7 +46,9 @@ def hadoop_wait_till_started(launch_out):
     process = launch_out['process']
     stdout = process.stderr
     while process.poll() is None:
-        if stdout.readline().find('Tracking URL:') != -1:
+        line = stdout.readline()
+        print(line)
+        if line.find('Tracking URL:') != -1:
             break
     if process.poll() > 0:
         raise RuntimeError('Hadoop task could not start')
