@@ -588,12 +588,16 @@ function render_workflow_classifier() {
                             if (PARAMETERS.get(params.path).get('type') == 'model') {
                                 PICARUS.postTable('models', {success: function (x) {add_model(x.row);modelsData[1].rowb64=base64.encode(x.row);r();runFeature(x.row)}, data: params});
                             } else {
+                                params.table = 'images';
+                                params.slices = _.map(startMidStopRows, function (x) {
+                                    return base64.encode(x[0]) + ',' + base64.encode(x[1]);
+                                }).join(';');
                                 PICARUS.postTable('models', {success: _.partial(watchJob, {done: function (x) {
                                     add_model(x.modelRow);
                                     modelsData[1].rowb64=base64.encode(x.modelRow);
                                     r();
                                     runFeature(x.modelRow)
-                                }, data: params})});
+                                }}), data: params});
                             }
                         }
                         function createClassifier(modelFeature) {
