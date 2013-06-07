@@ -398,8 +398,8 @@ function render_process_thumbnail() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
-        var startRow = $('#startRow').val();
-        var stopRow = $('#stopRow').val();
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/thumbnail'},
                                                         success: _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: button_reset}), fail: button_error})
     });
@@ -408,8 +408,8 @@ function render_process_delete() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
-        var startRow = $('#startRow').val();
-        var stopRow = $('#stopRow').val();
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         PICARUS.deleteSlice('images', startRow, stopRow, {success: button_reset, fail: button_error})
     });
 }
@@ -417,8 +417,8 @@ function render_process_exif() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
-        var startRow = $('#startRow').val();
-        var stopRow = $('#stopRow').val();
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         PICARUS.postSlice('images', startRow, stopRow, {data: {action: 'io/exif'}, success:  _.partial(watchJob, {success: _.partial(updateJobStatus, $('#results')), done: button_reset}), fail: button_error})
     });
 }
@@ -426,10 +426,10 @@ function render_process_modify() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
-        var columnName = $('#columnName').val();
-        var columnValue = $('#columnValue').val();
-        var startRow = $('#startRow').val();
-        var stopRow = $('#stopRow').val();
+        var columnName = unescape($('#columnName').val());
+        var columnValue = unescape($('#columnValue').val());
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         var data = {};
         data[columnName] = columnValue;
         PICARUS.patchSlice('images', startRow, stopRow, {success: button_reset, fail: button_error, data: data})
@@ -441,10 +441,10 @@ function render_process_copy() {
     $('#runButton').click(function () {
         button_running();
         var imageColumn = 'data:image';
-        var columnName = $('#columnName').val();
-        var columnValue = $('#columnValue').val();
-        var startRow = $('#startRow').val();
-        var stopRow = $('#stopRow').val();
+        var columnName = unescape($('#columnName').val());
+        var columnValue = unescape($('#columnValue').val());
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         var prefix = $('#rowPrefixDrop2 option:selected').val();
         var maxRows = Number($('#maxRows').val());
         function success(row, columns) {
@@ -774,8 +774,8 @@ function render_jobs_flickr() {
 function render_jobs_class() {
     slices_selector();
     $('#runButton').click(function () {
-        var startRow = $('#startRow').val();
-        var stopRow = $('#stopRow').val();
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         var imageColumn = 'thum:image_150sq';
         var numTasks = Number($('#num_tasks').val());
         var classColumn = $('#class').val();

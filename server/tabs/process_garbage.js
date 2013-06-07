@@ -2,8 +2,8 @@ function render_process_garbage() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();
-        var startRow = $('#startRow').val();
-        var stopRow = $('#stopRow').val();
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         function success(xhr) {
             response = JSON.parse(xhr.responseText);
             button_reset();

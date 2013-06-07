@@ -4,10 +4,10 @@ function render_process_copy() {
     $('#runButton').click(function () {
         button_running();
         var imageColumn = 'data:image';
-        var columnName = $('#columnName').val();
-        var columnValue = $('#columnValue').val();
-        var startRow = $('#startRow').val();
-        var stopRow = $('#stopRow').val();
+        var columnName = unescape($('#columnName').val());
+        var columnValue = unescape($('#columnValue').val());
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         var prefix = $('#rowPrefixDrop2 option:selected').val();
         var maxRows = Number($('#maxRows').val());
         function success(row, columns) {

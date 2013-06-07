@@ -1,8 +1,8 @@
 function render_jobs_class() {
     slices_selector();
     $('#runButton').click(function () {
-        var startRow = $('#startRow').val();
-        var stopRow = $('#stopRow').val();
+        var startRow = unescape($('#startRow').val());
+        var stopRow = unescape($('#stopRow').val());
         var imageColumn = 'thum:image_150sq';
         var numTasks = Number($('#num_tasks').val());
         var classColumn = $('#class').val();
