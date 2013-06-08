@@ -346,8 +346,7 @@ class JobsTable(BaseTableSmall):
                 class_column = params['classColumn']
                 assert class_column.startswith('meta:')
                 suffix = '/'.join(ub64(x) + '/' + ub64(y) for x, y in start_stop_rows)
-                data = 'hbase://localhost:9090/images/%s?class=%s&image=%s' % (suffix,
-                                                                               ub64(class_column), ub64(image_column))
+                data = 'hbase://localhost:9090/images/%s?class=%s&image=%s' % (suffix, ub64(class_column), ub64(image_column))
                 p['type'] = 'image_class'
                 try:
                     p['class_descriptions'] = params['classDescriptions']

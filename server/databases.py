@@ -188,6 +188,8 @@ class BaseDB(object):
                 p['max_upload_date'] = max_upload_date
             if min_upload_date is not None:
                 p['min_upload_date'] = min_upload_date
+        if iterations > 1 and upload_date_radius is None:
+            bottle.abort(400)  # Need to specify a radius for multiple iters or else we will return same vals
         try:
             p['page'] = int(params['page'])
         except KeyError:

@@ -22,8 +22,8 @@ function render_jobs_flickr() {
 
 
         function call_api(state) {
-            var timeRadius = 60 * 60 * 24 * 30 * 6; // 6 months
-            var p = {action: 'o/crawl/flickr', hasGeo: Number($('#demogeo').is(':checked')), query: state.query, uploadDateRadius: timeRadius};
+            var timeRadius = 60 * 60 * 24 * 30 * 12; // 12 months
+            var p = {action: 'o/crawl/flickr', hasGeo: Number($('#demogeo').is(':checked')), query: state.query, uploadDateRadius: timeRadius, iterations: iters};
             var apiKey = $('#demoapikey').val();
             var apiSecret = $('#demoapisecret').val();
             if (apiKey && apiSecret) {
