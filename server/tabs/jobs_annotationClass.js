@@ -1,4 +1,4 @@
-function render_jobs_class() {
+function render_jobs_annotationClass() {
     slices_selector();
     $('#runButton').click(function () {
         var startRow = unescape($('#startRow').val());

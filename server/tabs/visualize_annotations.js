@@ -68,12 +68,13 @@ function render_visualize_annotations_loaded() {
         results = new PicarusRows([], {'table': 'annotation-results-' + task});
         users = new PicarusRows([], {'table': 'annotation-users-' + task});
         var imageColumn = 'thum:image_150sq';
+        var onlyWorkers = JSON.parse(JOBS.get(task).get('params')).mode == 'amt';
         $('#negPct').change(data_change);
         $('#posPct').change(data_change);
         $('#posCnt').change(data_change);
         $('#negCnt').change(data_change);
         function data_change() {
-            user_annotations = collect_users(users, results, true, true);
+            user_annotations = collect_users(users, results, onlyWorkers, true);
             clean_results = _.flatten(_.values(user_annotations), true);
             var classes = get_classes(clean_results);
             var select_template = "{{#classes}}<option value='{{.}}'>{{.}}</option>{{/classes}};"
