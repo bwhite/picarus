@@ -164,17 +164,30 @@ class BaseDB(object):
         if 'onePerOwner' in params:
             p['one_per_owner'] = params['onePerOwner'] == '1'
         try:
-            p['min_upload_date'] = int(params['minUploadDate'])
-        except KeyError:
-            pass
-        try:
             p['max_rows'] = int(params['maxRows'])
         except KeyError:
             pass
+        iterations = min(10000, int(params.get('iterations', 1)))
         try:
-            p['max_upload_date'] = int(params['maxUploadDate'])
+            min_upload_date = int(params['minUploadDate'])
         except KeyError:
-            pass
+            min_upload_date = None
+        try:
+            max_upload_date = int(params['maxUploadDate'])
+        except KeyError:
+            max_upload_date = None
+        try:
+            upload_date_radius = int(params['uploadDateRadius'])
+            if max_upload_date is None:
+                max_upload_date = int(time.time())
+            if min_upload_date is None:
+                min_upload_date = 1232170610
+        except KeyError:
+            upload_date_radius = None
+            if max_upload_date is not None:
+                p['max_upload_date'] = max_upload_date
+            if min_upload_date is not None:
+                p['min_upload_date'] = min_upload_date
         try:
             p['page'] = int(params['page'])
         except KeyError:
@@ -197,7 +210,12 @@ class BaseDB(object):
             self.mutate_row('images', row, cols)
             job_columns['goodRows'] += 1
             self._jobs.update_job(job_row, job_columns)
-        crawlers.flickr_crawl(store, class_name=class_name, query=query, **p)
+
+        for _ in range(iterations):
+            if upload_date_radius:
+                p['min_upload_date'] = random.randint(min_upload_date, max_upload_date - upload_date_radius)
+                p['max_upload_date'] = p['min_upload_date'] + upload_date_radius
+            crawlers.flickr_crawl(store, class_name=class_name, query=query, **p)
         job_columns['status'] = 'completed'
         self._jobs.update_job(job_row, job_columns)
 
