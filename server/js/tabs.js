@@ -600,7 +600,7 @@ function render_workflow_classifier() {
 
                             PICARUS.postTable('models', {success: function (x) {
                                 add_model(x.row);
-                                modelsData[1].rowb64 += '  ' + base64.encode(x.row);
+                                modelsData[1].rowb64 = base64.encode(x.row);
                                 r();
                                 if (PARAMETERS.get(params.path).get('output_type') === 'feature') {
                                     runFeature(x.row);
@@ -619,7 +619,7 @@ function render_workflow_classifier() {
                             }).join(';');
                             PICARUS.postTable('models', {success: _.partial(watchJob, {done: function (x) {
                                 add_model(x.modelRow);
-                                modelsData[1].rowb64 = base64.encode(x.modelRow);
+                                modelsData[1].rowb64 += '  ' + base64.encode(x.modelRow);
                                 r();
                                 runFeature(x.modelRow);
                             }}), data: params});
