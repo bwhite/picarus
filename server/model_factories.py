@@ -72,10 +72,18 @@ def classifier_localnbnn(row_cols, params):
 
 def feature_bovw_mask(row_cols, params):
     features = []
+    max_feature_dims = 16777216  # 128 * 1024 * 1024 / 8 = 16,777,216 ~ 128MB
+
     for row, columns in row_cols:
         cur_feature = msgpack.loads(columns['mask_feature'])
         cur_feature = np.array(cur_feature[0]).reshape((-1, cur_feature[1][2]))
-        features += random.sample(cur_feature, min(len(cur_feature), params['max_per_row']))
+        features += list(cur_feature)
+        # TODO: This isn't uniformly random if we hit the memory limit
+        # (later samples are more probable), by knowing the # of rows we can do a better job
+        if cur_feature.size and len(features) * cur_feature.shape[1] >= max_feature_dims:
+            features = random.sample(features, max_feature_dims / cur_feature.shape[1])
+    if len(features) >= params['max_samples']:
+        features = random.sample(features, params['max_samples'])
     features = np.asfarray(features)
     clusters = sp.cluster.vq.kmeans(features, params['num_clusters'])[0]
     num_clusters = clusters.shape[0]

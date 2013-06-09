@@ -125,7 +125,7 @@ PARAM_SCHEMAS.append({'type': 'factory',
                       'kind': 'feature',
                       'data': 'slices',
                       'input_types': ['mask_feature'],
-                      'params': {'max_per_row': {'type': 'int', 'min': 1, 'max': 101},
+                      'params': {'max_samples': {'type': 'int', 'min': 1000, 'max': 50000},
                                  'num_clusters': {'type': 'int', 'min': 2, 'max': 1000},
                                  'levels': {'type': 'int', 'min': 1, 'max': 4}}})
 
