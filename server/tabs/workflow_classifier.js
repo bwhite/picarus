@@ -11,6 +11,7 @@ function render_workflow_classifier() {
                  'change #classifier_select': 'renderClassifier',
                  'click #runButton': 'run'},
         run: function () {
+            button_running();
             console.log('Click');
             var trainFrac = Number($('#trainFrac').val());
             var gtColumn = $('#gtColumn').val();
@@ -67,7 +68,8 @@ function render_workflow_classifier() {
                                                                                           success: _.partial(watchJob, {done: function () {data.thumbnailClass = 'label-success';data.thumbnail = 'Done';r()}})});
                             });
                         }
-                        runThumbnails();
+                        if ($('#thumbCheck').prop('checked'))
+                            runThumbnails();
                         
                         function runPreprocess(modelPreprocessor) {
                             var preprocessTodo = slicesData.length;
@@ -121,6 +123,7 @@ function render_workflow_classifier() {
                                         data.classifier = 'Done';
                                         data.classifierClass = 'label-success';
                                         r();
+                                        button_reset();
                                         alert('Workflow done');
                                     }
                                 }}),
