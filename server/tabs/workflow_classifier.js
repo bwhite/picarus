@@ -1,7 +1,7 @@
 function render_workflow_classifier() {
     var AppView = Backbone.View.extend({
         initialize: function() {
-            _.bindAll(this, 'render');
+            _.bindAll(this, 'render', 'renderFeature', 'renderBovw');
             this.collection.bind('sync', this.render);
             this.render();
         },
@@ -200,7 +200,7 @@ function render_workflow_classifier() {
             model_create_selector($('#slices_select'), $('#params_feature'), 'feature', name, true);
             if (PARAMETERS.get(path).get('output_type') === 'mask_feature') {
                 $('#bovwSection').css('display', '')
-                renderBovw();
+                this.renderBovw();
             } else {
                 $('#bovwSection').css('display', 'none');
             }
