@@ -393,6 +393,24 @@ function model_create_selector($slicesSelect, $params, modelKind, name, hideInpu
     })[0];
     if (_.isUndefined(model))
         return;
+    function add_number_range_check(cur_el, minVal, maxVal) {
+        cur_el.change(function () {
+            var val = cur_el.val();
+            var par = $(this).parent().parent();
+            var bad = function () {par.removeClass('success');par.addClass('error')}
+            var good = function () {par.addClass('success');par.removeClass('error')}
+            if (!val.length) {
+                bad();
+            } else {
+                val = Number(val)
+                if (val < minVal || val >= maxVal)
+                    bad();
+                else
+                    good();
+            }
+            return ' [' + minVal + ',' + maxVal + ')';
+        });
+    }
     function add_param_selections(params, param_prefix) {
         _.each(params, function (value, key) {
             var cur_el;
@@ -407,12 +425,17 @@ function model_create_selector($slicesSelect, $params, modelKind, name, hideInpu
             } else if (value.type == 'int_list') {
                 // Create as many input boxes as the min # of boxes
                 cur_el = $('<input>').attr('type', 'text').addClass('input-medium').val(value.min_size);
+                if (value.max_size == value.min_size + 1)
+                    cur_el.css('display', 'none');
+                hint_addition = add_number_range_check(cur_el, value.min_size, value.max_size)
                 var box_func = function () {
                     $("[name^=" + param_prefix + key +  "]").remove();
                     _.each(_.range(Number(cur_el.val())), function (x) {
                         var cur_el_num = $('<input>').attr('name', param_prefix + key + ':' + x).attr('type', 'text').addClass('input-mini');
+                        var hint_addition_num = add_number_range_check(cur_el_num, value.min, value.max);
                         $params.append(cur_el_num);
-                        add_hint(cur_el_num, key + ':' + x);
+                        cur_el_num.wrap($('<div class="control-group"><div class="controls"></div></div>'));
+                        add_hint(cur_el_num.parent().parent(), key + ':' + x + hint_addition_num);
                     });
                 }
                 box_func();
@@ -421,19 +444,7 @@ function model_create_selector($slicesSelect, $params, modelKind, name, hideInpu
                 cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
             }
             if (value.type == 'int' || value.type == 'float') {
-                hint_addition = ' [' + value.min + ',' + value.max + ')';
-                cur_el.change(function () {
-                    var val = cur_el.val();
-                    var par = $(this).parent().parent();
-                    var bad = function () {par.removeClass('success');par.addClass('error')}
-                    var good = function () {par.addClass('success');par.removeClass('error')}
-                    if (!val.length)
-                        return bad();
-                    val = Number(val)
-                    if (val < value.min || val >= value.max)
-                        return bad();
-                    return good();
-                });
+                hint_addition = add_number_range_check(cur_el, value.min, value.max);
             }
             if (typeof cur_el !== 'undefined') {
                 $params.append(cur_el);
