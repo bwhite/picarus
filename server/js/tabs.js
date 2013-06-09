@@ -549,7 +549,7 @@ function render_workflow_classifier() {
                                                                                           data: {action: 'io/link', model: modelPreprocessor}});
                             });
                         }
-                        function runFeature(modelFeature) {
+                        function runFeature(modelFeature, outputType) {
                             var featureTodo = slicesData.length;
                             _.each(slicesData, function (data) {
                                 data.feature = 'Running';
@@ -561,7 +561,11 @@ function render_workflow_classifier() {
                                         data.feature = 'Done';
                                         data.featureClass = 'label-success';
                                         r();
-                                        createClassifier(modelFeature);
+                                        if (outputType === 'feature') {
+                                            createClassifier(modelFeature);
+                                        } else {
+                                            createBovw(modelFeature);
+                                        }
                                     }
                                 }}),
                                                                                           data: {action: 'io/link', model: modelFeature}});
@@ -602,11 +606,7 @@ function render_workflow_classifier() {
                                 add_model(x.row);
                                 modelsData[1].rowb64 = base64.encode(x.row);
                                 r();
-                                if (PARAMETERS.get(params.path).get('output_type') === 'feature') {
-                                    runFeature(x.row);
-                                } else {
-                                    createBovw(x.row);
-                                }
+                                runFeature(x.row, PARAMETERS.get(params.path).get('output_type'));
                             }, data: params});
                         }
                         function createBovw(modelMaskFeature) {
@@ -621,7 +621,7 @@ function render_workflow_classifier() {
                                 add_model(x.modelRow);
                                 modelsData[1].rowb64 += '  ' + base64.encode(x.modelRow);
                                 r();
-                                runFeature(x.modelRow);
+                                runFeature(x.modelRow, 'feature');
                             }}), data: params});
                         }
                         function createClassifier(modelFeature) {
