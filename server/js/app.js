@@ -399,17 +399,14 @@ function model_create_selector($slicesSelect, $params, modelKind, name, hideInpu
             var par = $(this).parent().parent();
             var bad = function () {par.removeClass('success');par.addClass('error')}
             var good = function () {par.addClass('success');par.removeClass('error')}
-            if (!val.length) {
-                bad();
-            } else {
-                val = Number(val)
-                if (val < minVal || val >= maxVal)
-                    bad();
-                else
-                    good();
-            }
-            return ' [' + minVal + ',' + maxVal + ')';
+            if (!$.isNumeric(val))
+                return bad();
+            val = Number(val)
+            if (val < minVal || val >= maxVal)
+                return bad();
+            return good();
         });
+        return ' [' + minVal + ',' + maxVal + ')';
     }
     function add_param_selections(params, param_prefix) {
         _.each(params, function (value, key) {
