@@ -143,7 +143,7 @@ function render_workflow_classifier() {
                                 if (PARAMETERS.get(params.path).get('output_type') === 'feature') {
                                     runFeature(x.row);
                                 } else {
-                                    this.createBovw(x.row);
+                                    createBovw(x.row);
                                 }
                             }, data: params});
                         }
