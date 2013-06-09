@@ -650,7 +650,7 @@ function render_workflow_classifier() {
             $('#params_feature').html('');
             var name = $('#feature_select').find(":selected").text();
             var path = $('#feature_select').find(":selected").val();
-            if (_.isUndefined(name))
+            if (!path)
                 return;
             model_create_selector($('#slices_select'), $('#params_feature'), 'feature', name, true);
             if (PARAMETERS.get(path).get('output_type') === 'mask_feature') {
