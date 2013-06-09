@@ -396,14 +396,13 @@ function model_create_selector($slicesSelect, $params, modelKind, name, hideInpu
     function add_param_selections(params, param_prefix) {
         _.each(params, function (value, key) {
             var cur_el;
+            var hint_addition = '';
             if (value.type == 'enum') {
                 var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
                 cur_el = $('<select>').attr('name', param_prefix + key).html(Mustache.render(select_template, {models: value.values}));
             } else if (value.type == 'int') {
-                // TODO: Client-side data validation
                 cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
             } else if (value.type == 'float') {
-                // TODO: Client-side data validation
                 cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
             } else if (value.type == 'int_list') {
                 // Create as many input boxes as the min # of boxes
@@ -419,10 +418,25 @@ function model_create_selector($slicesSelect, $params, modelKind, name, hideInpu
                 box_func();
                 cur_el.change(box_func);
             } else if (value.type == 'str') {
-                // TODO: Client-side data validation
                 cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
             }
+            if (value.type == 'int' || value.type == 'float') {
+                hint_addition = ' [' + value.min + ',' + value.max + ')';
+                cur_el.change(function () {
+                    var val = cur_el.val();
+                    var par = $(this).parent().parent();
+                    var bad = function () {par.removeClass('success');par.addClass('error')}
+                    var good = function () {par.addClass('success');par.removeClass('error')}
+                    if (!val.length)
+                        return bad();
+                    val = Number(val)
+                    if (val < value.min || val >= value.max)
+                        return bad();
+                    return good();
+                });
+            }
             if (typeof cur_el !== 'undefined') {
+                cur_el.wrap($('<div class="control-group"><div class="controls"></div></div>'));
                 $params.append(cur_el);
                 add_hint(cur_el, key);
             }
