@@ -237,7 +237,7 @@ function render_workflow_classifier() {
             var select_template = "{{#models}}<option value='{{row}}'>{{name}}</option>{{/models}};"
             $('#preprocess_select').html(Mustache.render(select_template, {models: preprocessors}));
             $('#feature_select').html(Mustache.render(select_template, {models: features}));
-            $('#bovw_select').html(Mustache.render(select_template, {models: bovw}));
+            $('#bovw_select').html(Mustache.render(select_template, {models: bovws}));
             $('#classifier_select').html(Mustache.render(select_template, {models: classifiers}));
             slices_selector();
             this.renderPreprocessor();
