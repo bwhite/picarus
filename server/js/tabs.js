@@ -485,27 +485,34 @@ function render_workflow_classifier() {
                 var stopRow = base64.decode(slice[1]);
                 var rows = [];
                 function scanner_success(row, columns) {
-                    rows.push(row);
+                    rows.push([row, columns[gtColumn]]);
                 }
                 function add_model(row) {
                     var model = new PicarusRow({row: row}, {table: 'models', columns: ['meta:']});
                     MODELS.add(model);
                     model.fetch();
                 }
+                function num_positive(rows) {
+                    var posClass = $('input[name="param-class_positive"]').val();
+                    return _.reduce(rows, function (x, y) {
+                        return x + Number(y[1] === posClass);
+                    }, 0);
+                }
                 function scanner_done(data) {
                     var trainInd = Math.min(rows.length - 1, Math.round(trainFrac * rows.length));
-                    var midRow = rows[trainInd];
+                    var midRow = rows[trainInd][0];
                     if (trainInd) {
-                        startMidStopRows.push([startRow, midRow, stopRow]);
+                        startMidStopRows.push([startRow, midRow, stopRow, trainInd, rows.length - trainInd,
+                                               num_positive(rows.slice(0, trainInd)), num_positive(rows.slice(trainInd))]);
                         console.log('trainInd: ' + trainInd + ' rows: ' + rows.length);
                     }
                     slicesTodo -= 1;
                     if (!slicesTodo) {
                         console.log(startMidStopRows);
                         var slicesData = _.map(startMidStopRows, function (x) {
-                            return {startRow: x[0], midRow: x[1], stopRow: x[2], thumbnail: '-', preprocessor: '-', feature: '-', classifier: '-'};
+                            return {startRow: x[0], midRow: x[1], stopRow: x[2], trainPos: x[5], valPos: x[6], trainNeg: x[3] - x[5], valNeg: x[4] - x[6], thumbnail: '-', preprocessor: '-', feature: '-', classifier: '-'};
                         });
-                        var progressTemplate = "<table><tr><th>trainStart</th><th>trainStop/valStart</th><th>valStop</th><th>Thumb</th><th>Preproc</th><th>Feat</th><th>Classify</th></tr>{{#slices}}<tr><td>{{startRow}}</td><td>{{midRow}}</td><td>{{stopRow}}</td><td><span class='label {{thumbnailClass}}'>{{thumbnail}}</span></td><td><span class='label {{preprocessorClass}}'>{{preprocessor}}</span></td><td><span class='label {{featureClass}}'>{{feature}}</span></td><td><span class='label {{classifierClass}}'>{{classifier}}</span></td></tr>{{/slices}}</table>"
+                        var progressTemplate = "<table><tr><th>trainStart</th><th>trainStop/valStart</th><th>valStop</th><th>TrainPos/Neg</th><th>ValPos/Neg</th><th>Thumb</th><th>Preproc</th><th>Feat</th><th>Classify</th></tr>{{#slices}}<tr><td>{{startRow}}</td><td>{{midRow}}</td><td>{{stopRow}}</td><td>{{trainPos}}/{{trainNeg}}</td><td>{{valPos}}/{{valNeg}}</td><td><span class='label {{thumbnailClass}}'>{{thumbnail}}</span></td><td><span class='label {{preprocessorClass}}'>{{preprocessor}}</span></td><td><span class='label {{featureClass}}'>{{feature}}</span></td><td><span class='label {{classifierClass}}'>{{classifier}}</span></td></tr>{{/slices}}</table>"
                         var modelsTemplate = "<table><tr><th>Name</th><th>Row (b64)</th></tr>{{#models}}<tr><td>{{name}}</td><td>{{rowb64}}</td></tr>{{/models}}</table>";
                         var modelsData = [{name: 'preprocessor'}, {name: 'feature'}, {name: 'classifier'}];
                         function r() {
