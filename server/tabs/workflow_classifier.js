@@ -125,6 +125,8 @@ function render_workflow_classifier() {
                         function createFeature(modelPreprocessor) {
                             var params = model_create_selector_get($('#params_feature'));
                             params.path = $('#feature_select').find(":selected").val();
+                            if (!param.path)
+                                return;
                             params['input-processed_image'] = modelPreprocessor;
 
                             PICARUS.postTable('models', {success: function (x) {

@@ -587,6 +587,8 @@ function render_workflow_classifier() {
                         function createFeature(modelPreprocessor) {
                             var params = model_create_selector_get($('#params_feature'));
                             params.path = $('#feature_select').find(":selected").val();
+                            if (!param.path)
+                                return;
                             params['input-processed_image'] = modelPreprocessor;
 
                             PICARUS.postTable('models', {success: function (x) {
@@ -727,7 +729,7 @@ function render_jobs_list() {
         button_confirm_click_reset($clearCompletedButton);
     });
 }
-function render_jobs_flickr() {
+function render_jobs_crawlFlickr() {
     row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
     $('#runButton').click(function () {
         button_running();

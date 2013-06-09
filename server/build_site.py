@@ -5,7 +5,7 @@ import argparse
 
 
 def render_app():
-    template_names = 'data_prefixes data_projects data_usage models_list models_create models_single models_slice process_thumbnail process_delete process_exif process_modify process_copy workflow_classifier jobs_list jobs_flickr jobs_annotationClass visualize_thumbnails visualize_metadata visualize_exif visualize_locations visualize_times visualize_annotations evaluate_classifier'.split()
+    template_names = 'data_prefixes data_projects data_usage models_list models_create models_single models_slice process_thumbnail process_delete process_exif process_modify process_copy workflow_classifier jobs_list jobs_crawlFlickr jobs_annotationClass visualize_thumbnails visualize_metadata visualize_exif visualize_locations visualize_times visualize_annotations evaluate_classifier'.split()
 
     app_template = open('app_template.html').read()
     templates = []
