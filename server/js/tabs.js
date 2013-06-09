@@ -469,6 +469,7 @@ function render_workflow_classifier() {
         },
         events: {'change #preprocess_select': 'renderPreprocessor',
                  'change #feature_select': 'renderFeature',
+                 'change #bovw_select': 'renderBovw',
                  'change #classifier_select': 'renderClassifier',
                  'click #runButton': 'run'},
         run: function () {
@@ -525,50 +526,52 @@ function render_workflow_classifier() {
                         
                         function runPreprocess(modelPreprocessor) {
                             var preprocessTodo = slicesData.length;
-                            data.preprocessor = 'Running';
-                            data.preprocessorClass = 'label-info';
-                            r();
                             _.each(slicesData, function (data) {
+                                data.preprocessor = 'Running';
+                                data.preprocessorClass = 'label-info';
+                                r();
                                 PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {
-                                    data.preprocessor = 'Done';
-                                    data.preprocessorClass = 'label-success';
-                                    r();
                                     preprocessTodo -= 1;
-                                    if (!preprocessTodo)
+                                    if (!preprocessTodo) {
+                                        data.preprocessor = 'Done';
+                                        data.preprocessorClass = 'label-success';
+                                        r();
                                         createFeature(modelPreprocessor);
+                                    }
                                 }}),
                                                                                           data: {action: 'io/link', model: modelPreprocessor}});
                             });
                         }
                         function runFeature(modelFeature) {
                             var featureTodo = slicesData.length;
-                            data.feature = 'Running';
-                            data.featureClass = 'label-info';
-                            r();
                             _.each(slicesData, function (data) {
+                                data.feature = 'Running';
+                                data.featureClass = 'label-info';
+                                r();
                                 PICARUS.postSlice('images', data.startRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {
-                                    data.feature = 'Done';
-                                    data.featureClass = 'label-success';
-                                    r();
                                     featureTodo -= 1;
-                                    if (!featureTodo)
+                                    if (!featureTodo) {
+                                        data.feature = 'Done';
+                                        data.featureClass = 'label-success';
+                                        r();
                                         createClassifier(modelFeature);
+                                    }
                                 }}),
                                                                                           data: {action: 'io/link', model: modelFeature}});
                             });
                         }
                         function runClassifier(modelClassifier) {
                             var classifierTodo = slicesData.length;
-                            data.classifier = 'Running';
-                            data.classifierClass = 'label-info';
-                            r();
                             _.each(slicesData, function (data) {
+                                data.classifier = 'Running';
+                                data.classifierClass = 'label-info';
+                                r();
                                 PICARUS.postSlice('images', data.midRow, data.stopRow, {success:  _.partial(watchJob, {done: function () {
-                                    data.classifier = 'Done';
-                                    data.classifierClass = 'label-success';
-                                    r();
                                     classifierTodo -= 1;
                                     if (!classifierTodo) {
+                                        data.classifier = 'Done';
+                                        data.classifierClass = 'label-success';
+                                        r();
                                         alert('Workflow done');
                                     }
                                 }}),
@@ -585,20 +588,32 @@ function render_workflow_classifier() {
                             var params = model_create_selector_get($('#params_feature'));
                             params.path = $('#feature_select').find(":selected").val();
                             params['input-processed_image'] = modelPreprocessor;
-                            if (PARAMETERS.get(params.path).get('type') == 'model') {
-                                PICARUS.postTable('models', {success: function (x) {add_model(x.row);modelsData[1].rowb64=base64.encode(x.row);r();runFeature(x.row)}, data: params});
-                            } else {
-                                params.table = 'images';
-                                params.slices = _.map(startMidStopRows, function (x) {
-                                    return base64.encode(x[0]) + ',' + base64.encode(x[1]);
-                                }).join(';');
-                                PICARUS.postTable('models', {success: _.partial(watchJob, {done: function (x) {
-                                    add_model(x.modelRow);
-                                    modelsData[1].rowb64=base64.encode(x.modelRow);
-                                    r();
-                                    runFeature(x.modelRow)
-                                }}), data: params});
-                            }
+
+                            PICARUS.postTable('models', {success: function (x) {
+                                add_model(x.row);
+                                modelsData[1].rowb64 += '  ' + base64.encode(x.row);
+                                r();
+                                if (PARAMETERS.get(params.path).get('output_type') === 'feature') {
+                                    runFeature(x.row);
+                                } else {
+                                    runBovw(x.row);
+                                }
+                            }, data: params});
+                        }
+                        function createBovw(modelMaskFeature) {
+                            var params = model_create_selector_get($('#params_bovw'));
+                            params.path = $('#bovw_select').find(":selected").val();
+                            params['input-mask_feature'] = modelMaskFeature;
+                            params.table = 'images';
+                            params.slices = _.map(startMidStopRows, function (x) {
+                                return base64.encode(x[0]) + ',' + base64.encode(x[1]);
+                            }).join(';');
+                            PICARUS.postTable('models', {success: _.partial(watchJob, {done: function (x) {
+                                add_model(x.modelRow);
+                                modelsData[1].rowb64 = base64.encode(x.modelRow);
+                                r();
+                                runFeature(x.modelRow);
+                            }}), data: params});
                         }
                         function createClassifier(modelFeature) {
                             var params = model_create_selector_get($('#params_classifier'));
@@ -632,6 +647,20 @@ function render_workflow_classifier() {
         renderFeature: function () {
             $('#params_feature').html('');
             var name = $('#feature_select').find(":selected").text();
+            var path = $('#feature_select').find(":selected").val();
+            if (_.isUndefined(name))
+                return;
+            model_create_selector($('#slices_select'), $('#params_feature'), 'feature', name, true);
+            if (PARAMETERS.get(path).get('output_type') === 'mask_feature') {
+                $('#bovwSection').css('display', '')
+                renderBovw();
+            } else {
+                $('#bovwSection').css('display', 'none');
+            }
+        },
+        renderBovw: function () {
+            $('#params_bovw').html('');
+            var name = $('#bovw_select').find(":selected").text();
             if (_.isUndefined(name))
                 return;
             model_create_selector($('#slices_select'), $('#params_feature'), 'feature', name, true);
@@ -655,7 +684,8 @@ function render_workflow_classifier() {
                 });
             }
             var preprocessors = filterNames(['picarus.ImagePreprocessor']);
-            var features = filterNames(['bovw', 'picarus.GISTImageFeature', 'picarus.HistogramImageFeature']);
+            var features = filterNames(['picarus.HOGImageMaskFeature', 'picarus.GISTImageFeature', 'picarus.HistogramImageFeature']);
+            var bovws = filterNames(['bovw']);
             var classifiers = filterNames(['svmlinear', 'svmkernel']);
             var select_template = "{{#models}}<option value='{{row}}'>{{name}}</option>{{/models}};"
             $('#preprocess_select').html(Mustache.render(select_template, {models: preprocessors}));
