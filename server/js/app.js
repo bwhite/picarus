@@ -436,9 +436,9 @@ function model_create_selector($slicesSelect, $params, modelKind, name, hideInpu
                 });
             }
             if (typeof cur_el !== 'undefined') {
-                cur_el = cur_el.wrap($('<div class="control-group"><div class="controls"></div></div>'));
                 $params.append(cur_el);
-                add_hint(cur_el, key + hint_addition);
+                cur_el.wrap($('<div class="control-group"><div class="controls"></div></div>'));
+                add_hint(cur_el.parent().parent(), key + hint_addition);
             }
         });
     }
