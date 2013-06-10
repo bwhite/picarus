@@ -30,6 +30,14 @@ function render_workflow_classifier() {
                     var model = new PicarusRow({row: row}, {table: 'models', columns: ['meta:']});
                     MODELS.add(model);
                     model.fetch();
+                    // If we have a project selected, add the models to it
+                    var project = $('#globalProjectDrop').val();
+                    if (project.length) {
+                        var attributes = {};
+                        var selectedProjects = base64.encode(project);
+                        attributes['meta:projects-' + EMAIL_AUTH.email] = selectedProjects;
+                        model.save(attributes, {patch: true});
+                    }
                 }
                 function num_positive(rows) {
                     var posClass = $('input[name="param-class_positive"]').val();
