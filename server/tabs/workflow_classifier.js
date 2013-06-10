@@ -39,7 +39,7 @@ function render_workflow_classifier() {
                 }
                 function scanner_done(data) {
                     var trainInd = Math.min(rows.length - 1, Math.round(trainFrac * rows.length));
-                    if (trainInd) {
+                    if (trainInd > 0) {
                         var midRow = rows[trainInd][0];
                         startMidStopRows.push([startRow, midRow, stopRow, trainInd, rows.length - trainInd,
                                                num_positive(rows.slice(0, trainInd)), num_positive(rows.slice(trainInd))]);
