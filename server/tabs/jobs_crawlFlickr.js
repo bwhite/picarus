@@ -42,8 +42,7 @@ function render_jobs_crawlFlickr() {
                     d.setUTCSeconds(e);
                     return d.toString();
                 }
-                var data = {minUploadDate: etod(minUploadDate), maxUploadDate: etod(maxUploadDate)};
-                $('#results').append('Crawl Finished : ' + state.query + ' '+ JSON.stringify(data) + '<br>');
+                $('#results').append('Crawl Finished : ' + state.query + '<br>');
                 button_reset();
             }
             var graphDiv = $('<div>');

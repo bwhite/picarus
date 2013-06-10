@@ -521,6 +521,12 @@ function render_workflow_classifier() {
                             $('#modelsTable').html(Mustache.render(modelsTemplate, {models: modelsData}));
                         }
                         r();
+                        var totalClassCounts = _.reduce(slicesData, function (a, b) {return [a[0] + b.trainNeg, a[1] + b.trainPos, a[2] + b.valNeg, a[3] + b.valPos]}, [0, 0, 0, 0]);
+                        if (!totalClassCounts[0] || !totalClassCounts[1] || !totalClassCounts[2] || !totalClassCounts[3]) {
+                            alert('Each of pos/neg for train/val must have at least one sample, aborting.');
+                            button_reset();
+                            return;
+                        }
                         function runThumbnails() {
                             _.each(slicesData, function (data) {
                                 data.thumbnail = 'Running';
@@ -784,8 +790,7 @@ function render_jobs_crawlFlickr() {
                     d.setUTCSeconds(e);
                     return d.toString();
                 }
-                var data = {minUploadDate: etod(minUploadDate), maxUploadDate: etod(maxUploadDate)};
-                $('#results').append('Crawl Finished : ' + state.query + ' '+ JSON.stringify(data) + '<br>');
+                $('#results').append('Crawl Finished : ' + state.query + '<br>');
                 button_reset();
             }
             var graphDiv = $('<div>');
