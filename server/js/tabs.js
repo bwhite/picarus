@@ -501,14 +501,19 @@ function render_workflow_classifier() {
                 }
                 function scanner_done(data) {
                     var trainInd = Math.min(rows.length - 1, Math.round(trainFrac * rows.length));
-                    var midRow = rows[trainInd][0];
                     if (trainInd) {
+                        var midRow = rows[trainInd][0];
                         startMidStopRows.push([startRow, midRow, stopRow, trainInd, rows.length - trainInd,
                                                num_positive(rows.slice(0, trainInd)), num_positive(rows.slice(trainInd))]);
                         console.log('trainInd: ' + trainInd + ' rows: ' + rows.length);
                     }
                     slicesTodo -= 1;
                     if (!slicesTodo) {
+                        if (!startMidStopRows.length) {
+                            alert('No slices provided that have the specified GT column');
+                            button_reset();
+                            return;
+                        }
                         console.log(startMidStopRows);
                         var slicesData = _.map(startMidStopRows, function (x) {
                             return {startRow: x[0], midRow: x[1], stopRow: x[2], trainPos: x[5], valPos: x[6], trainNeg: x[3] - x[5], valNeg: x[4] - x[6], thumbnail: '-', preprocessor: '-', feature: '-', classifier: '-'};
