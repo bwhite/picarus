@@ -160,6 +160,8 @@ function render_visualize_annotations_loaded() {
             // Hookup delete
             function delete_row() {
                 action = $('#actionSplit').find(":selected").val();
+                if (_.isUndefined(action) || !action.length)
+                    return;
                 delKeys = _.keys(_.object({'positive': posScores, 'negative': negScores, 'other': otherScores}[action]));
                 picarus_api_delete_rows(delKeys, progressModal());
                 button_confirm_click_reset($('#removeButton'));
@@ -191,10 +193,10 @@ function render_visualize_annotations_loaded() {
         debug_dc = data_change;
     }
     function change() {
-        var task = decode_id($('#annotator_select').find(":selected").val());
-        if (_.isUndefined(task)) {
+        var task = $('#annotator_select').find(":selected").val()
+        if (_.isUndefined(task) || !task.length)
             return;
-        }
+        task = decode_id(task);
         function success_annotation(annotation) {
             annotation_type = JSON.parse(annotation['params']).type;
             if (annotation_type == 'image_class') {
