@@ -1413,6 +1413,27 @@ function render_evaluate_classifier_loaded() {
         $('#examples').html('');
         sliceStats = {}; // [startRow/stopRow] = {# pos, # neg, # noconf, #nometa, #noconfmeta}
         var slices = slices_selector_get(true);
+        function createExamples(title, examples, $el) {
+            // examples: list of {name: display name, rows: list of rows}
+            var maxExamples = 24;
+            var imageColumn = 'thum:image_150sq';
+            $el.html('');
+            $el.append($('<h2>').text(title));
+            _.each(examples, function (x) {
+                $el.append($('<h3>').text(x.name));
+                _.each(x.rows.slice(0, maxExamples), function (y) {
+                    var id = _.uniqueId('image_');
+                    $el.append($('<img>').attr('id', id).attr('title', 'Row: ' + base64.encode(y[0]) + ' Conf: ' + y[1]).addClass('hide'));
+                    function success(response) {
+                        if (_.isUndefined(response[imageColumn]))
+                            return;
+                        $('#' + id).attr('src', 'data:image/jpeg;base64,' + base64.encode(response[imageColumn])).attr('width', '150px').removeClass('hide');
+                    }
+                    PICARUS.getRow("images", y[0], {success: success, columns: [imageColumn]});
+                })
+            });
+        }
+
         _.each(slices, function (start_stop_row, index) {
             var curSlice = start_stop_row.join('/');
             sliceStats[curSlice] = {'numPos': 0, 'numNeg': 0, 'noConf': 0, 'noGT': 0, 'noConfGT': 0};
@@ -1445,6 +1466,13 @@ function render_evaluate_classifier_loaded() {
                     confs = {neg_confs: _.map(row_confs.neg_confs, function (x) {return x[1]}), pos_confs: _.map(row_confs.pos_confs, function (x) {return x[1]})};
                     plot_confs(confs);
                     render_slice_stats_table($('#slicesTable'), sliceStats);
+                    // Create examples table
+                    createExamples('Examples', [{name: 'Positive (most positive)', rows: _.clone(row_confs.pos_confs).reverse()},
+                                                {name: 'Positive (most negative)', rows: row_confs.pos_confs},
+                                                {name: 'Negative (most negative)', rows: row_confs.neg_confs},
+                                                {name: 'Negative (most positive)', rows: _.clone(row_confs.neg_confs).reverse()}],
+                                   $('#prethresholdExamples'))
+
                     button_reset();
                 }
             else
