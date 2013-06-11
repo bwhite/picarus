@@ -1811,8 +1811,8 @@ function render_evaluate_classifier_loaded() {
                     // Create examples table
                     createClassifierExamples('Examples', [{name: 'Positive (most positive)', rows: _.clone(row_confs.pos_confs).reverse()},
                                                           {name: 'Positive (most negative)', rows: row_confs.pos_confs},
-                                                          {name: 'Negative (most negative)', rows: row_confs.neg_confs},
-                                                          {name: 'Negative (most positive)', rows: _.clone(row_confs.neg_confs).reverse()}],
+                                                          {name: 'Negative (most positive)', rows: _.clone(row_confs.neg_confs).reverse()},
+                                                          {name: 'Negative (most negative)', rows: row_confs.neg_confs}],
                                              $('#prethresholdExamples'))
 
                     button_reset();
