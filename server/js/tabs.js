@@ -1406,26 +1406,27 @@ function render_evaluate_classifier_loaded() {
     slices_selector();
     $('#runButton').click(function () {
         button_running();
-        confs = {pos_confs: [], neg_confs: []};
+        row_confs = {pos_confs: [], neg_confs: []};
         var gt_column = decode_id($('#gtColumn').val());
         var conf_column = decode_id($('#modelKey').val());
         var posClass = $('#posClass').val();
-        
+        $('#examples').html('');
         sliceStats = {}; // [startRow/stopRow] = {# pos, # neg, # noconf, #nometa, #noconfmeta}
         var slices = slices_selector_get(true);
         _.each(slices, function (start_stop_row, index) {
             var curSlice = start_stop_row.join('/');
             sliceStats[curSlice] = {'numPos': 0, 'numNeg': 0, 'noConf': 0, 'noGT': 0, 'noConfGT': 0};
             function success(row, columns) {
-                $('#progress').css('width', (100 * (confs.pos_confs.length + confs.neg_confs.length) / 19850.) + '%')
+                // TODO: Need to get # of rows for proper progress updating
+                $('#progress').css('width', (100 * (row_confs.pos_confs.length + row_confs.neg_confs.length) / 19850.) + '%')
                 c = columns;
                 if (_.has(columns, conf_column) && _.has(columns, gt_column)) {
                     if (columns[gt_column] == posClass) {
                         sliceStats[curSlice].numPos += 1;
-                        confs.pos_confs.push(msgpack.unpack(columns[conf_column]));
+                        row_confs.pos_confs.push([row, msgpack.unpack(columns[conf_column])]);
                     } else {
                         sliceStats[curSlice].numNeg += 1;
-                        confs.neg_confs.push(msgpack.unpack(columns[conf_column]));
+                        row_confs.neg_confs.push([row, msgpack.unpack(columns[conf_column])]);
                     }
                 } else {
                     if (!_.has(columns, conf_column))
@@ -1439,8 +1440,9 @@ function render_evaluate_classifier_loaded() {
             var success_confs;
             if (index == (slices.length - 1))
                 success_confs = function () {
-                    confs.neg_confs.sort(function(a, b) {return a - b});
-                    confs.pos_confs.sort(function(a, b) {return a - b});
+                    row_confs.neg_confs.sort(function(a, b) {return a[1] - b[1]});
+                    row_confs.pos_confs.sort(function(a, b) {return a[1] - b[1]});
+                    confs = {neg_confs: _.map(row_confs.neg_confs, function (x) {return x[1]}), pos_confs: _.map(row_confs.pos_confs, function (x) {return x[1]})};
                     plot_confs(confs);
                     render_slice_stats_table($('#slicesTable'), sliceStats);
                     button_reset();
