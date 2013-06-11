@@ -1437,6 +1437,7 @@ function render_evaluate_classifier_loaded() {
     slices_selector();
     $('#runButton').click(function () {
         button_running();
+        // TODO: Fix the globals in here, plot_confs needs some of them
         row_confs = {pos_confs: [], neg_confs: []};
         var gt_column = decode_id($('#gtColumn').val());
         var conf_column = decode_id($('#modelKey').val());
@@ -1673,6 +1674,7 @@ function to_google_data(pts, labels, tooltip) {
     data.addRows(pts);
     return data;
 }
+
 function plot_confs(confs) {
     var test_out = test_confs_to_confusion_matrix();
     if (test_out)
@@ -1735,10 +1737,10 @@ function plot_confs(confs) {
         setNearest(chart2, data2, 2, [1], thresh);
         setNearest(chart3, data3, 2, [1], thresh);
         setNearest(chart4, data4, 0, [1], thresh);
-        createClassifierExamples('Examples (w/ threshold)', [{name: 'True Positives', rows: _.filter(_.clone(row_confs.pos_confs).reverse(), function (x) {return x[1] >= thresh})},
-                                                             {name: 'False Negatives', rows: _.filter(row_confs.pos_confs, function (x) {return x[1] < thresh})},
-                                                             {name: 'False Positives', rows: _.filter(_.clone(row_confs.neg_confs).reverse(), function (x) {return x[1] >= thresh})},
-                                                             {name: 'True Negatives', rows: _.filter(row_confs.neg_confs, function (x) {return x[1] < thresh})}],
+        createClassifierExamples('Examples (w/ threshold)', [{name: 'True Positives (uniform, descending)', rows: _.filter(_.clone(row_confs.pos_confs).reverse(), function (x) {return x[1] >= thresh})},
+                                                             {name: 'False Negatives (uniform, ascending)', rows: _.filter(row_confs.pos_confs, function (x) {return x[1] < thresh})},
+                                                             {name: 'False Positives (uniform, descending)', rows: _.filter(_.clone(row_confs.neg_confs).reverse(), function (x) {return x[1] >= thresh})},
+                                                             {name: 'True Negatives (uniform, ascending)', rows: _.filter(row_confs.neg_confs, function (x) {return x[1] < thresh})}],
                                  $('#thresholdExamples'), true);
     }
     var al = google.visualization.events.addListener;
