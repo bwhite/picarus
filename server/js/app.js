@@ -359,7 +359,10 @@ function row_selector(prefixDrop, args) {
                 var table_prefixes = _.map(table_project.split(','), function (x) {
                     return base64.decode(x);
                 });
-                prefixes = _.intersection(prefixes, table_prefixes);
+                prefixes = _.filter(table_prefixes, function (x) {
+                    return _.some(prefixes, function (y) {return _.str.startsWith(x, y)});
+                });
+                //prefixes = _.intersection(prefixes, table_prefixes);
             }
             prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
             var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
