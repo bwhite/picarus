@@ -1737,7 +1737,7 @@ function plot_confs(confs) {
         setNearest(chart2, data2, 2, [1], thresh);
         setNearest(chart3, data3, 2, [1], thresh);
         setNearest(chart4, data4, 0, [1], thresh);
-        var jointConfsAbs = row_confs.neg_confs + row_confs.pos_confs;
+        var jointConfsAbs = row_confs.neg_confs.concat(row_confs.pos_confs);
         jointConfsAbs.sort(function(a, b) {return Math.abs(a[1] - thresh) - Math.abs(b[1] - thresh)});
         createClassifierExamples('Examples (w/ threshold)', [{name: 'True Positives (uniform, descending)', rows: _.filter(_.clone(row_confs.pos_confs).reverse(), function (x) {return x[1] >= thresh}), uniform: true},
                                                              {name: 'False Negatives (uniform, ascending)', rows: _.filter(row_confs.pos_confs, function (x) {return x[1] < thresh}), uniform: true},
