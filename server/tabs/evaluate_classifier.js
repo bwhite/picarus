@@ -1,7 +1,7 @@
 function render_evaluate_classifier() {
     google_visualization_load(render_evaluate_classifier_loaded);
 }
-function createClassifierExamples(title, examples, $el, sample) {
+function createClassifierExamples(title, examples, $el) {
     // examples: list of {name: display name, rows: list of rows}
     var maxExamples = 21;
     var imageColumn = 'thum:image_150sq';
@@ -10,7 +10,7 @@ function createClassifierExamples(title, examples, $el, sample) {
     _.each(examples, function (x) {
         $el.append($('<h3>').text(x.name));
         var curRows = x.rows;
-        if (sample && curRows.length > maxExamples) {
+        if (x.uniform && curRows.length > maxExamples) {
             // Always includes first/last
             var step = Math.max(1, Math.floor((curRows.length - 1) / (maxExamples - 1)));
             var newRows = _.map(_.range(0, curRows.length - 1, step), function (ind) {
@@ -349,11 +349,14 @@ function plot_confs(confs) {
         setNearest(chart2, data2, 2, [1], thresh);
         setNearest(chart3, data3, 2, [1], thresh);
         setNearest(chart4, data4, 0, [1], thresh);
-        createClassifierExamples('Examples (w/ threshold)', [{name: 'True Positives (uniform, descending)', rows: _.filter(_.clone(row_confs.pos_confs).reverse(), function (x) {return x[1] >= thresh})},
-                                                             {name: 'False Negatives (uniform, ascending)', rows: _.filter(row_confs.pos_confs, function (x) {return x[1] < thresh})},
-                                                             {name: 'False Positives (uniform, descending)', rows: _.filter(_.clone(row_confs.neg_confs).reverse(), function (x) {return x[1] >= thresh})},
-                                                             {name: 'True Negatives (uniform, ascending)', rows: _.filter(row_confs.neg_confs, function (x) {return x[1] < thresh})}],
-                                 $('#thresholdExamples'), true);
+        var jointConfsAbs = row_confs.neg_confs + row_confs.pos_confs;
+        jointConf.sort(function(a, b) {return Math.abs(a[1] - thresh) - Math.abs(b[1] - thresh)});
+        createClassifierExamples('Examples (w/ threshold)', [{name: 'True Positives (uniform, descending)', rows: _.filter(_.clone(row_confs.pos_confs).reverse(), function (x) {return x[1] >= thresh}), uniform: true},
+                                                             {name: 'False Negatives (uniform, ascending)', rows: _.filter(row_confs.pos_confs, function (x) {return x[1] < thresh}), uniform: true},
+                                                             {name: 'False Positives (uniform, descending)', rows: _.filter(_.clone(row_confs.neg_confs).reverse(), function (x) {return x[1] >= thresh}), uniform: true},
+                                                             {name: 'True Negatives (uniform, ascending)', rows: _.filter(row_confs.neg_confs, function (x) {return x[1] < thresh}), uniform: true},
+                                                             {name: 'Most Confusing (|conf - thresh|, ascending)', rows: jointConfsAbs}],
+                                 $('#thresholdExamples'));
     }
     var al = google.visualization.events.addListener;
     al(chart0, 'select', function () {var sel = chart0.getSelection(); if (sel[0] !== undefined) setSelections(data0.getValue(sel[0].row, 0))});
