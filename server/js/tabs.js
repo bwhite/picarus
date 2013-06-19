@@ -1382,7 +1382,7 @@ function render_visualize_annotations_loaded() {
     rows_dropdown(JOBS, {el: $('#annotator_select'), filter: function (x) {return x.get('type') == 'annotation'}, text: function (x) {
         var p = JSON.parse(x.get('params'));
         if (p.type == "image_class")
-            return p.type + ' ' + p.num_tasks;
+            return x.get('row') + p.type + ' ' + p.num_tasks;
         return p.type;
     }, change: change});
 }
