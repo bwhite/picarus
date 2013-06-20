@@ -152,7 +152,7 @@ class Jobs(object):
     def get_work(self, queues, timeout=0):
         out = self.db.brpop(['queue:' + x for x in queues], timeout=timeout)
         if not out:
-            raise ValueError('No job returned within timeout')
+            return
         print('Processing job from [%s]' % out[0])
         return pickle.loads(out[1])
 
@@ -176,7 +176,17 @@ def main():
         getattr(db, func)(*method_args, **method_kwargs)
 
     def _work(args, jobs):
-        job_worker(**jobs.get_work(args.queues))
+        import inotifyx
+        fd = inotifyx.init()
+        # NOTE: .git/logs/HEAD is the last thing updated after a git pull/merge
+        inotifyx.add_watch(fd, '../.git/logs/HEAD', inotifyx.IN_MODIFY)
+        inotifyx.add_watch(fd, '.reloader', inotifyx.IN_MODIFY | inotifyx.IN_ATTRIB)
+        while 1:
+            work = jobs.get_work(args.queues, timeout=1)
+            if inotifyx.get_events(fd):
+                break
+            if work:
+                job_worker(**work)
 
     parser = argparse.ArgumentParser(description='Picarus job operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')

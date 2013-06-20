@@ -337,12 +337,12 @@ if __name__ == '__main__':
                                       spawn=MAX_CONNECTIONS)
 
     def reloader():
-        import gevent_inotifyx as inotify
-        fd = inotify.init()
+        import gevent_inotifyx as inotifyx
+        fd = inotifyx.init()
         # NOTE: .git/logs/HEAD is the last thing updated after a git pull/merge
-        inotify.add_watch(fd, '../.git/logs/HEAD', inotify.IN_MODIFY)
-        inotify.add_watch(fd, '.reloader', inotify.IN_MODIFY | inotify.IN_ATTRIB)
-        inotify.get_events(fd)
+        inotifyx.add_watch(fd, '../.git/logs/HEAD', inotifyx.IN_MODIFY)
+        inotifyx.add_watch(fd, '.reloader', inotifyx.IN_MODIFY | inotifyx.IN_ATTRIB)
+        inotifyx.get_events(fd)
         logging.warn('Shutting down due to new update')
         SERVER.stop_accepting()
         SERVER.pool.join()
