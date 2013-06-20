@@ -153,7 +153,7 @@ class Jobs(object):
         out = self.db.brpop(['queue:' + x for x in queues], timeout=timeout)
         if not out:
             raise ValueError('No job returned within timeout')
-        print('Processing job from [%s]' % out[1])
+        print('Processing job from [%s]' % out[0])
         return pickle.loads(out[1])
 
 

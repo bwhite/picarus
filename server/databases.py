@@ -71,9 +71,9 @@ class BaseDB(object):
 
     def __init__(self, jobs, local=False, raven=None):
         if hasattr(self, 'args'):
-            self.args += [jobs, None, raven]
+            self.args += [jobs, True, raven]
         else:
-            self.args = [jobs, None, raven]
+            self.args = [jobs, True, raven]
         if raven is not None and local:
             import raven as _raven
             self.raven = _raven.Client(raven)
