@@ -184,14 +184,14 @@ def main():
         inotifyx.add_watch(fd, '../.git/logs/HEAD', inotifyx.IN_MODIFY)
         inotifyx.add_watch(fd, '.reloader', inotifyx.IN_MODIFY | inotifyx.IN_ATTRIB)
         while 1:
-            queue, work = jobs.get_work(args.queues, timeout=1000)
+            work = jobs.get_work(args.queues, timeout=1000)
             if inotifyx.get_events(fd, 0):
                 if work:
                     print('Pushing work back into queue')
-                    jobs.add_work(False, queue, **work)
+                    jobs.add_work(False, work[0], **work[1])
                 break
             if work:
-                job_worker(**work)
+                job_worker(**work[1])
 
     parser = argparse.ArgumentParser(description='Picarus job operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
