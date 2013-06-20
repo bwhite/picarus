@@ -188,6 +188,7 @@ def main():
             if work:
                 job_worker(**work[1])
             if inotifyx.get_events(fd, 0):
+                print('Shutting down due to new update')
                 break
 
     parser = argparse.ArgumentParser(description='Picarus job operations')
