@@ -146,15 +146,17 @@ class Jobs(object):
         self._check_owner(task, owner)
         return self.get_annotation_manager(task)
 
-    def add_work(self, db, func, method_args, method_kwargs, queue):
-        self.db.lpush('queue:' + queue, pickle.dumps({'db': db, 'func': func, 'method_args': method_args, 'method_kwargs': method_kwargs}, -1))
+    def add_work(self, front, queue, **kw):
+        push = self.db.lpush if front else self.db.rpush
+        push('queue:' + queue, pickle.dumps(kw, -1))
 
     def get_work(self, queues, timeout=0):
         out = self.db.brpop(['queue:' + x for x in queues], timeout=timeout)
         if not out:
             return
-        print('Processing job from [%s]' % out[0])
-        return out
+        queue = out[0][:len('queue:')]
+        print('Processing job from [%s]' % queue)
+        return queue, pickle.loads(out[1])
 
 
 def main():
@@ -182,13 +184,14 @@ def main():
         inotifyx.add_watch(fd, '../.git/logs/HEAD', inotifyx.IN_MODIFY)
         inotifyx.add_watch(fd, '.reloader', inotifyx.IN_MODIFY | inotifyx.IN_ATTRIB)
         while 1:
-            queue, work = jobs.get_work(args.queues, timeout=1)
+            queue, work = jobs.get_work(args.queues, timeout=1000)
             if inotifyx.get_events(fd, 0):
                 if work:
-                    jobs.db.rpush(queue, work)
+                    print('Pushing work back into queue')
+                    jobs.add_work(False, queue, **work)
                 break
             if work:
-                job_worker(**pickle.loads(work))
+                job_worker(**work)
 
     parser = argparse.ArgumentParser(description='Picarus job operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')

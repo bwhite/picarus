@@ -63,7 +63,7 @@ def async(func):
                 if self.raven:
                     self.raven.captureException()
                 raise
-        self._jobs.add_work(db=self, func=func.__name__, method_args=args, method_kwargs=kw, queue='default')
+        self._jobs.add_work(True, 'default', db=self, func=func.__name__, method_args=args, method_kwargs=kw)
     return inner
 
 
