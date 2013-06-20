@@ -6,6 +6,7 @@ import pprint
 import mturk_vision
 import base64
 import uuid
+import pickle
 from hadoop_parse import scrape_hadoop_jobs
 
 
@@ -145,6 +146,12 @@ class Jobs(object):
         self._check_owner(task, owner)
         return self.get_annotation_manager(task)
 
+    def add_work(self, db, func, method_args, method_kwargs, queue):
+        self.db.lpush('queue:' + queue, pickle.dumps({'db': db, 'func': func, 'method_args': method_args, 'method_kwargs': method_kwargs}, -1))
+
+    def get_work(self, queues, timeout=0):
+        return self.db.brpop(['queue:' + x for x in queues], timeout=timeout)
+
 
 def main():
 
@@ -161,6 +168,12 @@ def main():
     def _destroy(args, jobs):
         jobs.db.flushall()
 
+    def job_worker(db, func, method_args, method_kwargs):
+        getattr(db, func)(*method_args, **method_kwargs)
+
+    def _work(args, jobs):
+        job_worker(**jobs.get_work(args.queues))
+
     parser = argparse.ArgumentParser(description='Picarus job operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
     parser.add_argument('--redis_port', type=int, help='Redis Port', default=3)
@@ -171,6 +184,10 @@ def main():
 
     subparser = subparsers.add_parser('destroy', help='Delete everything in the jobs DB')
     subparser.set_defaults(func=_destroy)
+
+    subparser = subparsers.add_parser('work', help='Do background work')
+    parser.add_argument('queues', nargs='+', help='Queues to do work on')
+    subparser.set_defaults(func=_work)
 
     args = parser.parse_args()
     jobs = Jobs(args.redis_host, args.redis_port)

@@ -15,7 +15,6 @@ import base64
 import hadoopy_hbase
 import os
 import re
-import gipc
 import crawlers
 import logging
 import driver
@@ -54,45 +53,34 @@ def hadoop_wait_till_started(launch_out):
         raise RuntimeError('Hadoop task could not start')
 
 
-def job_runner(**kw):
-    gipc.start_process(target=job_worker, args=(pickle.dumps(kw),)).join()
-
-
-def job_worker(data):
-    data = pickle.loads(data)
-    db, func, method_args, method_kwargs = data['db'], data['func'], data['method_args'], data['method_kwargs']
-    getattr(db, func)(*method_args, **method_kwargs)
-
-
 def async(func):
 
     def inner(self, *args, **kw):
-        if self._spawn is None:
+        if self._local:
             try:
                 return func(self, *args, **kw)
             except:
                 if self.raven:
                     self.raven.captureException()
-                    raise
-        self._spawn(job_runner, db=self, func=func.__name__,
-                    method_args=args, method_kwargs=kw)
+                raise
+        self._jobs.add_work(db=self, func=func.__name__, method_args=args, method_kwargs=kw, queue='default')
     return inner
 
 
 class BaseDB(object):
 
-    def __init__(self, jobs, spawn, raven=None):
+    def __init__(self, jobs, local=False, raven=None):
         if hasattr(self, 'args'):
             self.args += [jobs, None, raven]
         else:
             self.args = [jobs, None, raven]
-        if raven is not None and spawn is None:
+        if raven is not None and local:
             import raven as _raven
             self.raven = _raven.Client(raven)
         else:
             self.raven = None
         self._jobs = jobs
-        self._spawn = spawn
+        self._local = local
         super(BaseDB, self).__init__()
 
     def __reduce__(self):
