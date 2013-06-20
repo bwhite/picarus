@@ -207,7 +207,8 @@ def main():
     subparser.set_defaults(func=_work)
 
     args = parser.parse_args()
-    jobs = Jobs(args.redis_host, args.redis_port, 3, args.annotations_redis_host, args.annotations_redis_port)
+    jobs = Jobs(args.redis_host, args.redis_port, 3,
+                args.annotations_redis_host, args.annotations_redis_port)
     args.func(args, jobs)
 
 if __name__ == '__main__':
