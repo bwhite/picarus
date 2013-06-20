@@ -62,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
     parser.add_argument('--raven', help='URL to the Raven/Sentry logging server')
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--local', action='store_true', help='If true, do not use the worker queues and instead run background tasks in server process.')
     parser.add_argument('--reloader', action='store_true', help='If true, enable stopping on git/QUIT changes.  Server should be run in a loop.')
     parser.add_argument('--port', default='80', type=int)
     parser.add_argument('--hadoop_jobtracker', help='Path to Hadoop Jobtracker Webserver', default='http://localhost:50030')
@@ -363,11 +364,11 @@ if __name__ == '__main__':
 
     def THRIFT_CONSTRUCTOR():
         if ARGS.database == 'redis':
-            return RedisDB(ARGS.redis_host, ARGS.redis_port, 2, JOBS, SERVER._spawn, ARGS.raven)
+            return RedisDB(ARGS.redis_host, ARGS.redis_port, 2, JOBS, ARGS.local, ARGS.raven)
         if ARGS.database == 'hbase':
-            return HBaseDB(ARGS.thrift_server, ARGS.thrift_port, JOBS, SERVER._spawn, ARGS.raven)
+            return HBaseDB(ARGS.thrift_server, ARGS.thrift_port, JOBS, ARGS.local, ARGS.raven)
         if ARGS.database == 'hbasehadoop':
-            return HBaseDBHadoop(ARGS.thrift_server, ARGS.thrift_port, JOBS, SERVER._spawn, ARGS.raven)
+            return HBaseDBHadoop(ARGS.thrift_server, ARGS.thrift_port, JOBS, ARGS.local, ARGS.raven)
         raise ValueError('Unknown option[%s]' % ARGS.database)
     for x in range(5):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
