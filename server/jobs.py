@@ -154,7 +154,7 @@ class Jobs(object):
         if not out:
             return
         print('Processing job from [%s]' % out[0])
-        return pickle.loads(out[1])
+        return out[1]
 
 
 def main():
@@ -184,9 +184,10 @@ def main():
         while 1:
             work = jobs.get_work(args.queues, timeout=1)
             if inotifyx.get_events(fd):
+                jobs.db.rpush(work)
                 break
             if work:
-                job_worker(**work)
+                job_worker(**pickle.loads(work))
 
     parser = argparse.ArgumentParser(description='Picarus job operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
