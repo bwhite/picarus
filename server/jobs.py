@@ -154,7 +154,7 @@ class Jobs(object):
         if not out:
             return
         print('Processing job from [%s]' % out[0])
-        return out[1]
+        return out
 
 
 def main():
@@ -182,9 +182,10 @@ def main():
         inotifyx.add_watch(fd, '../.git/logs/HEAD', inotifyx.IN_MODIFY)
         inotifyx.add_watch(fd, '.reloader', inotifyx.IN_MODIFY | inotifyx.IN_ATTRIB)
         while 1:
-            work = jobs.get_work(args.queues, timeout=1)
+            queue, work = jobs.get_work(args.queues, timeout=1)
             if inotifyx.get_events(fd, 0):
-                jobs.db.rpush(work)
+                if work:
+                    jobs.db.rpush(queue, work)
                 break
             if work:
                 job_worker(**pickle.loads(work))
