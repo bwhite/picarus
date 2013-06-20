@@ -150,7 +150,11 @@ class Jobs(object):
         self.db.lpush('queue:' + queue, pickle.dumps({'db': db, 'func': func, 'method_args': method_args, 'method_kwargs': method_kwargs}, -1))
 
     def get_work(self, queues, timeout=0):
-        return pickle.loads(self.db.brpop(['queue:' + x for x in queues], timeout=timeout))
+        out = self.db.brpop(['queue:' + x for x in queues], timeout=timeout)
+        if not out:
+            raise ValueError('No job returned within timeout')
+        print('Processing job from [%s]' % out[1])
+        return pickle.loads(out[1])
 
 
 def main():
