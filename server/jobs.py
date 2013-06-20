@@ -177,6 +177,8 @@ def main():
     parser = argparse.ArgumentParser(description='Picarus job operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
     parser.add_argument('--redis_port', type=int, help='Redis Port', default=3)
+    parser.add_argument('--annotations_redis_host', help='Annotations Host', default='localhost')
+    parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
     subparsers = parser.add_subparsers(help='Commands')
 
     subparser = subparsers.add_parser('info', help='Display info about jobs')
@@ -190,7 +192,7 @@ def main():
     subparser.set_defaults(func=_work)
 
     args = parser.parse_args()
-    jobs = Jobs(args.redis_host, args.redis_port)
+    jobs = Jobs(args.redis_host, args.redis_port, 3, args.annotations_redis_host, args.annotations_redis_port)
     args.func(args, jobs)
 
 if __name__ == '__main__':
