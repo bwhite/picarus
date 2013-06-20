@@ -411,6 +411,7 @@ class HBaseDBHadoop(HBaseDB):
     def __reduce__(self):
         return (HBaseDBHadoop, tuple(self.args))
 
+    @async
     def exif_job(self, start_row, stop_row, job_row):
         cmdenvs = {'HBASE_TABLE': 'images',
                    'HBASE_OUTPUT_COLUMN': base64.b64encode('meta:exif')}
@@ -420,6 +421,7 @@ class HBaseDBHadoop(HBaseDB):
                                                       jobconfs={'mapred.task.timeout': '6000000', 'picarus.job.row': job_row}, cmdenvs=cmdenvs, check_script=False,
                                                       make_executable=False, start_row=start_row, stop_row=stop_row, name=job_row, wait=False))
 
+    @async
     def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row, job_row):
         output_hdfs = 'picarus_temp/%f/' % time.time()
         model_fp = model_tofile(model)
