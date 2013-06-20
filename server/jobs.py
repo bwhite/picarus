@@ -150,7 +150,7 @@ class Jobs(object):
         self.db.lpush('queue:' + queue, pickle.dumps({'db': db, 'func': func, 'method_args': method_args, 'method_kwargs': method_kwargs}, -1))
 
     def get_work(self, queues, timeout=0):
-        return self.db.brpop(['queue:' + x for x in queues], timeout=timeout)
+        return pickle.loads(self.db.brpop(['queue:' + x for x in queues], timeout=timeout))
 
 
 def main():
