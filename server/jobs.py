@@ -160,12 +160,8 @@ class Jobs(object):
             return
         queue = out[0][:len('queue:')]
         data = pickle.loads(out[1])
-        try:
-            debug_data = json.dumps(data['method_args'])
-        except:
-            debug_data = str(data['method_args'])
         print('Processing job from [%s][%s]' % (queue, data['func']))
-        pprint.pprint(debug_data)
+        pprint.pprint(data['method_args'])
         return queue, data
 
 
