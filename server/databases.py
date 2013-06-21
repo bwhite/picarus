@@ -201,7 +201,8 @@ class BaseDB(object):
             job_columns['goodRows'] += 1
             self._jobs.update_job(job_row, job_columns)
 
-        for _ in range(iterations):
+        for n in range(iterations):
+            print('Iter[%d]' % n)
             if upload_date_radius:
                 p['min_upload_date'] = random.randint(min_upload_date, max_upload_date - upload_date_radius)
                 p['max_upload_date'] = p['min_upload_date'] + upload_date_radius
