@@ -155,8 +155,9 @@ class Jobs(object):
         if not out:
             return
         queue = out[0][:len('queue:')]
-        print('Processing job from [%s]' % queue)
-        return queue, pickle.loads(out[1])
+        data = pickle.loads(out[1])
+        print('Processing job from [%s][%s][%r][%r]' % (queue, data['func'], data['method_args'], data['method_kwargs']))
+        return queue, data
 
 
 def main():
@@ -186,6 +187,7 @@ def main():
         while 1:
             work = jobs.get_work(args.queues, timeout=5)
             if work:
+                jobs.add_work(True, 'old' + work[0], **work[1])
                 job_worker(**work[1])
             if inotifyx.get_events(fd, 0):
                 print('Shutting down due to new update')
