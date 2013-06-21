@@ -345,7 +345,8 @@ if __name__ == '__main__':
         inotifyx.get_events(fd)
         logging.warn('Shutting down due to new update')
         SERVER.stop_accepting()
-        SERVER.pool.join()
+        logging.warn('Free Count[%d] (will kill outstanding processes in 120 sec.)' % SERVER.pool.free_count())
+        SERVER.pool.join(timeout=120)
         SERVER.close()
         logging.warn('Shut down successful')
 
