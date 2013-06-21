@@ -4,6 +4,7 @@ if __name__ == '__main__':
     monkey.patch_all()
 import redis
 import json
+import pprint
 import argparse
 import pprint
 import mturk_vision
@@ -164,7 +165,7 @@ class Jobs(object):
         except:
             debug_data = str(data['method_args'])
         print('Processing job from [%s][%s]' % (queue, data['func']))
-        print(debug_data)
+        pprint.pprint(debug_data)
         return queue, data
 
 
