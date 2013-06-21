@@ -159,7 +159,7 @@ class Jobs(object):
             return
         queue = out[0][:len('queue:')]
         data = pickle.loads(out[1])
-        print('Processing job from [%s][%s][%s][%s]' % (queue, data['func'], data['method_args'], data['method_kwargs']))
+        print('Processing job from [%s][%s][%s][%s]' % (queue, data['func'], str(data['method_args']), str(data['method_kwargs'])))
         return queue, data
 
 
