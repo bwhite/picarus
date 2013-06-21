@@ -309,16 +309,18 @@ function picarus_api_row_action(rows, action, params) {
             params.done();
     }
     function work(s) {
+        if (!rows.length)
+            return;
         var row = rows.pop();
         if (_.isUndefined(row))
             return;
         action(row, s);
     }
+    function workSuccess() { 
+        success();
+        work(workSuccess);
+    }
     _.each(_.range(maxRowsIter), function () {
-        work(function () { 
-                 success();
-                 while (rows.length)
-                     work(success);
-             });
+        work(workSuccess);
     });
 }

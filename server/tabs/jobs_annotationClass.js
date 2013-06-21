@@ -7,6 +7,7 @@ function render_jobs_annotationClass() {
         var numTasks = Number($('#num_tasks').val());
         var classColumn = $('#class').val();
         var mode = $('#modeSelect').val();
+        $('#results').html('');
         function success(response) {
             JOBS.fetch();
             $('#results').append($('<a>').attr('href', '/v0/annotation/' + response.row + '/index.html').text('Worker').attr('target', '_blank'));
