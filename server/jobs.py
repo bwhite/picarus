@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+if __name__ == '__main__':
+    from gevent import monkey
+    monkey.patch_all()
 import redis
 import json
 import argparse
