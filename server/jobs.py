@@ -163,7 +163,8 @@ class Jobs(object):
             debug_data = json.dumps(data['method_args'])
         except:
             debug_data = str(data['method_args'])
-        print('Processing job from [%s][%s][%s]' % (queue, data['func'], debug_data))
+        print('Processing job from [%s][%s]' % (queue, data['func']))
+        print(debug_data)
         return queue, data
 
 
