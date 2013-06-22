@@ -185,6 +185,7 @@ class BaseDB(object):
         job_columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
 
         def store(image, class_name, source, query, **kw):
+            print('In store')
             cols = {}
             md5 = lambda x: hashlib.md5(x).digest()
             cur_md5 = md5(image)
@@ -197,7 +198,9 @@ class BaseDB(object):
             for x, y in kw.items():
                 cols['meta:' + x] = y
             row = row_prefix + cur_md5
+            print('Pre mutate row')
             self.mutate_row('images', row, cols)
+            print('Post mutate row')
             job_columns['goodRows'] += 1
             self._jobs.update_task(job_row, job_columns)
 
@@ -410,7 +413,7 @@ class HBaseDBHadoop(HBaseDB):
         super(HBaseDBHadoop, self).__init__(*args, **kw)
 
     def __reduce__(self):
-        return (HBaseDBHadoop, tuple(self.args))
+        return HBaseDBHadoop, tuple(self.args)
 
     @async
     def exif_job(self, start_row, stop_row, job_row):
