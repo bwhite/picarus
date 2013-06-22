@@ -103,8 +103,8 @@ class BaseDB(object):
                 continue
             self.mutate_row(table, row, {output_column: output_data})
             good_rows += 1
-            self._jobs.update_job(job_row, {'goodRows': good_rows, 'badRows': total_rows - good_rows, 'status': 'running'})
-        self._jobs.update_job(job_row, {'goodRows': good_rows, 'badRows': total_rows - good_rows, 'status': 'completed'})
+            self._jobs.update_task(job_row, {'goodRows': good_rows, 'badRows': total_rows - good_rows, 'status': 'running'})
+        self._jobs.update_task(job_row, {'goodRows': good_rows, 'badRows': total_rows - good_rows, 'status': 'completed'})
 
     @async
     def exif_job(self, start_row, stop_row, job_row):
@@ -199,7 +199,7 @@ class BaseDB(object):
             row = row_prefix + cur_md5
             self.mutate_row('images', row, cols)
             job_columns['goodRows'] += 1
-            self._jobs.update_job(job_row, job_columns)
+            self._jobs.update_task(job_row, job_columns)
 
         for n in range(iterations):
             print('Iter[%d]' % n)
@@ -208,7 +208,7 @@ class BaseDB(object):
                 p['max_upload_date'] = p['min_upload_date'] + upload_date_radius
             crawlers.flickr_crawl(store, class_name=class_name, query=query, **p)
         job_columns['status'] = 'completed'
-        self._jobs.update_job(job_row, job_columns)
+        self._jobs.update_task(job_row, job_columns)
 
     @async
     def create_model_job(self, create_model, params, inputs, schema, start_stop_rows, table, email, job_row):
@@ -226,7 +226,7 @@ class BaseDB(object):
                         yield row, {pretty_column: columns[raw_column] for pretty_column, raw_column in inputs.items()}
                         job_columns['goodRows'] += 1
                         job_columns['badRows'] = total_rows - job_columns['goodRows']
-                        self._jobs.update_job(job_row, job_columns)
+                        self._jobs.update_task(job_row, job_columns)
                     except KeyError:
                         continue
         input_type, output_type, model_link = create_model(inner(), params)
@@ -239,7 +239,7 @@ class BaseDB(object):
                                                                       'output_type': output_type, 'email': email, 'name': manager.model_to_name(model_link),
                                                                       'factory_info': json.dumps(factory_info)})
         job_columns['status'] = 'completed'
-        self._jobs.update_job(job_row, job_columns)
+        self._jobs.update_task(job_row, job_columns)
 
 
 class RedisDB(BaseDB):

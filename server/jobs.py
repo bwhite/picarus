@@ -11,6 +11,7 @@ import mturk_vision
 import base64
 import uuid
 import pickle
+import time
 from hadoop_parse import scrape_hadoop_jobs
 
 
@@ -43,7 +44,7 @@ class Jobs(object):
     def add_task(self, type, owner, params, secret_params):
         task = base64.urlsafe_b64encode(uuid.uuid4().bytes)[:-2]
         data = {'owner': owner, '_params': json.dumps(secret_params),
-                'params': json.dumps(params), 'type': type}
+                'params': json.dumps(params), 'type': type, 'startTime': str(time.time())}
         if not self.db.set(self._lock_prefix + task, '', nx=True):
             raise UnauthorizedException
         # TODO: Do these atomically
@@ -100,7 +101,7 @@ class Jobs(object):
         # TODO: For Hadoop jobs kill the task if it is running
         # TODO: For worker/crawl/model jobs kill the worker process or send it a signal
 
-    def update_job(self, row, columns):
+    def update_task(self, row, columns):
         self.db.hmset(self._task_prefix + row, columns)
 
     def update_hadoop_jobs(self, hadoop_jobtracker):
@@ -114,7 +115,7 @@ class Jobs(object):
             except NotFoundException:
                 continue
             # TODO: Need to do this atomically with the exists check
-            self.update_job(row, columns)
+            self.update_task(row, columns)
 
     def get_tasks(self, owner):
         outs = {}
