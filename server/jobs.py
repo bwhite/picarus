@@ -204,6 +204,7 @@ def main():
     parser = argparse.ArgumentParser(description='Picarus job operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
     parser.add_argument('--redis_port', type=int, help='Redis Port', default=6379)
+    parser.add_argument('--raven', help='URL to the Raven/Sentry logging server')
     parser.add_argument('--annotations_redis_host', help='Annotations Host', default='localhost')
     parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
     parser.add_argument('--thrift_server', default='localhost')
