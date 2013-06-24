@@ -63,8 +63,18 @@ def async(func):
                 if self.raven:
                     self.raven.captureException()
                 raise
-        self._jobs.add_work(True, 'default', db=self, func=func.__name__, method_args=args, method_kwargs=kw)
+        self._jobs.add_work(True, 'default', func=func.__name__, method_args=args, method_kwargs=kw)
     return inner
+
+
+def factory(database, local, jobs, raven, **kw):
+    if database == 'redis':
+        return RedisDB(kw['redis_host'], kw['redis_port'], 2, jobs, local, raven)
+    if database == 'hbase':
+        return HBaseDB(kw['thrift_server'], kw['thrift_port'], jobs, local, raven)
+    if database == 'hbasehadoop':
+        return HBaseDBHadoop(kw['thrift_server'], kw['thrift_port'], jobs, local, raven)
+    raise ValueError('Unknown option[%s]' % database)
 
 
 class BaseDB(object):

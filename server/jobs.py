@@ -12,6 +12,7 @@ import base64
 import uuid
 import pickle
 import time
+import databases
 from hadoop_parse import scrape_hadoop_jobs
 
 
@@ -185,25 +186,29 @@ def main():
         getattr(db, func)(*method_args, **method_kwargs)
 
     def _work(args, jobs):
-        import inotifyx
+        import gevent_inotifyx as inotifyx
         fd = inotifyx.init()
         # NOTE: .git/logs/HEAD is the last thing updated after a git pull/merge
         inotifyx.add_watch(fd, '../.git/logs/HEAD', inotifyx.IN_MODIFY)
         inotifyx.add_watch(fd, '.reloader', inotifyx.IN_MODIFY | inotifyx.IN_ATTRIB)
+        db = THRIFT_CONSTRUCTOR()
         while 1:
             work = jobs.get_work(args.queues, timeout=5)
             if work:
-                jobs.add_work(True, 'old' + work[0], **work[1])
-                job_worker(**work[1])
+                #jobs.add_work(True, 'old' + work[0], **work[1])
+                job_worker(db=db, **work[1])
             if inotifyx.get_events(fd, 0):
                 print('Shutting down due to new update')
                 break
 
     parser = argparse.ArgumentParser(description='Picarus job operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
-    parser.add_argument('--redis_port', type=int, help='Redis Port', default=3)
+    parser.add_argument('--redis_port', type=int, help='Redis Port', default=6379)
     parser.add_argument('--annotations_redis_host', help='Annotations Host', default='localhost')
     parser.add_argument('--annotations_redis_port', type=int, help='Annotations Port', default=6380)
+    parser.add_argument('--thrift_server', default='localhost')
+    parser.add_argument('--thrift_port', default='9090')
+    parser.add_argument('--database', choices=['hbase', 'hbasehadoop', 'redis'], default='hbasehadoop', help='Select which database to use as our backend.  Those ending in hadoop use it for job processing.')
     subparsers = parser.add_subparsers(help='Commands')
 
     subparser = subparsers.add_parser('info', help='Display info about jobs')
@@ -219,6 +224,11 @@ def main():
     args = parser.parse_args()
     jobs = Jobs(args.redis_host, args.redis_port, 3,
                 args.annotations_redis_host, args.annotations_redis_port)
+
+    def THRIFT_CONSTRUCTOR():
+        return databases.factory(args.database, True, jobs, args.raven,
+                                 thrift_server=args.thrift_server, thrift_port=args.thrift_port,
+                                 redis_host=args.redis_host, redis_port=args.redis_port)
     args.func(args, jobs)
 
 if __name__ == '__main__':

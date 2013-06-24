@@ -10,7 +10,7 @@ import gevent
 import mturk_vision
 from users import Users, UnknownUser
 from yubikey import Yubikey
-from databases import HBaseDB, RedisDB, HBaseDBHadoop
+import databases
 import jobs
 import logging
 import contextlib
@@ -364,13 +364,9 @@ if __name__ == '__main__':
         gevent.spawn(refresh_hadoop_jobs)
 
     def THRIFT_CONSTRUCTOR():
-        if ARGS.database == 'redis':
-            return RedisDB(ARGS.redis_host, ARGS.redis_port, 2, JOBS, ARGS.local, ARGS.raven)
-        if ARGS.database == 'hbase':
-            return HBaseDB(ARGS.thrift_server, ARGS.thrift_port, JOBS, ARGS.local, ARGS.raven)
-        if ARGS.database == 'hbasehadoop':
-            return HBaseDBHadoop(ARGS.thrift_server, ARGS.thrift_port, JOBS, ARGS.local, ARGS.raven)
-        raise ValueError('Unknown option[%s]' % ARGS.database)
+        return databases.factory(ARGS.database, ARGS.local, JOBS, ARGS.raven,
+                                 thrift_server=ARGS.thrift_server, thrift_port=ARGS.thrift_port,
+                                 redis_host=ARGS.redis_host, redis_port=ARGS.redis_port)
     for x in range(5):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     SERVER.serve_forever()
