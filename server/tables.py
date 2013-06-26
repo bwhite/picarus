@@ -332,7 +332,7 @@ class JobsTable(BaseTableSmall):
         params = {base64.b64decode(k): base64.b64decode(v) for k, v in params.items()}
         path = params['path']
         start_stop_rows = parse_slices()
-        if path in ('annotation/images/class',):
+        if path in ('annotation/images/class', 'annotation/images/qa'):
             data_table = get_table(self._auth_user, path.split('/')[1])
             for start_row, stop_row in start_stop_rows:
                 data_table._slice_validate(start_row, stop_row, 'r')
@@ -356,6 +356,14 @@ class JobsTable(BaseTableSmall):
                     p['class_thumbnails'] = params['classThumbnails']
                 except KeyError:
                     pass
+            elif path == 'annotation/images/qa':
+                question_column = params['questionColumn']
+                assert question_column.startswith('meta:')
+                response_type_column = params['responseTypeColumn']
+                assert response_type_column.startswith('meta:')
+                suffix = '/'.join(ub64(x) + '/' + ub64(y) for x, y in start_stop_rows)
+                data = 'hbase://localhost:9090/images/%s?question=%s&responseType=%s&image=%s' % (suffix, ub64(class_column), ub64(response_type_column), ub64(image_column))
+                p['type'] = 'image_qa'
             else:
                 bottle.abort(400)
             if 'instructions' in params:
