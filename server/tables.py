@@ -585,7 +585,7 @@ class ImagesHBaseTable(DataHBaseTable):
             bottle.abort(400)
         params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
-        with thrift_new() as thrift:
+        with thrift_lock() as thrift:
             manager = PicarusManager(db=thrift)
             if action == 'io/thumbnail':
                 self._slice_validate(start_row, stop_row, 'rw')
