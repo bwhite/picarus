@@ -362,7 +362,7 @@ class JobsTable(BaseTableSmall):
                 response_type_column = params['responseTypeColumn']
                 assert response_type_column.startswith('meta:')
                 suffix = '/'.join(ub64(x) + '/' + ub64(y) for x, y in start_stop_rows)
-                data = 'hbase://localhost:9090/images/%s?question=%s&responseType=%s&image=%s' % (suffix, ub64(class_column), ub64(response_type_column), ub64(image_column))
+                data = 'hbase://localhost:9090/images/%s?question=%s&responseType=%s&image=%s' % (suffix, ub64(question_column), ub64(response_type_column), ub64(image_column))
                 p['type'] = 'image_qa'
             else:
                 bottle.abort(400)
