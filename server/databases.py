@@ -359,7 +359,7 @@ class HBaseDB(BaseDB):
             self.args += [server, port]
         else:
             self.args = [server, port]
-        self.__thrift = hadoopy_hbase.connect(server, port, timeout=60000)
+        self.__thrift = hadoopy_hbase.connect(server, port, timeout=300000)
         self.num_mappers = 6
         super(HBaseDB, self).__init__(*args, **kw)
 
