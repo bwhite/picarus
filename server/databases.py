@@ -359,7 +359,7 @@ class HBaseDB(BaseDB):
             self.args += [server, port]
         else:
             self.args = [server, port]
-        self.__thrift = hadoopy_hbase.connect(server, port, timeout=300000)
+        self._thrift = hadoopy_hbase.connect(server, port, timeout=300000)
         self.num_mappers = 6
         super(HBaseDB, self).__init__(*args, **kw)
 
@@ -368,26 +368,26 @@ class HBaseDB(BaseDB):
 
     def mutate_row(self, table, row, mutations):
         mutations = [hadoopy_hbase.Mutation(column=x, value=y) for x, y in mutations.items()]
-        self.__thrift.mutateRow(table, row, mutations)
+        self._thrift.mutateRow(table, row, mutations)
 
     def delete_row(self, table, row):
-        self.__thrift.deleteAllRow(table, row)
+        self._thrift.deleteAllRow(table, row)
 
     def delete_column(self, table, row, column):
-        self.__thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=column, isDelete=True)])
+        self._thrift.mutateRow(table, row, [hadoopy_hbase.Mutation(column=column, isDelete=True)])
 
     def get_row(self, table, row, columns=None):
         if columns:
-            result = self.__thrift.getRowWithColumns(table, row, columns)
+            result = self._thrift.getRowWithColumns(table, row, columns)
         else:
-            result = self.__thrift.getRow(table, row)
+            result = self._thrift.getRow(table, row)
         if not result:
             bottle.abort(404)
         return {x: y.value for x, y in result[0].columns.items()}
 
     def get_column(self, table, row, column):
         try:
-            return self.__thrift.get(table, row, column)[0].value
+            return self._thrift.get(table, row, column)[0].value
         except IndexError:
             bottle.abort(404)
 
@@ -413,7 +413,7 @@ class HBaseDB(BaseDB):
         filt = ' AND '.join(filts)
         if not filt:
             filt = None
-        return hadoopy_hbase.scanner(self.__thrift, table, columns=columns,
+        return hadoopy_hbase.scanner(self._thrift, table, columns=columns,
                                      start_row=start_row, stop_row=stop_row, filter=filt, per_call=per_call)
 
 

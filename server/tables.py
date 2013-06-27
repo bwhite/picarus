@@ -304,7 +304,12 @@ class JobsTable(BaseTableSmall):
 
     def delete_row(self, row):
         try:
-            JOBS.delete_task(row, self.owner)
+            # TODO: This break the abstraction a bit, but it prevents unnecessary connections
+            if JOBS._get_task_type(row) == 'annotation':
+                with thrift_lock() as thrift:
+                    JOBS.delete_task(row, self.owner, data_connection=thrift)
+            else:
+                JOBS.delete_task(row, self.owner)
         except jobs.NotFoundException:
             bottle.abort(404)
         return {}
@@ -314,14 +319,15 @@ class JobsTable(BaseTableSmall):
             bottle.abort(400)
         params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
-        manager = JOBS.get_annotation_manager_check(row, self.owner)
         if action == 'io/annotation/sync':
-            manager.sync()
+            with thrift_lock() as thrift:
+                manager = JOBS.get_annotation_manager_check(row, self.owner, data_connection=thrift)
+                manager.sync()
             return {}
         elif action == 'io/annotation/priority':
             data_row = params['row']
             priority = int(params['priority'])
-            manager.row_increment_priority(data_row, priority)
+            JOBS.get_annotation_manager_check(row, self.owner, data_connection=None).row_increment_priority(data_row, priority)
             return {}
         else:
             bottle.abort(400)
@@ -373,7 +379,8 @@ class JobsTable(BaseTableSmall):
             assert params['mode'] in ('standalone', 'amt')
             p['mode'] = params['mode']
             task = JOBS.add_task('annotation', self.owner, params=p, secret_params={'secret': secret, 'data': data})
-            JOBS.get_annotation_manager(task, sync=True)
+            with thrift_lock() as thrift:
+                JOBS.get_annotation_manager(task, data_connection=thrift, sync=True)
             return {'row': base64.b64encode(task)}
         else:
             bottle.abort(400)
@@ -393,9 +400,9 @@ class AnnotationDataTable(BaseTableSmall):
         except jobs.UnauthorizedException:
             bottle.abort(401)
         if self.table == 'results':
-            table = JOBS.get_annotation_manager(self.task).admin_results(secret)
+            table = JOBS.get_annotation_manager(self.task, data_connection=None).admin_results(secret)
         elif self.table == 'users':
-            table = JOBS.get_annotation_manager(self.task).admin_users(secret)
+            table = JOBS.get_annotation_manager(self.task, data_connection=None).admin_users(secret)
         else:
             bottle.abort(500)
         return dod_to_lod_b64(table)

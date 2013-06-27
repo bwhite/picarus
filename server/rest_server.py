@@ -257,16 +257,16 @@ def auth_yubikey(_auth_user):
 @check_version
 def annotate_index(task):
     try:
-        return JOBS.get_annotation_manager(task).index
+        return JOBS.get_annotation_manager(task, data_connection=None).index
     except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
-
+        
 
 @bottle.get('/<version:re:[^/]*>/annotation/<task:re:[^/]*>/static/:file_name')
 @check_version
 def annotation_static(task, file_name):
     try:
-        JOBS.get_annotation_manager(task)
+        JOBS.get_annotation_manager(task, data_connection=None)
     except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
     root = mturk_vision.__path__[0] + '/static'
@@ -277,7 +277,7 @@ def annotation_static(task, file_name):
 @check_version
 def annotation_user(task):
     try:
-        return JOBS.get_annotation_manager(task).user(bottle.request)
+        return JOBS.get_annotation_manager(task, data_connection=None).user(bottle.request)
     except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
 
@@ -286,7 +286,7 @@ def annotation_user(task):
 @check_version
 def annotation_config(task):
     try:
-        return JOBS.get_annotation_manager(task).config
+        return JOBS.get_annotation_manager(task, data_connection=None).config
     except (KeyError, jobs.NotFoundException):
         bottle.abort(404)
 
@@ -294,20 +294,22 @@ def annotation_config(task):
 @bottle.get('/<version:re:[^/]*>/annotation/<task:re:[^/]*>/:user_id/data.js')
 @check_version
 def annotation_data(task, user_id):
-    try:
-        return JOBS.get_annotation_manager(task).make_data(user_id)
-    except (KeyError, jobs.NotFoundException):
-        bottle.abort(404)
+    with thrift_lock() as thrift:
+        try:
+            return JOBS.get_annotation_manager(task, data_connection=thrift).make_data(user_id)
+        except (KeyError, jobs.NotFoundException):
+            bottle.abort(404)
 
 
 @bottle.get('/<version:re:[^/]*>/annotation/<task:re:[^/]*>/image/:image_key')
 @check_version
 def annotation_image_get(task, image_key):
-    try:
-        data_key = image_key.rsplit('.', 1)[0]
-        cur_data = JOBS.get_annotation_manager(task).read_data(data_key)
-    except (KeyError, jobs.NotFoundException):
-        bottle.abort(404)
+    with thrift_lock() as thrift:
+        try:
+            data_key = image_key.rsplit('.', 1)[0]
+            cur_data = JOBS.get_annotation_manager(task, data_connection=thrift).read_data(data_key)
+        except (KeyError, jobs.NotFoundException):
+            bottle.abort(404)
     bottle.response.content_type = "image/jpeg"
     return cur_data
 
@@ -315,20 +317,22 @@ def annotation_image_get(task, image_key):
 @bottle.get('/<version:re:[^/]*>/annotation/<task:re:[^/]*>/data/:data_key')
 @check_version
 def annotation_data_get(task, data_key):
-    try:
-        cur_data = JOBS.get_annotation_manager(task).read_data(data_key)
-    except (KeyError, jobs.NotFoundException):
-        bottle.abort(404)
+    with thrift_lock() as thrift:
+        try:
+            cur_data = JOBS.get_annotation_manager(task, data_connection=thrift).read_data(data_key)
+        except (KeyError, jobs.NotFoundException):
+            bottle.abort(404)
     return cur_data
 
 
 @bottle.post('/<version:re:[^/]*>/annotation/<task:re:[^/]*>/result')
 @check_version
 def annotation_result(task):
-    try:
-        return JOBS.get_annotation_manager(task).result(**bottle.request.json)
-    except (KeyError, jobs.NotFoundException):
-        bottle.abort(404)
+    with thrift_lock() as thrift:
+        try:
+            return JOBS.get_annotation_manager(task, data_connection=thrift).result(**bottle.request.json)
+        except (KeyError, jobs.NotFoundException):
+            bottle.abort(404)
 
 
 if __name__ == '__main__':
@@ -367,6 +371,6 @@ if __name__ == '__main__':
         return databases.factory(ARGS.database, ARGS.local, JOBS, ARGS.raven,
                                  thrift_server=ARGS.thrift_server, thrift_port=ARGS.thrift_port,
                                  redis_host=ARGS.redis_host, redis_port=ARGS.redis_port)
-    for x in range(5):
+    for x in range(10):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     SERVER.serve_forever()

@@ -31,7 +31,6 @@ class Jobs(object):
         self.redis_host = host
         self.redis_port = port
         self.db = redis.StrictRedis(host=host, port=port, db=db)
-        self.annotation_cache = {}
         self._owner_prefix = 'owner:'
         self._task_prefix = 'task:'
         self._lock_prefix = 'lock:'
@@ -84,21 +83,17 @@ class Jobs(object):
         self._check_owner(task, owner)
         return json.loads(self.db.hget(self._task_prefix + task, '_params'))
 
-    def delete_task(self, task, owner):
+    def delete_task(self, task, owner, **kw):
         self._exists(task)
         self._check_owner(task, owner)
         task_type = self._get_task_type(task)
         if task_type == 'annotation':
-            manager = self.get_annotation_manager(task)
+            manager = self.get_annotation_manager(task, data_connection=kw['data_connection'])
         # TODO: Do these atomically
         self.db.delete(self._task_prefix + task, self._lock_prefix + task)
         self.db.srem(self._owner_prefix + owner, task)
         if task_type == 'annotation':
             manager.destroy()  # TODO: MTurk specific
-            try:
-                del self.annotation_cache[task]
-            except KeyError:
-                pass
         # TODO: For Hadoop jobs kill the task if it is running
         # TODO: For worker/crawl/model jobs kill the worker process or send it a signal
 
@@ -129,28 +124,24 @@ class Jobs(object):
                 outs[task.split(':', 1)[1]] = out
         return outs
 
-    def get_annotation_manager(self, task, sync=False):
+    def get_annotation_manager(self, task, data_connection, sync=False):
         self._exists(task)
         self._check_type(task, 'annotation')
-        try:
-            return self.annotation_cache[task]
-        except KeyError:
-            data = self.db.hgetall(self._task_prefix + task)
-            p = json.loads(data['params'])
-            ps = json.loads(data['_params'])
-            p['sync'] = sync
-            p['secret'] = str(ps['secret'])
-            p['redis_address'] = self.annotation_redis_host
-            p['redis_port'] = int(self.annotation_redis_port)
-            p['task_key'] = task
-            self.annotation_cache[task] = mturk_vision.manager(data=str(ps['data']), **p)
-            return self.annotation_cache[task]
+        data = self.db.hgetall(self._task_prefix + task)
+        p = json.loads(data['params'])
+        ps = json.loads(data['_params'])
+        p['sync'] = sync
+        p['secret'] = str(ps['secret'])
+        p['redis_address'] = self.annotation_redis_host
+        p['redis_port'] = int(self.annotation_redis_port)
+        p['task_key'] = task
+        return mturk_vision.manager(data=str(ps['data']), data_connection=data_connection._thrift, **p)
 
-    def get_annotation_manager_check(self, task, owner):
+    def get_annotation_manager_check(self, task, owner, data_connection):
         self._exists(task)
         self._check_type(task, 'annotation')
         self._check_owner(task, owner)
-        return self.get_annotation_manager(task)
+        return self.get_annotation_manager(task, data_connection)
 
     def add_work(self, front, queue, **kw):
         push = self.db.lpush if front else self.db.rpush
