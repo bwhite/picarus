@@ -6,7 +6,6 @@ import redis
 import json
 import pprint
 import argparse
-import pprint
 import mturk_vision
 import base64
 import uuid
@@ -135,7 +134,10 @@ class Jobs(object):
         p['redis_address'] = self.annotation_redis_host
         p['redis_port'] = int(self.annotation_redis_port)
         p['task_key'] = task
-        return mturk_vision.manager(data=str(ps['data']), data_connection=data_connection._thrift, **p)
+        # TODO: Currently only compatible with thrift based datastores
+        if data_connection:
+            data_connection = data_connection._thrift
+        return mturk_vision.manager(data=str(ps['data']), data_connection=data_connection, **p)
 
     def get_annotation_manager_check(self, task, owner, data_connection):
         self._exists(task)
