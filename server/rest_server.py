@@ -371,6 +371,6 @@ if __name__ == '__main__':
         return databases.factory(ARGS.database, ARGS.local, JOBS, ARGS.raven,
                                  thrift_server=ARGS.thrift_server, thrift_port=ARGS.thrift_port,
                                  redis_host=ARGS.redis_host, redis_port=ARGS.redis_port)
-    for x in range(5):
+    for x in range(3):
         THRIFT_POOL.put(THRIFT_CONSTRUCTOR())
     SERVER.serve_forever()
