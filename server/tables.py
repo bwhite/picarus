@@ -409,6 +409,8 @@ class AnnotationDataTable(BaseTableSmall):
             secret = JOBS.get_task_secret(self.task, self.owner)['secret']
         except jobs.UnauthorizedException:
             bottle.abort(401)
+        except jobs.NotFoundException:
+            bottle.abort(404)
         if self.table == 'results':
             table = JOBS.get_annotation_manager(self.task, data_connection=None).admin_results(secret)
         elif self.table == 'users':
