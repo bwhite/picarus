@@ -300,6 +300,8 @@ class JobsTable(BaseTableSmall):
             cur_table = JOBS.get_tasks(self.owner)
         except jobs.UnauthorizedException:
             bottle.abort(401)
+        except jobs.NotFoundException:
+            bottle.abort(404)
         return dod_to_lod_b64(cur_table)
 
     def delete_row(self, row):
@@ -319,18 +321,21 @@ class JobsTable(BaseTableSmall):
             bottle.abort(400)
         params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
-        if action == 'io/annotation/sync':
-            with thrift_lock() as thrift:
-                manager = JOBS.get_annotation_manager_check(row, self.owner, data_connection=thrift)
-                manager.sync()
-            return {}
-        elif action == 'io/annotation/priority':
-            data_row = params['row']
-            priority = int(params['priority'])
-            JOBS.get_annotation_manager_check(row, self.owner, data_connection=None).row_increment_priority(data_row, priority)
-            return {}
-        else:
-            bottle.abort(400)
+        try:
+            if action == 'io/annotation/sync':
+                with thrift_lock() as thrift:
+                    manager = JOBS.get_annotation_manager_check(row, self.owner, data_connection=thrift)
+                    manager.sync()
+                return {}
+            elif action == 'io/annotation/priority':
+                data_row = params['row']
+                priority = int(params['priority'])
+                JOBS.get_annotation_manager_check(row, self.owner, data_connection=None).row_increment_priority(data_row, priority)
+                return {}
+            else:
+                bottle.abort(400)
+        except jobs.NotFoundException:
+            bottle.abort(404)
 
     def post_table(self, params, files):
         if files:
