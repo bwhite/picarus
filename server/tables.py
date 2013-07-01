@@ -370,15 +370,13 @@ class JobsTable(BaseTableSmall):
             elif path == 'annotation/images/qa':
                 question_column = params['questionColumn']
                 assert question_column.startswith('meta:')
-                response_type_column = params['responseTypeColumn']
-                assert response_type_column.startswith('meta:')
                 latitude_column = params['latitudeColumn']
                 assert latitude_column.startswith('meta:')
                 longitude_column = params['longitudeColumn']
                 assert longitude_column.startswith('meta:')
                 suffix = '/'.join(ub64(x) + '/' + ub64(y) for x, y in start_stop_rows)
-                data = 'hbase://localhost:9090/images/%s?latitude=%s&longitude=%s&question=%s&responseType=%s&image=%s' % (suffix, ub64(latitude_column), ub64(longitude_column),
-                                                                                                                           ub64(question_column), ub64(response_type_column), ub64(image_column))
+                data = 'hbase://localhost:9090/images/%s?latitude=%s&longitude=%s&question=%s&image=%s' % (suffix, ub64(latitude_column), ub64(longitude_column),
+                                                                                                           ub64(question_column), ub64(image_column))
                 p['type'] = 'image_qa'
             else:
                 bottle.abort(400)
