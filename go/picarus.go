@@ -12,10 +12,6 @@ import (
 	"time"
 )
 
-type PostRowResponse struct {
-	Row string `json:"row"`
-}
-
 type Conn struct {
 	Email string
 	ApiKey string
@@ -124,7 +120,6 @@ func encodeFiles(files map[string][]byte) map[string][]byte {
 	return out
 }
 
-
 func (conn *Conn) GetRow(table string, row string, columns []string) (map[string]string, error) {
 	params := url.Values{}
 	if len(columns) > 0 {
@@ -217,6 +212,26 @@ func (conn *Conn) PostTable(table string, params map[string]string, files map[st
 	dataParsed := map[string]string{}
 	json.Unmarshal(data, &dataParsed)
 	return decodeValues(dataParsed)
+}
+
+func (conn *Conn) PostRow(table string, row string, params map[string]string) (map[string]string, error) {
+	data, err := conn.call("POST", []string{"v0", "data", table, UB64Enc(row)}, mapToUrlValues(encodeValues(params)), encodeFiles(files), conn.ApiKey)
+	if err != nil {
+		return nil, err
+	}
+	dataParsed := map[string]string{}
+	json.Unmarshal(data, &dataParsed)
+	return decodeDict(dataParsed)
+}
+
+func (conn *Conn) PatchRow(table string, row string, params map[string]string, files map[string][]byte) (map[string]string, error) {
+	data, err := conn.call("PATCH", []string{"v0", "data", table, UB64Enc(row)}, mapToUrlValues(encodeDict(params)), encodeFiles(files), conn.ApiKey)
+	if err != nil {
+		return nil, err
+	}
+	dataParsed := map[string]string{}
+	json.Unmarshal(data, &dataParsed)
+	return decodeDict(dataParsed)
 }
 
 func UB64Dec(s string) string {
