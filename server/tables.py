@@ -51,7 +51,7 @@ def _takeout_model_link_from_key(manager, key):
     model_binary, columns = key_to_model(manager, key, 'link')
     model = msgpack.loads(model_binary)
     if not isinstance(model, dict):
-        bottle.abort(400)
+        bottle.abort(500)
     return model
 
 
@@ -68,7 +68,7 @@ def _takeout_input_model_link_from_key(manager, key):
     model_binary, columns = key_to_model(manager, key, 'link')
     model = msgpack.loads(model_binary)
     if not isinstance(model, dict):
-        bottle.abort(400)
+        bottle.abort(500)
     return columns['input'], model
 
 
@@ -96,17 +96,17 @@ def _parse_params(params, schema):
         if param['type'] == 'enum':
             param_value = get_param(param_name)
             if param_value not in param['values']:
-                bottle.abort(400)
+                bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
             kw[param_name] = param_value
         elif param['type'] == 'int':
             param_value = get_param(param_name, int)
             if not (param['min'] <= param_value < param['max']):
-                bottle.abort(400)
+                bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
             kw[param_name] = param_value
         elif param['type'] == 'float':
             param_value = get_param(param_name, float)
             if not (param['min'] <= param_value < param['max']):
-                bottle.abort(400)
+                bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
             kw[param_name] = param_value
         elif param['type'] == 'int_list':
             param_value = {}
@@ -115,15 +115,15 @@ def _parse_params(params, schema):
                     try:
                         bin_value = get_param(param_name + ':' + str(x), int, True)
                     except ValueError:
-                        bottle.abort(400)
+                        bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
                     if not (param['min'] <= bin_value < param['max']):
-                        bottle.abort(400)
+                        bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
                     param_value[x] = bin_value
                 except KeyError:
                     pass
             param_value = sorted(param_value.items())
             if not len(param_value) == param_value[-1][0] + 1:
-                bottle.abort(400)
+                bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
             param_value = [x[1] for x in param_value]
             kw[param_name] = param_value
         elif param['type'] == 'const':
@@ -131,7 +131,7 @@ def _parse_params(params, schema):
         elif param['type'] == 'str':
             kw[param_name] = get_param(param_name)
         else:
-            bottle.abort(400)
+            bottle.abort(500)
     return kw
 
 
@@ -319,7 +319,7 @@ class JobsTable(BaseTableSmall):
 
     def post_row(self, row, params, files):
         if files:
-            bottle.abort(400)
+            bottle.abort(400, 'Table does not support files')
         params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
         try:
@@ -334,13 +334,13 @@ class JobsTable(BaseTableSmall):
                 JOBS.get_annotation_manager_check(row, self.owner, data_connection=None).row_increment_priority(data_row, priority)
                 return {}
             else:
-                bottle.abort(400)
+                bottle.abort(400, 'Invalid parameter value [action]')
         except jobs.NotFoundException:
             bottle.abort(404)
 
     def post_table(self, params, files):
         if files:
-            bottle.abort(400)
+            bottle.abort(400, 'Table does not support files')
         params = {base64.b64decode(k): base64.b64decode(v) for k, v in params.items()}
         path = params['path']
         start_stop_rows = parse_slices()
@@ -380,7 +380,7 @@ class JobsTable(BaseTableSmall):
                                                                                                            ub64(question_column), ub64(image_column))
                 p['type'] = 'image_qa'
             else:
-                bottle.abort(400)
+                bottle.abort(500)
             if 'instructions' in params:
                 p['instructions'] = params['instructions']
             p['num_tasks'] = int(params['numTasks'])
@@ -392,7 +392,7 @@ class JobsTable(BaseTableSmall):
                 JOBS.get_annotation_manager(task, data_connection=thrift, sync=True)
             return {'row': base64.b64encode(task)}
         else:
-            bottle.abort(400)
+            bottle.abort(400, 'Invalid parameter value [path]')
 
 
 class AnnotationDataTable(BaseTableSmall):
@@ -576,7 +576,7 @@ class ImagesHBaseTable(DataHBaseTable):
 
     def post_row(self, row, params, files):
         if files:
-            bottle.abort(400)
+            bottle.abort(400, 'Table does not support files')
         params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
         with thrift_lock() as thrift:
@@ -604,11 +604,11 @@ class ImagesHBaseTable(DataHBaseTable):
                 v = base64.b64encode(model.process_binary(binary_input))
                 return json.dumps({base64.b64encode(params['model']): v})
             else:
-                bottle.abort(400)
+                bottle.abort(400, 'Invalid parameter value [action]')
 
     def post_slice(self, start_row, stop_row, params, files):
         if files:
-            bottle.abort(400)
+            bottle.abort(400, 'Table does not support files')
         params = {k: base64.b64decode(v) for k, v in params.items()}
         action = params['action']
         with thrift_lock() as thrift:
@@ -660,7 +660,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 thrift.flickr_job(params, start_row, stop_row, job_row)
                 return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
             else:
-                bottle.abort(400)
+                bottle.abort(400, 'Invalid parameter value [action]')
 
 
 def parse_slices():
@@ -715,7 +715,7 @@ class ModelsHBaseTable(HBaseTable):
 
     def post_table(self, params, files):
         if files:
-            bottle.abort(400)
+            bottle.abort(400, 'Table does not support files')
         params = {base64.b64decode(k): base64.b64decode(v) for k, v in params.items()}
         path = params['path']
         with thrift_lock() as thrift:
@@ -729,14 +729,18 @@ class ModelsHBaseTable(HBaseTable):
                 for start_row, stop_row in start_stop_rows:
                     data_table._slice_validate(start_row, stop_row, 'r')
                 try:
-                    slices = [base64.b64encode(start_row) + ',' + base64.b64encode(stop_row) for start_row, stop_row in start_stop_rows]
-                    job_row = JOBS.add_task('model', self.owner, {'slices': ';'.join(slices),
-                                                                  'table': self.table,
-                                                                  'path': path}, {})
-                    #email, db, path, create_model, params, start_stop_rows, table, job_row
-                    return _create_model_from_factory(self.owner, thrift, path, FACTORIES[path], params, start_stop_rows, data_table.table, job_row)
+                    factory = FACTORIES[path]
                 except KeyError:
-                    bottle.abort(400)
+                    bottle.abort(400, 'Invalid parameter value [path]')
+                slices = [base64.b64encode(start_row) + ',' + base64.b64encode(stop_row)
+                          for start_row, stop_row in start_stop_rows]
+                job_row = JOBS.add_task('model', self.owner, {'slices': ';'.join(slices),
+                                                              'table': self.table,
+                                                              'path': path}, {})
+                return _create_model_from_factory(self.owner, thrift, path, factory,
+                                                  params, start_stop_rows, data_table.table,
+                                                  job_row)
+
 
 
 def get_table(_auth_user, table):
