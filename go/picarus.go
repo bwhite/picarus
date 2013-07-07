@@ -195,13 +195,13 @@ func (conn *PicarusConn) PostSlice(table string, startRow string, stopRow string
 }
 
 type Slice struct {
-    startRow, stopRow string
+    StartRow, StopRow string
 }
 
 func encodeSlices(slices []Slice) string {
 	out := []string{}
 	for _, v := range slices {
-		out = append(out, B64Enc(v.startRow) + "," + B64Enc(v.stopRow))
+		out = append(out, B64Enc(v.StartRow) + "," + B64Enc(v.StopRow))
 	}
 	return strings.Join(out, ";")
 }
