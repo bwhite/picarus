@@ -215,7 +215,7 @@ func (conn *Conn) PostTable(table string, params map[string]string, files map[st
 }
 
 func (conn *Conn) PostRow(table string, row string, params map[string]string) (map[string]string, error) {
-	data, err := conn.call("POST", []string{"v0", "data", table, UB64Enc(row)}, mapToUrlValues(encodeValues(params)), encodeFiles(files), conn.ApiKey)
+	data, err := conn.call("POST", []string{"v0", "data", table, UB64Enc(row)}, mapToUrlValues(encodeValues(params)), map[string][]byte{}, conn.ApiKey)
 	if err != nil {
 		return nil, err
 	}
