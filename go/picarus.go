@@ -16,14 +16,14 @@ type PostRowResponse struct {
 	Row string `json:"row"`
 }
 
-type PicarusConn struct {
+type Conn struct {
 	Email string
 	ApiKey string
 	LoginKey string
 	Server string
 }
 
-func (conn *PicarusConn) call(method string, path []string, params url.Values, files map[string][]byte, key string) ([]byte, error) {
+func (conn *Conn) call(method string, path []string, params url.Values, files map[string][]byte, key string) ([]byte, error) {
 	var err error
 	var req *http.Request
 	serverPrefix := conn.Server + "/" + strings.Join(path, "/")
@@ -125,7 +125,7 @@ func encodeFiles(files map[string][]byte) map[string][]byte {
 }
 
 
-func (conn *PicarusConn) GetRow(table string, row string, columns []string) (map[string]string, error) {
+func (conn *Conn) GetRow(table string, row string, columns []string) (map[string]string, error) {
 	params := url.Values{}
 	if len(columns) > 0 {
 		params.Set("columns", encodeColumns(columns))
@@ -139,7 +139,7 @@ func (conn *PicarusConn) GetRow(table string, row string, columns []string) (map
 	return decodeDict(dataParsed)
 }
 
-func (conn *PicarusConn) GetTable(table string, columns []string) ([]map[string]string, error) {
+func (conn *Conn) GetTable(table string, columns []string) ([]map[string]string, error) {
 	params := url.Values{}
 	if len(columns) > 0 {
 		params.Set("columns", encodeColumns(columns))
@@ -162,7 +162,7 @@ func encodeColumns(columns []string) string {
 }
 
 
-func (conn *PicarusConn) GetSlice(table string, startRow string, stopRow string, columns []string) ([]map[string]string, error) {
+func (conn *Conn) GetSlice(table string, startRow string, stopRow string, columns []string) ([]map[string]string, error) {
 	params := url.Values{}
 	if len(columns) > 0 {
 		params.Set("columns", encodeColumns(columns))
@@ -184,7 +184,7 @@ func mapToUrlValues(data map[string]string) url.Values {
 	return out
 }
 
-func (conn *PicarusConn) PostSlice(table string, startRow string, stopRow string, params map[string]string) (map[string]string, error) {
+func (conn *Conn) PostSlice(table string, startRow string, stopRow string, params map[string]string) (map[string]string, error) {
 	data, err := conn.call("POST", []string{"v0", "slice", table, UB64Enc(startRow), UB64Enc(stopRow)}, mapToUrlValues(encodeValues(params)), map[string][]byte{}, conn.ApiKey)
 	if err != nil {
 		return nil, err
@@ -206,7 +206,7 @@ func encodeSlices(slices []Slice) string {
 	return strings.Join(out, ";")
 }
 
-func (conn *PicarusConn) PostTable(table string, params map[string]string, files map[string][]byte, slices []Slice) (map[string]string, error) {
+func (conn *Conn) PostTable(table string, params map[string]string, files map[string][]byte, slices []Slice) (map[string]string, error) {
 	if len(slices) > 0 {
 		params["slices"] = encodeSlices(slices)
 	}
@@ -254,7 +254,7 @@ func B64Enc(s string) string {
 	return base64.StdEncoding.EncodeToString([]byte(s))
 }
 
-func (conn *PicarusConn) WatchJob(row string) error {
+func (conn *Conn) WatchJob(row string) error {
 	for {
 		data, err := conn.GetRow("jobs", row, []string{})
 		if err != nil {
