@@ -148,8 +148,8 @@ class BaseDB(object):
         p = {}
         row_prefix = start_row
         assert row_prefix.find(':') != -1
-        class_name = params.get('className')
-        query = params['query']
+        p['class_name'] = params.get('className')
+        p['query'] = params.get('query')
         p['lat'] = params.get('lat')
         p['lon'] = params.get('lon')
         p['radius'] = params.get('radius')
@@ -194,15 +194,18 @@ class BaseDB(object):
             pass
         job_columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
 
-        def store(image, class_name, source, query, **kw):
+        def store(crawl_kwargs, image, source, **kw):
             print('In store')
+            query = crawl_kwargs.get('query')
+            class_name = crawl_kwargs.get('class_name')
             cols = {}
             md5 = lambda x: hashlib.md5(x).digest()
             cur_md5 = md5(image)
             cols['data:image'] = image
             if class_name is not None:
                 cols['meta:class'] = class_name
-            cols['meta:query'] = query
+            if query is not None:
+                cols['meta:query'] = query
             cols['meta:source'] = source
             cols['hash:md5'] = cur_md5
             for x, y in kw.items():
@@ -219,7 +222,7 @@ class BaseDB(object):
             if upload_date_radius:
                 p['min_upload_date'] = random.randint(min_upload_date, max_upload_date - upload_date_radius)
                 p['max_upload_date'] = p['min_upload_date'] + upload_date_radius
-            crawlers.flickr_crawl(store, class_name=class_name, query=query, **p)
+            crawlers.flickr_crawl(store, **p)
         job_columns['status'] = 'completed'
         self._jobs.update_task(job_row, job_columns)
 
