@@ -133,7 +133,7 @@ def index_hamming_feature2d(row_cols, params):
                                                                       'max_results': params['max_results'],
                                                                       'max_keypoint_results': params['max_keypoint_results'],
                                                                       'hamming_thresh': params['hamming_thresh']}}
-    yield 'feature2d_binary', 'distance_image_rows', model_link
+    return 'feature2d_binary', 'distance_image_rows', model_link
 
 
 FACTORIES = {'factory/classifier/svmlinear': classifier_sklearn,
