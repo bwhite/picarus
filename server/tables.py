@@ -137,7 +137,10 @@ def _parse_params(params, schema):
 
 def _get_input(params, key):
     # TODO: Verify that model keys exist
-    return params['input-' + key]
+    try:
+        return params['input-' + key]
+    except KeyError:
+        bottle.abort(400, 'Parameter not found [%s]' % ('input-' + key,))
 
 
 def _create_model_from_params(manager, email, path, params):
