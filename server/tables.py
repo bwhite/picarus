@@ -85,12 +85,13 @@ def _parse_params(params, schema):
     prefix = 'param'
 
     def get_param(x, func=str, exception=False):
+        param_key = prefix + '-' + x
         try:
-            return func(params[prefix + '-' + x])
+            return func(params[param_key])
         except (KeyError, ValueError):
             if exception:
                 raise
-            bottle.abort(400)
+            bottle.abort(400, 'Parameter not found [%s]' % (param_key,))
     for param_name, param in schema_params.items():
         if param['type'] == 'enum':
             param_value = get_param(param_name)
