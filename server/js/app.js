@@ -365,9 +365,8 @@ function row_selector(prefixDrop, args) {
                         return base64.decode(y);
                     });
                 });
-                debug_table_start_stop = table_start_stop_rows;
                 start_stop_rows = _.filter(table_start_stop_rows, function (x) {
-                    return _.some(prefixes, function (y) {return x[0] >= y && x[1] < prefix_to_stop_row(y)});
+                    return _.some(prefixes, function (y) {return x[0] >= y && x[1] <= prefix_to_stop_row(y)});
                 });
                 //prefixes = _.intersection(prefixes, table_prefixes);
             } else {
