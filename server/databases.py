@@ -198,6 +198,7 @@ class BaseDB(object):
 
         def store(crawl_kwargs, image, source, **kw):
             print('In store')
+            # TODO: Need to extend onePerOwner to multiple iterations
             query = crawl_kwargs.get('query')
             class_name = crawl_kwargs.get('class_name')
             cols = {}

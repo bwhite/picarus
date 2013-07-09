@@ -338,12 +338,12 @@ function row_selector(prefixDrop, args) {
         },
         events: {'change': 'renderDrop'},
         renderDrop: function () {
-            var prefix = prefixDrop.children().filter('option:selected').val();
+            var startStopRows = prefixDrop.children().filter('option:selected').val().split(",");
             if (typeof args.startRow !== 'undefined')
-                args.startRow.val(prefix);
+                args.startRow.val(base64.decode(startStopRows[0]));
             // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
             if (typeof args.stopRow !== 'undefined')
-                args.stopRow.val(prefix_to_stop_row(prefix));
+                args.stopRow.val(base64.decode(startStopRows[1]));
         },
         render: function() {
             this.$el.empty();
@@ -354,19 +354,29 @@ function row_selector(prefixDrop, args) {
             if (_.isUndefined(prefixes))
                 return;
             var prefixes = _.keys(_.omit(prefixes.attributes, 'row'));
+            var start_stop_rows = [];
             if (!_.isUndefined(project) && project !== '') {
                 var table_project = PROJECTS.get(this.$tables.val()).get(project);
-                var table_prefixes = _.map(table_project.split(','), function (x) {
-                    return base64.decode(x);
+                var table_start_stop_rows = _.map(table_project.split(';'), function (x) {
+                    return _.map(x.split(','), function (y) {
+                        return base64.decode(y);
+                    });
                 });
-                prefixes = _.filter(table_prefixes, function (x) {
-                    return _.some(prefixes, function (y) {return _.str.startsWith(x, y)});
+                start_stop_rows = _.filter(table_start_stop_rows, function (x) {
+                    return _.some(prefixes, function (y) {return _.str.startsWith(x[0], y) && _.str.startsWith(x[1], y)});
                 });
                 //prefixes = _.intersection(prefixes, table_prefixes);
+            } else {
+                start_stop_rows = _.map(prefixes, function (x) {
+                    return [x, prefix_to_stop_row(x)];
+                });
             }
-            prefixes.sort(function (x, y) {return Number(x > y) - Number(x < y)});
-            var select_template = "{{#prefixes}}<option value='{{.}}'>{{.}}</option>{{/prefixes}};"
-            this.$el.append(Mustache.render(select_template, {prefixes: prefixes}));
+            start_stop_rows.sort(function (x, y) {return Number(x[0] > y[0]) - Number(x[0] < y[0])});
+            var select_template = "{{#data}}<option value='{{value}}'>{{text}}</option>{{/data}};"
+            var template_data = _.map(start_stop_rows, function (x) {
+                return {text: x[0] + '/' + x[1], value: base64.encode(x[0]) + ',' + base64.encode(x[1])};
+            });
+            this.$el.append(Mustache.render(select_template, {data: template_data}))
             this.postRender();
             this.renderDrop();
         }

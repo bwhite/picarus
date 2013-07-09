@@ -53,11 +53,11 @@ function render_data_prefixes() {
     new RowsView({collection: PREFIXES, el: $('#prefixes'), deleteValues: true, postRender: change});
 }
 function render_data_projects() {
-    prefixes_selector();
+    slices_selector();
     $('#modifyProjectButton').click(function () {
         var row = $('#globalDataTableDrop option:selected').val();
         var data = {};
-        var value = slices_selector_get(true).join(',');
+        var value = slices_selector_get().join(';');
         var project = $('#projectName').val();
         if (project === '')
             return;
