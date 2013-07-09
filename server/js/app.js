@@ -338,7 +338,10 @@ function row_selector(prefixDrop, args) {
         },
         events: {'change': 'renderDrop'},
         renderDrop: function () {
-            var startStopRows = prefixDrop.children().filter('option:selected').val().split(",");
+            var startStopRows = prefixDrop.children().filter('option:selected').val();
+            if (_.isUndefined(startStopRows))
+                return;
+            startStopRows = startStopRows.split(",");
             if (typeof args.startRow !== 'undefined')
                 args.startRow.val(base64.decode(startStopRows[0]));
             // TODO: Assumes that prefix is not empty and that the last character is not 0xff (it would overflow)
@@ -362,6 +365,7 @@ function row_selector(prefixDrop, args) {
                         return base64.decode(y);
                     });
                 });
+                debug_table_start_stop = table_start_stop_rows;
                 start_stop_rows = _.filter(table_start_stop_rows, function (x) {
                     return _.some(prefixes, function (y) {return x[0] >= y && x[1] < prefix_to_stop_row(y)});
                 });
