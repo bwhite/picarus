@@ -1460,8 +1460,8 @@ function render_evaluate_classifier_loaded() {
         button_running();
         // TODO: Fix the globals in here, plot_confs needs some of them
         row_confs = {pos_confs: [], neg_confs: []};
-        var gt_column = decode_id($('#gtColumn').val());
-        var conf_column = decode_id($('#modelKey').val());
+        var gt_column = base64.decode($('#gtColumn').val());
+        var conf_column = base64.decode($('#modelKey').val());
         var posClass = $('#posClass').val();
         $('#examples').html('');
         sliceStats = {}; // [startRow/stopRow] = {# pos, # neg, # noconf, #nometa, #noconfmeta}
@@ -1510,7 +1510,7 @@ function render_evaluate_classifier_loaded() {
                 }
             else
                 success_confs = function () {}
-            PICARUS.scanner("images", decode_id(start_stop_row[0]), decode_id(start_stop_row[1]), {success: success, done: success_confs, columns: [gt_column, conf_column]});
+            PICARUS.scanner("images", base64.decode(start_stop_row[0]), base64.decode(start_stop_row[1]), {success: success, done: success_confs, columns: [gt_column, conf_column]});
         });
     })
 }
@@ -1518,9 +1518,8 @@ function render_slice_stats_table(table, sliceStats) {
     //sliceStats[curSlice] = {'numPos': 0, 'numNeg': 0, 'noConf': 0, 'noGT': 0, 'noConfGT': 0};
     var select_template = "<table>{{#slices}}<tr><td>{{name}}</td><td>{{numPos}}</td><td>{{numNeg}}</td><td>{{noConf}}</td><td>{{noGT}}</td><td>{{noConfGT}}</td></tr>{{/slices}}</table>"
     function convert_name(k) {
-        console.log(k);
         return _.map(k.split('/'), function (x) {
-            return decode_id(x);
+            return base64.decode(x);
         }).join('/');
     }
     var slices = [{name: 'Slice', numPos: 'Pos', numNeg: 'Neg', noConf: 'No Conf', noGT: 'No GT', noConfGT: 'No ConfGT'}];
