@@ -110,6 +110,7 @@ function render_slice_stats_table(table, sliceStats) {
     var select_template = "<table>{{#slices}}<tr><td>{{name}}</td><td>{{numPos}}</td><td>{{numNeg}}</td><td>{{noConf}}</td><td>{{noGT}}</td><td>{{noConfGT}}</td></tr>{{/slices}}</table>"
     function convert_name(k) {
         return _.map(k.split('/'), function (x) {
+            console.log(x);
             return base64.decode(x);
         }).join('/');
     }
