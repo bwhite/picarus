@@ -1799,7 +1799,7 @@ function render_evaluate_classifier_loaded() {
         var slices = slices_selector_get(true);
 
         _.each(slices, function (start_stop_row, index) {
-            var curSlice = start_stop_row.join('/');
+            var curSlice = start_stop_row.join(',');
             sliceStats[curSlice] = {'numPos': 0, 'numNeg': 0, 'noConf': 0, 'noGT': 0, 'noConfGT': 0};
             function success(row, columns) {
                 // TODO: Need to get # of rows for proper progress updating
@@ -1850,8 +1850,7 @@ function render_slice_stats_table(table, sliceStats) {
     var select_template = "<table>{{#slices}}<tr><td>{{name}}</td><td>{{numPos}}</td><td>{{numNeg}}</td><td>{{noConf}}</td><td>{{noGT}}</td><td>{{noConfGT}}</td></tr>{{/slices}}</table>"
     function convert_name(k) {
         console.log(k);
-        return _.map(k, function (x) {
-            console.log(x);
+        return _.map(k.split(','), function (x) {
             return base64.decode(x);
         }).join('/');
     }
