@@ -43,7 +43,7 @@ function render_evaluate_classifier_loaded() {
                         m = this.collection.get(row);
                         $('#gtColumn').val(JSON.parse(m.get('meta:factory_info')).inputs.meta);
                         $('#posClass').val(JSON.parse(m.get('meta:factory_info')).params.class_positive);
-                        $('#modelKey').val(encode_id(row));
+                        $('#modelKey').val(base64.encode(row));
                     },
                     el: $('#model_select')});
     slices_selector();
