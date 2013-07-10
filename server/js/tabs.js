@@ -1518,6 +1518,7 @@ function render_slice_stats_table(table, sliceStats) {
     //sliceStats[curSlice] = {'numPos': 0, 'numNeg': 0, 'noConf': 0, 'noGT': 0, 'noConfGT': 0};
     var select_template = "<table>{{#slices}}<tr><td>{{name}}</td><td>{{numPos}}</td><td>{{numNeg}}</td><td>{{noConf}}</td><td>{{noGT}}</td><td>{{noConfGT}}</td></tr>{{/slices}}</table>"
     function convert_name(k) {
+        console.log(k);
         return _.map(k.split('/'), function (x) {
             return decode_id(x);
         }).join('/');
