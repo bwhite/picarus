@@ -11,10 +11,14 @@ def classifier_sklearn(row_cols, params):
     label_features = {0: [], 1: []}
     for row, columns in row_cols:
         label = int(columns['meta'] == params['class_positive'])
-        label_features[label].append(columns['feature'])
+        label_features[label].append(msgpack.loads(columns['feature'])[0])
+        if np.any(np.isnan(label_features[label])):
+            import base64
+            print('Row[%s] [%s] is NaN' % (base64.b64encode(row),
+                                           base64.b64encode(columns['feature'])))
     labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
     features = label_features[0] + label_features[1]
-    features = np.asfarray([msgpack.loads(x)[0] for x in features])
+    features = np.asfarray(features)
     print('Feature Shape[%s]' % repr(features.shape))
     import sklearn.svm
     classifier = sklearn.svm.LinearSVC()
