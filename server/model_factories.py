@@ -22,7 +22,8 @@ def classifier_sklearn(row_cols, params):
         classifier.fit(features, np.asarray(labels))
     except:
         print('Debug info')
-        print(features.tolist())
+        for f in features:
+            print(f.tolist())
         print(labels)
         raise
     model_link = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': classifier.coef_.tolist()[0],
