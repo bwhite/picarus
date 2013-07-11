@@ -104,5 +104,5 @@ function render_models_list() {
         var modelProjects = decode_projects(x);
         return curProject === '' || _.contains(modelProjects, curProject);
     }
-    new RowsView({collection: MODELS, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, projectsColumn, rowB64Column], postRender: postRender, deleteRows: true, columns: columns, filter: filter});
+    new RowsView({collection: MODELS, el: $('#results'), extraColumns: [takeoutColumn, notesColumn, tagsColumn, projectsColumn, rowB64Column, inputB64Column], postRender: postRender, deleteRows: true, columns: columns, filter: filter});
 }
