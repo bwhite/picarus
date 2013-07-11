@@ -57,38 +57,28 @@ def async(func):
 
     def inner(self, *args, **kw):
         if self._local:
-            try:
-                return func(self, *args, **kw)
-            except:
-                if self.raven:
-                    self.raven.captureException()
-                raise
+            return func(self, *args, **kw)
         self._jobs.add_work(True, 'default', func=func.__name__, method_args=args, method_kwargs=kw)
     return inner
 
 
-def factory(database, local, jobs, raven, **kw):
+def factory(database, local, jobs, **kw):
     if database == 'redis':
-        return RedisDB(kw['redis_host'], kw['redis_port'], 2, jobs, local, raven)
+        return RedisDB(kw['redis_host'], kw['redis_port'], 2, jobs, local)
     if database == 'hbase':
-        return HBaseDB(kw['thrift_server'], kw['thrift_port'], jobs, local, raven)
+        return HBaseDB(kw['thrift_server'], kw['thrift_port'], jobs, local)
     if database == 'hbasehadoop':
-        return HBaseDBHadoop(kw['thrift_server'], kw['thrift_port'], jobs, local, raven)
+        return HBaseDBHadoop(kw['thrift_server'], kw['thrift_port'], jobs, local)
     raise ValueError('Unknown option[%s]' % database)
 
 
 class BaseDB(object):
 
-    def __init__(self, jobs, local=False, raven=None):
+    def __init__(self, jobs, local=False):
         if hasattr(self, 'args'):
-            self.args += [jobs, True, raven]
+            self.args += [jobs, True]
         else:
-            self.args = [jobs, True, raven]
-        if raven is not None and local:
-            import raven as _raven
-            self.raven = _raven.Client(raven)
-        else:
-            self.raven = None
+            self.args = [jobs, True]
         self._jobs = jobs
         self._local = local
         super(BaseDB, self).__init__()

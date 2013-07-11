@@ -368,7 +368,7 @@ if __name__ == '__main__':
         gevent.spawn(refresh_hadoop_jobs)
 
     def THRIFT_CONSTRUCTOR():
-        return databases.factory(ARGS.database, ARGS.local, JOBS, ARGS.raven,
+        return databases.factory(ARGS.database, ARGS.local, JOBS,
                                  thrift_server=ARGS.thrift_server, thrift_port=ARGS.thrift_port,
                                  redis_host=ARGS.redis_host, redis_port=ARGS.redis_port)
     for x in range(16):

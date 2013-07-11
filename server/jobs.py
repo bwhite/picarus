@@ -179,6 +179,11 @@ def main():
         getattr(db, func)(*method_args, **method_kwargs)
 
     def _work(args, jobs):
+        if args.raven:
+            import raven
+            RAVEN = raven.Client(args.raven)
+        else:
+            RAVEN = None
         import gevent_inotifyx as inotifyx
         fd = inotifyx.init()
         # NOTE: .git/logs/HEAD is the last thing updated after a git pull/merge
@@ -186,13 +191,18 @@ def main():
         inotifyx.add_watch(fd, '.reloader', inotifyx.IN_MODIFY | inotifyx.IN_ATTRIB)
         db = THRIFT_CONSTRUCTOR()
         while 1:
-            work = jobs.get_work(args.queues, timeout=5)
-            if work:
-                #jobs.add_work(True, 'old' + work[0], **work[1])
-                job_worker(db=db, **work[1])
-            if inotifyx.get_events(fd, 0):
-                print('Shutting down due to new update')
-                break
+            try:
+                work = jobs.get_work(args.queues, timeout=5)
+                if work:
+                    jobs.add_work(True, 'old' + work[0], **work[1])
+                    job_worker(db=db, **work[1])
+                if inotifyx.get_events(fd, 0):
+                    print('Shutting down due to new update')
+                    break
+            except:
+                if RAVEN:
+                    RAVEN.captureException()
+                raise
 
     parser = argparse.ArgumentParser(description='Picarus job operations')
     parser.add_argument('--redis_host', help='Redis Host', default='localhost')
