@@ -12,10 +12,9 @@ def classifier_sklearn(row_cols, params):
     for row, columns in row_cols:
         label = int(columns['meta'] == params['class_positive'])
         label_features[label].append(msgpack.loads(columns['feature'])[0])
-        if np.any(np.isnan(label_features[label])):
+        if np.any(np.isnan(label_features[label][-1])):
             import base64
-            print('Row[%s] [%s] is NaN' % (base64.b64encode(row),
-                                           base64.b64encode(columns['feature'])))
+            print('Row[%s] is NaN' % (base64.b64encode(row)))
     labels = [0] * len(label_features[0]) + [1] * len(label_features[1])
     features = label_features[0] + label_features[1]
     features = np.asfarray(features)
