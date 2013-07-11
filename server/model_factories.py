@@ -18,7 +18,13 @@ def classifier_sklearn(row_cols, params):
     print('Feature Shape[%s]' % repr(features.shape))
     import sklearn.svm
     classifier = sklearn.svm.LinearSVC()
-    classifier.fit(features, np.asarray(labels))
+    try:
+        classifier.fit(features, np.asarray(labels))
+    except:
+        print('Debug info')
+        print(features)
+        print(labels)
+        raise
     model_link = {'name': 'picarus.LinearClassifier', 'kw': {'coefficients': classifier.coef_.tolist()[0],
                                                              'intercept': classifier.intercept_[0]}}
     return 'feature', 'binary_class_confidence', model_link
