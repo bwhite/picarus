@@ -230,7 +230,7 @@ def main():
                 args.annotations_redis_host, args.annotations_redis_port)
 
     def THRIFT_CONSTRUCTOR():
-        return databases.factory(args.database, True, jobs, args.raven,
+        return databases.factory(args.database, True, jobs,
                                  thrift_server=args.thrift_server, thrift_port=args.thrift_port,
                                  redis_host=args.redis_host, redis_port=args.redis_port)
     args.func(args, jobs)
