@@ -337,7 +337,7 @@ def annotation_result(task):
 
 @bottle.error(400)
 def error400(error):
-    print(error)
+    print(repr(error))
     return '400'
 
 if __name__ == '__main__':
