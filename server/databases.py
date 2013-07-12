@@ -145,6 +145,9 @@ class BaseDB(object):
         if not ((p['lat'] and p['lon']) or p['query']):
             bottle.abort(400, 'Invalid crawler parameters')
         p['radius'] = params.get('radius')
+        p['size'] = params.get('size', 'm')
+        if p['size'] not in ('sq', 't', 's', 'q', 'm', 'n', 'z', 'c', 'l', 'o'):
+            bottle.abort(400, 'Invalid size')
         p['api_key'] = params.get('apiKey', FLICKR_API_KEY)
         p['api_secret'] = params.get('apiSecret', FLICKR_API_SECRET)
         if not p['api_key'] or not p['api_secret']:
