@@ -107,8 +107,13 @@ class PicarusManager(object):
         else:
             raise ValueError
         model_chunks = int(columns[model_chunks_column])
-        model_chunk_columns = [model_column + '-%d' % x for x in range(model_chunks)]
-        chunks = [(int(x.split('-')[1]), y) for x, y in self.db.get_row(self.models_table, key, model_chunk_columns).items()]
+        # Get the chunks one at a time to relieve memory pressure
+        chunks = []
+        for x in range(model_chunks):
+            model_column + '-%d' % x
+            model_num = int(x.split('-')[1])
+            model_val = self.db.get_row(self.models_table, key, [model_column])[model_column]
+            chunks.append((model_num, model_val))
         chunks.sort()
         return ''.join([x[1] for x in chunks]), columns
 
