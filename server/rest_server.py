@@ -335,6 +335,11 @@ def annotation_result(task):
             bottle.abort(404)
 
 
+@bottle.error(400)
+def error400(error):
+    print(error)
+    return '400'
+
 if __name__ == '__main__':
     import gevent.pywsgi
     SERVER = gevent.pywsgi.WSGIServer(('0.0.0.0', ARGS.port), bottle.app(),
