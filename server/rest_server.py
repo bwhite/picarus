@@ -335,10 +335,13 @@ def annotation_result(task):
             bottle.abort(404)
 
 
+@bottle.error(500)
 @bottle.error(400)
-def error400(error):
-    print(repr(error))
-    return '400'
+@bottle.error(401)
+@bottle.error(403)
+@bottle.error(404)
+def error_handler(error):
+    return error.body
 
 if __name__ == '__main__':
     import gevent.pywsgi

@@ -71,7 +71,7 @@ class PicarusClient(object):
         if response.status_code in (502, 503, 429, 408):
             raise ErrorStatus('picarus_api: returned [%d]' % (response.status_code))
         if response.status_code != 200:
-            raise FatalErrorStatus('picarus_api: returned [%d]' % (response.status_code))
+            raise FatalErrorStatus('picarus_api: returned [%d][%s]' % (response.status_code, response.content[:64]))
         return json.loads(response.content)
 
     def _decode_lod(self, lod):
