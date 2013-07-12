@@ -110,10 +110,9 @@ class PicarusManager(object):
         # Get the chunks one at a time to relieve memory pressure
         chunks = []
         for x in range(model_chunks):
-            model_column + '-%d' % x
-            model_num = int(x.split('-')[1])
-            model_val = self.db.get_row(self.models_table, key, [model_column])[model_column]
-            chunks.append((model_num, model_val))
+            model_column_cur = model_column + '-%d' % x
+            model_val = self.db.get_row(self.models_table, key, [model_column_cur])[model_column_cur]
+            chunks.append((x, model_val))
         chunks.sort()
         return ''.join([x[1] for x in chunks]), columns
 
