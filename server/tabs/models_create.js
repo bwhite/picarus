@@ -44,7 +44,7 @@ function render_models_create() {
             var model = new PicarusRow({row: row}, {table: 'models', columns: ['meta:']});
             MODELS.add(model);
             model.fetch();
-            $('#results').html(response.row);
+            $('#results').html(base64.encode(response.row));
             button_reset();
         }
         var model_kind = $('#kind_select option:selected').val();
