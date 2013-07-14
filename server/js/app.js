@@ -435,7 +435,7 @@ function model_create_selector($slicesSelect, $params, modelKind, name, hideInpu
                 cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
             } else if (value.type == 'float') {
                 cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
-            } else if (value.type == 'int_list') {
+            } else if (value.type == 'int_list' || value.type == 'float_list') {
                 // Create as many input boxes as the min # of boxes
                 cur_el = $('<input>').attr('type', 'text').addClass('input-medium').val(value.min_size);
                 if (value.max_size == value.min_size + 1)

@@ -126,6 +126,25 @@ def _parse_params(params, schema):
                 bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
             param_value = [x[1] for x in param_value]
             kw[param_name] = param_value
+        elif param['type'] == 'float_list':
+            # TODO: Refactor as it shared code with int_list
+            param_value = {}
+            for x in range(param['max_size']):
+                try:
+                    try:
+                        bin_value = get_param(param_name + ':' + str(x), float, True)
+                    except ValueError:
+                        bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
+                    if not (param['min'] <= bin_value < param['max']):
+                        bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
+                    param_value[x] = bin_value
+                except KeyError:
+                    pass
+            param_value = sorted(param_value.items())
+            if not len(param_value) == param_value[-1][0] + 1:
+                bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
+            param_value = [x[1] for x in param_value]
+            kw[param_name] = param_value
         elif param['type'] == 'const':
             kw[param_name] = param['value']
         elif param['type'] == 'str':

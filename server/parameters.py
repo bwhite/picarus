@@ -30,6 +30,17 @@ PARAM_SCHEMAS.append({'type': 'model',
                                  'method': {'type': 'enum', 'values': ['force_max_side', 'max_side', 'force_square']}}})
 
 PARAM_SCHEMAS.append({'type': 'model',
+                      'name': 'picarus.ImageWarp',
+                      'kind': 'image_preprocessor',
+                      'input_type': 'raw_image',
+                      'output_type': 'processed_image',
+                      'params': {'compression': {'type': 'enum', 'values': ['jpg', 'png', 'ppm']},
+                                 'h': {'type': 'float_list', 'min': float('-inf'), 'max': float('inf'), 'min_size': 9, 'max_size': 10},
+                                 'height': {'type': 'int', 'min': 1, 'max': 1025},
+                                 'width': {'type': 'int', 'min': 1, 'max': 1025}}})
+
+
+PARAM_SCHEMAS.append({'type': 'model',
                       'name': 'picarus.HistogramImageFeature',
                       'kind': 'feature',
                       'input_type': 'processed_image',
