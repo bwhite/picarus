@@ -354,10 +354,9 @@ function render_models_single() {
             } else if (outputType == 'distance_image_rows') {
                 $('#results').html($('<h3>').text('Image Search Results'));
                 var data = msgpack.unpack(result[modelKey]);
-                debug_data = msgpack.unpack(result[modelKey]);
                 _.each(data, function (x) {
                     var image_id = _.uniqueId('image_');
-                    $('#results').append('<img id="' + image_id + '">' + ' ' + x[0] + '<br>');
+                    $('#results').append('<img title="' + x[0] + '" id="' + image_id + '">');
                     imageThumbnail(x[1], image_id);
                 });
             } else if (outputType == 'feature2d_binary') {

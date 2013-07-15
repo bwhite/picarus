@@ -97,7 +97,11 @@ function random_bytes(num) {
 function imageThumbnail(row, id) {
     var imageColumn = 'thum:image_150sq';
     function success(columns) {
-        $('#' + id).attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row)
+        var title = $('#' + id).attr('title');
+        if (_.isUndefined(title))
+            title = "";
+        title = title + " | " + base64.encode(row);
+        $('#' + id).attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', title);
     }
     PICARUS.getRow('images', row, {success: success, data: {columns: [imageColumn]}});
 }
