@@ -35,7 +35,7 @@ PARAM_SCHEMAS.append({'type': 'model',
                       'input_type': 'raw_image',
                       'output_type': 'processed_image',
                       'params': {'compression': {'type': 'enum', 'values': ['jpg', 'png', 'ppm']},
-                                 'h': {'type': 'float_list', 'min': float('-inf'), 'max': float('inf'), 'min_size': 9, 'max_size': 10},
+                                 'h': {'type': 'float_list', 'min': -9007199254740992., 'max': 9007199254740992, 'min_size': 9, 'max_size': 10},
                                  'height': {'type': 'int', 'min': 1, 'max': 1025},
                                  'width': {'type': 'int', 'min': 1, 'max': 1025}}})
 
