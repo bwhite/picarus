@@ -603,28 +603,26 @@ class ImagesHBaseTable(DataHBaseTable):
         action = params['action']
         with thrift_lock() as thrift:
             manager = PicarusManager(db=thrift)
-            print(params)
             model_key = params['model']
-            print('ModelKey[%r]' % model_key)
-            # TODO: Allow io/ so that we can write back to the image too
-            if action == 'i/link':
-                self._row_validate(row, 'r')
-                # TODO: Get this directly from model
-                chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
-                binary_input = thrift.get_column(self.table, row, chain_input)
-                model = picarus_takeout.ModelChain(msgpack.dumps([model_link]))
+            if action in ('i/link', 'i/chain', 'io/link', 'io/chain'):
+                write_result = action.startswith('io/')
+                if write_result:
+                    self._row_validate(row, 'rw')
+                else:
+                    self._row_validate(row, 'r')
+                if action.endswith('/link'):
+                    chain_input, model_link = _takeout_input_model_link_from_key(manager, model_key)
+                    binary_input = thrift.get_column(self.table, row, chain_input)
+                    model = picarus_takeout.ModelChain(msgpack.dumps([model_link]))
+                else:
+                    chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
+                    binary_input = thrift.get_column(self.table, row, chain_inputs[0])
+                    model = picarus_takeout.ModelChain(msgpack.dumps(list(model_chain)))
                 bottle.response.headers["Content-type"] = "application/json"
-                return json.dumps({base64.b64encode(params['model']): base64.b64encode(model.process_binary(binary_input))})
-            elif action == 'i/chain':
-                self._row_validate(row, 'r')
-                # TODO: Get this directly from model
-                chain_inputs, model_chain = zip(*_takeout_input_model_chain_from_key(manager, model_key))
-                binary_input = thrift.get_column(self.table, row, chain_inputs[0])
-                model_chain = list(model_chain)
-                model = picarus_takeout.ModelChain(msgpack.dumps(model_chain))
-                bottle.response.headers["Content-type"] = "application/json"
-                v = base64.b64encode(model.process_binary(binary_input))
-                return json.dumps({base64.b64encode(params['model']): v})
+                model_out = model.process_binary(binary_input)
+                if write_result:
+                    thrift.mutate_row(self.table, row, {model_key: model_out})
+                return json.dumps({base64.b64encode(model_key): base64.b64encode(model_out)})
             else:
                 bottle.abort(400, 'Invalid parameter value [action]')
 
