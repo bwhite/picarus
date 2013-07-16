@@ -269,15 +269,15 @@ func B64Enc(s string) string {
 	return base64.StdEncoding.EncodeToString([]byte(s))
 }
 
-func (conn *Conn) WatchJob(row string) error {
+func (conn *Conn) WatchJob(row string) (map[string]string, error) {
 	for {
 		data, err := conn.GetRow("jobs", row, []string{})
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fmt.Println(data)
 		if data["status"] == "completed" {
-			return nil
+			return data, nil
 		}
 		time.Sleep(1000 * time.Millisecond)
 	}
