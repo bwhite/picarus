@@ -142,7 +142,7 @@ class BaseDB(object):
             p['lat'] = float(params['lat'])
             p['lon'] = float(params['lon'])
             if 'locationDelta' in params:
-                p['step'] = float(params['locationDelta'])
+                p['incr'] = float(params['locationDelta'])
             if 'gridRadius' in params:
                 p['gridRadius'] = int(params['gridRadius'])
                 if p['gridRadius'] < 0:
