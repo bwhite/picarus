@@ -164,7 +164,7 @@ PARAM_SCHEMAS.append({'type': 'factory',
                       'data': 'slices',
                       'input_types': ['feature2d_binary'],
                       'params': {'max_results': {'type': 'int', 'min': 1, 'max': 101},
-                                 'max_keypoint_results': {'type': 'int', 'min': 1, 'max': 101},
+                                 'max_keypoint_results': {'type': 'int', 'min': 1, 'max': 1025},
                                  'hamming_thresh': {'type': 'int', 'min': 1, 'max': 266}}})
 
 PARAM_SCHEMAS.append({'type': 'factory',
