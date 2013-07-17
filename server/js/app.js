@@ -439,6 +439,9 @@ function model_create_selector($slicesSelect, $params, modelKind, name, hideInpu
                 cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
             } else if (value.type == 'float') {
                 cur_el = $('<input>').attr('name', param_prefix + key).attr('type', 'text').addClass('input-medium');
+            } else if (value.type == 'bool') {
+                var select_template = "{{#models}}<option value='{{.}}'>{{.}}</option>{{/models}};"
+                cur_el = $('<select>').attr('name', param_prefix + key).html(Mustache.render(select_template, {models: ['0', '1']}));
             } else if (value.type == 'int_list' || value.type == 'float_list') {
                 // Create as many input boxes as the min # of boxes
                 cur_el = $('<input>').attr('type', 'text').addClass('input-medium').val(value.min_size);

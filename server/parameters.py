@@ -94,6 +94,18 @@ PARAM_SCHEMAS.append({'type': 'model',
 
 
 PARAM_SCHEMAS.append({'type': 'model',
+                      'name': 'picarus.FREAKImageFeature2d',
+                      'kind': 'feature2d',
+                      'input_type': 'processed_image',
+                      'output_type': 'feature2d_binary',
+                      'params': {'thresh': {'type': 'int', 'min': 1, 'max': 256},
+                                 'orientation_norm': {'type': 'bool'},
+                                 'scale_norm': {'type': 'bool'},
+                                 'octaves': {'type': 'int', 'min': 1, 'max': 6},
+                                 'pattern_scale': {'type': 'float', 'min': .1, 'max': 32.}}})
+
+
+PARAM_SCHEMAS.append({'type': 'model',
                       'name': 'picarus.FaceImageObjectDetector',
                       'kind': 'detector',
                       'input_type': 'processed_image',

@@ -108,6 +108,12 @@ def _parse_params(params, schema):
             if not (param['min'] <= param_value < param['max']):
                 bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
             kw[param_name] = param_value
+        elif param['type'] == 'bool':
+            try:
+                param_value = bool(get_param(param_name, int))
+            except ValueError:
+                bottle.abort(400, 'Invalid parameter value [%s]' % (param_name,))
+            kw[param_name] = param_value
         elif param['type'] == 'int_list':
             param_value = {}
             for x in range(param['max_size']):
