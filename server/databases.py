@@ -141,6 +141,18 @@ class BaseDB(object):
             p['api_key'] = params['apiKey']
             p['lat'] = float(params['lat'])
             p['lon'] = float(params['lon'])
+            if 'locationDelta' in params:
+                p['step'] = float(params['locationDelta'])
+            if 'gridRadius' in params:
+                p['gridRadius'] = int(params['gridRadius'])
+                if p['gridRadius'] < 0:
+                    raise ValueError
+            if 'headingDelta' in params:
+                p['headingDelta'] = float(params['headingDelta'])
+            if 'pitch' in params:
+                p['pitch'] = float(params['pitch'])
+            if 'fov' in params:
+                p['fov'] = float(params['fov'])
         except (KeyError, ValueError):
             bottle.abort(400, 'Invalid crawler parameters')
 
