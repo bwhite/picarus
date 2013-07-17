@@ -88,7 +88,7 @@ PARAM_SCHEMAS.append({'type': 'model',
                       'kind': 'feature2d',
                       'input_type': 'processed_image',
                       'output_type': 'feature2d_binary',
-                      'params': {'thresh': {'type': 'int', 'min': 1, 'max': 64},
+                      'params': {'thresh': {'type': 'int', 'min': 1, 'max': 256},
                                  'octaves': {'type': 'int', 'min': 1, 'max': 6},
                                  'pattern_scale': {'type': 'float', 'min': .1, 'max': 10.}}})
 
