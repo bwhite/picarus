@@ -15,7 +15,7 @@ function render_models_list() {
             function takeoutSuccess(response) {
                  chunks = _.map(response, function (v, k) {
                     return [Number(k.split('-')[1]), v];
-                 }).sort(function(a, b) {return a - b});
+                 }).sort(function(a, b) {return a[0] - b[0]});
                  model = _.map(chunks, function (v, k) {
                     return v[1];
                 }).join('');
