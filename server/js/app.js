@@ -873,6 +873,7 @@ function app_main_postauth(email_auth) {
     //Start the app by setting kicking off the history behaviour.
     //We will get a routing event with the initial URL fragment
     Backbone.history.start();
+    $('#refreshButton').click(refresh_models);
     window.onbeforeunload = function() {return "Leaving Picarus..."};
 }
 
