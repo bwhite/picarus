@@ -132,12 +132,43 @@ class BaseDB(object):
         self._row_job(table, start_row, stop_row, input_column, output_column, func, job_row)
 
     @async
+    def street_view_job(self, params, start_row, stop_row, job_row):
+        # Only slices where the start_row can be used as a prefix may be used
+        assert start_row and ord(start_row[-1]) != 255 and start_row[:-1] + chr(ord(start_row[-1]) + 1) == stop_row
+        p = {}
+        row_prefix = start_row
+        try:
+            p['api_key'] = params['apiKey']
+            p['lat'] = params['lat']
+            p['lon'] = params['lon']
+        except KeyError:
+            bottle.abort(400, 'Invalid crawler parameters')
+
+        job_columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
+
+        def store(crawl_kwargs, image, source, **kw):
+            cols = {}
+            md5 = lambda x: hashlib.md5(x).digest()
+            cur_md5 = md5(image)
+            cols['data:image'] = image
+            cols['meta:source'] = source
+            cols['hash:md5'] = cur_md5
+            for x, y in kw.items():
+                cols['meta:' + x] = y
+            row = row_prefix + cur_md5
+            self.mutate_row('images', row, cols)
+            job_columns['goodRows'] += 1
+            self._jobs.update_task(job_row, job_columns)
+        crawlers.street_view_crawl(store, **p)
+        job_columns['status'] = 'completed'
+        self._jobs.update_task(job_row, job_columns)
+
+    @async
     def flickr_job(self, params, start_row, stop_row, job_row):
         # Only slices where the start_row can be used as a prefix may be used
         assert start_row and ord(start_row[-1]) != 255 and start_row[:-1] + chr(ord(start_row[-1]) + 1) == stop_row
         p = {}
         row_prefix = start_row
-        assert row_prefix.find(':') != -1
         p['class_name'] = params.get('className')
         p['query'] = params.get('query')
         p['lat'] = params.get('lat')

@@ -679,6 +679,14 @@ class ImagesHBaseTable(DataHBaseTable):
                                                               'action': action}, {})
                 thrift.flickr_job(params, start_row, stop_row, job_row)
                 return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
+            elif action == 'o/crawl/streetview':
+                self._slice_validate(start_row, stop_row, 'w')
+                job_row = JOBS.add_task('crawl', self.owner, {'startRow': base64.b64encode(start_row),
+                                                              'stopRow': base64.b64encode(stop_row),
+                                                              'table': self.table,
+                                                              'action': action}, {})
+                thrift.street_view_job(params, start_row, stop_row, job_row)
+                return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
             else:
                 bottle.abort(400, 'Invalid parameter value [action]')
 
@@ -760,7 +768,6 @@ class ModelsHBaseTable(HBaseTable):
                 return _create_model_from_factory(self.owner, thrift, path, factory,
                                                   params, start_stop_rows, data_table.table,
                                                   job_row)
-
 
 
 def get_table(_auth_user, table):
