@@ -144,11 +144,11 @@ class BaseDB(object):
             if 'locationDelta' in params:
                 p['incr'] = float(params['locationDelta'])
             if 'gridRadius' in params:
-                p['gridRadius'] = int(params['gridRadius'])
-                if p['gridRadius'] < 0:
+                p['grid_radius'] = int(params['gridRadius'])
+                if p['grid_radius'] < 0:
                     raise ValueError
             if 'headingDelta' in params:
-                p['headingDelta'] = float(params['headingDelta'])
+                p['heading_delta'] = float(params['headingDelta'])
             if 'pitch' in params:
                 p['pitch'] = float(params['pitch'])
             if 'fov' in params:
