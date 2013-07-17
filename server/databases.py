@@ -139,9 +139,9 @@ class BaseDB(object):
         row_prefix = start_row
         try:
             p['api_key'] = params['apiKey']
-            p['lat'] = params['lat']
-            p['lon'] = params['lon']
-        except KeyError:
+            p['lat'] = float(params['lat'])
+            p['lon'] = float(params['lon'])
+        except (KeyError, ValueError):
             bottle.abort(400, 'Invalid crawler parameters')
 
         job_columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
