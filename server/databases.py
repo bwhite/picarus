@@ -157,6 +157,7 @@ class BaseDB(object):
             bottle.abort(400, 'Invalid crawler parameters')
 
         job_columns = {'goodRows': 0, 'badRows': 0, 'status': 'running'}
+        row_latlon = {}  # [row] = [[lat, lon]]
 
         def store(crawl_kwargs, image, source, **kw):
             cols = {}
@@ -168,10 +169,16 @@ class BaseDB(object):
             for x, y in kw.items():
                 cols['meta:' + x] = y
             row = row_prefix + cur_md5
+            try:
+                row_latlon.setdefault(row, []).append([kw['latitude'], kw['longitude']])
+            except KeyError:
+                pass
             self.mutate_row('images', row, cols)
             job_columns['goodRows'] += 1
             self._jobs.update_task(job_row, job_columns)
         crawlers.street_view_crawl(store, **p)
+        for row, latlons in row_latlon.items():
+            self.mutate_row('images', row, {'meta:latlons': json.dumps(latlons)})
         job_columns['status'] = 'completed'
         self._jobs.update_task(job_row, job_columns)
 
