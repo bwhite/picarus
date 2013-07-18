@@ -629,6 +629,21 @@ class ImagesHBaseTable(DataHBaseTable):
                 if write_result:
                     thrift.mutate_row(self.table, row, {model_key: model_out})
                 return json.dumps({base64.b64encode(model_key): base64.b64encode(model_out)})
+            if action in ('io/thumbnail', 'i/thumbnail'):
+                # TODO: Refactor this, it shares code with link/chain
+                write_result = action.startswith('io/')
+                if write_result:
+                    self._row_validate(row, 'rw')
+                else:
+                    self._row_validate(row, 'r')
+                # Makes 150x150 thumbnails from the data:image column
+                model_chain = [{'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}}]
+                model = picarus_takeout.ModelChain(msgpack.dumps(list(model_chain)))
+                bottle.response.headers["Content-type"] = "application/json"
+                model_out = model.process_binary(binary_input)
+                if write_result:
+                    thrift.mutate_row(self.table, row, {model_key: model_out})
+                return json.dumps({base64.b64encode('thum:image_150sq'): base64.b64encode(model_out)})
             else:
                 bottle.abort(400, 'Invalid parameter value [action]')
 
