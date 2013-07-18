@@ -609,8 +609,8 @@ class ImagesHBaseTable(DataHBaseTable):
         action = params['action']
         with thrift_lock() as thrift:
             manager = PicarusManager(db=thrift)
-            model_key = params['model']
             if action in ('i/link', 'i/chain', 'io/link', 'io/chain'):
+                model_key = params['model']
                 write_result = action.startswith('io/')
                 if write_result:
                     self._row_validate(row, 'rw')
