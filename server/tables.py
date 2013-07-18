@@ -640,7 +640,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 model_chain = [{'name': 'picarus.ImagePreprocessor', 'kw': {'method': 'force_square', 'size': 150, 'compression': 'jpg'}}]
                 model = picarus_takeout.ModelChain(msgpack.dumps(list(model_chain)))
                 bottle.response.headers["Content-type"] = "application/json"
-                model_out = model.process_binary(binary_input)
+                model_out = model.process_binary(thrift.get_column(self.table, row, 'data:image'))
                 if write_result:
                     thrift.mutate_row(self.table, row, {model_key: model_out})
                 return json.dumps({base64.b64encode('thum:image_150sq'): base64.b64encode(model_out)})
