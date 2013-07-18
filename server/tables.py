@@ -629,7 +629,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 if write_result:
                     thrift.mutate_row(self.table, row, {model_key: model_out})
                 return json.dumps({base64.b64encode(model_key): base64.b64encode(model_out)})
-            if action in ('io/thumbnail', 'i/thumbnail'):
+            elif action in ('io/thumbnail', 'i/thumbnail'):
                 # TODO: Refactor this, it shares code with link/chain
                 write_result = action.startswith('io/')
                 if write_result:
@@ -642,7 +642,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 bottle.response.headers["Content-type"] = "application/json"
                 model_out = model.process_binary(thrift.get_column(self.table, row, 'data:image'))
                 if write_result:
-                    thrift.mutate_row(self.table, row, {model_key: model_out})
+                    thrift.mutate_row(self.table, row, {'thum:image_150sq': model_out})
                 return json.dumps({base64.b64encode('thum:image_150sq'): base64.b64encode(model_out)})
             else:
                 bottle.abort(400, 'Invalid parameter value [action]')
