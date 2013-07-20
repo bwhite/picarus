@@ -878,7 +878,7 @@ function render_visualize_thumbnails() {
             if (!_.has(columns, imageColumn))
                 return;
             console.log(row);
-            $el.append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', row));
+            $el.append($('<img>').attr('src', 'data:image/jpeg;base64,' + base64.encode(columns[imageColumn])).attr('title', base64.encode(row)));
         }
         function done() {
             hasMoreData = false;
