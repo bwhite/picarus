@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"bytes"
+	"errors"
 	"mime/multipart"
 	"io/ioutil"
 	"net/http"
