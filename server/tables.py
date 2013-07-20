@@ -569,6 +569,8 @@ class DataHBaseTable(HBaseTable):
         return json.dumps(out)
 
     def patch_slice(self, start_row, stop_row, params, files):
+        if files:
+            bottle.abort(400, 'Table does not support files')
         self._slice_validate(start_row, stop_row, 'w')
         # NOTE: Only parameters allowed, no "files" due to memory restrictions
         mutations = {}
@@ -682,7 +684,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 job_row = JOBS.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
                                                                 'stopRow': base64.b64encode(stop_row),
                                                                 'inputColumn': base64.b64encode(input_column),
-                                                                'outputColumn': base64.b64encode(input_column),
+                                                                'outputColumn': base64.b64encode(output_column),
                                                                 'table': self.table,
                                                                 'action': action}, {})
                 thrift.copy_job('images', input_column=input_column, output_column=output_column,
