@@ -672,6 +672,19 @@ class ImagesHBaseTable(DataHBaseTable):
                                                                 'action': action}, {})
                 thrift.exif_job(start_row=start_row, stop_row=stop_row, job_row=job_row)
                 return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
+            elif action == 'io/copy':
+                self._slice_validate(start_row, stop_row, 'rw')
+                input_column = params['inputColumn']
+                output_column = params['outputColumn']
+                job_row = JOBS.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
+                                                                'stopRow': base64.b64encode(stop_row),
+                                                                'inputColumn': base64.b64encode(input_column),
+                                                                'outputColumn': base64.b64encode(input_column),
+                                                                'table': self.table,
+                                                                'action': action}, {})
+                thrift.copy_job('images', input_column=input_column, output_column=output_column,
+                                start_row=start_row, stop_row=stop_row, job_row=job_row)
+                return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
             elif action == 'io/link':
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = params['model']

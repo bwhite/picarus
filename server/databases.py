@@ -124,6 +124,10 @@ class BaseDB(object):
         self._row_job('images', start_row, stop_row, 'data:image', 'meta:exif', func, job_row)
 
     @async
+    def copy_job(self, table, input_column, output_column, start_row, stop_row, job_row):
+        self._row_job('images', start_row, stop_row, input_column, output_column, lambda x: x, job_row)
+
+    @async
     def takeout_chain_job(self, table, model, input_column, output_column, start_row, stop_row, job_row):
         model = picarus_takeout.ModelChain(msgpack.dumps(model))
 
