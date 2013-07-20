@@ -574,6 +574,8 @@ class DataHBaseTable(HBaseTable):
         mutations = {}
         for x, y in params.items():
             mutations[base64.b64decode(x)] = base64.b64decode(y)
+        for x in mutations:
+            self._column_write_validate(x)
         if mutations:
             with thrift_lock() as thrift:
                 for row, _ in thrift.scanner(self.table, start_row=start_row, stop_row=stop_row, keys_only=True):
@@ -676,6 +678,7 @@ class ImagesHBaseTable(DataHBaseTable):
                 self._slice_validate(start_row, stop_row, 'rw')
                 input_column = params['inputColumn']
                 output_column = params['outputColumn']
+                self._column_write_validate(output_column)
                 job_row = JOBS.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
                                                                 'stopRow': base64.b64encode(stop_row),
                                                                 'inputColumn': base64.b64encode(input_column),
