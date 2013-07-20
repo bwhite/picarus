@@ -58,12 +58,15 @@ func (conn *Conn) call(method string, path []string, params url.Values, files ma
 	if err != nil {
 		return nil, err
 	}
+	body, err := ioutil.ReadAll(response.Body)
+	defer response.Body.Close()
+	if err != nil {
+		return nil, err
+	}
 	if response.StatusCode != 200 {
-		body := ioutil.ReadAll(response.Body)
 		return nil, errors.New(fmt.Sprintf("Bad status[%d][%s]", response.StatusCode, body))
 	}
-	defer response.Body.Close()
-	return ioutil.ReadAll(response.Body)
+	return body, nil
 }
 
 func decodeLod(values []map[string]string) ([]map[string]string, error) {
