@@ -165,18 +165,65 @@ func encodeColumns(columns []string) string {
 }
 
 
-func (conn *Conn) GetSlice(table string, startRow string, stopRow string, columns []string) ([]map[string]string, error) {
-	params := url.Values{}
+func (conn *Conn) GetSlice(table string, startRow string, stopRow string, columns []string, params map[string]string) ([]map[string]string, error) {
 	if len(columns) > 0 {
-		params.Set("columns", encodeColumns(columns))
+		params["columns"] = encodeColumns(columns)
 	}
-	data, err := conn.call("GET", []string{"v0", "slice", table, UB64Enc(startRow), UB64Enc(stopRow)}, params, map[string][]byte{}, conn.ApiKey)
+	data, err := conn.call("GET", []string{"v0", "slice", table, UB64Enc(startRow), UB64Enc(stopRow)}, mapToUrlValues(params), map[string][]byte{}, conn.ApiKey)
 	if err != nil {
 		return nil, err
 	}
 	dataParsed := []map[string]string{}
 	json.Unmarshal(data, &dataParsed)
 	return decodeLod(dataParsed)
+}
+
+
+type ScannerState struct {
+	startRow, stopRow string
+	prevData *[]map[string]string
+	nextRow int
+	columns []string
+	params map[string]string
+	conn *Conn
+	Done bool
+}
+
+func (conn *Conn) Scanner(table string, startRow string, stopRow string, columns []string, params map[string]string) *ScannerState {
+	return &ScannerState{startRow: startRow, stopRow: stopRow, nextRow: 0, columns: columns, params: params, Done: false}
+}
+
+func (ss *ScannerState) Next() (string, map[string]string, error) {
+	if ss.Done {
+		return "", nil, nil
+	}
+	if ss.prevData == nil || (ss.prevData != nil && len(*ss.prevData) == ss.nextRow) {
+		var startRow string
+		var excludeStart string
+		if ss.prevData == nil {
+			excludeStart = "0"
+			startRow = ss.startRow
+		} else {
+			excludeStart = "1"
+			startRow = (*ss.prevData)[ss.nextRow - 1]["row"]
+		}
+		ss.params["excludeStart"] = excludeStart
+		data, err := ss.conn.GetSlice("images", startRow, ss.stopRow, ss.columns, ss.params)
+		if err != nil {
+			return "", nil, err
+		}
+		if len(data) == 0 {
+			ss.Done = true
+			return "", nil, nil
+		}
+		ss.prevData = &data
+		ss.nextRow = 0
+	}
+	columns := (*ss.prevData)[ss.nextRow]
+	row := columns["row"]
+	delete(columns, "row")
+	ss.nextRow += 1
+	return row, columns, nil
 }
 
 func mapToUrlValues(data map[string]string) url.Values {
