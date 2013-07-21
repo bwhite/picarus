@@ -180,7 +180,7 @@ func (conn *Conn) GetSlice(table string, startRow string, stopRow string, column
 
 
 type ScannerState struct {
-	startRow, stopRow string
+	startRow, prevRow, stopRow string
 	prevData *[]map[string]string
 	nextRow int
 	columns []string
@@ -199,20 +199,20 @@ func (ss *ScannerState) Next() (string, map[string]string, error) {
 		return "", nil, nil
 	}
 	if ss.prevData == nil || (ss.prevData != nil && len(*ss.prevData) == ss.nextRow) {
-		var startRow string
+		startRow := ss.startRow
 		var excludeStart string
 		if ss.prevData == nil {
 			excludeStart = "0"
-			startRow = ss.startRow
 		} else {
 			excludeStart = "1"
-			startRow = (*ss.prevData)[ss.nextRow - 1]["row"]
+			startRow = ss.prevRow
 		}
 		ss.params["excludeStart"] = excludeStart
 		data, err := ss.conn.GetSlice("images", startRow, ss.stopRow, ss.columns, ss.params)
 		if err != nil {
 			return "", nil, err
 		}
+		fmt.Println(data)
 		if len(data) == 0 {
 			ss.Done = true
 			return "", nil, nil
@@ -221,10 +221,10 @@ func (ss *ScannerState) Next() (string, map[string]string, error) {
 		ss.nextRow = 0
 	}
 	columns := (*ss.prevData)[ss.nextRow]
-	row := columns["row"]
+	ss.prevRow = columns["row"]
 	delete(columns, "row")
 	ss.nextRow += 1
-	return row, columns, nil
+	return ss.prevRow, columns, nil
 }
 
 func mapToUrlValues(data map[string]string) url.Values {
