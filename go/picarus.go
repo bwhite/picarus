@@ -190,7 +190,7 @@ type ScannerState struct {
 }
 
 func (conn *Conn) Scanner(table string, startRow string, stopRow string, columns []string, params map[string]string) *ScannerState {
-	return &ScannerState{startRow: startRow, stopRow: stopRow, nextRow: 0, columns: columns, params: params, Done: false}
+	return &ScannerState{startRow: startRow, stopRow: stopRow, nextRow: 0, columns: columns, params: params, Done: false, conn: conn}
 }
 
 func (ss *ScannerState) Next() (string, map[string]string, error) {
