@@ -26,7 +26,7 @@ PARAM_SCHEMAS.append({'type': 'model',
                       'input_type': 'raw_image',
                       'output_type': 'processed_image',
                       'params': {'compression': {'type': 'enum', 'values': ['jpg', 'png', 'ppm']},
-                                 'size': {'type': 'int', 'min': 16, 'max': 1025},
+                                 'size': {'type': 'int', 'min': 16, 'max': 4097},
                                  'method': {'type': 'enum', 'values': ['force_max_side', 'max_side', 'force_square']}}})
 
 PARAM_SCHEMAS.append({'type': 'model',
@@ -36,8 +36,8 @@ PARAM_SCHEMAS.append({'type': 'model',
                       'output_type': 'processed_image',
                       'params': {'compression': {'type': 'enum', 'values': ['jpg', 'png', 'ppm']},
                                  'h': {'type': 'float_list', 'min': -9007199254740992., 'max': 9007199254740992, 'min_size': 9, 'max_size': 10},
-                                 'height': {'type': 'int', 'min': 1, 'max': 1025},
-                                 'width': {'type': 'int', 'min': 1, 'max': 1025}}})
+                                 'height': {'type': 'int', 'min': 1, 'max': 4097},
+                                 'width': {'type': 'int', 'min': 1, 'max': 4097}}})
 
 
 PARAM_SCHEMAS.append({'type': 'model',
