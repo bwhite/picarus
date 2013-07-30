@@ -194,7 +194,6 @@ func (conn *Conn) Scanner(table string, startRow string, stopRow string, columns
 }
 
 func (ss *ScannerState) Next() (string, map[string]string, error) {
-	fmt.Println(*ss)
 	if ss.Done {
 		return "", nil, nil
 	}
@@ -212,7 +211,6 @@ func (ss *ScannerState) Next() (string, map[string]string, error) {
 		if err != nil {
 			return "", nil, err
 		}
-		fmt.Println(data)
 		if len(data) == 0 {
 			ss.Done = true
 			return "", nil, nil
