@@ -118,9 +118,9 @@ class BaseDB(object):
                 if image_tags is None:
                     return json.dumps({})
                 else:
-                    return json.dumps({name: base64.b64encode(image_tags[id]) if isinstance(image_tags[id], str) else image_tags[id]
-                                       for id, name in TAGS.items()
-                                       if id in image_tags})
+                    return json.dumps(dict((name, base64.b64encode(image_tags[id]) if isinstance(image_tags[id], str) else image_tags[id])
+                                           for id, name in TAGS.items()
+                                           if id in image_tags))
         self._row_job('images', start_row, stop_row, 'data:image', 'meta:exif', func, job_row)
 
     @async
@@ -289,7 +289,7 @@ class BaseDB(object):
                 for row, columns in row_cols:
                     total_rows += 1
                     try:
-                        yield row, {pretty_column: columns[raw_column] for pretty_column, raw_column in inputs.items()}
+                        yield row, dict((pretty_column, columns[raw_column]) for pretty_column, raw_column in inputs.items())
                         job_columns['goodRows'] += 1
                         job_columns['badRows'] = total_rows - job_columns['goodRows']
                         self._jobs.update_task(job_row, job_columns)
@@ -297,7 +297,7 @@ class BaseDB(object):
                         continue
         input_type, output_type, model_link = create_model(inner(), params)
         slices = [base64.b64encode(start_row) + ',' + base64.b64encode(stop_row) for start_row, stop_row in start_stop_rows]
-        inputsb64 = {k: base64.b64encode(v) for k, v in inputs.items()}
+        inputsb64 = dict((k, base64.b64encode(v)) for k, v in inputs.items())
         factory_info = {'slices': slices, 'num_rows': job_columns['goodRows'], 'data': 'slices', 'params': params, 'inputs': inputsb64}
         manager = driver.PicarusManager(db=self)
         model_chain = tables._takeout_model_chain_from_key(manager, inputs[input_type]) + [model_link]
@@ -358,7 +358,7 @@ class RedisDB(BaseDB):
             result = self._get_columns(table, row, columns, keys_only=keys_only)
         else:
             if keys_only:
-                result = {x: '' for x in self.__redis.hkeys(table + ':' + row)}
+                result = dict((x, '') for x in self.__redis.hkeys(table + ':' + row))
             else:
                 result = self.__redis.hgetall(table + ':' + row)
         if check and not result:
@@ -436,7 +436,7 @@ class HBaseDB(BaseDB):
             result = self._thrift.getRow(table, row)
         if not result:
             bottle.abort(404)
-        return {x: y.value for x, y in result[0].columns.items()}
+        return dict((x, y.value) for x, y in result[0].columns.items())
 
     def get_column(self, table, row, column):
         try:
