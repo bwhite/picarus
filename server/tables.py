@@ -26,7 +26,7 @@ def dod_to_lod_b64(dod):
     outs = []
     for row, columns in sorted(dod.items(), key=lambda x: x[0]):
         out = {'row': base64.b64encode(row)}
-        out.update({base64.b64encode(x): base64.b64encode(y) if isinstance(y, str) else base64.b64encode(json.dumps(y)) for x, y in columns.items()})
+        out.update(dict((base64.b64encode(x), base64.b64encode(y) if isinstance(y, str) else base64.b64encode(json.dumps(y))) for x, y in columns.items()))
         outs.append(out)
     return outs
 
@@ -34,7 +34,7 @@ PARAM_SCHEMAS_B64 = dod_to_lod_b64(PARAM_SCHEMAS_SERVE)
 
 
 def encode_row(row, columns):
-    out = {base64.b64encode(k): base64.b64encode(v) for k, v in columns.items()}
+    out = dict((base64.b64encode(k), base64.b64encode(v)) for k, v in columns.items())
     out['row'] = base64.b64encode(row)
     return out
 
@@ -186,7 +186,7 @@ def _create_model_from_params(manager, email, path, params):
 def _create_model_from_factory(email, db, path, create_model, params, start_stop_rows, table, job_row):
     schema = PARAM_SCHEMAS_SERVE[path]
     model_params = _parse_params(params, schema)
-    inputs = {x: _get_input(params, x) for x in schema['input_types']}
+    inputs = dict((x, _get_input(params, x)) for x in schema['input_types'])
     db.create_model_job(create_model, model_params, inputs, schema, start_stop_rows, table, email, job_row)
     return {'row': base64.b64encode(job_row), 'table': base64.b64encode('jobs')}
 
@@ -203,7 +203,7 @@ class BaseTableSmall(object):
         full_table = self._get_table()
         if columns:
             columns.add('row')
-            return json.dumps([{y: x[y] for y in columns.intersection(x)} for x in full_table])
+            return json.dumps([dict((y, x[y]) for y in columns.intersection(x)) for x in full_table])
         else:
             return json.dumps(full_table)
 
@@ -222,7 +222,7 @@ class BaseTableSmall(object):
         column_values_b64 = self._get_row(row, columns)
         if columns_ub64:
             columns_ub64 = set(columns_ub64).intersection(column_values_b64)
-            return {x: column_values_b64[x] for x in columns_ub64}
+            return dict((x, column_values_b64[x]) for x in columns_ub64)
         else:
             return column_values_b64
 
@@ -348,7 +348,7 @@ class JobsTable(BaseTableSmall):
     def post_row(self, row, params, files):
         if files:
             bottle.abort(400, 'Table does not support files')
-        params = {k: base64.b64decode(v) for k, v in params.items()}
+        params = dict((k, base64.b64decode(v)) for k, v in params.items())
         action = params['action']
         try:
             if action == 'io/annotation/sync':
@@ -369,7 +369,7 @@ class JobsTable(BaseTableSmall):
     def post_table(self, params, files):
         if files:
             bottle.abort(400, 'Table does not support files')
-        params = {base64.b64decode(k): base64.b64decode(v) for k, v in params.items()}
+        params = dict((base64.b64decode(k), base64.b64decode(v)) for k, v in params.items())
         path = params['path']
         start_stop_rows = parse_slices()
         if path in ('annotation/images/class', 'annotation/images/qa'):
@@ -486,8 +486,8 @@ class HBaseTable(object):
         with thrift_lock() as thrift:
             self._row_validate(row, 'r', thrift)
             result = thrift.get_row(self.table, row, columns)
-        return {base64.b64encode(x): base64.b64encode(y)
-                for x, y in result.items()}
+        return dict((base64.b64encode(x), base64.b64encode(y))
+                    for x, y in result.items())
 
 
 class DataHBaseTable(HBaseTable):
@@ -609,7 +609,7 @@ class ImagesHBaseTable(DataHBaseTable):
     def post_row(self, row, params, files):
         if files:
             bottle.abort(400, 'Table does not support files')
-        params = {k: base64.b64decode(v) for k, v in params.items()}
+        params = dict((k, base64.b64decode(v)) for k, v in params.items())
         action = params['action']
         with thrift_lock() as thrift:
             manager = PicarusManager(db=thrift)
@@ -654,7 +654,7 @@ class ImagesHBaseTable(DataHBaseTable):
     def post_slice(self, start_row, stop_row, params, files):
         if files:
             bottle.abort(400, 'Table does not support files')
-        params = {k: base64.b64decode(v) for k, v in params.items()}
+        params = dict((k, base64.b64decode(v)) for k, v in params.items())
         action = params['action']
         with thrift_lock() as thrift:
             manager = PicarusManager(db=thrift)
@@ -667,7 +667,7 @@ class ImagesHBaseTable(DataHBaseTable):
                                                                 'table': self.table,
                                                                 'action': action}, {})
                 thrift.takeout_chain_job('images', model, 'data:image', 'thum:image_150sq', start_row=start_row, stop_row=stop_row, job_row=job_row)
-                return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
+                return dict((base64.b64encode(k), base64.b64encode(v)) for k, v in {'row': job_row, 'table': 'jobs'}.items())
             elif action == 'io/exif':
                 self._slice_validate(start_row, stop_row, 'rw')
                 job_row = JOBS.add_task('process', self.owner, {'startRow': base64.b64encode(start_row),
@@ -675,7 +675,7 @@ class ImagesHBaseTable(DataHBaseTable):
                                                                 'table': self.table,
                                                                 'action': action}, {})
                 thrift.exif_job(start_row=start_row, stop_row=stop_row, job_row=job_row)
-                return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
+                return dict((base64.b64encode(k), base64.b64encode(v)) for k, v in {'row': job_row, 'table': 'jobs'}.items())
             elif action == 'io/copy':
                 self._slice_validate(start_row, stop_row, 'rw')
                 input_column = params['inputColumn']
@@ -689,7 +689,7 @@ class ImagesHBaseTable(DataHBaseTable):
                                                                 'action': action}, {})
                 thrift.copy_job('images', input_column=input_column, output_column=output_column,
                                 start_row=start_row, stop_row=stop_row, job_row=job_row)
-                return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
+                return dict((base64.b64encode(k), base64.b64encode(v)) for k, v in {'row': job_row, 'table': 'jobs'}.items())
             elif action == 'io/link':
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = params['model']
@@ -699,7 +699,7 @@ class ImagesHBaseTable(DataHBaseTable):
                                                                 'table': self.table,
                                                                 'action': action}, {})
                 thrift.takeout_chain_job('images', [model_link], chain_input, model_key, start_row=start_row, stop_row=stop_row, job_row=job_row)
-                return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
+                return dict((base64.b64encode(k), base64.b64encode(v)) for k, v in {'row': job_row, 'table': 'jobs'}.items())
             elif action == 'io/chain':
                 self._slice_validate(start_row, stop_row, 'rw')
                 model_key = params['model']
@@ -709,7 +709,7 @@ class ImagesHBaseTable(DataHBaseTable):
                                                                 'table': self.table,
                                                                 'action': action}, {})
                 thrift.takeout_chain_job('images', list(model_chain), chain_inputs[0], model_key, start_row=start_row, stop_row=stop_row, job_row=job_row)
-                return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
+                return dict((base64.b64encode(k), base64.b64encode(v)) for k, v in {'row': job_row, 'table': 'jobs'}.items())
             elif action == 'o/crawl/flickr':
                 self._slice_validate(start_row, stop_row, 'w')
                 job_row = JOBS.add_task('crawl', self.owner, {'startRow': base64.b64encode(start_row),
@@ -717,7 +717,7 @@ class ImagesHBaseTable(DataHBaseTable):
                                                               'table': self.table,
                                                               'action': action}, {})
                 thrift.flickr_job(params, start_row, stop_row, job_row)
-                return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
+                return dict((base64.b64encode(k), base64.b64encode(v)) for k, v in {'row': job_row, 'table': 'jobs'}.items())
             elif action == 'o/crawl/streetview':
                 self._slice_validate(start_row, stop_row, 'w')
                 job_row = JOBS.add_task('crawl', self.owner, {'startRow': base64.b64encode(start_row),
@@ -725,7 +725,7 @@ class ImagesHBaseTable(DataHBaseTable):
                                                               'table': self.table,
                                                               'action': action}, {})
                 thrift.street_view_job(params, start_row, stop_row, job_row)
-                return {base64.b64encode(k): base64.b64encode(v) for k, v in {'row': job_row, 'table': 'jobs'}.items()}
+                return dict((base64.b64encode(k), base64.b64encode(v)) for k, v in {'row': job_row, 'table': 'jobs'}.items())
             else:
                 bottle.abort(400, 'Invalid parameter value [action]')
 
@@ -783,7 +783,7 @@ class ModelsHBaseTable(HBaseTable):
     def post_table(self, params, files):
         if files:
             bottle.abort(400, 'Table does not support files')
-        params = {base64.b64decode(k): base64.b64decode(v) for k, v in params.items()}
+        params = dict((base64.b64decode(k), base64.b64decode(v)) for k, v in params.items())
         path = params['path']
         with thrift_lock() as thrift:
             manager = PicarusManager(db=thrift)

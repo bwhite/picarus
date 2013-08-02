@@ -74,7 +74,7 @@ class Jobs(object):
         self._exists(task)
         self._check_owner(task, owner)
         out = self.db.hgetall(self._task_prefix + task)
-        out = {k: v for k, v in out.items() if not k.startswith('_')}
+        out = dict((k, v) for k, v in out.items() if not k.startswith('_'))
         return out
 
     def get_task_secret(self, task, owner):
@@ -119,7 +119,7 @@ class Jobs(object):
             task = self._task_prefix + job_key
             if self.db.hget(task, 'owner') == owner:
                 out = self.db.hgetall(task)
-                out = {k: v for k, v in out.items() if not k.startswith('_')}
+                out = dict((k, v) for k, v in out.items() if not k.startswith('_'))
                 outs[task.split(':', 1)[1]] = out
         return outs
 

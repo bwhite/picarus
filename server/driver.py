@@ -95,7 +95,7 @@ class PicarusManager(object):
             raise
 
     def key_to_model(self, key, model_type=None):
-        columns = {x[5:]: y for x, y in self.db.get_row(self.models_table, key, ['meta:']).items()}
+        columns = dict((x[5:], y) for x, y in self.db.get_row(self.models_table, key, ['meta:']).items())
         if model_type is None:
             return columns
         if model_type == 'link':
