@@ -104,7 +104,7 @@ def parse_params_files():
         files[x] = bottle.request.files[x]
     if "application/json" in bottle.request.content_type:
         # TODO: Is this too strict?  We may want to let json expose real types
-        return {str(k): str(v) for k, v in bottle.request.json.items()}, files
+        return dict((str(k), str(v)) for k, v in bottle.request.json.items()), files
     for x in set(bottle.request.params) - set(bottle.request.files):
         params[x] = bottle.request.params[x]
     return params, files
@@ -125,7 +125,7 @@ def parse_columns():
 def parse_params():
     if bottle.request.content_type == "application/json":
         # TODO: Is this too strict?  We may want to let json expose real types
-        return {str(k): str(v) for k, v in bottle.request.json.items()}
+        return dict((str(k), str(v)) for k, v in bottle.request.json.items())
     return dict(bottle.request.params)
 
 
