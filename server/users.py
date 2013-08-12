@@ -118,8 +118,8 @@ class User(object):
 
     def create_api_key(self, ttl=None, key=None):
         if ttl is None:
-            ttl = 604800
-        ttl = max(1, min(int(ttl), 604800))  # 1sec <= x <= 1week
+            ttl = 31536000
+        ttl = max(1, min(int(ttl), 31536000))  # 1sec <= x <= 1year
         if key is None:
             key = self._key_gen()
         k = self._api_key_prefix + self.email
