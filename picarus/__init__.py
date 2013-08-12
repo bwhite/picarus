@@ -52,7 +52,6 @@ def retry(func):
                             v.seek(0)
     return inner
 
-
 class PicarusClient(object):
 
     def __init__(self, email, api_key=None, login_key=None, server="https://api.picar.us", max_attempts=5):
@@ -239,3 +238,14 @@ class PicarusClient(object):
         if d is None:
             return {}
         return dict((x, self.dec(y)) for x, y in d.items())
+
+    def watch_job(self, job_data, delay=10., verbose=False):
+        status = 'running'
+        while 1:
+            job_results = self.get_row(job_data['table'], job_data['row'])
+            if verbose:
+                print(job_results)
+            status = job_results.get('status')
+            if status in ('completed', 'finished'):
+                return job_results
+            time.sleep(delay)
