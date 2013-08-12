@@ -78,12 +78,12 @@ class PicarusClient(object):
         row_columns = []
         for x in lod:
             row = self.dec(x['row'])
-            columns = {self.dec(x): self.dec(y) for x, y in x.items() if x != 'row'}
+            columns = dict((self.dec(x), self.dec(y)) for x, y in x.items() if x != 'row')
             row_columns.append((row, columns))
         return row_columns
 
     def _decode_dict(self, d):
-        return {self.dec(x): self.dec(y) for x, y in d.items()}
+        return dict((self.dec(x), self.dec(y)) for x, y in d.items())
 
     def _split_data(self, data):
         data_out = {}
@@ -212,7 +212,7 @@ class PicarusClient(object):
         return base64.urlsafe_b64decode(str(x))
 
     def encdict(self, d):
-        return {self.enc(x): y for x, y in self.encvalues(d).items()}
+        return dict((self.enc(x), y) for x, y in self.encvalues(d).items())
 
     def encvalues(self, d):
         if d is None:
@@ -233,9 +233,9 @@ class PicarusClient(object):
     def decdict(self, d):
         if d is None:
             return {}
-        return {self.dec(x): self.dec(y) for x, y in d.items()}
+        return dict((self.dec(x), self.dec(y)) for x, y in d.items())
 
     def decvalues(self, d):
         if d is None:
             return {}
-        return {x: self.dec(y) for x, y in d.items()}
+        return dict((x, self.dec(y)) for x, y in d.items())
