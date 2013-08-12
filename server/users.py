@@ -11,6 +11,8 @@ import json
 import logging
 import re
 
+DEFAULT_TTL = 31536000
+
 
 def email_auth_factory(email_auth_fn='email_auth.js'):
     try:
@@ -118,7 +120,7 @@ class User(object):
 
     def create_api_key(self, ttl=None, key=None):
         if ttl is None:
-            ttl = 31536000
+            ttl = DEFAULT_TTL
         ttl = max(1, min(int(ttl), 31536000))  # 1sec <= x <= 1year
         if key is None:
             key = self._key_gen()
@@ -318,7 +320,7 @@ class Users(object):
 
     def email_api_key(self, user, ttl=None):
         if ttl is None:
-            ttl = 86400
+            ttl = DEFAULT_TTL
         # Can only send one every hour
         if time.time() - user.last_email() >= 3600:
             user.set_last_email()
@@ -326,7 +328,7 @@ class Users(object):
 
     def email_login_api_key(self, user, ttl=None):
         if ttl is None:
-            ttl = 86400
+            ttl = DEFAULT_TTL
         self.email_func(user.email, user.create_api_key(ttl=ttl), ttl, user.create_login_key())
 
     def auth_api_key(self, private=False):
