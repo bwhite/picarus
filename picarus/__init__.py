@@ -1,4 +1,7 @@
-from picarus_takeout import ModelChain, spherical_hasher_train
+try:
+    from picarus_takeout import ModelChain, spherical_hasher_train
+except ImportError:
+    print('Could not load picarus_takeout, some functionality will be unavilable')
 import base64
 import urllib
 import time
