@@ -383,10 +383,18 @@ class JobsTable(BaseTableSmall):
             image_column = params['imageColumn']
             ub64 = base64.urlsafe_b64encode
             if path == 'annotation/images/class':
-                class_column = params['classColumn']
-                assert class_column.startswith('meta:')
                 suffix = '/'.join(ub64(x) + '/' + ub64(y) for x, y in start_stop_rows)
-                data = 'hbase://localhost:9090/images/%s?class=%s&image=%s' % (suffix, ub64(class_column), ub64(image_column))
+                try:
+                    p['class'] = params['class']
+                    data = 'hbase://localhost:9090/images/%s?image=%s' % (suffix, ub64(image_column))
+                except KeyError:
+                    try:
+                        class_column = params['classColumn']
+                    except KeyError:
+                        bottle.abort(400)
+                    if not class_column.startswith('meta:'):
+                        bottle.abort(400)
+                    data = 'hbase://localhost:9090/images/%s?class=%s&image=%s' % (suffix, ub64(class_column), ub64(image_column))
                 p['type'] = 'image_class'
                 try:
                     p['class_descriptions'] = params['classDescriptions']
