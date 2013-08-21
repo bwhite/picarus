@@ -24,9 +24,9 @@ class Mapper(picarus.HBaseMapper):
                 if image_tags is None:
                     yield row, json.dumps({})
                 else:
-                    yield row, json.dumps({name: base64.b64encode(image_tags[id]) if isinstance(image_tags[id], str) else image_tags[id]
-                                           for id, name in TAGS.items()
-                                           if id in image_tags})
+                    yield row, json.dumps(dict((name, base64.b64encode(image_tags[id])) if isinstance(image_tags[id], str) else image_tags[id]
+                                               for id, name in TAGS.items()
+                                               if id in image_tags))
         except:
             sys.stdout.flush()
             hadoopy.counter('STATUS', 'badRows')
