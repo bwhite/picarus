@@ -1,11 +1,13 @@
 function render_jobs_crawlFlickr() {
-    row_selector($('#rowPrefixDrop'), {startRow: $('#startRow'), stopRow: $('#stopRow')});
+    row_selector($('#rowPrefixDrop'));
     $('#runButton').click(function () {
         button_running();
         var demo_class = $('#democlass').val();
         var demo_query = $('#demoquery').val();
-        var row_prefix = $('#rowPrefixDrop').val();
-        if (demo_query.length == 0 && row_prefix.length == 0) {
+        var row_start_stop = _.map($('#rowPrefixDrop').val().split(','), function (x) {
+            return base64.decode(x);
+        });
+        if (demo_query.length == 0 && row_start_stop.length == 0) {
             display_alert('Must specify query and prefix');
             return;
         }
@@ -48,7 +50,7 @@ function render_jobs_crawlFlickr() {
             var graphDiv = $('<div>');
             $('#results').append(graphDiv);
             $('#results').append($('<br>'));
-            PICARUS.postSlice('images', row_prefix, prefix_to_stop_row(row_prefix), {success: _.partial(watchJob, {success: _.partial(updateJobStatus, graphDiv), done: success}), data: p});
+            PICARUS.postSlice('images', row_start_stop[0], row_start_stop[1], {success: _.partial(watchJob, {success: _.partial(updateJobStatus, graphDiv), done: success}), data: p});
         }
         call_api({className: demo_class, query: demo_query});
     });
