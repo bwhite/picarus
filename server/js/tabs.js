@@ -1472,6 +1472,7 @@ function render_evaluate_classifier_loaded() {
         $('#examples').html('');
         sliceStats = {}; // [startRow/stopRow] = {# pos, # neg, # noconf, #nometa, #noconfmeta}
         var slices = slices_selector_get(true);
+        var sliceDoneIndex = 0;
 
         _.each(slices, function (start_stop_row, index) {
             var curSlice = start_stop_row.join(',');
@@ -1497,25 +1498,23 @@ function render_evaluate_classifier_loaded() {
                         sliceStats[curSlice].noGT += 1;
                 }
             }
-            var success_confs;
-            if (index == (slices.length - 1))
-                success_confs = function () {
-                    row_confs.neg_confs.sort(function(a, b) {return a[1] - b[1]});
-                    row_confs.pos_confs.sort(function(a, b) {return a[1] - b[1]});
-                    confs = {neg_confs: _.map(row_confs.neg_confs, function (x) {return x[1]}), pos_confs: _.map(row_confs.pos_confs, function (x) {return x[1]})};
-                    plot_confs(confs);
-                    render_slice_stats_table($('#slicesTable'), sliceStats);
-                    // Create examples table
-                    createClassifierExamples('Examples', [{name: 'Positive (most positive)', rows: _.clone(row_confs.pos_confs).reverse()},
-                                                          {name: 'Positive (most negative)', rows: row_confs.pos_confs},
-                                                          {name: 'Negative (most positive)', rows: _.clone(row_confs.neg_confs).reverse()},
-                                                          {name: 'Negative (most negative)', rows: row_confs.neg_confs}],
-                                             $('#prethresholdExamples'))
-
-                    button_reset();
-                }
-            else
-                success_confs = function () {}
+            var success_confs = function () {
+                sliceDoneIndex += 1
+                if (slices.length != sliceDoneIndex)
+                    return;
+                row_confs.neg_confs.sort(function(a, b) {return a[1] - b[1]});
+                row_confs.pos_confs.sort(function(a, b) {return a[1] - b[1]});
+                confs = {neg_confs: _.map(row_confs.neg_confs, function (x) {return x[1]}), pos_confs: _.map(row_confs.pos_confs, function (x) {return x[1]})};
+                plot_confs(confs);
+                render_slice_stats_table($('#slicesTable'), sliceStats);
+                // Create examples table
+                createClassifierExamples('Examples', [{name: 'Positive (most positive)', rows: _.clone(row_confs.pos_confs).reverse()},
+                                                      {name: 'Positive (most negative)', rows: row_confs.pos_confs},
+                                                      {name: 'Negative (most positive)', rows: _.clone(row_confs.neg_confs).reverse()},
+                                                      {name: 'Negative (most negative)', rows: row_confs.neg_confs}],
+                                         $('#prethresholdExamples'))
+                button_reset();
+            }
             PICARUS.scanner("images", base64.decode(start_stop_row[0]), base64.decode(start_stop_row[1]), {success: success, done: success_confs, columns: [gt_column, conf_column]});
         });
     })
